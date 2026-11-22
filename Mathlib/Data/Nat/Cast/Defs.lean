@@ -115,9 +115,12 @@ namespace Nat
 /-- Computationally friendlier cast than `Nat.unaryCast`, using binary representation. -/
 protected def binCast [Zero R] [One R] [Add R] : ℕ → R
   | 0 => 0
-  | n + 1 => if (n + 1) % 2 = 0
-    then (Nat.binCast ((n + 1) / 2)) + (Nat.binCast ((n + 1) / 2))
-    else (Nat.binCast ((n + 1) / 2)) + (Nat.binCast ((n + 1) / 2)) + 1
+  | n + 1 =>
+    let half : R := Nat.binCast (Nat.euclideanDiv (n + 1) 2)
+    if (n + 1) % 2 = 0 then half + half else half + half + 1
+decreasing_by
+  rw [Nat.euclideanDiv_eq_core]
+  exact Nat.div_lt_self (Nat.succ_pos _) (Nat.le_refl 2)
 
 @[simp]
 theorem binCast_eq [AddMonoidWithOne R] (n : ℕ) :
@@ -127,6 +130,7 @@ theorem binCast_eq [AddMonoidWithOne R] (n : ℕ) :
   | zero => rw [Nat.binCast, Nat.cast_zero]
   | succ k =>
       rw [Nat.binCast]
+      simp only [Nat.euclideanDiv_eq_core]
       by_cases h : (k + 1) % 2 = 0
       · conv => rhs; rw [← Nat.mod_add_div (k + 1) 2]
         rw [ite_eq_left h, hk _ <| Nat.div_lt_self (Nat.succ_pos k) (Nat.le_refl 2), ← Nat.cast_add]

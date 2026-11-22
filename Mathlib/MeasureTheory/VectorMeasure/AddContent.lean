@@ -159,8 +159,12 @@ lemma exists_extension_of_isSetRing_of_le_measure_of_dense [IsFiniteMeasure μ]
       rw [← sub_eq_zero, ← enorm_eq_zero, sub_add_eq_sub_sub]
       exact eq_bot_iff.2 (le_of_forall_gt this)
     intro ε εpos
-    obtain ⟨δ, δpos, hδ⟩ : ∃ δ, 0 < δ ∧ 8 * δ = ε :=
-      ⟨ε / 8, (ENNReal.div_pos εpos.ne' (by simp)), ENNReal.mul_div_cancel (by simp) (by simp)⟩
+    obtain ⟨δ, δpos, hδ⟩ : ∃ δ, 0 < δ ∧ 8 * δ = ε := by
+      have : IsUnit (8 : ℝ≥0∞) := ENNReal.isUnit_iff.2 ⟨by simp, ENNReal.ofNat_ne_top⟩
+      refine ⟨ε / 8, ?_⟩
+      rw [ENNReal.checkedDiv_eq_div]
+      exact ⟨ENNReal.div_pos εpos.ne' ENNReal.ofNat_ne_top,
+        ENNReal.mul_div_cancel (by simp) ENNReal.ofNat_ne_top⟩
     -- approximate `s` and `t` up to `δ` by sets `s'` and `t'` in `C`.
     obtain ⟨s', s'C, hs'⟩ : ∃ s' ∈ C, μ (s' ∆ s) < δ := h'C _ _ s.2 δpos
     obtain ⟨t', t'C, ht'⟩ : ∃ t' ∈ C, μ (t' ∆ t) < δ := h'C _ _ t.2 δpos

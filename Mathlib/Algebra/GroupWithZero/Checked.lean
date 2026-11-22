@@ -18,10 +18,10 @@ together with evidence that the element is invertible. The operations use the gr
 there is no ambient inverse operation and no value at an invalid denominator. An integer power
 requires invertibility only for a negative exponent.
 
-These declarations implement the ordinary notation `a⁻¹`, `a / b` and `a ^ n` for monoids
-without an ambient inverse, such as groups with zero and fields; see
-`Mathlib.Algebra.GroupWithZero.Checked.Notation`. Their theorems use the ordinary notation and
-the established names, beginning in `Mathlib.Algebra.GroupWithZero.Inverse`.
+These declarations implement `a⁻¹` and `a ^ n` for monoids without an ambient inverse,
+such as groups with zero and fields. Ordinary division notation `a / b` uses a unit denominator
+in a commutative monoid or division ring. See `Mathlib.Algebra.GroupWithZero.Checked.Notation` for
+notation and `Mathlib.Algebra.GroupWithZero.Inverse` for the associated theorems.
 
 The default evidence tactics use local hypotheses, unit and nonzero closure, and simplification.
 A local hypothesis may also be applied: a pointwise hypothesis `∀ x, f x ≠ 0` or
@@ -96,6 +96,7 @@ macro_rules
         | ((with_reducible apply_assumption) <;> assumption)
         | (apply $(Lean.mkIdent `IsUnit.ne_zero); assumption)
         | exact NeZero.ne _
+        | (with_reducible_and_instances exact $(Lean.mkIdent `OfNat.ofNat_ne_zero) _)
         | (with_reducible_and_instances exact one_ne_zero)
         | exact $(Lean.mkIdent `Nat.cast_add_one_ne_zero) _
         | ((with_reducible apply $(Lean.mkIdent `neg_ne_zero.mpr)); checked_nonzero)
@@ -161,6 +162,7 @@ macro_rules
         | (with_reducible_and_instances exact $(Lean.mkIdent `isUnit_of_invertible) _)
         | ((with_reducible apply $(Lean.mkIdent `Pi.isUnit_iff).2); intro; checked_unit)
         | (apply GroupWithZero.isUnit_of_ne_zero; checked_nonzero)
+        | exact Group.isUnit _
         | fail "an invertibility proof is required"))
 
 /-- Invertibility is needed only on the negative-exponent branch. A local hypothesis of exactly
@@ -189,7 +191,7 @@ Write it as `a⁻¹`. -/
 noncomputable def inv (a : M) (ha : IsUnit a := by checked_unit) : M :=
   ↑ha.unit⁻¹
 
-/-- Divide an arbitrary numerator by a denominator known to be a unit. Write it as `a / b`. -/
+/-- Divide an arbitrary numerator by a denominator known to be a unit. -/
 noncomputable def div (a b : M) (hb : IsUnit b := by checked_unit) : M :=
   a /ₚ hb.unit
 

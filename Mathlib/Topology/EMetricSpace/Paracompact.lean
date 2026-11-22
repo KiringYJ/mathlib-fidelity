@@ -88,10 +88,13 @@ instance (priority := 100) instParacompactSpace [PseudoEMetricSpace α] : Paraco
     obtain ⟨n, hn⟩ : ∃ n : ℕ, eball x (3 * 2⁻¹ ^ n) ⊆ s (ind x) := by
       -- This proof takes 5 lines because we can't import `specific_limits` here
       rcases EMetric.isOpen_iff.1 (ho <| ind x) x (mem_ind x) with ⟨ε, ε0, hε⟩
-      have : 0 < ε / 3 := ENNReal.div_pos_iff.2 ⟨ε0.lt.ne', ENNReal.coe_ne_top⟩
-      rcases ENNReal.exists_inv_two_pow_lt this.ne' with ⟨n, hn⟩
-      refine ⟨n, Subset.trans (eball_subset_eball ?_) hε⟩
-      simpa only [div_eq_mul_inv, mul_comm] using (ENNReal.mul_lt_of_lt_div hn).le
+      have : IsUnit (3 : ℝ≥0∞) := ENNReal.isUnit_iff.2 ⟨by simp, ENNReal.ofNat_ne_top⟩
+      have hthird : 0 < ε / (3 : ℝ≥0∞) := by
+        rw [ENNReal.checkedDiv_eq_div]
+        exact ENNReal.div_pos ε0.ne' ENNReal.ofNat_ne_top
+      obtain ⟨n, hn⟩ := ENNReal.exists_inv_two_pow_lt hthird.ne'
+      rw [ENNReal.checkedDiv_eq_div] at hn
+      exact ⟨n, (eball_subset_eball (ENNReal.mul_lt_of_lt_div' hn).le).trans hε⟩
     by_contra! h
     apply h n (ind x)
     exact memD.2 ⟨x, rfl, hn, fun _ _ _ => h _ _, mem_eball_self (pow_pos _)⟩

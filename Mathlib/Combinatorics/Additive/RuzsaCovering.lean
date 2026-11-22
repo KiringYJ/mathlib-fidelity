@@ -28,9 +28,9 @@ namespace Finset
 variable [DecidableEq G] {A B : Finset G}
 
 /-- **Ruzsa's covering lemma**. -/
-@[to_additive /-- **Ruzsa's covering lemma** -/]
+@[to_additive ruzsa_covering_add_neg /-- **Ruzsa's covering lemma**, in additive form. -/]
 theorem ruzsa_covering_mul (hB : B.Nonempty) (hK : #(A * B) ≤ K * #B) :
-    ∃ F ⊆ A, #F ≤ K ∧ A ⊆ F * (B / B) := by
+    ∃ F ⊆ A, #F ≤ K ∧ A ⊆ F * (B * B⁻¹) := by
   have : ∀ F, Decidable ((F : Set G).PairwiseDisjoint (· • B)) := fun F ↦ Classical.dec _
   set C := {F ∈ A.powerset | (SetLike.coe F).PairwiseDisjoint (· • B)}
   obtain ⟨F, hFmax⟩ := C.exists_maximal <| filter_nonempty_iff.2
@@ -44,14 +44,23 @@ theorem ruzsa_covering_mul (hB : B.Nonempty) (hK : #(A * B) ≤ K * #B) :
       _ ≤ #(A * B) := by gcongr
       _ ≤ K * #B := hK
   by_cases hau : a ∈ F
-  · exact subset_mul_left _ hB.one_mem_div hau
+  · obtain ⟨b, hb⟩ := hB
+    apply subset_mul_left _ _ hau
+    simpa only [mul_inv_cancel] using mul_mem_mul hb (inv_mem_inv hb)
   by_cases! H : ∀ b ∈ F, Disjoint (a • B) (b • B)
   · refine (hFmax.not_gt ?_ <| ssubset_insert hau).elim
     rw [insert_subset_iff, coe_insert]
     exact ⟨⟨ha, hFA⟩, hF.insert fun _ hb _ ↦ H _ hb⟩
   simp_rw [not_disjoint_iff, ← inv_smul_mem_iff] at H
   obtain ⟨b, hb, c, hc₁, hc₂⟩ := H
-  exact mem_mul.2 ⟨b, hb, b⁻¹ * a, mem_div.2 ⟨_, hc₂, _, hc₁, by simp⟩, by simp⟩
+  exact mem_mul.2 ⟨b, hb, b⁻¹ * a,
+    mem_mul.2 ⟨_, hc₂, _, inv_mem_inv hc₁, by simp [mul_assoc]⟩, by simp⟩
+
+/-- **Ruzsa's covering lemma** for the difference set. -/
+theorem ruzsa_covering_add {H : Type*} [AddGroup H] [DecidableEq H] {A B : Finset H}
+    (hB : B.Nonempty) (hK : #(A + B) ≤ K * #B) :
+    ∃ F ⊆ A, #F ≤ K ∧ A ⊆ F + (B - B) := by
+  simpa only [sub_eq_add_neg] using ruzsa_covering_add_neg hB hK
 
 end Finset
 
@@ -59,14 +68,20 @@ namespace Set
 variable {A B : Set G}
 
 /-- **Ruzsa's covering lemma** for sets. See also `Finset.ruzsa_covering_mul`. -/
-@[to_additive /-- **Ruzsa's covering lemma** for sets. See also `Finset.ruzsa_covering_add`. -/]
+@[to_additive ruzsa_covering_add_neg /-- **Ruzsa's covering lemma** for additive sets. -/]
 lemma ruzsa_covering_mul (hA : A.Finite) (hB : B.Finite) (hB₀ : B.Nonempty)
     (hK : Nat.card (A * B) ≤ K * Nat.card B) :
-    ∃ F ⊆ A, Nat.card F ≤ K ∧ A ⊆ F * (B / B) ∧ F.Finite := by
+    ∃ F ⊆ A, Nat.card F ≤ K ∧ A ⊆ F * (B * B⁻¹) ∧ F.Finite := by
   lift A to Finset G using hA
   lift B to Finset G using hB
   classical
   obtain ⟨F, hFA, hF, hAF⟩ := Finset.ruzsa_covering_mul hB₀ (by simpa [← Finset.coe_mul] using hK)
   exact ⟨F, by norm_cast; simp [*]⟩
+
+/-- **Ruzsa's covering lemma** for sets. See also `Finset.ruzsa_covering_add`. -/
+lemma ruzsa_covering_add {H : Type*} [AddGroup H] {A B : Set H}
+    (hA : A.Finite) (hB : B.Finite) (hB₀ : B.Nonempty) (hK : Nat.card (A + B) ≤ K * Nat.card B) :
+    ∃ F ⊆ A, Nat.card F ≤ K ∧ A ⊆ F + (B - B) ∧ F.Finite := by
+  simpa only [sub_eq_add_neg] using ruzsa_covering_add_neg hA hB hB₀ hK
 
 end Set

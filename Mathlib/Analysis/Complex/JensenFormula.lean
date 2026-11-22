@@ -188,12 +188,12 @@ theorem circleAverage_re_herglotzRieszKernel_mul_log₀ {w ρ : ℂ} {R : ℝ} (
   have hR : 0 < R := pos_of_mem_ball hw
   have hρ' : ‖ρ‖ = R := by simpa only [sub_zero] using mem_sphere_iff_norm.mp hρ
   have hw' : ‖w‖ < R := by simpa only [sub_zero] using mem_ball_iff_norm.mp hw
-  let r (n : ℕ) : ℝ := R - (R - ‖w‖) / (n + 2)
+  let r (n : ℕ) : ℝ := R - (R - ‖w‖) / ((n : ℝ) + 2)
   have hr_lt (n : ℕ) : r n < R := sub_lt_self _ (div_pos (sub_pos.mpr hw') (by positivity))
   have hwr (n : ℕ) : ‖w‖ < r n := by
     dsimp only [r]
     rw [lt_sub_iff_add_lt]
-    have h : (R - ‖w‖) / (n + 2) < R - ‖w‖ := by
+    have h : (R - ‖w‖) / ((n : ℝ) + 2) < R - ‖w‖ := by
       refine (div_lt_iff₀ (by positivity)).2 ?_
       exact lt_mul_of_one_lt_right (sub_pos.mpr hw')
         (by linarith [Nat.cast_nonneg (α := ℝ) n])

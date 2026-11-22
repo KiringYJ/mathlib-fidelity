@@ -216,15 +216,12 @@ protected theorem iterate (hf : Conservative f μ) (n : ℕ) : Conservative f^[n
     Then `f^[k] x ∈ s` and `f^[n + 1]^[(l - k) / (n + 1)] (f^[k] x) = f^[l] x ∈ s`. -/
   rw [Nat.frequently_atTop_iff_infinite] at hx
   rcases Nat.exists_lt_modEq_of_infinite hx n.succ_pos with ⟨k, hk, l, hl, hkl, hn⟩
-  set m := (l - k) / (n + 1)
-  have : (n + 1) * m = l - k := by
-    apply Nat.mul_div_cancel'
-    exact (Nat.modEq_iff_dvd' hkl.le).1 hn
+  obtain ⟨m, hm⟩ := (Nat.modEq_iff_dvd' hkl.le).1 hn
   refine ⟨f^[k] x, hk, m, ?_, ?_⟩
-  · intro hm
-    rw [hm, mul_zero, eq_comm, tsub_eq_zero_iff_le] at this
-    exact this.not_gt hkl
-  · rwa [← iterate_mul, this, ← iterate_add_apply, tsub_add_cancel_of_le]
+  · intro hzero
+    rw [hzero, mul_zero, tsub_eq_zero_iff_le] at hm
+    exact hm.not_gt hkl
+  · rwa [← iterate_mul, ← hm, ← iterate_add_apply, tsub_add_cancel_of_le]
     exact hkl.le
 
 end Conservative

@@ -59,15 +59,15 @@ variable {N : ℕ} [NeZero N]
 
 /-- The `AddMonoidHom` from `ZMod N` to `ℝ / ℤ` sending `j mod N` to `j / N mod 1`. -/
 noncomputable def toAddCircle : ZMod N →+ UnitAddCircle :=
-  lift N ⟨AddMonoidHom.mk' (fun j ↦ ↑(j / N : ℝ)) (by simp [add_div]),
+  lift N ⟨AddMonoidHom.mk' (fun j ↦ ↑((j : ℝ) / (N : ℝ))) (by simp [add_div]),
     by simp⟩
 
 lemma toAddCircle_intCast (j : ℤ) :
-    toAddCircle (j : ZMod N) = ↑(j / N : ℝ) := by
+    toAddCircle (j : ZMod N) = ↑((j : ℝ) / (N : ℝ)) := by
   simp [toAddCircle]
 
 lemma toAddCircle_natCast (j : ℕ) :
-    toAddCircle (j : ZMod N) = ↑(j / N : ℝ) := by
+    toAddCircle (j : ZMod N) = ↑((j : ℝ) / (N : ℝ)) := by
   simpa using toAddCircle_intCast (N := N) j
 
 /--
@@ -75,7 +75,7 @@ Explicit formula for `toCircle j`. Note that this is "evil" because it uses `ZMo
 possible, it is recommended to lift `j` to `ℤ` and use `toAddCircle_intCast` instead.
 -/
 lemma toAddCircle_apply (j : ZMod N) :
-    toAddCircle j = ↑(j.val / N : ℝ) := by
+    toAddCircle j = ↑((j.val : ℝ) / (N : ℝ)) := by
   rw [← toAddCircle_natCast, natCast_zmod_val]
 
 variable (N) in

@@ -134,29 +134,32 @@ def evalOrdinalSub : NormNumExt where
       pure (.isNat i rn q(isNat_ordinalSub $pa $pb (.refl $rn)))
     | _, _ => throwError "not subtration on ordinals"
 
-/-- info: 12 / 5 -/
+/-- info: quotient 12 5 ⋯ -/
 #guard_msgs in
-#norm_num (12 : Ordinal.{0}) / 5
+#norm_num Ordinal.quotient (12 : Ordinal.{0}) 5 (by norm_num)
 
-lemma isNat_ordinalDiv.{u} : ∀ {a b : Ordinal.{u}} {an bn rn : ℕ},
-    IsNat a an → IsNat b bn → an / bn = rn → IsNat (a / b) rn
-  | _, _, _, _, _, ⟨rfl⟩, ⟨rfl⟩, rfl => ⟨Eq.symm <| natCast_div ..⟩
+lemma isNat_ordinalDiv.{u} {a b : Ordinal.{u}} {an bn rn : ℕ} (hb : b ≠ 0) (hbn : bn ≠ 0)
+    (pa : IsNat a an) (pb : IsNat b bn) (h : IsNat (Nat.euclideanDiv an bn hbn) rn) :
+    IsNat (Ordinal.quotient a b hb) rn := by
+  obtain ⟨rfl⟩ := pa
+  obtain ⟨rfl⟩ := pb
+  exact ⟨(natCast_div an bn hbn).symm.trans (congrArg (Nat.cast : ℕ → Ordinal) h.out)⟩
 
-/-- The `norm_num` extension for division on ordinals. -/
-@[norm_num (_ : Ordinal) / (_ : Ordinal)]
+/-- The `norm_num` extension for the ordinal quotient by a nonzero numeral. -/
+@[norm_num Ordinal.quotient _ _ _]
 def evalOrdinalDiv : NormNumExt where
   eval {u α} e := do
     let some u' := u.dec | throwError "level is not succ"
     haveI' : u =QL u' + 1 := ⟨⟩
     match α, e with
-    | ~q(Ordinal.{u'}), ~q(($a : Ordinal) / ($b : Ordinal)) =>
+    | ~q(Ordinal.{u'}), ~q(Ordinal.quotient $a $b $hb) =>
       let i : Q(AddMonoidWithOne Ordinal.{u'}) := q(inferInstance)
       let ⟨an, pa⟩ ← deriveNat a i
       let ⟨bn, pb⟩ ← deriveNat b i
-      have rn : Q(ℕ) := mkRawNatLit (an.natLit! / bn.natLit!)
-      have : ($an / $bn) =Q $rn := ⟨⟩
-      pure (.isNat i rn q(isNat_ordinalDiv $pa $pb (.refl $rn)))
-    | _, _ => throwError "not division on ordinals"
+      let hbn ← mkDecideProofQ q($bn ≠ 0)
+      let ⟨rn, pr⟩ ← deriveNat q(Nat.euclideanDiv $an $bn $hbn) q(Nat.instAddMonoidWithOne)
+      return .isNat i rn q(isNat_ordinalDiv $hb $hbn $pa $pb $pr)
+    | _, _ => throwError "not an ordinal quotient"
 
 /-- info: 12 % 5 -/
 #guard_msgs in

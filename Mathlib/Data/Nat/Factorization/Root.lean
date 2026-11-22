@@ -52,22 +52,27 @@ we special-case the following values:
 * `floorRoot n 0 = 0`
 -/
 def floorRoot (n a : ℕ) : ℕ :=
-  if n = 0 ∨ a = 0 then 0 else a.factorization.prod fun p k ↦ p ^ (k / n)
+  if h : n = 0 ∨ a = 0 then 0
+  else a.factorization.prod fun p k ↦ p ^ Nat.euclideanDiv k n (fun hn ↦ h (.inl hn))
 
 /-- The RHS is a noncomputable version of `Nat.floorRoot` with better order-theoretic
 properties. -/
 lemma floorRoot_def :
-    floorRoot n a = if n = 0 ∨ a = 0 then 0 else (a.factorization ⌊/⌋ n).prod (· ^ ·) := by
-  unfold floorRoot; split_ifs with h <;> simp [Finsupp.floorDiv_def, prod_mapRange_index pow_zero]
+    floorRoot n a = if h : n = 0 ∨ a = 0 then 0 else
+      (FloorDiv.floorDiv a.factorization n (Nat.pos_of_ne_zero fun hn ↦ h (.inl hn))).prod
+        (· ^ ·) := by
+  unfold floorRoot
+  split_ifs with h <;>
+    simp [Nat.euclideanDiv_eq_core, Finsupp.floorDiv_def, prod_mapRange_index pow_zero]
 
 @[simp] lemma floorRoot_zero_left (a : ℕ) : floorRoot 0 a = 0 := by simp [floorRoot]
 @[simp] lemma floorRoot_zero_right (n : ℕ) : floorRoot n 0 = 0 := by simp [floorRoot]
 @[simp] lemma floorRoot_one_left (a : ℕ) : floorRoot 1 a = a := by
-  simp [floorRoot]; split_ifs <;> simp [*]
+  simp [floorRoot, Nat.euclideanDiv_eq_core]; split_ifs <;> simp [*]
 @[simp] lemma floorRoot_one_right (hn : n ≠ 0) : floorRoot n 1 = 1 := by simp [floorRoot, hn]
 
 @[simp] lemma floorRoot_pow_self (hn : n ≠ 0) (a : ℕ) : floorRoot n (a ^ n) = a := by
-  simp [floorRoot_def, pos_iff_ne_zero.2, hn]; split_ifs <;> simp [*]
+  simp [floorRoot_def, hn]; split_ifs <;> simp [*]
 
 lemma floorRoot_ne_zero : floorRoot n a ≠ 0 ↔ n ≠ 0 ∧ a ≠ 0 := by
   simp +contextual [floorRoot, not_or]
@@ -75,11 +80,12 @@ lemma floorRoot_ne_zero : floorRoot n a ≠ 0 ↔ n ≠ 0 ∧ a ≠ 0 := by
 @[simp] lemma floorRoot_eq_zero : floorRoot n a = 0 ↔ n = 0 ∨ a = 0 :=
   floorRoot_ne_zero.not_right.trans <| by simp only [not_and_or, ne_eq, not_not]
 
-@[simp] lemma factorization_floorRoot (n a : ℕ) :
+@[simp] lemma factorization_floorRoot (n a : ℕ) (hn : 0 < n) :
     (floorRoot n a).factorization = a.factorization ⌊/⌋ n := by
   rw [floorRoot_def]
   split_ifs with h
-  · obtain rfl | rfl := h <;> simp
+  · obtain rfl := h.resolve_left hn.ne'
+    simp
   apply a.factorization_prod_pow_eq_self_of_le_factorization
   exact le_self_nsmul (by simp) (by lia) |>.trans <| smul_floorDiv_le (by lia)
 
@@ -94,7 +100,8 @@ lemma pow_dvd_iff_dvd_floorRoot : a ^ n ∣ b ↔ a ∣ floorRoot n b := by
   · simp [hn]
   rw [← factorization_le_iff_dvd (pow_ne_zero _ ha) hb,
     ← factorization_le_iff_dvd ha (floorRoot_ne_zero.2 ⟨hn, hb⟩), factorization_pow,
-    factorization_floorRoot, le_floorDiv_iff_smul_le (β := ℕ →₀ ℕ) (pos_iff_ne_zero.2 hn)]
+    factorization_floorRoot _ _ (Nat.pos_of_ne_zero hn),
+    le_floorDiv_iff_smul_le (β := ℕ →₀ ℕ) (pos_iff_ne_zero.2 hn)]
 
 lemma floorRoot_pow_dvd : floorRoot n a ^ n ∣ a := pow_dvd_iff_dvd_floorRoot.2 dvd_rfl
 
@@ -111,24 +118,28 @@ we special-case the following values:
 * `ceilRoot n 0 = 0`
 -/
 def ceilRoot (n a : ℕ) : ℕ :=
-  if n = 0 ∨ a = 0 then 0 else a.factorization.prod fun p k ↦ p ^ ((k + n - 1) / n)
+  if h : n = 0 ∨ a = 0 then 0
+  else a.factorization.prod fun p k ↦ p ^ Nat.euclideanDiv (k + n - 1) n (fun hn ↦ h (.inl hn))
 
 /-- The RHS is a noncomputable version of `Nat.ceilRoot` with better order-theoretic
 properties. -/
 lemma ceilRoot_def :
-    ceilRoot n a = if n = 0 ∨ a = 0 then 0 else (a.factorization ⌈/⌉ n).prod (· ^ ·) := by
+    ceilRoot n a = if h : n = 0 ∨ a = 0 then 0 else
+      (CeilDiv.ceilDiv a.factorization n (Nat.pos_of_ne_zero fun hn ↦ h (.inl hn))).prod
+        (· ^ ·) := by
   unfold ceilRoot
   split_ifs with h <;>
-    simp [Finsupp.ceilDiv_def, prod_mapRange_index pow_zero, Nat.ceilDiv_eq_add_pred_div]
+    simp [Nat.euclideanDiv_eq_core, Finsupp.ceilDiv_def, prod_mapRange_index pow_zero,
+      Nat.ceilDiv_eq_add_pred_div]
 
 @[simp] lemma ceilRoot_zero_left (a : ℕ) : ceilRoot 0 a = 0 := by simp [ceilRoot]
 @[simp] lemma ceilRoot_zero_right (n : ℕ) : ceilRoot n 0 = 0 := by simp [ceilRoot]
 @[simp] lemma ceilRoot_one_left (a : ℕ) : ceilRoot 1 a = a := by
-  simp [ceilRoot]; split_ifs <;> simp [*]
+  simp [ceilRoot, Nat.euclideanDiv_eq_core]; split_ifs <;> simp [*]
 @[simp] lemma ceilRoot_one_right (hn : n ≠ 0) : ceilRoot n 1 = 1 := by simp [ceilRoot, hn]
 
 @[simp] lemma ceilRoot_pow_self (hn : n ≠ 0) (a : ℕ) : ceilRoot n (a ^ n) = a := by
-  simp [ceilRoot_def, pos_iff_ne_zero.2, hn]; split_ifs <;> simp [*]
+  simp [ceilRoot_def, hn]; split_ifs <;> simp [*]
 
 lemma ceilRoot_ne_zero : ceilRoot n a ≠ 0 ↔ n ≠ 0 ∧ a ≠ 0 := by
   simp +contextual [ceilRoot_def, not_or]
@@ -136,13 +147,14 @@ lemma ceilRoot_ne_zero : ceilRoot n a ≠ 0 ↔ n ≠ 0 ∧ a ≠ 0 := by
 @[simp] lemma ceilRoot_eq_zero : ceilRoot n a = 0 ↔ n = 0 ∨ a = 0 :=
   ceilRoot_ne_zero.not_right.trans <| by simp only [not_and_or, ne_eq, not_not]
 
-@[simp] lemma factorization_ceilRoot (n a : ℕ) :
+@[simp] lemma factorization_ceilRoot (n a : ℕ) (hn : 0 < n) :
     (ceilRoot n a).factorization = a.factorization ⌈/⌉ n := by
   rw [ceilRoot_def]
   split_ifs with h
-  · obtain rfl | rfl := h <;> simp
+  · obtain rfl := h.resolve_left hn.ne'
+    simp
   refine prod_pow_factorization_eq_self fun p hp ↦ ?_
-  have : p.Prime ∧ p ∣ a ∧ ¬a = 0 := by simpa using support_ceilDiv_subset hp
+  have : p.Prime ∧ p ∣ a ∧ ¬a = 0 := by simpa using support_ceilDiv_subset hn hp
   exact this.1
 
 /-- Galois connection between `ceilRoot n : ℕ → ℕ` and `a ↦ a ^ n : ℕ → ℕ` where `ℕ` is ordered
@@ -158,7 +170,8 @@ lemma dvd_pow_iff_ceilRoot_dvd (hn : n ≠ 0) : a ∣ b ^ n ↔ ceilRoot n a ∣
   · simp [hn]
   rw [← factorization_le_iff_dvd ha (pow_ne_zero _ hb),
     ← factorization_le_iff_dvd (ceilRoot_ne_zero.2 ⟨hn, ha⟩) hb, factorization_pow,
-    factorization_ceilRoot, ceilDiv_le_iff_le_smul (β := ℕ →₀ ℕ) (pos_iff_ne_zero.2 hn)]
+    factorization_ceilRoot _ _ (Nat.pos_of_ne_zero hn),
+    ceilDiv_le_iff_le_smul (β := ℕ →₀ ℕ) (pos_iff_ne_zero.2 hn)]
 
 lemma dvd_ceilRoot_pow (hn : n ≠ 0) : a ∣ ceilRoot n a ^ n :=
   (dvd_pow_iff_ceilRoot_dvd hn).2 dvd_rfl

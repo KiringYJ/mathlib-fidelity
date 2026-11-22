@@ -176,12 +176,12 @@ variable [Semifield α] [LinearOrder α] [IsStrictOrderedRing α] [ExistsAddOfLE
 
 /-- Special case of **Jensen's inequality** for sums of powers. -/
 lemma pow_sum_div_card_le_sum_pow (hf : ∀ i ∈ s, 0 ≤ f i) (n : ℕ) {hs : IsUnit ((#s : α) ^ n)} :
-    (∑ i ∈ s, f i) ^ (n + 1) / #s ^ n ≤ ∑ i ∈ s, f i ^ (n + 1) := by
+    (∑ i ∈ s, f i) ^ (n + 1) / (#s : α) ^ n ≤ ∑ i ∈ s, f i ^ (n + 1) := by
   rw [div_le_iff₀' ((pow_nonneg (Nat.cast_nonneg _) n).lt_of_ne' hs.ne_zero)]
   exact pow_sum_le_card_mul_sum_pow hf _
 
 theorem sum_div_card_sq_le_sum_sq_div_card {hs : IsUnit (#s : α)} :
-    ((∑ i ∈ s, f i) / #s) ^ 2 ≤ (∑ i ∈ s, f i ^ 2) / #s := by
+    ((∑ i ∈ s, f i) / (#s : α)) ^ 2 ≤ (∑ i ∈ s, f i ^ 2) / (#s : α) := by
   have hs₀ : (0 : α) < #s := (Nat.cast_nonneg _).lt_of_ne' hs.ne_zero
   rw [div_pow₀, div_le_div_iff₀ (by positivity) hs₀, sq (#s : α), mul_left_comm, ← mul_assoc]
   gcongr

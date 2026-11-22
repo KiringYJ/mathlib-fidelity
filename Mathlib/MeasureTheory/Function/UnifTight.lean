@@ -252,7 +252,10 @@ private theorem tendsto_Lp_of_tendsto_ae_of_meas (hp : 1 ≤ p) (hp' : p ≠ ∞
   intro ε hε
   obtain rfl | hμ := eq_or_ne μ 0
   · simp
-  have hε' : 0 < ε / 3 := ENNReal.div_pos hε.ne' (ofNat_ne_top)
+  have h3 : IsUnit (3 : ℝ≥0∞) := ENNReal.isUnit_iff.2 ⟨by simp, ofNat_ne_top⟩
+  have hε' : 0 < ε / 3 := by
+    rw [ENNReal.checkedDiv_eq_div]
+    exact ENNReal.div_pos hε.ne' ofNat_ne_top
   -- use tightness to divide the domain into interior and exterior
   obtain ⟨Eg, hmEg, hμEg, hgε⟩ := MemLp.exists_eLpNorm_indicator_compl_lt hp' hg' hε'.ne'
   obtain ⟨Ef, hmEf, hμEf, hfε⟩ := hut.exists_measurableSet_indicator hε'.ne'
@@ -312,7 +315,7 @@ private theorem tendsto_Lp_of_tendsto_ae_of_meas (hp : 1 ≤ p) (hp' : p ≠ ∞
     _ ≤ eLpNorm (indicator Eᶜ (f n - g)) p μ + eLpNorm (indicator E (f n - g)) p μ := by
         apply eLpNorm_add_le (by assumption) (by assumption) hp
     _ ≤ (ε / 3 + ε / 3) + ε / 3 := add_le_add hfngEcε hfngEε
-    _ = ε := by simp only [add_thirds]
+    _ = ε := by simp only [ENNReal.checkedDiv_eq_div, add_thirds]
 
 /-- Lemma used in `tendsto_Lp_of_tendsto_ae`. -/
 private theorem ae_tendsto_ae_congr {f f' : ℕ → α → β} {g g' : α → β}

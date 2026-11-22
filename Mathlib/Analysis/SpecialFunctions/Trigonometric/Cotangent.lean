@@ -100,7 +100,7 @@ open scoped Topology Nat Complex
 variable {x : ℂ} {Z : Set ℂ}
 
 /-- The main term in the infinite product for sine. -/
-noncomputable abbrev sineTerm (x : ℂ) (n : ℕ) : ℂ := -x ^ 2 / (n + 1) ^ 2
+noncomputable abbrev sineTerm (x : ℂ) (n : ℕ) : ℂ := -x ^ 2 / ((n : ℂ) + 1) ^ 2
 
 lemma sineTerm_ne_zero {x : ℂ} (hx : x ∈ ℂ_ℤ) (n : ℕ) : 1 + sineTerm x n ≠ 0 := by
   have hn := (Nat.cast_add_one_ne_zero (R := ℂ) n).isUnit.pow 2
@@ -147,7 +147,7 @@ private lemma sineTerm_bound_aux (hZ : IsCompact Z) :
   have hf : ContinuousOn (fun x : ℂ => ‖-x ^ 2‖) Z := by
     fun_prop
   obtain ⟨s, hs⟩ := bddAbove_def.mp (IsCompact.bddAbove_image hZ hf)
-  refine ⟨fun n : ℕ => ‖(s : ℂ) / (n + 1) ^ 2‖, ?_, ?_⟩
+  refine ⟨fun n : ℕ => ‖(s : ℂ) / ((n : ℂ) + 1) ^ 2‖, ?_, ?_⟩
   · simpa only [norm_div, norm_pow] using summable_norm_div_add_one_sq (s : ℂ)
   · simp only [norm_neg, norm_pow, Set.mem_image, forall_exists_index, and_imp,
       forall_apply_eq_imp_iff₂, sineTerm, norm_div, norm_real, norm_eq_abs] at *
@@ -265,7 +265,7 @@ lemma logDeriv_sin_div_eq_cot (hz : x ∈ ℂ_ℤ) :
   have hden : (π : ℂ) / ((π : ℂ) * x) = 1 / x := by
     apply div_eq_div_iff.mpr
     rw [one_mul]
-  change (cos (π * x) * π) / sin (π * x) - π / ((π : ℂ) * x) = _
+  change (cos (π * x) * π) / sin (π * x) - (π : ℂ) / ((π : ℂ) * x) = _
   rw [hden, Complex.cot, ← mul_div_assoc₀, mul_comm (Complex.cos (π * x))]
 
 private lemma add_natCast_ne_zero_of_mem_integerComplement (hx : x ∈ ℂ_ℤ) (n : ℕ) :

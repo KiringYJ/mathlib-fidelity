@@ -589,15 +589,16 @@ def finFunctionFinEquiv {m n : ℕ} : (Fin n → Fin m) ≃ Fin (m ^ n) :=
         refine (Nat.add_lt_add_of_lt_of_le (ih _) <| Nat.mul_le_mul_right _
           (Fin.is_le _)).trans_eq ?_
         rw [← one_add_mul (_ : ℕ), add_comm, pow_succ']⟩)
-    (fun a b => ⟨a / m ^ (b : ℕ) % m, by
-      rcases n with - | n
-      · exact b.elim0
-      rcases m with - | m
-      · rw [zero_pow n.succ_ne_zero] at a
+    (fun a b =>
+      have hm : m ≠ 0 := by
+        rintro rfl
+        rw [zero_pow (Nat.ne_zero_of_lt b.is_lt)] at a
         exact a.elim0
-      · exact Nat.mod_lt _ m.succ_pos⟩)
+      ⟨Nat.euclideanDiv a.val (m ^ b.val) (pow_ne_zero _ hm) % m,
+        Nat.mod_lt _ (Nat.pos_of_ne_zero hm)⟩)
     fun a => by
       dsimp
+      simp only [Nat.euclideanDiv_eq_core]
       induction n with
       | zero => subsingleton [(finCongr <| pow_zero _).subsingleton]
       | succ n ih =>
@@ -636,15 +637,14 @@ def finPiFinEquiv {m : ℕ} {n : Fin m → ℕ} : (∀ i : Fin m, Fin (n i)) ≃
       · exact isEmptyElim fn
       refine (Nat.add_lt_add_of_lt_of_le (ih _) <| Nat.mul_le_mul_right _ (Fin.is_le _)).trans_eq ?_
       rw [← one_add_mul (_ : ℕ), mul_comm, add_comm]⟩)
-    (fun a b => ⟨(a / ∏ j : Fin b, n (Fin.castLE b.is_lt.le j)) % n b, by
-      cases m
-      · exact b.elim0
-      rcases h : n b with nb | nb
-      · rw [prod_eq_zero (Finset.mem_univ _) h] at a
-        exact isEmptyElim a
-      exact Nat.mod_lt _ nb.succ_pos⟩)
+    (fun a b =>
+      have hn (i : Fin m) : n i ≠ 0 := fun h =>
+        (Nat.ne_zero_of_lt a.is_lt) (Finset.prod_eq_zero (Finset.mem_univ i) h)
+      ⟨Nat.euclideanDiv a.val (∏ j : Fin b, n (Fin.castLE b.is_lt.le j))
+        (Finset.prod_ne_zero_iff.mpr fun _ _ ↦ hn _) % n b,
+        Nat.mod_lt _ (Nat.pos_of_ne_zero (hn b))⟩)
     (by
-      intro a; revert a; dsimp only [Fin.val_mk]
+      intro a; revert a; simp only [Nat.euclideanDiv_eq_core]
       refine Fin.consInduction ?_ ?_ n
       · intro a
         have : Subsingleton (Fin (∏ i : Fin 0, i.elim0)) :=
@@ -665,7 +665,7 @@ def finPiFinEquiv {m : ℕ} {n : Fin m → ℕ} : (∀ i : Fin m, Fin (n i)) ≃
           Fin.prod_univ_succ, Fin.castLE_zero, Fin.cons_zero, ← Nat.div_div_eq_div_mul,
           mul_left_comm (_ % _ : ℕ), ← mul_sum]
         convert! Nat.mod_add_div _ _
-        exact ih (a / x) (Nat.div_lt_of_lt_mul <| a.is_lt.trans_eq (Fin.prod_univ_succ _)))
+        exact ih _ (Nat.div_lt_of_lt_mul <| a.is_lt.trans_eq (Fin.prod_univ_succ _)))
 
 theorem finPiFinEquiv_apply {m : ℕ} {n : Fin m → ℕ} (f : ∀ i : Fin m, Fin (n i)) :
     (finPiFinEquiv f : ℕ) = ∑ i, f i * ∏ j, n (Fin.castLE i.is_lt.le j) := rfl

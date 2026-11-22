@@ -562,7 +562,11 @@ instance {G : Type*} [TopologicalSpace G] [Π i, SMul G (R i)] [∀ i, SMulMemCl
     ContinuousSMul G (Πʳ i, [R i, B i]_[𝓟 T]) :=
   isEmbedding_coe_of_principal.continuousSMul continuous_id rfl
 
-@[to_additive]
+instance [Π i, AddGroup (R i)] [∀ i, AddSubgroupClass (S i) (R i)]
+    [∀ i, IsTopologicalAddGroup (R i)] :
+    IsTopologicalAddGroup (Πʳ i, [R i, B i]_[𝓟 T]) where
+
+@[to_additive existing]
 instance [Π i, Group (R i)] [∀ i, SubgroupClass (S i) (R i)] [∀ i, IsTopologicalGroup (R i)] :
     IsTopologicalGroup (Πʳ i, [R i, B i]_[𝓟 T]) where
 
@@ -602,7 +606,11 @@ instance continuousSMul {G : Type*} [TopologicalSpace G] [Π i, SMul G (R i)]
     rw [continuous_dom_prod_left hBopen.out]
     exact fun S hS ↦ (continuous_inclusion hS).comp continuous_smul
 
-@[to_additive]
+instance isTopologicalAddGroup [Π i, AddGroup (R i)] [∀ i, AddSubgroupClass (S i) (R i)]
+    [∀ i, IsTopologicalAddGroup (R i)] :
+    IsTopologicalAddGroup (Πʳ i, [R i, B i]) where
+
+@[to_additive existing]
 instance isTopologicalGroup [Π i, Group (R i)] [∀ i, SubgroupClass (S i) (R i)]
     [∀ i, IsTopologicalGroup (R i)] :
     IsTopologicalGroup (Πʳ i, [R i, B i]) where

@@ -402,7 +402,7 @@ theorem _root_.Disjoint.exists_thickenings (hst : Disjoint s t) (hs : IsCompact 
     (ht : IsClosed t) :
     ∃ δ, 0 < δ ∧ Disjoint (thickening δ s) (thickening δ t) := by
   obtain ⟨r, hr, h⟩ := exists_pos_forall_lt_edist hs ht hst
-  refine ⟨r / 2, half_pos (NNReal.coe_pos.2 hr), ?_⟩
+  refine ⟨(r : ℝ) / 2, half_pos (NNReal.coe_pos.2 hr), ?_⟩
   rw [disjoint_iff_inf_le]
   rintro z ⟨hzs, hzt⟩
   rw [mem_thickening_iff_exists_edist_lt] at hzs hzt

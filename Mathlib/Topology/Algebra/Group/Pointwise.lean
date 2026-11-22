@@ -186,27 +186,26 @@ section IsTopologicalGroup
 
 variable [TopologicalSpace G] [Group G] [IsTopologicalGroup G] {s t : Set G}
 
-@[to_additive]
-theorem IsOpen.div_left (ht : IsOpen t) : IsOpen (s / t) := by
-  rw [← iUnion_div_left_image]
-  exact isOpen_biUnion fun a _ => isOpenMap_div_left a t ht
+@[to_additive IsOpen.add_neg_left]
+theorem IsOpen.div_left (ht : IsOpen t) : IsOpen (s * t⁻¹) :=
+  ht.inv.mul_left
 
-@[to_additive]
-theorem IsOpen.div_right (hs : IsOpen s) : IsOpen (s / t) := by
-  rw [← iUnion_div_right_image]
-  exact isOpen_biUnion fun a _ => isOpenMap_div_right a s hs
+@[to_additive IsOpen.add_neg_right]
+theorem IsOpen.div_right (hs : IsOpen s) : IsOpen (s * t⁻¹) :=
+  hs.mul_right
 
-@[to_additive]
-theorem subset_interior_div_left : interior s / t ⊆ interior (s / t) :=
-  interior_maximal (div_subset_div_right interior_subset) isOpen_interior.div_right
+@[to_additive subset_interior_add_neg_left]
+theorem subset_interior_div_left : interior s * t⁻¹ ⊆ interior (s * t⁻¹) :=
+  subset_interior_mul_left
 
-@[to_additive]
-theorem subset_interior_div_right : s / interior t ⊆ interior (s / t) :=
-  interior_maximal (div_subset_div_left interior_subset) isOpen_interior.div_left
+@[to_additive subset_interior_add_neg_right]
+theorem subset_interior_div_right : s * (interior t)⁻¹ ⊆ interior (s * t⁻¹) :=
+  interior_maximal (mul_subset_mul_left (inv_subset_inv.mpr interior_subset))
+    isOpen_interior.div_left
 
-@[to_additive]
-theorem subset_interior_div : interior s / interior t ⊆ interior (s / t) :=
-  (div_subset_div_left interior_subset).trans subset_interior_div_left
+@[to_additive subset_interior_add_neg]
+theorem subset_interior_div : interior s * (interior t)⁻¹ ⊆ interior (s * t⁻¹) :=
+  (mul_subset_mul_left (inv_subset_inv.mpr interior_subset)).trans subset_interior_div_left
 
 @[to_additive]
 theorem IsOpen.mul_closure (hs : IsOpen s) (t : Set G) : s * closure t = s * t := by
@@ -221,13 +220,13 @@ theorem IsOpen.closure_mul (ht : IsOpen t) (s : Set G) : closure s * t = s * t :
   rw [← inv_inv (closure s * t), mul_inv_rev, inv_closure, ht.inv.mul_closure, mul_inv_rev, inv_inv,
     inv_inv]
 
-@[to_additive]
-theorem IsOpen.div_closure (hs : IsOpen s) (t : Set G) : s / closure t = s / t := by
-  simp_rw [div_eq_mul_inv, inv_closure, hs.mul_closure]
+@[to_additive IsOpen.add_neg_closure]
+theorem IsOpen.div_closure (hs : IsOpen s) (t : Set G) : s * (closure t)⁻¹ = s * t⁻¹ := by
+  rw [inv_closure, hs.mul_closure]
 
-@[to_additive]
-theorem IsOpen.closure_div (ht : IsOpen t) (s : Set G) : closure s / t = s / t := by
-  simp_rw [div_eq_mul_inv, ht.inv.closure_mul]
+@[to_additive IsOpen.closure_add_neg]
+theorem IsOpen.closure_div (ht : IsOpen t) (s : Set G) : closure s * t⁻¹ = s * t⁻¹ :=
+  ht.inv.closure_mul s
 
 @[to_additive]
 theorem IsClosed.mul_left_of_isCompact (ht : IsClosed t) (hs : IsCompact s) : IsClosed (s * t) :=
@@ -373,6 +372,32 @@ theorem IsClosed.iInter_closure_mul_left_eq {ι : Type*} {s : Set G} (hs : IsClo
   rw [hU.iInter_closure_mul_left_eq_closure, hs.closure_eq]
 
 end IsTopologicalGroup
+
+section IsTopologicalAddGroup
+variable [TopologicalSpace G] [AddGroup G] [IsTopologicalAddGroup G] {s t : Set G}
+
+theorem IsOpen.sub_left (ht : IsOpen t) : IsOpen (s - t) := by
+  simpa only [sub_eq_add_neg] using ht.add_neg_left (s := s)
+
+theorem IsOpen.sub_right (hs : IsOpen s) : IsOpen (s - t) := by
+  simpa only [sub_eq_add_neg] using hs.add_neg_right (t := t)
+
+theorem subset_interior_sub_left : interior s - t ⊆ interior (s - t) := by
+  simpa only [sub_eq_add_neg] using subset_interior_add_neg_left (s := s) (t := t)
+
+theorem subset_interior_sub_right : s - interior t ⊆ interior (s - t) := by
+  simpa only [sub_eq_add_neg] using subset_interior_add_neg_right (s := s) (t := t)
+
+theorem subset_interior_sub : interior s - interior t ⊆ interior (s - t) := by
+  simpa only [sub_eq_add_neg] using subset_interior_add_neg (s := s) (t := t)
+
+theorem IsOpen.sub_closure (hs : IsOpen s) (t : Set G) : s - closure t = s - t := by
+  simpa only [sub_eq_add_neg] using hs.add_neg_closure t
+
+theorem IsOpen.closure_sub (ht : IsOpen t) (s : Set G) : closure s - t = s - t := by
+  simpa only [sub_eq_add_neg] using ht.closure_add_neg s
+
+end IsTopologicalAddGroup
 
 section FilterMul
 

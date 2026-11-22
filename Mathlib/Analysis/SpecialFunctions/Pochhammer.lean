@@ -113,7 +113,7 @@ theorem descPochhammer_eval_le_sum_descFactorial
 theorem descPochhammer_eval_div_factorial_le_sum_choose
     (hn : n ≠ 0) {ι : Type*} {t : Finset ι} (p : ι → ℕ) (w : ι → ℝ)
     (h₀ : ∀ i ∈ t, 0 ≤ w i) (h₁ : ∑ i ∈ t, w i = 1) (h_avg : n - 1 ≤ ∑ i ∈ t, w i * p i) :
-    (descPochhammer ℝ n).eval (∑ i ∈ t, w i * p i) / n.factorial
+    (descPochhammer ℝ n).eval (∑ i ∈ t, w i * p i) / (n.factorial : ℝ)
       ≤ ∑ i ∈ t, w i * (p i).choose n := by
   simp_rw [Nat.cast_choose_eq_descPochhammer_div,
     ← mul_div_assoc₀, ← Finset.sum_div, descPochhammer_eval_eq_descFactorial]

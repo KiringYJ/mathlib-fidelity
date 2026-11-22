@@ -658,7 +658,8 @@ protected theorem inv {x y} (h : c x y) : c x⁻¹ y⁻¹ :=
 
 /-- Multiplicative congruence relations preserve division. -/
 @[to_additive /-- Additive congruence relations preserve subtraction. -/]
-protected theorem div : ∀ {w x y z}, c w x → c y z → c (w / y) (x / z) := @fun w x y z h1 h2 => by
+protected theorem div {w x y z} (h1 : c w x) (h2 : c y z) :
+    c (w / y) (x / z) := by
   simpa only [div_eq_mul_inv] using c.mul h1 (c.inv h2)
 
 /-- Multiplicative congruence relations preserve integer powers. -/
@@ -674,12 +675,9 @@ with a negation. -/]
 instance hasInv : Inv c.Quotient :=
   ⟨(Quotient.map' Inv.inv) fun _ _ => c.inv⟩
 
-/-- The division induced on the quotient by a congruence relation on a type with a
-division. -/
-@[to_additive /-- The subtraction induced on the quotient by an additive congruence relation on a
-type with a subtraction. -/]
-instance hasDiv : Div c.Quotient :=
-  ⟨(Quotient.map₂ (· / ·)) fun _ _ h₁ _ _ h₂ => c.div h₁ h₂⟩
+/-- The difference of two classes is the class of the difference of their representatives. -/
+instance _root_.AddCon.hasSub {M : Type*} [AddGroup M] (c : AddCon M) : Sub c.Quotient :=
+  ⟨Quotient.map₂ (· - ·) fun _ _ h₁ _ _ h₂ => c.sub h₁ h₂⟩
 
 /-- The integer power induced on the quotient by a congruence relation on a type with a
 division. -/
@@ -688,19 +686,26 @@ with a subtraction. -/]
 instance instZPow : Pow c.Quotient ℤ :=
   ⟨fun x z => Quotient.map' (fun x => x ^ z) (fun _ _ h => c.zpow z h) x⟩
 
-/-- The quotient of a group by a congruence relation is a group. -/
-@[to_additive /-- The quotient of an `AddGroup` by an additive congruence relation is
-an `AddGroup`. -/]
-instance group : Group c.Quotient := fast_instance%
-  Function.Surjective.group Quotient.mk'' Quotient.mk''_surjective
+/-- The quotient of an additive group by an additive congruence is an additive group. -/
+instance _root_.AddCon.addGroup {M : Type*} [AddGroup M] (c : AddCon M) :
+    AddGroup c.Quotient := fast_instance%
+  Function.Surjective.addGroup Quotient.mk'' Quotient.mk''_surjective
     rfl (fun _ _ => rfl) (fun _ => rfl) (fun _ _ => rfl) (fun _ _ => rfl) fun _ _ => rfl
+
+/-- The quotient of a group by a congruence relation is a group. -/
+@[to_additive existing]
+instance group : Group c.Quotient :=
+  letI : Div c.Quotient := ⟨fun p q ↦ p * q⁻¹⟩
+  fast_instance% Function.Surjective.group Quotient.mk'' Quotient.mk''_surjective
+    rfl (fun _ _ => rfl) (fun _ => rfl)
+    (fun x y ↦ congrArg (fun a : M ↦ (a : c.Quotient)) (div_eq_mul_inv x y))
+    (fun _ _ => rfl) fun _ _ => rfl
 
 /-- The quotient of a `CommGroup` by a congruence relation is a `CommGroup`. -/
 @[to_additive /-- The quotient of an `AddCommGroup` by an additive congruence
 relation is an `AddCommGroup`. -/]
-instance commGroup {M : Type*} [CommGroup M] (c : Con M) : CommGroup c.Quotient := fast_instance%
-  Function.Surjective.commGroup _ Quotient.mk''_surjective rfl (fun _ _ => rfl) (fun _ => rfl)
-      (fun _ _ => rfl) (fun _ _ => rfl) (fun _ _ => rfl)
+instance commGroup {M : Type*} [CommGroup M] (c : Con M) : CommGroup c.Quotient :=
+  { c.group, c.commMonoid with }
 
 end Groups
 

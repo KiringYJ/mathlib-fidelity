@@ -65,9 +65,8 @@ lemma map_rotation_eq_self_of_forall_strongDual_eq_zero
   ext L
   simp_rw [charFunDual_map, charFunDual_prod, charFunDual_eq_of_forall_strongDual_eq_zero hμ,
     ← Complex.exp_add]
-  rw [← add_div, ← add_div, ← neg_add, ← neg_add]
-  congr 3
-  norm_cast
+  simp only [← Complex.ofReal_add, ← add_div, ← neg_add]
+  apply congrArg (fun v : ℝ ↦ cexp ((-v / 2 : ℝ) : ℂ))
   have h1 : (L.comp (.rotation θ)).comp (.inl ℝ E E)
       = Real.cos θ • L.comp (.inl ℝ E E) - Real.sin θ • L.comp (.inr ℝ E E) := by
     ext x
@@ -194,7 +193,7 @@ variable [CompleteSpace E] [SecondCountableTopology E]
 /-- A Gaussian measure has moments of all orders.
 That is, the identity is in L^p for all finite `p`. -/
 lemma memLp_id (μ : Measure E) [IsGaussian μ] (p : ℝ≥0∞) (hp : p ≠ ∞) : MemLp id p μ := by
-  suffices MemLp (fun x ↦ ‖x‖ ^ 2) (p / 2) μ by
+  suffices MemLp (fun x ↦ ‖x‖ ^ 2) (ENNReal.div p 2) μ by
     rw [← memLp_norm_rpow_iff (q := 2) (by fun_prop) (by simp) (by simp)]
     simpa using this
   lift p to ℝ≥0 using hp

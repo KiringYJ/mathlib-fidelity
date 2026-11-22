@@ -225,18 +225,18 @@ lemma measure_mutuallySingularSetSlice (κ η : Kernel α γ) [IsFiniteKernel κ
 /-- Radon-Nikodym derivative of the kernel `κ` with respect to the kernel `η`. -/
 noncomputable
 irreducible_def rnDeriv (κ η : Kernel α γ) (a : α) (x : γ) : ℝ≥0∞ :=
-  ENNReal.ofReal (rnDerivAux κ (κ + η) a x) / ENNReal.ofReal (1 - rnDerivAux κ (κ + η) a x)
+  ENNReal.div (ENNReal.ofReal (rnDerivAux κ (κ + η) a x))
+    (ENNReal.ofReal (1 - rnDerivAux κ (κ + η) a x))
 
 lemma rnDeriv_def' (κ η : Kernel α γ) :
-    rnDeriv κ η = fun a x ↦ ENNReal.ofReal (rnDerivAux κ (κ + η) a x)
-      / ENNReal.ofReal (1 - rnDerivAux κ (κ + η) a x) := by ext; rw [rnDeriv_def]
+    rnDeriv κ η = fun a x ↦ ENNReal.div (ENNReal.ofReal (rnDerivAux κ (κ + η) a x))
+      (ENNReal.ofReal (1 - rnDerivAux κ (κ + η) a x)) := by ext; rw [rnDeriv_def]
 
 @[fun_prop]
 lemma measurable_rnDeriv (κ η : Kernel α γ) :
     Measurable (fun p : α × γ ↦ rnDeriv κ η p.1 p.2) := by
-  simp_rw [rnDeriv_def]
-  exact (measurable_rnDerivAux κ _).ennreal_ofReal.div
-    (measurable_const.sub (measurable_rnDerivAux κ _)).ennreal_ofReal
+  simp_rw [rnDeriv_def, ENNReal.div_eq_mul_inv]
+  fun_prop
 
 @[fun_prop]
 lemma measurable_rnDeriv_right (κ η : Kernel α γ) (a : α) :
@@ -355,8 +355,8 @@ lemma withDensity_rnDeriv_of_subset_compl_mutuallySingularSetSlice
     exact fun x hx hx_mem ↦ hs hx hx_mem
   calc
     ∫⁻ x in s, ↑(Real.toNNReal (1 - rnDerivAux κ (κ + η) a x)) *
-      (ENNReal.ofReal (rnDerivAux κ (κ + η) a x) /
-        ENNReal.ofReal (1 - rnDerivAux κ (κ + η) a x)) ∂(κ + η) a
+      ENNReal.div (ENNReal.ofReal (rnDerivAux κ (κ + η) a x))
+        (ENNReal.ofReal (1 - rnDerivAux κ (κ + η) a x)) ∂(κ + η) a
   _ = ∫⁻ x in s, ENNReal.ofReal (rnDerivAux κ (κ + η) a x) ∂(κ + η) a := by
       refine setLIntegral_congr_fun hsm (fun x hx ↦ ?_)
       rw [ofNNReal_toNNReal,

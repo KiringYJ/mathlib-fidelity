@@ -80,7 +80,8 @@ private theorem no_collision (hrs : r.HolderConjugate s) :
 /-- Let `r > 1` and `1/r + 1/s = 1`. Suppose there is an integer `j` where `B_r` and `B'_s` both
 jump over `j` (i.e. an anti-collision). Then this leads to a contradiction. -/
 private theorem no_anticollision (hrs : r.HolderConjugate s) :
-    ¬∃ j k m : ℤ, k < j / r ∧ (j + 1) / r ≤ k + 1 ∧ m ≤ j / s ∧ (j + 1) / s < m + 1 := by
+    ¬∃ j k m : ℤ, k < (j : ℝ) / r ∧ ((j : ℝ) + 1) / r ≤ k + 1 ∧
+      m ≤ (j : ℝ) / s ∧ ((j : ℝ) + 1) / s < m + 1 := by
   intro ⟨j, k, m, h₁₁, h₁₂, h₂₁, h₂₂⟩
   have h₃ := add_lt_add_of_lt_of_le h₁₁ h₂₁
   have h₄ := add_lt_add_of_le_of_lt h₁₂ h₂₂
@@ -91,23 +92,23 @@ private theorem no_anticollision (hrs : r.HolderConjugate s) :
 
 /-- Let `0 < r ∈ ℝ` and `j ∈ ℤ`. Then either `j ∈ B_r` or `B_r` jumps over `j`. -/
 private theorem hit_or_miss (h : r > 0) :
-    j ∈ {beattySeq r k | k} ∨ ∃ k : ℤ, k < j / r ∧ (j + 1) / r ≤ k + 1 := by
+    j ∈ {beattySeq r k | k} ∨ ∃ k : ℤ, k < (j : ℝ) / r ∧ ((j : ℝ) + 1) / r ≤ k + 1 := by
   -- for both cases, the candidate is `k = ⌈(j + 1) / r⌉ - 1`
-  cases lt_or_ge ((⌈(j + 1) / r⌉ - 1) * r) j
-  · refine Or.inr ⟨⌈(j + 1) / r⌉ - 1, ?_⟩
+  cases lt_or_ge ((⌈((j : ℝ) + 1) / r⌉ - 1) * r) j
+  · refine Or.inr ⟨⌈((j : ℝ) + 1) / r⌉ - 1, ?_⟩
     rw [Int.cast_sub, Int.cast_one, lt_div_iff₀ h, sub_add_cancel]
     exact ⟨‹_›, Int.le_ceil _⟩
-  · refine Or.inl ⟨⌈(j + 1) / r⌉ - 1, ?_⟩
+  · refine Or.inl ⟨⌈((j : ℝ) + 1) / r⌉ - 1, ?_⟩
     rw [beattySeq, Int.floor_eq_iff, Int.cast_sub, Int.cast_one, ← lt_div_iff₀ h, sub_lt_iff_lt_add]
     exact ⟨‹_›, Int.ceil_lt_add_one _⟩
 
 /-- Let `0 < r ∈ ℝ` and `j ∈ ℤ`. Then either `j ∈ B'_r` or `B'_r` jumps over `j`. -/
 private theorem hit_or_miss' (h : r > 0) :
-    j ∈ {beattySeq' r k | k} ∨ ∃ k : ℤ, k ≤ j / r ∧ (j + 1) / r < k + 1 := by
+    j ∈ {beattySeq' r k | k} ∨ ∃ k : ℤ, k ≤ (j : ℝ) / r ∧ ((j : ℝ) + 1) / r < k + 1 := by
   -- for both cases, the candidate is `k = ⌊(j + 1) / r⌋`
-  cases le_or_gt (⌊(j + 1) / r⌋ * r) j
-  · exact Or.inr ⟨⌊(j + 1) / r⌋, (le_div_iff₀ h).2 ‹_›, Int.lt_floor_add_one _⟩
-  · refine Or.inl ⟨⌊(j + 1) / r⌋, ?_⟩
+  cases le_or_gt (⌊((j : ℝ) + 1) / r⌋ * r) j
+  · exact Or.inr ⟨⌊((j : ℝ) + 1) / r⌋, (le_div_iff₀ h).2 ‹_›, Int.lt_floor_add_one _⟩
+  · refine Or.inl ⟨⌊((j : ℝ) + 1) / r⌋, ?_⟩
     rw [beattySeq', sub_eq_iff_eq_add, Int.ceil_eq_iff, Int.cast_add, Int.cast_one]
     constructor
     · rwa [add_sub_cancel_right]

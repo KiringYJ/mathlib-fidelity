@@ -127,7 +127,7 @@ open Nat
 /-- The inequality which contradicts Bertrand's postulate, for large enough `n`.
 -/
 theorem bertrand_main_inequality {n : ℕ} (n_large : 512 ≤ n) :
-    n * (2 * n) ^ sqrt (2 * n) * 4 ^ (2 * n / 3) ≤ 4 ^ n := by
+    n * (2 * n) ^ sqrt (2 * n) * 4 ^ (Nat.euclideanDiv (2 * n) 3) ≤ 4 ^ n := by
   rw [← @cast_le ℝ]
   simp only [cast_mul, cast_pow, ← Real.rpow_natCast, cast_ofNat]
   refine _root_.trans ?_ (Bertrand.real_main_inequality (by exact_mod_cast n_large))
@@ -139,17 +139,19 @@ theorem bertrand_main_inequality {n : ℕ} (n_large : 512 ≤ n) :
   · exact (cast_div_le (hn := (by norm_num : (↑(3 : ℕ) : ℝ) ≠ 0).isUnit)).trans (by norm_cast)
 
 /-- A lemma that tells us that, in the case where Bertrand's postulate does not hold, the prime
-factorization of the central binomial coefficient only has factors at most `2 * n / 3 + 1`.
+factorization of the central binomial coefficient only has factors at most `⌊2n/3⌋ + 1`.
 -/
 theorem centralBinom_factorization_small (n : ℕ) (n_large : 2 < n)
     (no_prime : ∀ p : ℕ, p.Prime → n < p → 2 * n < p) :
-    centralBinom n = ∏ p ∈ Finset.range (2 * n / 3 + 1), p ^ (centralBinom n).factorization p := by
+    centralBinom n = ∏ p ∈ Finset.range (Nat.euclideanDiv (2 * n) 3 + 1),
+      p ^ (centralBinom n).factorization p := by
   refine (Eq.trans ?_ n.prod_pow_factorization_centralBinom).symm
   apply Finset.prod_subset
-  · grw [Nat.div_le_self]
+  · simp only [Nat.euclideanDiv_eq_core]
+    grw [Nat.div_le_self]
   intro x hx h2x
   rw [Finset.mem_range, Nat.lt_succ_iff] at hx h2x
-  rw [not_le, div_lt_iff_lt_mul three_pos, mul_comm x] at h2x
+  rw [Nat.euclideanDiv_eq_core, not_le, div_lt_iff_lt_mul three_pos, mul_comm x] at h2x
   obtain h | h : ¬ x.Prime ∨ x ≤ n := by simpa [imp_iff_not_or, hx.not_gt] using no_prime x
   · rw [factorization_eq_zero_of_not_prime n.centralBinom h, Nat.pow_zero]
   · rw [factorization_centralBinom_of_two_mul_self_lt_three_mul n_large h h2x, Nat.pow_zero]
@@ -157,19 +159,19 @@ theorem centralBinom_factorization_small (n : ℕ) (n_large : 2 < n)
 /-- An upper bound on the central binomial coefficient used in the proof of Bertrand's postulate.
 The bound splits the prime factors of `centralBinom n` into those
 1. At most `sqrt (2 * n)`, which contribute at most `2 * n` for each such prime.
-2. Between `sqrt (2 * n)` and `2 * n / 3`, which contribute at most `4^(2 * n / 3)` in total.
-3. Between `2 * n / 3` and `n`, which do not exist.
+2. Between `sqrt (2 * n)` and `⌊2n/3⌋`, which contribute at most `4^⌊2n/3⌋` in total.
+3. Between `⌊2n/3⌋` and `n`, which do not exist.
 4. Between `n` and `2 * n`, which would not exist in the case where Bertrand's postulate is false.
 5. Above `2 * n`, which do not exist.
 -/
 theorem centralBinom_le_of_no_bertrand_prime (n : ℕ) (n_large : 2 < n)
     (no_prime : ∀ p : ℕ, p.Prime → n < p → 2 * n < p) :
-    centralBinom n ≤ (2 * n) ^ sqrt (2 * n) * 4 ^ (2 * n / 3) := by
+    centralBinom n ≤ (2 * n) ^ sqrt (2 * n) * 4 ^ (Nat.euclideanDiv (2 * n) 3) := by
   have n_pos : 0 < n := (Nat.zero_le _).trans_lt n_large
   have n2_pos : 1 ≤ 2 * n := mul_pos (zero_lt_two' ℕ) n_pos
-  let S := {p ∈ Finset.range (2 * n / 3 + 1) | Nat.Prime p}
+  let S := {p ∈ Finset.range (Nat.euclideanDiv (2 * n) 3 + 1) | Nat.Prime p}
   let f x := x ^ n.centralBinom.factorization x
-  have : ∏ x ∈ S, f x = ∏ x ∈ Finset.range (2 * n / 3 + 1), f x := by
+  have : ∏ x ∈ S, f x = ∏ x ∈ Finset.range (Nat.euclideanDiv (2 * n) 3 + 1), f x := by
     refine Finset.prod_filter_of_ne fun p _ h => ?_
     contrapose h; dsimp only [f]
     rw [factorization_eq_zero_of_not_prime n.centralBinom h, _root_.pow_zero]
@@ -183,7 +185,7 @@ theorem centralBinom_le_of_no_bertrand_prime (n : ℕ) (n_large : 2 < n)
     refine pow_right_mono₀ n2_pos ((Finset.card_le_card fun x hx => ?_).trans this.le)
     obtain ⟨h1, h2⟩ := Finset.mem_filter.1 hx
     exact Finset.mem_Icc.mpr ⟨(Finset.mem_filter.1 h1).2.one_lt.le, h2⟩
-  · refine le_trans ?_ (primorial_le_four_pow (2 * n / 3))
+  · refine le_trans ?_ (primorial_le_four_pow (Nat.euclideanDiv (2 * n) 3))
     refine (Finset.prod_le_prod fun p hp => (?_ : f p ≤ p)).trans ?_
     · obtain ⟨h1, h2⟩ := Finset.mem_filter.1 hp
       refine (pow_right_mono₀ (Finset.mem_filter.1 h1).2.one_lt.le ?_).trans (pow_one p).le
@@ -204,7 +206,7 @@ theorem exists_prime_lt_and_le_two_mul_eventually (n : ℕ) (n_large : 512 ≤ n
   -- Then we have the above sub-exponential bound on the size of this central binomial coefficient.
   -- We now couple this bound with an exponential lower bound on the central binomial coefficient,
   -- yielding an inequality which we have seen is false for large enough n.
-  have : n.centralBinom ≤ (2 * n) ^ sqrt (2 * n) * 4 ^ (2 * n / 3) :=
+  have : n.centralBinom ≤ (2 * n) ^ sqrt (2 * n) * 4 ^ (Nat.euclideanDiv (2 * n) 3) :=
     centralBinom_le_of_no_bertrand_prime n (lt_of_lt_of_le (by norm_num1) n_large) no_prime
   grw [this, ← mul_assoc, bertrand_main_inequality n_large]
 

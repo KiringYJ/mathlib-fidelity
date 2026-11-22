@@ -42,18 +42,20 @@ local notation "Ω" => Quotient <| orbitRel α β
 `Quotient.out`. -/
 @[to_additive
       /-- **Class formula** for a finite group acting on a finite type. See
-      `AddAction.card_eq_sum_card_addGroup_div_card_stabilizer` for a specialized version using
+      `AddAction.card_eq_sum_card_addGroup_sub_card_stabilizer` for a specialized version using
       `Quotient.out`. -/]
 theorem card_eq_sum_card_group_div_card_stabilizer' [Fintype α] [Fintype β] [Fintype Ω]
     [∀ b : β, Fintype <| stabilizer α b] {φ : Ω → β} (hφ : LeftInverse Quotient.mk'' φ) :
-    Fintype.card β = ∑ ω : Ω, Fintype.card α / Fintype.card (stabilizer α (φ ω)) := by
+    Fintype.card β = ∑ ω : Ω,
+      Nat.euclideanDiv (Fintype.card α) (Fintype.card (stabilizer α (φ ω)))
+        Fintype.card_pos.ne' := by
   classical
-    have : ∀ ω : Ω, Fintype.card α / Fintype.card (stabilizer α (φ ω)) =
+    have : ∀ ω : Ω,
+        Nat.euclideanDiv (Fintype.card α) (Fintype.card (stabilizer α (φ ω))) Fintype.card_pos.ne' =
         Fintype.card (α ⧸ stabilizer α (φ ω)) := by
       intro ω
       rw [Fintype.card_congr (@Subgroup.groupEquivQuotientProdSubgroup α _ (stabilizer α <| φ ω)),
-        Fintype.card_prod, Nat.mul_div_cancel]
-      exact Fintype.card_pos_iff.mpr (by infer_instance)
+        Fintype.card_prod, Nat.euclideanDiv_mul_right_cancel]
     simp_rw [this, ← Fintype.card_sigma,
       Fintype.card_congr (selfEquivSigmaOrbitsQuotientStabilizer' α β hφ)]
 
@@ -61,7 +63,8 @@ theorem card_eq_sum_card_group_div_card_stabilizer' [Fintype α] [Fintype β] [F
 @[to_additive /-- **Class formula** for a finite group acting on a finite type. -/]
 theorem card_eq_sum_card_group_div_card_stabilizer [Fintype α] [Fintype β] [Fintype Ω]
     [∀ b : β, Fintype <| stabilizer α b] :
-    Fintype.card β = ∑ ω : Ω, Fintype.card α / Fintype.card (stabilizer α ω.out) :=
+    Fintype.card β = ∑ ω : Ω,
+      Nat.euclideanDiv (Fintype.card α) (Fintype.card (stabilizer α ω.out)) Fintype.card_pos.ne' :=
   card_eq_sum_card_group_div_card_stabilizer' α β Quotient.out_eq'
 
 end MulAction

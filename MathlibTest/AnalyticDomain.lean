@@ -101,7 +101,7 @@ example (r : ℝ) :
 -- of its zero norm.
 example (p : FormalMultilinearSeries ℝ ℝ ℝ) (n : {n : ℕ // n ≠ 0})
     (hn : p (n : ℕ) = 0) :
-    ((‖p (n : ℕ)‖₊ : ℝ≥0∞) ^ (1 / (n : ℕ) : ℝ))⁻¹ = ∞ := by
+    ((‖p (n : ℕ)‖₊ : ℝ≥0∞) ^ (1 / ((n : ℕ) : ℝ)))⁻¹ = ∞ := by
   have hn0 : 0 < ((n : ℕ) : ℝ) := Nat.cast_pos.mpr (Nat.pos_iff_ne_zero.mpr n.2)
   simp only [hn, nnnorm_zero, ENNReal.coe_zero,
     ENNReal.zero_rpow_of_pos (one_div_pos.mpr hn0), ENNReal.inv_zero]

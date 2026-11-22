@@ -681,7 +681,7 @@ lemma rpow_sqrt (a : A) (x : ℝ) (h : IsUnit a)
   have : IsStrictlyPositive a := by grind
   rw [sqrt_eq_rpow, rpow_rpow _ _ _ (by simp), one_div_mul_eq_div₀]
 
-lemma sqrt_rpow_nnreal {a : A} {x : ℝ≥0} : sqrt (a ^ (x : ℝ)) = a ^ (x / 2 : ℝ) := by
+lemma sqrt_rpow_nnreal {a : A} {x : ℝ≥0} : sqrt (a ^ (x : ℝ)) = a ^ ((x : ℝ) / 2) := by
   by_cases htriv : 0 ≤ a
   case neg => simp [sqrt_eq_cfc, rpow_def, cfc_apply_of_not_predicate a htriv]
   case pos =>
@@ -693,7 +693,7 @@ lemma sqrt_rpow_nnreal {a : A} {x : ℝ≥0} : sqrt (a ^ (x : ℝ)) = a ^ (x / 2
       rw [← nnrpow_eq_rpow h₁, h₂, ← nnrpow_eq_rpow h₃, sqrt_nnrpow (A := A)]
 
 lemma rpow_sqrt_nnreal {a : A} {x : ℝ≥0}
-    (ha : 0 ≤ a := by cfc_tac) : (sqrt a) ^ (x : ℝ) = a ^ (x / 2 : ℝ) := by
+    (ha : 0 ≤ a := by cfc_tac) : (sqrt a) ^ (x : ℝ) = a ^ ((x : ℝ) / 2) := by
   by_cases hx : x = 0
   case pos =>
     have ha' : 0 ≤ sqrt a := sqrt_nonneg _

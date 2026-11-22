@@ -64,7 +64,8 @@ theorem subst_wlog {x y z s : ℝ} (hxy : 0 ≤ x * y) (hxyz : x + y + z = 0) :
         ≤ _ * _ ^ 3 := by gcongr; exact lhs_ineq hxy
       _ ≤ (3 * (x + y) ^ 2 + 2 * s ^ 2) ^ 4 / 4 ^ 4 := mid_ineq
       _ ≤ (2 * (x ^ 2 + y ^ 2 + (x + y) ^ 2) + 2 * s ^ 2) ^ 4 / 4 ^ 4 := by
-          gcongr (?_ + _) ^ 4 / _
+          apply div_le_div_of_nonneg_right _ (by positivity)
+          gcongr (?_ + _) ^ 4
           apply rhs_ineq
   refine le_of_pow_le_pow_left₀ two_ne_zero (by positivity) ?_
   calc

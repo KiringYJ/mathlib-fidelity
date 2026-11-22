@@ -87,32 +87,37 @@ meta def ratCastOfNumerals : InclusionExt where
     deriveRatCast e r
 
 /-- Efficiently enclose `m / d` in a dyadic interval with precision `prec` for a positive `d`. -/
-def natDiv (m d prec : ℕ) (_hd : 0 < d) : Interval Dyadic :=
+def natDiv (m d prec : ℕ) (hd : 0 < d) : Interval Dyadic :=
   let scaled := m <<< prec
-  let quotient := scaled / d
+  let quotient := scaled.euclideanDiv d hd.ne'
   let lower := Dyadic.ofIntWithPrec quotient prec
   let upper := if quotient * d = scaled then lower else lower + Dyadic.step prec
   Interval.Icc lower upper
 
 theorem natDiv_eq_rat (m : ℕ) {d : ℕ} (prec : ℕ) (hd : 0 < d) :
-    natDiv m d prec hd = rat ((m : ℚ) / d) prec := by
+    natDiv m d prec hd = rat ((m : ℚ) / (d : ℚ)) prec := by
   let q := Rat.fraction (m : ℤ) d hd.ne'
-  have hq : (m : ℚ) / d = q := by
+  have hq : (m : ℚ) / (d : ℚ) = q := by
     simpa only [q, Int.cast_natCast] using (Rat.fraction_eq_div (m : ℤ) d hd.ne').symm
   -- Normalization cancels a common positive factor, so the shifted quotient is unchanged.
   obtain ⟨c, hc, hm, hden⟩ := Rat.normalize_num_den' (m : ℤ) d hd.ne'
   change (m : ℤ) = q.num * c at hm
   change d = q.den * c at hden
-  have hquotient : ((m : ℤ) <<< prec) / (d : ℤ) = (q.num <<< prec) / (q.den : ℤ) := by
+  have hd' : (d : ℤ) ≠ 0 := Int.natCast_ne_zero.mpr hd.ne'
+  have hden' : (q.den : ℤ) ≠ 0 := by exact_mod_cast q.den_nz
+  have hquotient : Int.euclideanDiv ((m : ℤ) <<< prec) (d : ℤ) hd' =
+      Int.euclideanDiv (q.num <<< prec) (q.den : ℤ) hden' := by
+    simp only [Int.euclideanDiv_eq_core]
     rw [hm, hden, Int.natCast_mul, Int.mul_comm (q.den : ℤ),
       ← Int.ediv_ediv_of_nonneg (by simp), ← Int.shiftLeft_mul,
       Int.mul_ediv_cancel _ (by exact_mod_cast hc)]
-  let k := (m <<< prec) / d
+  let k := (m <<< prec).euclideanDiv d hd.ne'
   let lower := Dyadic.ofIntWithPrec (k : ℤ) (prec : ℤ)
   have hlower : q.toDyadic (prec : ℤ) = lower := by
-    change Dyadic.ofIntWithPrec ((q.num <<< prec) / (q.den : ℤ)) (prec : ℤ) = lower
+    change Dyadic.ofIntWithPrec _ (prec : ℤ) = lower
+    simp only [Int.euclideanDiv_eq_core] at hquotient
     rw [← hquotient]
-    simp only [lower, k, Int.natCast_ediv, Int.natCast_shiftLeft]
+    simp only [lower, k, Nat.euclideanDiv_eq_core, Int.natCast_ediv, Int.natCast_shiftLeft]
   have hodd (i p : ℤ) (hi : i % 2 = 1) : (Dyadic.ofOdd i p hi).toRat =
       Rat.fraction (i <<< (-p).toNat) (1 <<< p.toNat) (NeZero.ne _) := by
     cases p
@@ -138,9 +143,9 @@ theorem natDiv_eq_rat (m : ℕ) {d : ℕ} (prec : ℕ) (hd : 0 < d) :
   simp only [hq, natDiv, rat, hlower, hexact, lower, k]
 
 theorem natDiv_mem (m : ℕ) {d : ℕ} (prec : ℕ) (hd : 0 < d) :
-    (m : ℝ) / d ∈ natDiv m d prec hd := by
+    (m : ℝ) / (d : ℝ) ∈ natDiv m d prec hd := by
   rw [natDiv_eq_rat m prec hd]
-  have h := ratCast_mem ((m : ℚ) / d) prec
+  have h := ratCast_mem ((m : ℚ) / (d : ℚ)) prec
   simpa only [Rat.cast_div, Rat.cast_natCast] using h
 
 /-- Enclose a scientific literal in a dyadic interval with precision `prec`. -/

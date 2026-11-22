@@ -133,10 +133,10 @@ lemma oddKernel_undef (a : UnitAddCircle) {x : ℝ} (hx : x ≤ 0) : oddKernel a
 to `∑ (n : ℕ), 2 * n * sin (2 * π * n * a) * exp (-π * n ^ 2 * x)`. See `hasSum_nat_sinKernel`
 for the defining sum. -/
 @[irreducible] def sinKernel (a : UnitAddCircle) (x : ℝ) : ℝ :=
-  (show Function.Periodic (fun ξ : ℝ ↦ re (jacobiTheta₂' ξ (I * x) / (-2 * π))) 1 by
+  (show Function.Periodic (fun ξ : ℝ ↦ re (jacobiTheta₂' ξ (I * x) / (-2 * (π : ℂ)))) 1 by
     simp [jacobiTheta₂'_add_left]).lift a
 
-lemma sinKernel_def (a x : ℝ) : ↑(sinKernel ↑a x) = jacobiTheta₂' a (I * x) / (-2 * π) := by
+lemma sinKernel_def (a x : ℝ) : ↑(sinKernel ↑a x) = jacobiTheta₂' a (I * x) / (-2 * (π : ℂ)) := by
   simp [sinKernel, re_eq_add_conj, jacobiTheta₂'_conj, map_ofNat]
 
 lemma sinKernel_undef (a : UnitAddCircle) {x : ℝ} (hx : x ≤ 0) : sinKernel a x = 0 := by
@@ -193,7 +193,7 @@ lemma oddKernel_functional_equation (a : UnitAddCircle) (x : ℝ) (hx : 0 < x) :
     apply div_eq_iff.mpr
     rw [mul_mul_mul_comm, I_mul_I, ← ofReal_mul, mul_one_div_cancel (ha := hx.ne'.isUnit),
       ofReal_one, mul_one]
-  have h2 : (-I * (I * ↑(1 / x))) = 1 / x := by
+  have h2 : (-I * (I * ↑(1 / x : ℝ))) = 1 / (x : ℂ) := by
     rw [← mul_assoc, neg_mul, I_mul_I, neg_neg, one_mul, ofReal_div, ofReal_one]
   have h3 : (x : ℂ) ^ (3 / 2 : ℂ) ≠ 0 := by
     simp only [Ne, cpow_eq_zero_iff, ofReal_eq_zero, hx.ne', false_and, not_false_eq_true]

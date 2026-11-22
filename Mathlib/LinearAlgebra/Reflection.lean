@@ -184,12 +184,16 @@ lemma reflection_mul_reflection_pow_apply (m : ℕ) (z : M)
     (t : R := f y * g x - 2) (ht : t = f y * g x - 2 := by rfl) :
     ((reflection hf * reflection hg) ^ m) z =
       z +
-        ((S R ((m - 2) / 2)).eval t * ((S R ((m - 1) / 2)).eval t + (S R ((m - 3) / 2)).eval t)) •
+        ((S R (Int.euclideanDiv ((m : ℤ) - 2) 2)).eval t *
+          ((S R (Int.euclideanDiv ((m : ℤ) - 1) 2)).eval t +
+            (S R (Int.euclideanDiv ((m : ℤ) - 3) 2)).eval t)) •
           ((g x * f z - g z) • y - f z • x) +
-        ((S R ((m - 1) / 2)).eval t * ((S R (m / 2)).eval t + (S R ((m - 2) / 2)).eval t)) •
+        ((S R (Int.euclideanDiv ((m : ℤ) - 1) 2)).eval t *
+          ((S R (Int.euclideanDiv m 2)).eval t +
+            (S R (Int.euclideanDiv ((m : ℤ) - 2) 2)).eval t)) •
           ((f y * g z - f z) • x - g z • y) := by
   induction m with
-  | zero => simp
+  | zero => norm_num
   | succ m ih =>
     /- Now, let us collect two facts about the evaluations of `S r k`. These easily follow from the
     properties of the `S` polynomials. -/
@@ -206,11 +210,16 @@ lemma reflection_mul_reflection_pow_apply (m : ℕ) (z : M)
     simp only [reflection_apply, map_add, map_sub, map_smul, hf, hg]
     -- `m` can be written in the form `2 * k + e`, where `e` is `0` or `1`.
     push_cast
-    rw [← Int.mul_ediv_add_emod m 2]
-    set k : ℤ := m / 2
-    set e : ℤ := m % 2
-    simp_rw [add_assoc (2 * k), add_sub_assoc (2 * k), add_comm (2 * k),
-      add_mul_ediv_left _ k (by simp : (2 : ℤ) ≠ 0)]
+    rw [← Int.euclideanDiv_mul_add_mod (m : ℤ) 2 (by decide)]
+    set k : ℤ := Int.euclideanDiv m 2
+    set e : ℤ := (m : ℤ) % 2
+    have shift (a : ℤ) : Int.euclideanDiv (a + 2 * k) 2 = Int.euclideanDiv a 2 + k := by
+      apply Int.euclideanDiv_eq_of_remainder (r := a % 2) (by decide)
+      · have := Int.euclideanDiv_mul_add_mod a 2 (by decide)
+        omega
+      · exact Int.emod_nonneg _ (by decide)
+      · exact Int.emod_lt_of_pos _ (by decide : (0 : ℤ) < 2)
+    simp_rw [add_assoc (2 * k), add_sub_assoc (2 * k), add_comm (2 * k), shift]
     have he : e = 0 ∨ e = 1 := by lia
     clear_value e
     /- Now, equate the coefficients on both sides. These linear combinations were
@@ -233,9 +242,13 @@ lemma reflection_mul_reflection_pow (m : ℕ)
     (t : R := f y * g x - 2) (ht : t = f y * g x - 2 := by rfl) :
     ((reflection hf * reflection hg) ^ m).toLinearMap =
       LinearMap.id (R := R) (M := M) +
-        ((S R ((m - 2) / 2)).eval t * ((S R ((m - 1) / 2)).eval t + (S R ((m - 3) / 2)).eval t)) •
+        ((S R (Int.euclideanDiv ((m : ℤ) - 2) 2)).eval t *
+          ((S R (Int.euclideanDiv ((m : ℤ) - 1) 2)).eval t +
+            (S R (Int.euclideanDiv ((m : ℤ) - 3) 2)).eval t)) •
           ((g x • f - g).smulRight y - f.smulRight x) +
-        ((S R ((m - 1) / 2)).eval t * ((S R (m / 2)).eval t + (S R ((m - 2) / 2)).eval t)) •
+        ((S R (Int.euclideanDiv ((m : ℤ) - 1) 2)).eval t *
+          ((S R (Int.euclideanDiv m 2)).eval t +
+            (S R (Int.euclideanDiv ((m : ℤ) - 2) 2)).eval t)) •
           ((f y • g - f).smulRight x - g.smulRight y) := by
   ext z
   simpa using reflection_mul_reflection_pow_apply hf hg m z t ht
@@ -245,9 +258,13 @@ lemma reflection_mul_reflection_zpow_apply (m : ℤ) (z : M)
     (t : R := f y * g x - 2) (ht : t = f y * g x - 2 := by rfl) :
     ((reflection hf * reflection hg) ^ m) z =
       z +
-        ((S R ((m - 2) / 2)).eval t * ((S R ((m - 1) / 2)).eval t + (S R ((m - 3) / 2)).eval t)) •
+        ((S R (Int.euclideanDiv (m - 2) 2)).eval t *
+          ((S R (Int.euclideanDiv (m - 1) 2)).eval t +
+            (S R (Int.euclideanDiv (m - 3) 2)).eval t)) •
           ((g x * f z - g z) • y - f z • x) +
-        ((S R ((m - 1) / 2)).eval t * ((S R (m / 2)).eval t + (S R ((m - 2) / 2)).eval t)) •
+        ((S R (Int.euclideanDiv (m - 1) 2)).eval t *
+          ((S R (Int.euclideanDiv m 2)).eval t +
+            (S R (Int.euclideanDiv (m - 2) 2)).eval t)) •
           ((f y * g z - f z) • x - g z • y) := by
   induction m using Int.negInduction with
   | nat m => exact_mod_cast reflection_mul_reflection_pow_apply hf hg m z t ht
@@ -255,7 +272,11 @@ lemma reflection_mul_reflection_zpow_apply (m : ℤ) (z : M)
     have ht' : t = g x * f y - 2 := by rwa [mul_comm (g x)]
     rw [zpow_neg, ← inv_zpow, mul_inv_rev, reflection_inv, reflection_inv, zpow_natCast,
       reflection_mul_reflection_pow_apply hg hf m z t ht', add_right_comm z]
-    have aux (a b : ℤ) (hab : a + b = -3 := by lia) : a / 2 = -(b / 2) - 2 := by lia
+    have aux (a b : ℤ) (hab : a + b = -3 := by lia) :
+        Int.euclideanDiv a 2 = -Int.euclideanDiv b 2 - 2 := by
+      have := Int.euclideanDiv_mul_add_mod a 2 (by decide)
+      have := Int.euclideanDiv_mul_add_mod b 2 (by decide)
+      omega
     rw [aux (-m - 3) m, aux (-m - 2) (m - 1), aux (-m - 1) (m - 2), aux (-m) (m - 3)]
     simp only [S_neg_sub_two, Polynomial.eval_neg]
     ring_nf
@@ -265,9 +286,13 @@ lemma reflection_mul_reflection_zpow (m : ℤ)
     (t : R := f y * g x - 2) (ht : t = f y * g x - 2 := by rfl) :
     ((reflection hf * reflection hg) ^ m).toLinearMap =
       LinearMap.id (R := R) (M := M) +
-        ((S R ((m - 2) / 2)).eval t * ((S R ((m - 1) / 2)).eval t + (S R ((m - 3) / 2)).eval t)) •
+        ((S R (Int.euclideanDiv (m - 2) 2)).eval t *
+          ((S R (Int.euclideanDiv (m - 1) 2)).eval t +
+            (S R (Int.euclideanDiv (m - 3) 2)).eval t)) •
           ((g x • f - g).smulRight y - f.smulRight x) +
-        ((S R ((m - 1) / 2)).eval t * ((S R (m / 2)).eval t + (S R ((m - 2) / 2)).eval t)) •
+        ((S R (Int.euclideanDiv (m - 1) 2)).eval t *
+          ((S R (Int.euclideanDiv m 2)).eval t +
+            (S R (Int.euclideanDiv (m - 2) 2)).eval t)) •
           ((f y • g - f).smulRight x - g.smulRight y) := by
   ext z
   simpa using reflection_mul_reflection_zpow_apply hf hg m z t ht

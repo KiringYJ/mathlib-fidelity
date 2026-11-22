@@ -84,12 +84,21 @@ theorem prodPrimeFactors_add_of_squarefree [CommSemiring R] {f g : ArithmeticFun
     ∏ᵖ p ∣ n, (f + g) p = (f * g) n := by
   rw [prodPrimeFactors_apply hn.ne_zero]
   simp_rw [add_apply (f := f) (g := g)]
-  rw [prod_add, mul_apply, sum_divisorsAntidiagonal (f · * g ·),
+  let term (d : ℕ) := if hd : d = 0 then 0 else f d * g (Nat.euclideanDiv n d hd)
+  have hsum : (∑ d ∈ n.divisors.attach,
+      f d.val * g (Nat.euclideanDiv n d.val (Nat.pos_of_mem_divisors d.property).ne')) =
+      ∑ d ∈ n.divisors, term d := by
+    rw [← Finset.sum_attach n.divisors term]
+    exact sum_congr rfl fun d _ ↦ by
+      simp only [term, dite_eq_right (Nat.pos_of_mem_divisors d.property).ne']
+  rw [prod_add, mul_apply, sum_divisorsAntidiagonal (f · * g ·), hsum,
     ← divisors_filter_squarefree_of_squarefree hn, sum_divisors_filter_squarefree hn.ne_zero,
     factors_eq]
   apply sum_congr rfl
   intro t ht
-  rw [t.prod_val, Function.id_def,
+  have ht₀ : (∏ p ∈ t, p) ≠ 0 :=
+    (Finset.prod_pos fun _ hp ↦ Nat.pos_of_mem_primeFactors (mem_powerset.mp ht hp)).ne'
+  rw [t.prod_val, Function.id_def, show term (∏ p ∈ t, p) = _ from dite_eq_right ht₀,
     ← prod_primeFactors_sdiff_of_squarefree hn (mem_powerset.mp ht),
     hf.map_prod_of_subset_primeFactors n t (mem_powerset.mp ht),
     ← hg.map_prod_of_subset_primeFactors n (_ \ t) sdiff_subset]
@@ -172,7 +181,9 @@ theorem sigma_one_apply_prime_pow {p i : ℕ} (hp : p.Prime) :
     σ 1 (p ^ i) = ∑ k ∈ .range (i + 1), p ^ k := by
   simp [sigma_apply_prime_pow hp]
 
-theorem sigma_eq_sum_div (k n : ℕ) : sigma k n = ∑ d ∈ divisors n, (n / d) ^ k := by
+theorem sigma_eq_sum_div (k n : ℕ) :
+    sigma k n = ∑ d ∈ n.divisors.attach,
+      (Nat.euclideanDiv n d.val (Nat.pos_of_mem_divisors d.property).ne') ^ k := by
   rw [sigma_apply, ← sum_div_divisors]
 
 theorem sigma_zero_apply (n : ℕ) : σ 0 n = #n.divisors := by simp [sigma_apply]
@@ -403,9 +414,14 @@ theorem sum_Ioc_mul_eq_sum_prod_filter (f g : ArithmeticFunction R) (N : ℕ) :
     exact sum_congr rfl fun _ _ ↦ (by simp_all)
 
 theorem sum_Ioc_mul_eq_sum_sum (f g : ArithmeticFunction R) (N : ℕ) :
-    ∑ n ∈ Ioc 0 N, (f * g) n = ∑ n ∈ Ioc 0 N, f n * ∑ m ∈ Ioc 0 (N / n), g m := by
+    ∑ n ∈ Ioc 0 N, (f * g) n = ∑ n ∈ (Ioc 0 N).attach,
+      f n.val *
+        ∑ m ∈ Ioc 0 (Nat.euclideanDiv N n.val (Finset.mem_Ioc.mp n.property).1.ne'), g m := by
   rw [sum_Ioc_mul_eq_sum_prod_filter, sum_filter, sum_product]
-  refine sum_congr rfl fun n hn ↦ ?_
+  conv_lhs => rw [← Finset.sum_attach]
+  refine sum_congr rfl fun n _ ↦ ?_
+  have hn := n.property
+  simp only [Nat.euclideanDiv_eq_core]
   simp only [sum_ite, not_le, sum_const_zero, add_zero, mul_sum]
   congr
   ext
@@ -419,7 +435,8 @@ theorem sum_Ioc_mul_eq_sum_sum (f g : ArithmeticFunction R) (N : ℕ) :
     simp [mul_div_le, div_le_self]
 
 theorem sum_Ioc_mul_zeta_eq_sum (f : ArithmeticFunction R) (N : ℕ) :
-    ∑ n ∈ Ioc 0 N, (f * zeta) n = ∑ n ∈ Ioc 0 N, f n * ↑(N / n) := by
+    ∑ n ∈ Ioc 0 N, (f * zeta) n = ∑ n ∈ (Ioc 0 N).attach,
+      f n.val * ↑(Nat.euclideanDiv N n.val (Finset.mem_Ioc.mp n.property).1.ne') := by
   rw [sum_Ioc_mul_eq_sum_sum]
   refine sum_congr rfl fun n hn ↦ ?_
   simp_rw [natCoe_apply]
@@ -428,7 +445,8 @@ theorem sum_Ioc_mul_zeta_eq_sum (f : ArithmeticFunction R) (N : ℕ) :
 --TODO: Dirichlet hyperbola method to get sums of length `sqrt N`
 /-- An `O(N)` formula for the sum of the number of divisors function. -/
 theorem sum_Ioc_sigma0_eq_sum_div (N : ℕ) :
-    ∑ n ∈ Ioc 0 N, sigma 0 n = ∑ n ∈ Ioc 0 N, (N / n) := by
+    ∑ n ∈ Ioc 0 N, sigma 0 n = ∑ n ∈ (Ioc 0 N).attach,
+      Nat.euclideanDiv N n.val (Finset.mem_Ioc.mp n.property).1.ne' := by
   rw [← zeta_mul_pow_eq_sigma, pow_zero_eq_zeta]
   convert! sum_Ioc_mul_zeta_eq_sum zeta N using 1
   simpa using sum_congr rfl (by grind)

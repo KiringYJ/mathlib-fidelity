@@ -54,7 +54,7 @@ theorem Units.mem [NumberField K] [IsCyclotomicExtension {3} ℚ K] :
     dsimp only [rank]
     rw [card_eq_nrRealPlaces_add_nrComplexPlaces, nrRealPlaces_eq_zero (n := 3) K (by decide),
       zero_add, nrComplexPlaces_eq_totient_div_two (n := 3)]
-    rfl
+    norm_num [Nat.totient_prime Nat.prime_three]
   obtain ⟨⟨x, e⟩, hxu, -⟩ := exist_unique_eq_mul_prod _ u
   replace hxu : u = x := by
     rw [← mul_one x.1, hxu]

@@ -98,7 +98,8 @@ theorem nat_rawCast_1 : (Nat.rawCast 1 : R) = 1 := by simp
 theorem nat_rawCast_2 [Nat.AtLeastTwo n] : (Nat.rawCast n : R) = OfNat.ofNat n := rfl
 theorem int_rawCast_neg {R} [Ring R] : (Int.rawCast (.negOfNat n) : R) = -Nat.rawCast n := by simp
 theorem nnrat_rawCast {R} [DivisionSemiring R] (hd : (d : R) ≠ 0) :
-    (NNRat.rawCast n d hd : R) = Nat.rawCast n / (Nat.rawCast d : R) := by rfl
+    (NNRat.rawCast n d hd : R) =
+      Checked.div (Nat.rawCast n : R) (Nat.rawCast d : R) hd.isUnit := rfl
 theorem rat_rawCast_neg {R} [DivisionRing R] (hd : (d : R) ≠ 0) :
     (Rat.rawCast (.negOfNat n) d hd : R) = Int.rawCast (.negOfNat n) / (Nat.rawCast d : R) := by
   rfl

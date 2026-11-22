@@ -63,10 +63,8 @@ Cauchy filters. -/
 class CauchyContinuousSub (G : Type*) [UniformSpace G] [Sub G] : Prop where
   cauchyContinuous_sub : CauchyContinuous fun p : G × G ↦ p.1 - p.2
 
-/-- Division on a uniform space is Cauchy continuous: it maps Cauchy filters on the product to
-Cauchy filters. -/
-@[to_additive]
-class CauchyContinuousDiv (G : Type*) [UniformSpace G] [Div G] : Prop where
+/-- Right division in a group maps Cauchy filters on the product to Cauchy filters. -/
+class CauchyContinuousDiv (G : Type*) [UniformSpace G] [Group G] : Prop where
   cauchyContinuous_div : CauchyContinuous fun p : G × G ↦ p.1 / p.2
 
 export CauchyContinuousAdd (cauchyContinuous_add)
@@ -75,6 +73,17 @@ export CauchyContinuousNeg (cauchyContinuous_neg)
 export CauchyContinuousInv (cauchyContinuous_inv)
 export CauchyContinuousSub (cauchyContinuous_sub)
 export CauchyContinuousDiv (cauchyContinuous_div)
+
+/-- Apply a Cauchy continuous binary operation to two Cauchy continuous maps. -/
+theorem CauchyContinuous.comp₂ {X A B C : Type*} [UniformSpace X] [UniformSpace A]
+    [UniformSpace B] [UniformSpace C] {op : A → B → C}
+    (hop : CauchyContinuous (Function.uncurry op)) {f : X → A} {g : X → B}
+    (hf : CauchyContinuous f) (hg : CauchyContinuous g) :
+    CauchyContinuous fun x ↦ op (f x) (g x) := by
+  apply hop.comp (f := fun x ↦ (f x, g x))
+  intro F hF
+  apply cauchy_prod_iff.2
+  simpa only [Filter.map_map, Function.comp_def] using And.intro (hf hF) (hg hF)
 
 section IsUniformGroup
 
@@ -88,9 +97,12 @@ instance (priority := 100) IsUniformGroup.cauchyContinuousMul : CauchyContinuous
 instance (priority := 100) IsUniformGroup.cauchyContinuousInv : CauchyContinuousInv G :=
   ⟨uniformContinuous_inv.cauchyContinuous⟩
 
-@[to_additive]
 instance (priority := 100) IsUniformGroup.cauchyContinuousDiv : CauchyContinuousDiv G :=
   ⟨uniformContinuous_div.cauchyContinuous⟩
+
+instance (priority := 100) IsUniformAddGroup.cauchyContinuousSub {A : Type*}
+    [UniformSpace A] [AddGroup A] [IsUniformAddGroup A] : CauchyContinuousSub A :=
+  ⟨uniformContinuous_sub.cauchyContinuous⟩
 
 end IsUniformGroup
 
@@ -108,10 +120,13 @@ theorem CauchyContinuousMul.continuousMul [Mul M] [CauchyContinuousMul M] : Cont
 theorem CauchyContinuousInv.continuousInv [Inv M] [CauchyContinuousInv M] : ContinuousInv M :=
   ⟨cauchyContinuous_inv.continuous⟩
 
-/-- A Cauchy continuous division is continuous. -/
-@[to_additive /-- A Cauchy continuous subtraction is continuous. -/]
-theorem CauchyContinuousDiv.continuousDiv [Div M] [CauchyContinuousDiv M] : ContinuousDiv M :=
+/-- Cauchy continuous group division is continuous. -/
+theorem CauchyContinuousDiv.continuousDiv [Group M] [CauchyContinuousDiv M] : ContinuousDiv M :=
   ⟨cauchyContinuous_div.continuous⟩
+
+/-- A Cauchy continuous subtraction is continuous. -/
+theorem CauchyContinuousSub.continuousSub [Sub M] [CauchyContinuousSub M] : ContinuousSub M :=
+  ⟨cauchyContinuous_sub.continuous⟩
 
 /-- On a complete space, a continuous multiplication is Cauchy continuous. -/
 @[to_additive /-- On a complete space, a continuous addition is Cauchy continuous. -/]
@@ -127,11 +142,16 @@ theorem CauchyContinuousInv.of_continuousInv [Inv M] [ContinuousInv M] [Complete
   ⟨(continuous_inv.cauchyContinuous_comp cauchyContinuous_id :
     CauchyContinuous ((fun a : M ↦ a⁻¹) ∘ id))⟩
 
-/-- On a complete space, a continuous division is Cauchy continuous. -/
-@[to_additive /-- On a complete space, a continuous subtraction is Cauchy continuous. -/]
-theorem CauchyContinuousDiv.of_continuousDiv [Div M] [ContinuousDiv M] [CompleteSpace M] :
+/-- On a complete group, continuous right division is Cauchy continuous. -/
+theorem CauchyContinuousDiv.of_continuousDiv [Group M] [ContinuousDiv M] [CompleteSpace M] :
     CauchyContinuousDiv M :=
   ⟨(continuous_div'.cauchyContinuous_comp cauchyContinuous_id :
     CauchyContinuous ((fun p : M × M ↦ p.1 / p.2) ∘ id))⟩
+
+/-- On a complete space, a continuous subtraction is Cauchy continuous. -/
+theorem CauchyContinuousSub.of_continuousSub [Sub M] [ContinuousSub M] [CompleteSpace M] :
+    CauchyContinuousSub M :=
+  ⟨(continuous_sub.cauchyContinuous_comp cauchyContinuous_id :
+    CauchyContinuous ((fun p : M × M ↦ p.1 - p.2) ∘ id))⟩
 
 end Continuity

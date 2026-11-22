@@ -718,7 +718,8 @@ lemma pow_sub_one_dvd_differentIdeal_aux
     exact ⟨_, ha.symm⟩
   suffices ∀ x ∈ a, intTrace A B x ∈ p by
     have hPe : P ^ (e - 1) ≠ ⊥ := pow_ne_zero _ hPbot
-    have hP : ((P ^ (e - 1) :)⁻¹ : FractionalIdeal B⁰ L) = a / p.map (algebraMap A B) := by
+    have hP : ((P ^ (e - 1) :)⁻¹ : FractionalIdeal B⁰ L) =
+        (a : FractionalIdeal B⁰ L) / (p.map (algebraMap A B) : FractionalIdeal B⁰ L) := by
       rw [eq_div_iff, ha, FractionalIdeal.coeIdeal_mul, inv_mul_cancel_left₀]
     rw [Ideal.dvd_iff_le, differentialIdeal_le_iff (K := K) (L := L) hPe, hP,
       Submodule.map_le_iff_le_comap]
@@ -873,7 +874,8 @@ lemma dvd_differentIdeal_of_not_isSeparable
     rintro rfl; apply hp'
     rwa [Ideal.bot_mul] at ha
   suffices ∀ x ∈ a, Algebra.intTrace A B x ∈ p by
-    have hP : ((P :)⁻¹ : FractionalIdeal B⁰ L) = a / p.map (algebraMap A B) := by
+    have hP : ((P :)⁻¹ : FractionalIdeal B⁰ L) =
+        (a : FractionalIdeal B⁰ L) / (p.map (algebraMap A B) : FractionalIdeal B⁰ L) := by
       rw [eq_div_iff, ha, FractionalIdeal.coeIdeal_mul, inv_mul_cancel_left₀]
     rw [Ideal.dvd_iff_le, differentialIdeal_le_iff (K := K) (L := L) hPbot, hP,
       Submodule.map_le_iff_le_comap]

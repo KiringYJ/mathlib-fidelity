@@ -77,7 +77,7 @@ def gaussianPDFReal (μ : ℝ) (v : ℝ≥0) (hv : v ≠ 0) (x : ℝ) : ℝ :=
 
 lemma gaussianPDFReal_def (μ : ℝ) {v : ℝ≥0} (hv : v ≠ 0) :
     gaussianPDFReal μ v hv =
-      fun x ↦ (√(2 * π * v))⁻¹ * rexp (-(x - μ) ^ 2 / (2 * v)) := rfl
+      fun x ↦ (√(2 * π * v))⁻¹ * rexp (-(x - μ) ^ 2 / (2 * (v : ℝ))) := rfl
 
 /-- The Gaussian pdf is positive. -/
 lemma gaussianPDFReal_pos (μ : ℝ) {v : ℝ≥0} (hv : v ≠ 0) (x : ℝ) :
@@ -180,7 +180,7 @@ lemma gaussianPDFReal_inv_mul {μ : ℝ} {v : ℝ≥0} {c : ℝ} (hv : v ≠ 0) 
     rw [mul_right_comm, ← hnorm, mul_inv_cancel₀]
   have hlin : (c⁻¹ * x - μ) * c = x - c * μ := by
     rw [sub_mul, mul_right_comm, inv_mul_cancel₀, one_mul, mul_comm μ c]
-  have hexp : -(c⁻¹ * x - μ) ^ 2 / (2 * v) = -(x - c * μ) ^ 2 / (2 * (c ^ 2 * v)) := by
+  have hexp : -(c⁻¹ * x - μ) ^ 2 / (2 * (v : ℝ)) = -(x - c * μ) ^ 2 / (2 * (c ^ 2 * v)) := by
     apply div_eq_div_iff.2
     rw [← hlin]
     ring
@@ -510,19 +510,23 @@ theorem complexMGF_id_gaussianReal (z : ℂ) :
     complexMGF id (gaussianReal μ v) z = cexp (z * μ + v * z ^ 2 / 2) := by
   by_cases hv : v = 0
   · simp [complexMGF, hv]
+  have hvR : (v : ℝ) ≠ 0 := NNReal.coe_ne_zero.mpr hv
+  have hvC : (v : ℂ) ≠ 0 := by exact_mod_cast hvR
   calc ∫ x, cexp (z * x) ∂gaussianReal μ v
     _ = ∫ x, gaussianPDFReal μ v hv x * cexp (z * x) ∂ℙ := by
       simp_rw [integral_gaussianReal_eq_integral_smul hv, Complex.real_smul]
     _ = (√(2 * π * v))⁻¹
-        * ∫ x : ℝ, cexp (-(2 * v)⁻¹ * x ^ 2 + (z + μ / v) * x + -μ ^ 2 / (2 * v)) ∂ℙ := by
+        * ∫ x : ℝ, cexp (-(2 * v)⁻¹ * x ^ 2 + (z + (μ : ℂ) / (v : ℂ)) * x
+          + -(μ : ℂ) ^ 2 / (2 * (v : ℂ))) ∂ℙ := by
       unfold gaussianPDFReal
       push_cast
       simp_rw [mul_assoc, integral_const_mul, ← Complex.exp_add]
       congr with x
       congr 1
       ring
-    _ = (√(2 * π * v))⁻¹ * (π / - -(2 * v)⁻¹) ^ (1 / 2 : ℂ)
-        * cexp (-μ ^ 2 / (2 * v) - (z + μ / v) ^ 2 / (4 * -(2 * v)⁻¹)) := by
+    _ = (√(2 * π * v))⁻¹ * ((π : ℂ) / - -(2 * (v : ℂ))⁻¹) ^ (1 / 2 : ℂ)
+        * cexp (-(μ : ℂ) ^ 2 / (2 * (v : ℂ))
+          - (z + (μ : ℂ) / (v : ℂ)) ^ 2 / (4 * -(2 * (v : ℂ))⁻¹)) := by
       have hv_pos : 0 < v := pos_iff_ne_zero.mpr hv
       have h_scale : IsUnit (2 * v) := (mul_pos zero_lt_two hv_pos).ne'.isUnit
       let q : ℝ≥0 := Checked.inv (2 * v) h_scale
@@ -531,7 +535,10 @@ theorem complexMGF_id_gaussianReal (z : ℂ) :
         exact NNReal.coe_pos.mpr (inv_pos.mpr (mul_pos zero_lt_two hv_pos))
       dsimp only [q] at hb
       rw [integral_cexp_quadratic hb, ← mul_assoc]
-    _ = 1 * cexp (-μ ^ 2 / (2 * v) - (z + μ / v) ^ 2 / (4 * -(2 * v)⁻¹)) := by
+      push_cast
+      rfl
+    _ = 1 * cexp (-(μ : ℂ) ^ 2 / (2 * (v : ℂ))
+          - (z + (μ : ℂ) / (v : ℂ)) ^ 2 / (4 * -(2 * (v : ℂ))⁻¹)) := by
       congr 1
       simp only [field, sqrt_eq_rpow, one_div, ofReal_inv, NNReal.coe_inv, NNReal.coe_mul,
         NNReal.coe_ofNat, ofReal_mul, ofReal_ofNat, neg_neg, div_inv_eq_mul,
@@ -560,6 +567,7 @@ theorem charFun_gaussianReal (t : ℝ) :
   rw [← complexMGF_id_mul_I, complexMGF_id_gaussianReal]
   congr
   simp only [mul_pow, I_sq, mul_neg, mul_one, sub_eq_add_neg]
+  push_cast
   ring_nf
 
 /-- The moment-generating function of a random variable with Gaussian distribution
@@ -642,13 +650,14 @@ lemma variance_fun_id_gaussianReal : Var[fun x ↦ x; gaussianReal μ v] = v := 
   _ = v := by
     rw [mgf_fun_id_gaussianReal, iteratedDeriv_succ, iteratedDeriv_one]
     simp only [zero_mul, zero_add]
-    have h : deriv (fun t ↦ rexp (v * t ^ 2 / 2)) = fun t ↦ v * t * rexp (v * t ^ 2 / 2) := by
+    have h : deriv (fun t : ℝ ↦ rexp (v * t ^ 2 / 2)) =
+        fun t : ℝ ↦ v * t * rexp (v * t ^ 2 / 2) := by
       funext t
       exact (hasDerivAt_gaussian_exponent v t).exp.deriv.trans (mul_comm _ _)
     rw [h]
     have h' := ((hasDerivAt_id (0 : ℝ)).const_mul (v : ℝ)).mul
       (hasDerivAt_gaussian_exponent v 0).exp
-    change HasDerivAt (fun t ↦ v * t * rexp (v * t ^ 2 / 2)) _ _ at h'
+    change HasDerivAt (fun t : ℝ ↦ v * t * rexp (v * t ^ 2 / 2)) _ _ at h'
     simpa using h'.deriv
 
 /-- The variance of a real Gaussian distribution `gaussianReal μ v` is
@@ -736,6 +745,7 @@ lemma gaussianReal_conv_gaussianReal {m₁ m₂ : ℝ} {v₁ v₂ : ℝ≥0} :
   simp_rw [charFun_conv, charFun_gaussianReal]
   rw [← Complex.exp_add]
   simp only [Complex.ofReal_add, NNReal.coe_add]
+  push_cast
   ring_nf
 
 /- The sum of two real Gaussian variables with means `m₁, m₂` and variances `v₁, v₂` is a real

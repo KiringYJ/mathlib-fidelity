@@ -161,10 +161,13 @@ theorem mulTSupport_mul_inv [DivisionMonoid α] (f g : X → α) :
     (mulTSupport fun x => f x * (g x)⁻¹) ⊆ mulTSupport f ∪ mulTSupport g :=
   mulTSupport_binop_subset (· * ·⁻¹) (by simp) f g
 
-@[to_additive]
 theorem mulTSupport_div [DivisionMonoid α] (f g : X → α) :
-    (mulTSupport fun x => f x / g x) ⊆ mulTSupport f ∪ mulTSupport g :=
-  mulTSupport_binop_subset (· / ·) one_div_one f g
+    (mulTSupport fun x => DivInvMonoid.div' (f x) (g x)) ⊆ mulTSupport f ∪ mulTSupport g :=
+  mulTSupport_mul_inv f g
+
+theorem tsupport_sub [SubtractionMonoid α] (f g : X → α) :
+    (tsupport fun x => f x - g x) ⊆ tsupport f ∪ tsupport g := by
+  simpa only [sub_eq_add_neg] using tsupport_add_neg f g
 
 theorem tsupport_smul_subset_left {M α} [Zero M] [Zero α] [SMulWithZero M α]
     (f : X → M) (g : X → α) : (tsupport fun x => f x • g x) ⊆ tsupport f :=
@@ -441,11 +444,15 @@ protected lemma HasCompactMulSupport.inv {α β : Type*} [TopologicalSpace α] [
     HasCompactMulSupport (f⁻¹) := by
   simpa only [HasCompactMulSupport, mulTSupport, mulSupport_inv] using hf
 
-@[to_additive]
 theorem HasCompactSupport.div {α β : Type*} [TopologicalSpace α] [DivisionMonoid β]
     {f f' : α → β} (hf : HasCompactMulSupport f) (hf' : HasCompactMulSupport f') :
-    HasCompactMulSupport (f / f') :=
-  div_eq_mul_inv f f' ▸ hf.mul hf'.inv
+    HasCompactMulSupport (DivInvMonoid.div' f f') :=
+  hf.mul hf'.inv
+
+theorem HasCompactSupport.sub {α β : Type*} [TopologicalSpace α] [SubtractionMonoid β]
+    {f f' : α → β} (hf : HasCompactSupport f) (hf' : HasCompactSupport f') :
+    HasCompactSupport (f - f') := by
+  simpa only [sub_eq_add_neg] using hf.add hf'.neg
 
 end DivisionMonoid
 

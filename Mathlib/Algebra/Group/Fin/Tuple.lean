@@ -6,7 +6,7 @@ Authors: Floris van Doorn, Yury Kudryashov, Sébastien Gouëzel, Chris Hughes
 module
 
 public import Mathlib.Algebra.Group.Basic
-public import Mathlib.Algebra.Notation.Pi.Basic
+public import Mathlib.Algebra.Group.Pi.Basic
 public import Mathlib.Data.Fin.VecNotation
 
 /-!
@@ -28,15 +28,26 @@ lemma insertNth_mul [∀ j, Mul (α j)] (i : Fin (n + 1)) (x y : α i) (p q : �
     i.insertNth (x * y) (p * q) = i.insertNth x p * i.insertNth y q :=
   insertNth_binop (fun _ ↦ (· * ·)) i x y p q
 
-@[to_additive (attr := simp)]
-lemma insertNth_div [∀ j, Div (α j)] (i : Fin (n + 1)) (x y : α i) (p q : ∀ j, α (i.succAbove j)) :
-    i.insertNth (x / y) (p / q) = i.insertNth x p / i.insertNth y q :=
-  insertNth_binop (fun _ ↦ (· / ·)) i x y p q
+@[simp]
+lemma insertNth_sub [∀ j, Sub (α j)] (i : Fin (n + 1)) (x y : α i) (p q : ∀ j, α (i.succAbove j)) :
+    i.insertNth (x - y) (p - q) = i.insertNth x p - i.insertNth y q :=
+  insertNth_binop (fun _ ↦ (· - ·)) i x y p q
 
-@[to_additive (attr := simp)]
+@[simp]
+lemma insertNth_div [∀ j, Group (α j)] (i : Fin (n + 1)) (x y : α i)
+    (p q : ∀ j, α (i.succAbove j)) :
+    i.insertNth (x / y) (p / q) = i.insertNth x p / i.insertNth y q := by
+  simpa only [Pi.div_def] using (insertNth_binop (fun j (a b : α j) ↦ a / b) i x y p q)
+
+@[simp]
+lemma insertNth_sub_same [∀ j, AddGroup (α j)] (i : Fin (n + 1)) (x y : α i)
+    (p : ∀ j, α (i.succAbove j)) : i.insertNth x p - i.insertNth y p = Pi.single i (x - y) := by
+  rw [← insertNth_sub, sub_self, insertNth_zero_right]
+
+@[to_additive existing, simp]
 lemma insertNth_div_same [∀ j, Group (α j)] (i : Fin (n + 1)) (x y : α i)
     (p : ∀ j, α (i.succAbove j)) : i.insertNth x p / i.insertNth y p = Pi.mulSingle i (x / y) := by
-  simp_rw [← insertNth_div, ← insertNth_one_right, Pi.div_def, div_self', Pi.one_def]
+  rw [← insertNth_div, div_self', insertNth_one_right]
 
 end Fin
 

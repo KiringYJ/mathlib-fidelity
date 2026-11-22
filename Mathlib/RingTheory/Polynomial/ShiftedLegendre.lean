@@ -57,26 +57,19 @@ theorem factorial_mul_shiftedLegendre_eq (n : ℕ) : (n ! : ℤ[X]) * (shiftedLe
       ← pow_add, ← mul_assoc, nsmul_eq_mul, add_comm]
     rw [Finset.mem_range] at hm
     linarith
-  _ = ∑ x ∈ range (n + 1), ↑((n + x)! / x !) * C (↑(n.choose x) * (-1) ^ x) * X ^ x := by
+  _ = ∑ x ∈ range (n + 1), ↑((n + x).descFactorial n) * C (↑(n.choose x) * (-1) ^ x) * X ^ x := by
     rw [iterate_derivative_sum]
     congr! 1 with x _
     rw [show (n.choose x • (-1) ^ x : ℤ[X]) = C (n.choose x • (-1) ^ x) by simp,
       iterate_derivative_C_mul, iterate_derivative_X_pow_eq_smul,
-      descFactorial_eq_div (by lia), show n + x - n = x by lia]
+      show n + x - n = x by lia]
     simp only [Int.reduceNeg, nsmul_eq_mul, eq_intCast, Int.cast_mul, Int.cast_natCast,
       Int.cast_pow, Int.cast_neg, Int.cast_one, zsmul_eq_mul]
     ring
   _ = ∑ i ∈ range (n + 1), ↑n ! * C ((-1) ^ i * ↑(n.choose i) * ↑((n + i).choose n)) * X ^ i := by
     congr! 2 with x _
-    rw [C_mul (b := ((n + x).choose n : ℤ)), mul_comm, mul_comm (n ! : ℤ[X]), mul_comm _ ((-1) ^ x),
-      mul_assoc]
-    congr 1
-    rw [add_comm, add_choose]
-    simp only [Int.natCast_ediv, cast_mul, eq_intCast]
-    norm_cast
-    rw [mul_comm, ← Nat.mul_div_assoc]
-    · rw [mul_comm, Nat.mul_div_mul_right _ _ (by positivity)]
-    · simp only [factorial_mul_factorial_dvd_factorial_add]
+    simp [Nat.descFactorial_eq_factorial_mul_choose, eq_intCast]
+    ring
   _ = (n ! : ℤ[X]) * (shiftedLegendre n) := by simp [← mul_assoc, shiftedLegendre, mul_sum]
 
 /-- The coefficient of the shifted Legendre polynomial at `k` is

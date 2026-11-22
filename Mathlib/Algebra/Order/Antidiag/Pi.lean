@@ -215,14 +215,20 @@ lemma nsmul_piAntidiag [DecidableEq (ι → ℕ)] (s : Finset ι) (m : ℕ) {n :
   · rintro ⟨f, rfl, hf, rfl⟩
     simpa [← mul_sum, hn] using hf
   rintro ⟨hfsum, hfsup, hfdvd⟩
-  have (i : _) : n ∣ f i := by
+  have hdvd (i : _) : n ∣ f i := by
     by_cases hi : i ∈ s
     · exact hfdvd _ hi
     · rw [not_imp_comm.1 (hfsup _) hi]
       exact dvd_zero _
-  refine ⟨fun i ↦ f i / n, ?_⟩
-  simp [funext_iff, Nat.mul_div_cancel', ← Nat.sum_div, *]
-  grind
+  refine ⟨fun i ↦ Nat.euclideanDiv (f i) n hn, ?_, ?_, ?_⟩
+  · rw [← Nat.sum_div hn hfdvd, hfsum, Nat.euclideanDiv_mul_left_cancel _ hn]
+  · intro i hi
+    apply hfsup i
+    rintro hzero
+    exact hi (by simp [hzero, Nat.euclideanDiv_eq_core])
+  · funext i
+    change n * Nat.euclideanDiv (f i) n hn = f i
+    simpa only [Nat.euclideanDiv_eq_core] using Nat.mul_div_cancel' (hdvd i)
 
 lemma map_nsmul_piAntidiag (s : Finset ι) (m : ℕ) {n : ℕ} (hn : n ≠ 0) :
     (piAntidiag s m).map ⟨(n • ·), nsmul_right_injective hn⟩ =

@@ -34,7 +34,8 @@ Liouville numbers.
 In the implementation, the condition `x ≠ a/b` replaces the traditional equivalent `0 < |x - a/b|`.
 -/
 def Liouville (x : ℝ) :=
-  ∀ n : ℕ, ∃ (a b : ℤ) (_ : 1 < b), x ≠ a / b ∧ |x - a / b| < 1 / (b : ℝ) ^ n
+  ∀ n : ℕ, ∃ (a b : ℤ) (_ : 1 < b),
+    x ≠ (a : ℝ) / (b : ℝ) ∧ |x - (a : ℝ) / (b : ℝ)| < 1 / (b : ℝ) ^ n
 
 namespace Liouville
 
@@ -127,7 +128,7 @@ theorem exists_one_le_pow_mul_dist {Z N R : Type*} [PseudoMetricSpace R] {d : N 
 theorem exists_pos_real_of_irrational_root {α : ℝ} (ha : Irrational α) {f : ℤ[X]} (f0 : f ≠ 0)
     (fa : eval α (map (algebraMap ℤ ℝ) f) = 0) :
     ∃ A : ℝ, 0 < A ∧ ∀ a : ℤ, ∀ b : ℕ,
-      (1 : ℝ) ≤ ((b : ℝ) + 1) ^ f.natDegree * (|α - a / (b + 1)| * A) := by
+      (1 : ℝ) ≤ ((b : ℝ) + 1) ^ f.natDegree * (|α - (a : ℝ) / ((b : ℝ) + 1)| * A) := by
   -- `fR` is `f` viewed as a polynomial with `ℝ` coefficients.
   set fR : ℝ[X] := map (algebraMap ℤ ℝ) f
   -- `fR` is non-zero, since `f` is non-zero.
@@ -162,7 +163,7 @@ theorem exists_pos_real_of_irrational_root {α : ℝ} (ha : Irrational α) {f : 
         (fun y h => by rw [fR.deriv]; exact hM h) (convex_Icc _ _) hy (mem_Icc_iff_abs_le.mp ?_)
     exact @mem_closedBall_self ℝ _ α ζ (le_of_lt z0)
   -- 3: the weird inequality of Liouville type with powers of the denominators.
-  · change 1 ≤ (a + 1 : ℝ) ^ f.natDegree * |eval α fR - eval ((z : ℝ) / (a + 1)) fR|
+  · change 1 ≤ (a + 1 : ℝ) ^ f.natDegree * |eval α fR - eval ((z : ℝ) / ((a : ℝ) + 1)) fR|
     rw [fa, zero_sub, abs_neg]
     -- key observation: the right-hand side of the inequality is an *integer*.  Therefore,
     -- if its absolute value is not at least one, then it vanishes.  Proceed by contradiction
@@ -190,7 +191,7 @@ protected theorem transcendental {x : ℝ} (lx : Liouville x) : Transcendental �
   -- There is a "large" real number `A` such that `(b + 1) ^ (deg f) * |f (x - a / (b + 1))| * A`
   -- is at least one.  This is obtained from lemma `exists_pos_real_of_irrational_root`.
   obtain ⟨A, hA, h⟩ : ∃ A : ℝ, 0 < A ∧ ∀ (a : ℤ) (b : ℕ),
-      (1 : ℝ) ≤ ((b : ℝ) + 1) ^ f.natDegree * (|x - a / (b + 1)| * A) :=
+      (1 : ℝ) ≤ ((b : ℝ) + 1) ^ f.natDegree * (|x - (a : ℝ) / ((b : ℝ) + 1)| * A) :=
     exists_pos_real_of_irrational_root lx.irrational f0 ef0
   -- Since the real numbers are Archimedean, a power of `2` exceeds `A`: `hn : A < 2 ^ r`.
   rcases pow_unbounded_of_one_lt A (lt_add_one 1) with ⟨r, hn⟩
@@ -203,7 +204,7 @@ protected theorem transcendental {x : ℝ} (lx : Liouville x) : Transcendental �
   -- clear denominators at `a1`
   rw [lt_div_iff₀' (pow_pos b0 _), pow_add, mul_assoc] at a1
   -- split the inequality via `1 / A`.
-  refine (?_ : (b : ℝ) ^ f.natDegree * |x - a / b| < 1 / A).trans_le ?_
+  refine (?_ : (b : ℝ) ^ f.natDegree * |x - (a : ℝ) / (b : ℝ)| < 1 / A).trans_le ?_
   -- This branch of the proof uses the Liouville condition and the Archimedean property
   · refine (lt_div_iff₀' hA).mpr ?_
     refine lt_of_le_of_lt ?_ a1

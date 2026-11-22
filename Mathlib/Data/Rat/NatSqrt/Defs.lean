@@ -44,7 +44,7 @@ theorem ratSqrt_sq_le (x : ℕ) {prec : ℕ} (h : 0 < prec) :
   exact_mod_cast sqrt_le' (x * prec ^ 2)
 
 theorem lt_ratSqrt_add_inv_prec_sq (x : ℕ) {prec : ℕ} (h : 0 < prec) :
-    (x : ℚ) < (ratSqrt x prec h + 1 / prec) ^ 2 := by
+    (x : ℚ) < (ratSqrt x prec h + (1 : ℚ) / (prec : ℚ)) ^ 2 := by
   apply (mul_lt_mul_iff_of_pos_right (pow_pos (Nat.cast_pos.mpr h : (0 : ℚ) < prec) 2)).mp
   rw [← mul_pow, add_mul, ratSqrt_mul_prec, div_mul_cancel₀]
   exact_mod_cast lt_succ_sqrt' (x * prec ^ 2)

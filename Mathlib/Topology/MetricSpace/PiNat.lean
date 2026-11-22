@@ -849,12 +849,14 @@ protected def pseudoEMetricSpace : PseudoEMetricSpace (∀ i, F i) where
       PseudoEMetricSpace.uniformity_edist, le_antisymm_iff, le_iInf_iff, le_principal_iff]
     constructor
     · intro ε hε
+      have : IsUnit (2 : ℝ≥0∞) := by simp [ENNReal.isUnit_iff]
+      have half_pos : 0 < ε / 2 := by
+        simpa only [ENNReal.checkedDiv_eq_div] using ENNReal.half_pos hε.ne'
       obtain ⟨K, hK⟩ : ∃ K : Finset ι, ∑' i : {j // j ∉ K}, 2⁻¹ ^ encode (i : ι) < ε / 2 :=
         ((tendsto_order.1 <| ENNReal.tendsto_tsum_compl_atTop_zero
-          (tsum_geometric_encode_lt_top ENNReal.one_half_lt_one).ne).2 _
-            <| by simpa using hε.ne').exists
+          (tsum_geometric_encode_lt_top ENNReal.one_half_lt_one).ne).2 _ half_pos).exists
       obtain ⟨δ, δpos, hδ⟩ : ∃ δ, 0 < δ ∧ δ * K.card < ε / 2 :=
-        ENNReal.exists_pos_mul_lt (by simp) (by simpa using hε.ne')
+        ENNReal.exists_pos_mul_lt (by simp) half_pos.ne'
       apply @mem_iInf_of_iInter _ _ _ _ _ K.finite_toSet fun i =>
           {p : (∀ i : ι, F i) × ∀ i : ι, F i | edist (p.fst i) (p.snd i) < δ}
       · rintro ⟨i, hi⟩
@@ -877,7 +879,7 @@ protected def pseudoEMetricSpace : PseudoEMetricSpace (∀ i, F i) where
             gcongr with i hi
             exact (hxy i hi).le
           _ ≤ ε / 2 + ε / 2 := by gcongr; simpa [mul_comm] using hδ.le
-          _ = ε := ENNReal.add_halves _
+          _ = ε := by simpa only [ENNReal.checkedDiv_eq_div] using ENNReal.add_halves ε
     · intro i ε hε₀
       have : (0 : ℝ≥0∞) < 2⁻¹ ^ encode i := ENNReal.pow_pos (by norm_num) _
       refine mem_iInf_of_mem (min (2⁻¹ ^ encode i) ε) <| mem_iInf_of_mem (by positivity) ?_

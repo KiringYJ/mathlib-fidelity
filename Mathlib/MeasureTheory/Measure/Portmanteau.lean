@@ -294,20 +294,20 @@ theorem FiniteMeasure.limsup_measure_closed_le_of_tendsto {Ω ι : Type*} {L : F
   let fs := F_closed.apprSeq
   have key₁ : Tendsto (fun n ↦ ∫⁻ ω, (fs n ω : ℝ≥0∞) ∂μ) atTop (𝓝 ((μ : Measure Ω) F)) :=
     HasOuterApproxClosed.tendsto_lintegral_apprSeq F_closed (μ : Measure Ω)
-  have room₁ : (μ : Measure Ω) F < (μ : Measure Ω) F + ε / 2 :=
+  have room₁ : (μ : Measure Ω) F < (μ : Measure Ω) F + ENNReal.div (ε : ℝ≥0∞) 2 :=
     ENNReal.lt_add_right (measure_lt_top (μ : Measure Ω) F).ne ε_pos'
   obtain ⟨M, hM⟩ := eventually_atTop.mp <| key₁.eventually_lt_const room₁
   have key₂ := FiniteMeasure.tendsto_iff_forall_lintegral_tendsto.mp μs_lim (fs M)
   have room₂ :
     (lintegral (μ : Measure Ω) fun a ↦ fs M a) <
-      (lintegral (μ : Measure Ω) fun a ↦ fs M a) + ε / 2 :=
+      (lintegral (μ : Measure Ω) fun a ↦ fs M a) + ENNReal.div (ε : ℝ≥0∞) 2 :=
     ENNReal.lt_add_right (ne_of_lt ((fs M).lintegral_lt_top_of_nnreal _)) ε_pos'
   have ev_near := key₂.eventually_le_const room₂
   have ev_near' := ev_near.mono
     (fun n ↦ le_trans (HasOuterApproxClosed.measure_le_lintegral F_closed (μs n) M))
   apply (Filter.limsup_le_limsup ev_near').trans
   rw [limsup_const]
-  apply le_trans (add_le_add (hM M rfl.le).le (le_refl (ε / 2 : ℝ≥0∞)))
+  apply le_trans (add_le_add (hM M rfl.le).le (le_refl (ENNReal.div (ε : ℝ≥0∞) 2)))
   simp only [add_assoc, ENNReal.add_halves, le_refl]
 
 /-- One implication of the portmanteau theorem:
@@ -710,15 +710,16 @@ theorem tendsto_iff_forall_lipschitz_integral_tendsto {γ Ω : Type*} {mΩ : Sig
   · simp
   refine fun h ↦ tendsto_of_forall_isClosed_limsup_real_le' fun s hs ↦ ?_
   refine le_of_forall_pos_le_add fun ε ε_pos ↦ ?_
-  let fs : ℕ → Ω → ℝ := fun n ω ↦ thickenedIndicator (δ := (1 : ℝ) / (n + 1)) (by positivity) s ω
+  let fs : ℕ → Ω → ℝ := fun n ω ↦
+    thickenedIndicator (δ := (1 : ℝ) / (n + 1 : ℝ)) (by positivity) s ω
   have key₁ : Tendsto (fun n ↦ ∫ ω, fs n ω ∂μ) atTop (𝓝 ((μ : Measure Ω).real s)) :=
-    tendsto_integral_thickenedIndicator_of_isClosed μ hs (δs := fun n ↦ (1 : ℝ) / (n + 1))
+    tendsto_integral_thickenedIndicator_of_isClosed μ hs (δs := fun n ↦ (1 : ℝ) / (n + 1 : ℝ))
       (fun _ ↦ by positivity) tendsto_one_div_add_atTop_nhds_zero_nat
   have room₁ : (μ : Measure Ω).real s < (μ : Measure Ω).real s + ε / 2 := by simp [ε_pos]
   obtain ⟨M, hM⟩ := eventually_atTop.mp <| key₁.eventually_lt_const room₁
   have key₂ : Tendsto (fun i ↦ ∫ ω, fs M ω ∂(μs i)) F (𝓝 (∫ ω, fs M ω ∂μ)) :=
     h (fs M) ⟨1, fun x y ↦ ?_⟩
-      ⟨_, lipschitzWith_thickenedIndicator (δ := (1 : ℝ) / (M + 1)) (by positivity) s⟩
+      ⟨_, lipschitzWith_thickenedIndicator (δ := (1 : ℝ) / (M + 1 : ℝ)) (by positivity) s⟩
   swap
   · simp only [Real.dist_eq, abs_le]
     have h1 x : fs M x ≤ 1 := thickenedIndicator_le_one _ _ _
@@ -731,7 +732,7 @@ theorem tendsto_iff_forall_lipschitz_integral_tendsto {γ Ω : Type*} {mΩ : Sig
     refine integral_mono ?_ (integrable_thickenedIndicator _ _) ?_
     · exact (integrable_indicator_iff hs.measurableSet).mpr (integrable_const _).integrableOn
     · have h : _ ≤ fs M :=
-        indicator_le_thickenedIndicator (δ := (1 : ℝ) / (M + 1)) (by positivity) s
+        indicator_le_thickenedIndicator (δ := (1 : ℝ) / (M + 1 : ℝ)) (by positivity) s
       simpa using! h
   apply (Filter.limsup_le_of_le ?_ ev_near).trans
   · apply (add_le_add (hM M rfl.le).le (le_refl (ε / 2))).trans_eq

@@ -100,9 +100,9 @@ def b : ℕ+ :=
 def r : ℕ :=
   (u.ap + 1) % (u.bp + 1)
 
-/-- `q = ap / bp`: quotient -/
+/-- The Euclidean quotient of the positive values represented by `ap` and `bp`. -/
 def q : ℕ :=
-  (u.ap + 1) / (u.bp + 1)
+  Nat.euclideanDiv (u.ap + 1) (u.bp + 1) (Nat.succ_ne_zero _)
 
 /-- `qp = q - 1` -/
 def qp : ℕ :=
@@ -209,9 +209,10 @@ theorem flip_v : (flip u).v = u.v.swap := by
   · simp only
     ring
 
-/-- Properties of division with remainder for a / b. -/
+/-- The Euclidean quotient and remainder reconstruct the dividend. -/
 theorem rq_eq : u.r + (u.bp + 1) * u.q = u.ap + 1 :=
-  Nat.mod_add_div (u.ap + 1) (u.bp + 1)
+  (Nat.add_comm _ _).trans <|
+    Nat.euclideanDiv_mul_add_mod (u.ap + 1) (u.bp + 1) (Nat.succ_ne_zero _)
 
 theorem qp_eq (hr : u.r = 0) : u.q = u.qp + 1 := by
   by_cases hq : u.q = 0

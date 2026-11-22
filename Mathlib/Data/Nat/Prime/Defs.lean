@@ -355,13 +355,15 @@ theorem not_prime_iff_minFac_lt {n : ℕ} (n2 : 2 ≤ n) : ¬Prime n ↔ minFac 
   (not_congr <| (prime_def_minFac (by omega)).trans <| and_iff_right n2).trans <|
     (lt_iff_le_and_ne.trans <| and_iff_right <| minFac_le n2).symm
 
-theorem minFac_le_div {n : ℕ} (hn : 1 < n) (np : ¬Prime n) : minFac n ≤ n / minFac n :=
+theorem minFac_le_div {n : ℕ} (hn : 1 < n) (np : ¬Prime n) :
+    minFac n ≤ Nat.euclideanDiv n (minFac n) (Nat.ne_of_gt (minFac_pos n (by omega))) :=
   match minFac_dvd n (by omega) with
   | ⟨0, h0⟩ => absurd hn <| by rw [h0, mul_zero]; decide
   | ⟨1, h1⟩ => by
     rw [mul_one] at h1
     exact absurd (by rw [h1]; exact minFac_prime (by omega)) np
   | ⟨x + 2, hx⟩ => by
+    rw [Nat.euclideanDiv_eq_core]
     conv_rhs =>
       congr
       rw [hx]
@@ -371,11 +373,12 @@ theorem minFac_le_div {n : ℕ} (hn : 1 < n) (np : ¬Prime n) : minFac n ≤ n /
 /-- The square of the smallest prime factor of a composite number `n` is at most `n`.
 -/
 theorem minFac_sq_le_self {n : ℕ} (hn : 1 < n) (h : ¬Prime n) : minFac n ^ 2 ≤ n :=
-  have t : minFac n ≤ n / minFac n := minFac_le_div hn h
+  have hd := Nat.ne_of_gt (minFac_pos n (by omega))
+  have t := minFac_le_div hn h
   calc
     minFac n ^ 2 = minFac n * minFac n := sq (minFac n)
-    _ ≤ n / minFac n * minFac n := Nat.mul_le_mul_right (minFac n) t
-    _ ≤ n := div_mul_le_self n (minFac n)
+    _ ≤ Nat.euclideanDiv n (minFac n) hd * minFac n := Nat.mul_le_mul_right (minFac n) t
+    _ ≤ n := by rw [Nat.euclideanDiv_eq_core]; exact div_mul_le_self n (minFac n)
 
 @[simp]
 theorem minFac_eq_two_iff {n : ℕ} {hn : n ≠ 1} : minFac n hn = 2 ↔ 2 ∣ n := by
@@ -386,8 +389,10 @@ theorem minFac_eq_two_iff {n : ℕ} {hn : n ≠ 1} : minFac n hn = 2 ↔ 2 ∣ n
   · intro h
     exact le_antisymm (minFac_le_of_dvd (le_refl 2) h) (minFac_prime hn).two_le
 
-theorem factors_lemma {k} : (k + 2) / minFac (k + 2) < k + 2 :=
-  div_lt_self (Nat.zero_lt_succ _) (minFac_prime (by omega)).one_lt
+theorem factors_lemma {k} :
+    Nat.euclideanDiv (k + 2) (minFac (k + 2)) (Nat.ne_of_gt (minFac_pos _ (by omega))) < k + 2 := by
+  rw [Nat.euclideanDiv_eq_core]
+  exact div_lt_self (Nat.zero_lt_succ _) (minFac_prime (by omega)).one_lt
 
 end MinFac
 

@@ -84,6 +84,8 @@ theorem uniformContinuous_algebraMap_liesOver :
   `γL : ValuativeRel.ValueGroupWithZero Lʷ`       `γK: ValuativeRel.ValueGroupWithZero Kᵛ`
   -/
   let e := v.asIdeal.ramificationIdx' w.asIdeal
+  have he : 0 < (e : ℤ) := by
+    exact_mod_cast Nat.pos_of_ne_zero (ramificationIdx'_ne_zero_of_liesOver w.asIdeal v.ne_bot)
   -- push `γL` to `ℤᵐ⁰`
   let σL := WithVal.valueGroupOrderIso₀ (w.valuation L)
   let σw := valueGroup₀_equiv_withZeroMulInt (w.valuation L)
@@ -93,7 +95,7 @@ theorem uniformContinuous_algebraMap_liesOver :
   let σvV := ValuativeRel.ValueGroupWithZero.orderMonoidIso (WithVal.valuation (v.valuation K))
   let σv := valueGroup₀_equiv_withZeroMulInt (v.valuation K)
   let σK := WithVal.valueGroupOrderIso₀ (v.valuation K)
-  let γK := σvV.symm (σK.symm (σv.symm (exp (m.log / e))))
+  let γK := σvV.symm (σK.symm (σv.symm (exp (m.log.euclideanDiv (e : ℤ) he.ne'))))
   have hγK : γK ≠ 0 := by simp [γK, EmbeddingLike.map_eq_zero_iff (f := σK.symm)]
   use .mk0 _ hγK
   simp only [Units.val_mk0, Set.mem_ofPred_eq, true_and]
@@ -111,8 +113,8 @@ theorem uniformContinuous_algebraMap_liesOver :
     WithVal.algebraMap_left_apply, WithVal.algebraMap_right_apply, ← valuation_liesOver L v,
     ← log_lt_log (by simp_all) (by simp [EmbeddingLike.map_eq_zero_iff (f := σwV)]), log_pow,
     nsmul_eq_mul, mul_comm]
-  exact Int.mul_lt_of_lt_ediv
-    (mod_cast pos_of_ne_zero (ramificationIdx'_ne_zero_of_liesOver w.asIdeal v.ne_bot)) hx
+  rw [Int.euclideanDiv_eq_core] at hx
+  exact Int.mul_lt_of_lt_ediv he hx
 
 end AKLB
 

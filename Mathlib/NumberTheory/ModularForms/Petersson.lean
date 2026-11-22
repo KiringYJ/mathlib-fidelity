@@ -56,7 +56,8 @@ lemma petersson_slash (k : ℤ) (f f' : ℍ → ℂ) (g : GL (Fin 2) ℝ) (τ : 
       zpow_add₀ hD, mul_zpow₀, ModularForm.slash_apply, ← hDdef, ← hjdef,
       -Matrix.GeneralLinearGroup.val_det_apply]
     ring
-  _ = D ^ (k - 2) * (conj (σ g (f (g • τ))) * σ g (f' (g • τ)) * (D * τ.im / j.normSq) ^ k) := by
+  _ = D ^ (k - 2) * (conj (σ g (f (g • τ))) * σ g (f' (g • τ)) *
+      ((D : ℂ) * τ.im / (j.normSq : ℂ)) ^ k) := by
     rw [div_zpow₀, mul_zpow₀, zpow_neg₀ hjSq, div_eq_mul_inv₀, zpow_add₀ hD]
     ring
   _ = D ^ (k - 2) * (conj (σ g (f (g • τ))) * σ g (f' (g • τ)) * (im (g • τ)) ^ k) := by

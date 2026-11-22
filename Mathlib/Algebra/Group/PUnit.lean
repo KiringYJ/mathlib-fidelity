@@ -45,7 +45,9 @@ instance commGroup : CommGroup PUnit where
 -- note simp can prove this when the Boolean ring structure is introduced
 @[to_additive] lemma mul_eq (x y : PUnit) : x * y = unit := rfl
 
-@[to_additive (attr := simp)] lemma div_eq (x y : PUnit) : x / y = unit := rfl
+universe u
+
+@[to_additive (attr := simp)] lemma div_eq (x y : PUnit.{u + 1}) : x / y = unit := rfl
 @[to_additive (attr := simp)] lemma inv_eq (x : PUnit) : x⁻¹ = unit := rfl
 
 end PUnit

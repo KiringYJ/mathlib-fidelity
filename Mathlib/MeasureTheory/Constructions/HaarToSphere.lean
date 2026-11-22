@@ -114,7 +114,7 @@ def volumeIoiPow (n : ℕ) : Measure (Ioi (0 : ℝ)) :=
   .withDensity (.comap Subtype.val volume) fun r ↦ .ofReal (r.1 ^ n)
 
 lemma volumeIoiPow_apply_Iio (n : ℕ) (x : Ioi (0 : ℝ)) :
-    volumeIoiPow n (Iio x) = ENNReal.ofReal (x.1 ^ (n + 1) / (n + 1)) := by
+    volumeIoiPow n (Iio x) = ENNReal.ofReal (x.1 ^ (n + 1) / ((n : ℝ) + 1)) := by
   have hr₀ : 0 ≤ x.1 := le_of_lt x.2
   rw [volumeIoiPow, withDensity_apply _ measurableSet_Iio,
     setLIntegral_subtype measurableSet_Ioi _ fun a : ℝ ↦ .ofReal (a ^ n),

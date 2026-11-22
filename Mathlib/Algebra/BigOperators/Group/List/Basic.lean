@@ -354,7 +354,8 @@ theorem prod_inv {K : Type*} [DivisionCommMonoid K] :
 @[to_additive /-- Cancellation of a telescoping sum. -/]
 theorem prod_range_div (n : ℕ) (f : ℕ → G) :
     ((range n).map fun k ↦ f (k + 1) / f k).prod = f n / f 0 := by
-  have h : ((·⁻¹) ∘ fun k ↦ f (k + 1) / f k) = fun k ↦ f k / f (k + 1) := by ext; apply inv_div
+  have h : ((·⁻¹) ∘ fun k ↦ f (k + 1) / f k) =
+      fun k ↦ f k / f (k + 1) := by ext; apply inv_div
   rw [← inv_inj, prod_inv, map_map, inv_div, h, prod_range_div']
 
 /-- Alternative version of `List.prod_set` when the list is over a group -/
@@ -426,8 +427,12 @@ theorem alternatingProd_cons_cons' (a b : G) (l : List G) :
 
 end
 
-@[to_additive]
-theorem alternatingProd_cons_cons [DivInvMonoid G] (a b : G) (l : List G) :
+theorem alternatingSum_cons_cons [SubNegMonoid G] (a b : G) (l : List G) :
+    alternatingSum (a :: b :: l) = a - b + alternatingSum l := by
+  rw [sub_eq_add_neg, alternatingSum_cons_cons']
+
+@[to_additive alternatingSum_cons_cons_of_addGroup]
+theorem alternatingProd_cons_cons [Group G] (a b : G) (l : List G) :
     alternatingProd (a :: b :: l) = a / b * alternatingProd l := by
   rw [div_eq_mul_inv, alternatingProd_cons_cons']
 

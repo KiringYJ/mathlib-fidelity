@@ -169,7 +169,7 @@ local notation "n" => finrank K L
 /-- A variation of `Algebra.discr_powerBasis_eq_prod`. -/
 theorem discr_powerBasis_eq_prod'' [Algebra.IsSeparable K L] (e : Fin pb.dim ≃ (L →ₐ[K] E)) :
     algebraMap K E (discr K pb.basis) =
-      (-1) ^ (n * (n - 1) / 2) *
+      (-1) ^ Nat.euclideanDiv (n * (n - 1)) 2 *
         ∏ i : Fin pb.dim, ∏ j ∈ Ioi i, (e j pb.gen - e i pb.gen) * (e i pb.gen - e j pb.gen) := by
   rw [discr_powerBasis_eq_prod' _ _ _ e]
   simp_rw [fun i j => neg_eq_neg_one_mul ((e j pb.gen - e i pb.gen) * (e i pb.gen - e j pb.gen)),
@@ -191,13 +191,15 @@ theorem discr_powerBasis_eq_prod'' [Algebra.IsSeparable K L] (e : Fin pb.dim ≃
   have hle : 1 ≤ pb.dim := by
     rw [← hn, Nat.one_le_iff_ne_zero, ← zero_lt_iff, Module.finrank_pos_iff]
     infer_instance
-  rw [hn, Nat.cast_div h₂ hne, Nat.cast_mul, Nat.cast_sub hle]
+  have hcast := Nat.cast_div h₂ hne
+  simp only [Nat.euclideanDiv_eq_core] at hcast ⊢
+  rw [hn, hcast, Nat.cast_mul, Nat.cast_sub hle]
   ring
 
 /-- Formula for the discriminant of a power basis using the norm of the field extension. -/
 theorem discr_powerBasis_eq_norm [Algebra.IsSeparable K L] :
     discr K pb.basis =
-      (-1) ^ (n * (n - 1) / 2) *
+      (-1) ^ Nat.euclideanDiv (n * (n - 1)) 2 *
       norm K (aeval pb.gen (minpoly K pb.gen).derivative) := by
   let E := AlgebraicClosure L
   let := fun a b : E => Classical.propDecidable (Eq a b)

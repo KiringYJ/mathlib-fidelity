@@ -58,7 +58,7 @@ theorem tendsto_measure_symmDiff_preimage_nhds_zero
   intro ε hε
   -- Without loss of generality, `s` is an open set.
   wlog hso : IsOpen s generalizing s ε
-  · have H : 0 < ε / 3 := ENNReal.div_pos hε.ne' ENNReal.coe_ne_top
+  · have H : 0 < ENNReal.div ε 3 := ENNReal.div_pos hε.ne' ENNReal.coe_ne_top
     -- Indeed, we can choose an open set `U` such that `ν (U ∆ s) < ε / 3`,
     -- apply the lemma to `U`, then use the triangle inequality for `μ (_ ∆ _)`.
     rcases hs.exists_isOpen_symmDiff_lt hνs H.ne' with ⟨U, hUo, hU, hUs⟩
@@ -72,7 +72,7 @@ theorem tendsto_measure_symmDiff_preimage_nhds_zero
         refine (measure_symmDiff_le _ (g ⁻¹' U) _).trans ?_
         gcongr
         apply measure_symmDiff_le
-      _ ≤ ε / 3 + ε / 3 + ε / 3 := by
+      _ ≤ ENNReal.div ε 3 + ENNReal.div ε 3 + ENNReal.div ε 3 := by
         gcongr
         · rwa [← preimage_symmDiff, hfa.measure_preimage (hs.symmDiff hmU), symmDiff_comm]
         · rwa [← preimage_symmDiff, hg.measure_preimage (hmU.symmDiff hs)]
@@ -81,7 +81,7 @@ theorem tendsto_measure_symmDiff_preimage_nhds_zero
   -- `μ (g ⁻¹' s \ K) < ε / 2`.
   have hνs' : μ (g ⁻¹' s) ≠ ∞ := by rwa [hg.measure_preimage hs]
   obtain ⟨K, hKg, hKco, hKcl, hKμ⟩ :
-      ∃ K, MapsTo g K s ∧ IsCompact K ∧ IsClosed K ∧ μ (g ⁻¹' s \ K) < ε / 2 :=
+      ∃ K, MapsTo g K s ∧ IsCompact K ∧ IsClosed K ∧ μ (g ⁻¹' s \ K) < ENNReal.div ε 2 :=
     MeasurableSet.exists_isCompact_isClosed_sdiff_lt (hg.measurable hso.measurableSet) hνs' <| by
       simp [hε.ne']
   have hKm : NullMeasurableSet K μ := hKcl.nullMeasurableSet

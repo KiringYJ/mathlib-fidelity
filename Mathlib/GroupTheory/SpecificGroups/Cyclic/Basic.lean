@@ -253,13 +253,17 @@ instance Subgroup.isCyclic [IsCyclic α] (H : Subgroup α) : IsCyclic H :=
     ⟨⟨⟨g ^ Nat.find hex, (Nat.find_spec hex).2⟩, fun ⟨x, hx⟩ =>
         let ⟨k, hk⟩ := hg x
         have hk : g ^ k = x := hk
-        have hk₂ : g ^ ((Nat.find hex : ℤ) * (k / Nat.find hex : ℤ)) ∈ H := by
+        have hd : (Nat.find hex : ℤ) ≠ 0 := Int.natCast_ne_zero_iff_pos.2 (Nat.find_spec hex).1
+        let q := Int.euclideanDiv k (Nat.find hex : ℤ) hd
+        have hrec : k % (Nat.find hex : ℤ) + (Nat.find hex : ℤ) * q = k :=
+          (Int.add_comm _ _).trans (Int.euclideanDiv_mul_add_mod k (Nat.find hex : ℤ) hd)
+        have hk₂ : g ^ ((Nat.find hex : ℤ) * q) ∈ H := by
           rw [zpow_mul]
           apply H.zpow_mem
           exact mod_cast (Nat.find_spec hex).2
         have hk₃ : g ^ (k % Nat.find hex : ℤ) ∈ H :=
           (Subgroup.mul_mem_cancel_right H hk₂).1 <| by
-            rw [← zpow_add, Int.emod_add_mul_ediv, hk]; exact hx
+            rw [← zpow_add, hrec, hk]; exact hx
         have hk₄ : k % Nat.find hex = (k % Nat.find hex).natAbs := by
           rw [Int.natAbs_of_nonneg
               (Int.emod_nonneg _ (Int.natCast_ne_zero_iff_pos.2 (Nat.find_spec hex).1))]
@@ -270,13 +274,12 @@ instance Subgroup.isCyclic [IsCyclic α] (H : Subgroup α) : IsCyclic H :=
               (Int.ofNat_lt.1 <| by
                 rw [← hk₄]; exact Int.emod_lt_of_pos _ (Int.natCast_pos.2 (Nat.find_spec hex).1))
               ⟨Nat.pos_of_ne_zero h, hk₅⟩
-        ⟨k / (Nat.find hex : ℤ),
+        ⟨q,
           Subtype.ext_iff.2
             (by
-              suffices g ^ ((Nat.find hex : ℤ) * (k / Nat.find hex : ℤ)) = x by simpa [zpow_mul]
-              rw [Int.mul_ediv_cancel'
-                  (Int.dvd_of_emod_eq_zero (Int.natAbs_eq_zero.mp hk₆)),
-                hk])⟩⟩⟩
+              suffices g ^ ((Nat.find hex : ℤ) * q) = x by simpa [zpow_mul]
+              rw [Int.natAbs_eq_zero.mp hk₆, zero_add] at hrec
+              rw [hrec, hk])⟩⟩⟩
   else by
     have : H = (⊥ : Subgroup α) :=
       Subgroup.ext fun x =>
@@ -313,33 +316,34 @@ open scoped Classical in
 theorem IsCyclic.card_pow_eq_one_le [DecidableEq α] [Fintype α] [IsCyclic α] {n : ℕ} (hn0 : 0 < n) :
     #{a : α | a ^ n = 1} ≤ n :=
   let ⟨g, hg⟩ := IsCyclic.exists_generator (α := α)
+  let d := Nat.gcd n (Fintype.card α)
+  have hd : 0 < d := gcd_pos_of_pos_left _ hn0
+  let q := Nat.euclideanDiv (Fintype.card α) d hd.ne'
+  have hcard : q * d = Fintype.card α := by
+    rw [show q = _ from Nat.euclideanDiv_eq_core _ _ _]
+    exact Nat.div_mul_cancel (Nat.gcd_dvd_right _ _)
   calc
-    #{a : α | a ^ n = 1} ≤
-        #(zpowers (g ^ (Fintype.card α / Nat.gcd n (Fintype.card α))) : Set α).toFinset := by
+    #{a : α | a ^ n = 1} ≤ #(zpowers (g ^ q) : Set α).toFinset := by
       gcongr
       intro x hx
-      let ⟨m, hm⟩ := show x ∈ Submonoid.powers g from mem_powers_iff_mem_zpowers.2 <| hg x
-      refine Set.mem_toFinset.2 ⟨(m / (Fintype.card α / Nat.gcd n (Fintype.card α)) : ℕ), ?_⟩
+      obtain ⟨m, hm⟩ := show x ∈ Submonoid.powers g from mem_powers_iff_mem_zpowers.2 <| hg x
+      have hqm : q ∣ m := by
+        refine Nat.dvd_of_mul_dvd_mul_right hd ?_
+        rw [hcard, ← Nat.card_eq_fintype_card, ← orderOf_eq_card_of_forall_mem_zpowers hg]
+        exact orderOf_dvd_of_pow_eq_one <| by simpa [pow_mul, hm, d] using (mem_filter.1 hx).2
+      obtain ⟨k, hk⟩ := hqm
+      refine Set.mem_toFinset.2 ⟨(k : ℤ), ?_⟩
       dsimp only at ⊢ hm
-      rw [zpow_natCast, ← pow_mul, Nat.mul_div_cancel_left', hm]
-      refine Nat.dvd_of_mul_dvd_mul_right (gcd_pos_of_pos_left (Fintype.card α) hn0) ?_
-      conv_lhs =>
-        rw [Nat.div_mul_cancel (Nat.gcd_dvd_right _ _), ← Nat.card_eq_fintype_card,
-          ← orderOf_eq_card_of_forall_mem_zpowers hg]
-      exact orderOf_dvd_of_pow_eq_one <| by simpa [pow_mul, hm] using (mem_filter.1 hx).2
+      rw [zpow_natCast, ← pow_mul, ← hk, hm]
     _ ≤ n := by
-      let ⟨m, hm⟩ := Nat.gcd_dvd_right n (Fintype.card α)
-      have hm0 : 0 < m :=
-        Nat.pos_of_ne_zero fun hm0 => by
-          rw [hm0, mul_zero, Fintype.card_eq_zero_iff] at hm
-          exact hm.elim' 1
+      have hq : 0 < q := Nat.pos_of_ne_zero fun e ↦
+        Fintype.card_ne_zero (α := α) (by simpa [e] using hcard.symm)
+      have hgd : (Fintype.card α).gcd q = q := Nat.gcd_eq_right ⟨d, hcard.symm⟩
       simp only [Set.toFinset_card, SetLike.coe_sort_coe]
-      rw [Fintype.card_zpowers, orderOf_pow g, orderOf_eq_card_of_forall_mem_zpowers hg,
-        Nat.card_eq_fintype_card]
-      nth_rw 2 [hm]; nth_rw 3 [hm]
-      rw [Nat.mul_div_cancel_left _ (gcd_pos_of_pos_left _ hn0), gcd_mul_left_left, hm,
-        Nat.mul_div_cancel _ hm0]
-      exact le_of_dvd hn0 (Nat.gcd_dvd_left _ _)
+      rw [Fintype.card_zpowers, orderOf_pow g, Nat.euclideanDiv_eq_core,
+        orderOf_eq_card_of_forall_mem_zpowers hg, Nat.card_eq_fintype_card]
+      rw [hgd, Nat.div_eq_of_eq_mul_right hq hcard.symm]
+      exact Nat.le_of_dvd hn0 (Nat.gcd_dvd_left _ _)
 
 end Classical
 

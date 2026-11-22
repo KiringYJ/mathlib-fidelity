@@ -576,7 +576,7 @@ theorem translationNumber_eq_of_tendsto₀ {τ' : ℝ}
   simpa [Function.comp_def, transnumAuxSeq_def, coe_pow] using h.comp h2
 
 theorem translationNumber_eq_of_tendsto₀' {τ' : ℝ}
-    (h : Tendsto (fun n : ℕ => f^[n + 1] 0 / (n + 1)) atTop (𝓝 τ')) : τ f = τ' := by
+    (h : Tendsto (fun n : ℕ => f^[n + 1] 0 / ((n : ℝ) + 1)) atTop (𝓝 τ')) : τ f = τ' := by
   refine f.translationNumber_eq_of_tendsto₀ ?_
   have he : Tendsto (fun n : {n : ℕ // n ≠ 0} ↦ (n : ℕ) - 1) (comap Subtype.val atTop) atTop :=
     (tendsto_sub_atTop_nat 1).comp tendsto_comap
@@ -719,7 +719,8 @@ theorem tendsto_translationNumber (x : ℝ) :
   simp [sub_eq_neg_add, Units.conj_pow']
 
 theorem tendsto_translation_number' (x : ℝ) :
-    Tendsto (fun n : ℕ => ((f ^ (n + 1) : CircleDeg1Lift) x - x) / (n + 1)) atTop (𝓝 <| τ f) := by
+    Tendsto (fun n : ℕ => ((f ^ (n + 1) : CircleDeg1Lift) x - x) / ((n : ℝ) + 1))
+      atTop (𝓝 <| τ f) := by
   have h : Tendsto (fun n : ℕ ↦ (⟨n + 1, n.succ_ne_zero⟩ : {n : ℕ // n ≠ 0})) atTop
       (comap Subtype.val atTop) := tendsto_comap_iff.2 (tendsto_add_atTop_nat 1)
   simpa [Function.comp_def] using (f.tendsto_translationNumber x).comp h
@@ -795,7 +796,7 @@ theorem lt_map_of_nat_lt_translationNumber {n : ℕ} (h : ↑n < τ f) (x : ℝ)
 `τ f = m / n`. On the circle this means that a map with a periodic orbit has
 a rational rotation number. -/
 theorem translationNumber_of_map_pow_eq_add_int {x : ℝ} {n : ℕ} {m : ℤ} (h : (f ^ n) x = x + m)
-    (hn : 0 < n) : τ f = m / n := by
+    (hn : 0 < n) : τ f = (m : ℝ) / (n : ℝ) := by
   have := (f ^ n).translationNumber_of_eq_add_int h
   rwa [translationNumber_pow, mul_comm, ← eq_div_iff] at this
 
@@ -849,7 +850,7 @@ theorem continuous_pow (hf : Continuous f) (n : ℕ) : Continuous (f ^ n : Circl
   exact hf.iterate n
 
 theorem translationNumber_eq_rat_iff (hf : Continuous f) {m : ℤ} {n : ℕ} (hn : 0 < n) :
-    τ f = m / n ↔ ∃ x, (f ^ n) x = x + m := by
+    τ f = (m : ℝ) / (n : ℝ) ↔ ∃ x, (f ^ n) x = x + m := by
   rw [eq_div_iff, mul_comm, ← translationNumber_pow]
   exact (f ^ n).translationNumber_eq_int_iff (f.continuous_pow hf n)
 

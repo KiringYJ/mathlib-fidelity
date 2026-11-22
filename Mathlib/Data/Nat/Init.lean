@@ -90,14 +90,17 @@ lemma two_mul_ne_two_mul_add_one : 2 * n ≠ 2 * m + 1 :=
 
 /-! ### `div` -/
 
-lemma le_div_two_iff_mul_two_le {n m : ℕ} : m ≤ n / 2 ↔ (m : ℤ) * 2 ≤ n := by
-  rw [Nat.le_div_iff_mul_le Nat.zero_lt_two, ← Int.ofNat_le, Int.natCast_mul, Int.ofNat_two]
+lemma le_div_two_iff_mul_two_le {n m : ℕ} : m ≤ Nat.euclideanDiv n 2 ↔ (m : ℤ) * 2 ≤ n := by
+  rw [Nat.euclideanDiv_eq_core, Nat.le_div_iff_mul_le Nat.zero_lt_two, ← Int.ofNat_le,
+    Int.natCast_mul, Int.ofNat_two]
 
 /-- A version of `Nat.div_lt_self` using successors, rather than additional hypotheses. -/
-lemma div_lt_self' (a b : ℕ) : (a + 1) / (b + 2) < a + 1 :=
-  Nat.div_lt_self (Nat.succ_pos _) (Nat.succ_lt_succ (Nat.succ_pos _))
+lemma div_lt_self' (a b : ℕ) : Nat.euclideanDiv (a + 1) (b + 2) < a + 1 := by
+  rw [Nat.euclideanDiv_eq_core]
+  exact Nat.div_lt_self (Nat.succ_pos _) (Nat.succ_lt_succ (Nat.succ_pos _))
 
-lemma two_mul_odd_div_two (hn : n % 2 = 1) : 2 * (n / 2) = n - 1 := by
+lemma two_mul_odd_div_two (hn : n % 2 = 1) : 2 * Nat.euclideanDiv n 2 = n - 1 := by
+  rw [Nat.euclideanDiv_eq_core]
   lia
 
 /-! ### `pow` -/

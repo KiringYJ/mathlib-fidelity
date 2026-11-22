@@ -568,7 +568,8 @@ theorem abv_inv (a : R) {ha : IsUnit a} :
   map_inv₀ (abvHom' abv) a
 
 theorem abv_div (a b : R) {hb : IsUnit b} :
-    abv (a / b) = Checked.div (abv a) (abv b) (Ne.isUnit ((abv_eq_zero abv).not.mpr hb.ne_zero)) :=
+    abv (Checked.div a b hb) =
+      Checked.div (abv a) (abv b) (Ne.isUnit ((abv_eq_zero abv).not.mpr hb.ne_zero)) :=
   map_div₀ (abvHom' abv) a b
 
 end DivisionSemiring

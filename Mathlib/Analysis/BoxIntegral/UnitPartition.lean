@@ -100,22 +100,22 @@ variable (n : ℕ)
 /-- A `BoxIntegral`, indexed by a positive integer `n` and `ν : ι → ℤ`, with corners `ν i / n`
 and of side length `1 / n`. -/
 def box [NeZero n] (ν : ι → ℤ) : Box ι where
-  lower := fun i ↦ ν i / n
-  upper := fun i ↦ (ν i + 1) / n
+  lower := fun i ↦ (ν i : ℝ) / (n : ℝ)
+  upper := fun i ↦ ((ν i : ℝ) + 1) / (n : ℝ)
   lower_lt_upper := fun _ ↦ by simp [add_div, n.pos_of_neZero]
 
 @[simp]
 theorem box_lower [NeZero n] (ν : ι → ℤ) :
-    (box n ν).lower = fun i ↦ (ν i / n : ℝ) := rfl
+    (box n ν).lower = fun i ↦ (ν i : ℝ) / (n : ℝ) := rfl
 
 @[simp]
 theorem box_upper [NeZero n] (ν : ι → ℤ) :
-    (box n ν).upper = fun i ↦ ((ν i + 1) / n : ℝ) := rfl
+    (box n ν).upper = fun i ↦ ((ν i : ℝ) + 1) / (n : ℝ) := rfl
 
 variable {n} in
 @[simp]
 theorem mem_box_iff [NeZero n] {ν : ι → ℤ} {x : ι → ℝ} :
-    x ∈ box n ν ↔ ∀ i, ν i / n < x i ∧ x i ≤ (ν i + 1) / n := by
+    x ∈ box n ν ↔ ∀ i, (ν i : ℝ) / (n : ℝ) < x i ∧ x i ≤ ((ν i : ℝ) + 1) / (n : ℝ) := by
   simp_rw [Box.mem_def, box, Set.mem_Ioc]
 
 variable {n} in
@@ -127,10 +127,10 @@ theorem mem_box_iff' [NeZero n] {ν : ι → ℤ} {x : ι → ℝ} :
 variable [NeZero n]
 
 /-- The tag of (the index of) a `unitPartition.box`. -/
-abbrev tag (ν : ι → ℤ) : ι → ℝ := fun i ↦ (ν i + 1) / n
+abbrev tag (ν : ι → ℤ) : ι → ℝ := fun i ↦ ((ν i : ℝ) + 1) / (n : ℝ)
 
 @[simp]
-theorem tag_apply (ν : ι → ℤ) (i : ι) : tag n ν i = (ν i + 1) / n := rfl
+theorem tag_apply (ν : ι → ℤ) (i : ι) : tag n ν i = ((ν i : ℝ) + 1) / (n : ℝ) := rfl
 
 theorem tag_mem (ν : ι → ℤ) : tag n ν ∈ box n ν :=
   mem_box_iff.mpr fun i ↦ ⟨(box n ν).lower_lt_upper i, le_rfl⟩
@@ -170,7 +170,7 @@ theorem box_injective : Function.Injective (fun ν : ι → ℤ ↦ box n ν) :=
   exact Box.ne_of_disjoint_coe (disjoint.mp h)
 
 lemma box.upper_sub_lower (ν : ι → ℤ) (i : ι) :
-    (box n ν).upper i - (box n ν).lower i = 1 / n := by
+    (box n ν).upper i - (box n ν).lower i = 1 / (n : ℝ) := by
   simp_rw [box, add_div, add_sub_cancel_left]
 
 section fintype
@@ -178,22 +178,23 @@ section fintype
 variable [Fintype ι]
 
 theorem diam_boxIcc (ν : ι → ℤ) :
-    Metric.diam (Box.Icc (box n ν)) ≤ 1 / n := by
+    Metric.diam (Box.Icc (box n ν)) ≤ 1 / (n : ℝ) := by
   rw [BoxIntegral.Box.Icc_eq_pi]
   refine ENNReal.toReal_le_of_le_ofReal (by positivity) <| Metric.ediam_pi_le_of_le fun i ↦ ?_
   simp_rw [Real.ediam_Icc, box.upper_sub_lower, le_rfl]
 
 @[simp]
 theorem volume_box (ν : ι → ℤ) :
-    volume (box n ν : Set (ι → ℝ)) = 1 / n ^ card ι := by
+    volume (box n ν : Set (ι → ℝ)) = ENNReal.div 1 ((n : ENNReal) ^ card ι) := by
   simp_rw [volume_pi, BoxIntegral.Box.coe_eq_pi, Measure.pi_pi, Real.volume_Ioc,
     box.upper_sub_lower, Finset.prod_const, ENNReal.ofReal_div_of_pos (Nat.cast_pos.mpr
-    n.pos_of_neZero), ENNReal.ofReal_one, ENNReal.ofReal_natCast, one_div, ENNReal.inv_pow,
+    n.pos_of_neZero), ENNReal.ofReal_one, ENNReal.ofReal_natCast, ENNReal.one_div, ENNReal.inv_pow,
     Finset.card_univ]
 
 theorem setFinite_index {s : Set (ι → ℝ)} (hs₁ : NullMeasurableSet s) (hs₂ : volume s ≠ ⊤) :
     Set.Finite {ν : ι → ℤ | ↑(box n ν) ⊆ s} := by
-  refine (Measure.finite_const_le_meas_of_disjoint_iUnion₀ volume (ε := 1 / n ^ card ι)
+  refine (Measure.finite_const_le_meas_of_disjoint_iUnion₀ volume
+    (ε := ENNReal.div 1 ((n : ENNReal) ^ card ι))
     (by simp) (As := fun ν : ι → ℤ ↦ (box n ν) ∩ s) (fun ν ↦ ?_) (fun _ _ h ↦ ?_) ?_).subset
       (fun _ hν ↦ ?_)
   · refine NullMeasurableSet.inter ?_ hs₁
@@ -268,7 +269,7 @@ theorem prepartition_isHenstock (B : Box ι) :
   rw [prepartition_tag n hν]
   exact Box.coe_subset_Icc (tag_mem _ _)
 
-theorem prepartition_isSubordinate (B : Box ι) {r : ℝ} (hr : 0 < r) (hn : 1 / n ≤ r) :
+theorem prepartition_isSubordinate (B : Box ι) {r : ℝ} (hr : 0 < r) (hn : 1 / (n : ℝ) ≤ r) :
     (prepartition n B).IsSubordinate (fun _ ↦ ⟨r, hr⟩) := by
   intro _ hI
   obtain ⟨ν, hν, rfl⟩ := mem_prepartition_iff.mp hI
@@ -278,7 +279,7 @@ theorem prepartition_isSubordinate (B : Box ι) {r : ℝ} (hr : 0 < r) (hn : 1 /
   · exact le_trans (diam_boxIcc n ν) hn
 
 private theorem mem_admissibleIndex_of_mem_box_aux₁ (x : ℝ) (a : ℤ) :
-    a < x ↔ a ≤ (⌈n * x⌉ - 1) / (n : ℝ) := by
+    a < x ↔ a ≤ ((⌈n * x⌉ : ℝ) - 1) / (n : ℝ) := by
   have h : 0 < (n : ℝ) := Nat.cast_pos.mpr <| n.pos_of_neZero
   rw [le_div_iff₀' h, le_sub_iff_add_le,
     show (n : ℝ) * a + 1 = (n * a + 1 : ℤ) by norm_cast,
@@ -286,7 +287,7 @@ private theorem mem_admissibleIndex_of_mem_box_aux₁ (x : ℝ) (a : ℤ) :
     mul_lt_mul_iff_right₀ h]
 
 private theorem mem_admissibleIndex_of_mem_box_aux₂ (x : ℝ) (a : ℤ) :
-    x ≤ a ↔ (⌈n * x⌉ - 1 + 1) / (n : ℝ) ≤ a := by
+    x ≤ a ↔ ((⌈n * x⌉ : ℝ) - 1 + 1) / (n : ℝ) ≤ a := by
   have h : 0 < (n : ℝ) := Nat.cast_pos.mpr <| n.pos_of_neZero
   rw [sub_add_cancel, div_le_iff₀' h,
     show (n : ℝ) * a = (n * a : ℤ) by norm_cast,
@@ -379,7 +380,7 @@ variable [Fintype ι]
 
 theorem integralSum_eq_tsum_div {B : Box ι} (hB : hasIntegralVertices B) (hs₀ : s ≤ B) :
     integralSum (Set.indicator s F) (BoxAdditiveMap.toSMul (Measure.toBoxAdditive volume))
-      (prepartition n B) = (∑' x : ↑(s ∩ (n : ℝ)⁻¹ • L), F x) / n ^ card ι := by
+      (prepartition n B) = (∑' x : ↑(s ∩ (n : ℝ)⁻¹ • L), F x) / (n : ℝ) ^ card ι := by
   classical
   unfold integralSum
   have : Fintype ↑(s ∩ (n : ℝ)⁻¹ • L) := by

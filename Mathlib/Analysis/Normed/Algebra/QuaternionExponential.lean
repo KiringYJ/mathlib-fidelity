@@ -40,7 +40,7 @@ theorem exp_coe (r : ℝ) : exp (r : ℍ[ℝ]) = ↑(exp r) :=
 /-- The even terms of `expSeries` are real, and correspond to the series for $\cos ‖q‖$. -/
 theorem expSeries_even_of_imaginary {q : Quaternion ℝ} (hq : q.re = 0) (n : ℕ) :
     expSeries ℝ (Quaternion ℝ) (2 * n) (fun _ => q) =
-      ↑((-1 : ℝ) ^ n * ‖q‖ ^ (2 * n) / (2 * n)!) := by
+      ↑((-1 : ℝ) ^ n * ‖q‖ ^ (2 * n) / ((2 * n)! : ℝ)) := by
   rw [expSeries_apply_eq]
   have hq2 : q ^ 2 = -normSq q := sq_eq_neg_normSq.mpr hq
   let k : ℝ := ↑(2 * n)!
@@ -60,7 +60,7 @@ theorem expSeries_even_of_imaginary {q : Quaternion ℝ} (hq : q.re = 0) (n : �
 `Real.sinc ‖q‖`. -/
 theorem expSeries_odd_of_imaginary {q : Quaternion ℝ} (hq : q.re = 0) (n : ℕ) :
     expSeries ℝ (Quaternion ℝ) (2 * n + 1) (fun _ => q) =
-      ((-1 : ℝ) ^ n * ‖q‖ ^ (2 * n) / (2 * n + 1)!) • q := by
+      ((-1 : ℝ) ^ n * ‖q‖ ^ (2 * n) / ((2 * n + 1)! : ℝ)) • q := by
   rw [expSeries_apply_eq]
   have hq2 : q ^ 2 = -normSq q := sq_eq_neg_normSq.mpr hq
   let k : ℝ := ↑(2 * n + 1)!
@@ -75,8 +75,8 @@ theorem expSeries_odd_of_imaginary {q : Quaternion ℝ} (hq : q.re = 0) (n : ℕ
 
 /-- The exponential series combines the cosine and sinc series evaluated at `‖q‖`. -/
 theorem hasSum_expSeries_of_imaginary {q : Quaternion ℝ} (hq : q.re = 0) {c s : ℝ}
-    (hc : HasSum (fun n => (-1 : ℝ) ^ n * ‖q‖ ^ (2 * n) / (2 * n)!) c)
-    (hs : HasSum (fun n => (-1 : ℝ) ^ n * ‖q‖ ^ (2 * n) / (2 * n + 1)!) s) :
+    (hc : HasSum (fun n => (-1 : ℝ) ^ n * ‖q‖ ^ (2 * n) / ((2 * n)! : ℝ)) c)
+    (hs : HasSum (fun n => (-1 : ℝ) ^ n * ‖q‖ ^ (2 * n) / ((2 * n + 1)! : ℝ)) s) :
     HasSum (fun n => expSeries ℝ (Quaternion ℝ) n fun _ => q) (↑c + s • q) := by
   replace hc := hasSum_coe.mpr hc
   replace hs := hs.smul_const q
@@ -94,10 +94,10 @@ theorem exp_of_re_eq_zero (q : Quaternion ℝ) (hq : q.re = 0) :
   obtain rfl | hq₀ := eq_or_ne q 0
   · simp
   have hnorm : ‖q‖ ≠ 0 := norm_ne_zero_iff.mpr hq₀
-  have hs : HasSum (fun n => (-1 : ℝ) ^ n * ‖q‖ ^ (2 * n) / (2 * n + 1)!)
+  have hs : HasSum (fun n => (-1 : ℝ) ^ n * ‖q‖ ^ (2 * n) / ((2 * n + 1)! : ℝ))
       (Real.sinc ‖q‖) := by
-    have hterm (n : ℕ) : ((-1 : ℝ) ^ n * ‖q‖ ^ (2 * n + 1) / (2 * n + 1)!) / ‖q‖ =
-        (-1 : ℝ) ^ n * ‖q‖ ^ (2 * n) / (2 * n + 1)! := by
+    have hterm (n : ℕ) : ((-1 : ℝ) ^ n * ‖q‖ ^ (2 * n + 1) / ((2 * n + 1)! : ℝ)) / ‖q‖ =
+        (-1 : ℝ) ^ n * ‖q‖ ^ (2 * n) / ((2 * n + 1)! : ℝ) := by
       rw [pow_succ, ← mul_assoc, ← div_mul_eq_mul_div₀ ((-1 : ℝ) ^ n * ‖q‖ ^ (2 * n)) ‖q‖,
         mul_div_cancel_right₀]
     rw [Real.sinc_of_ne_zero hnorm]

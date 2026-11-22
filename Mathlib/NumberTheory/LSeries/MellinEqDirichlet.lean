@@ -70,7 +70,7 @@ lemma hasSum_mellin {a : ι → ℂ} {p : ι → ℝ} {F : Ioi (0 : ℝ) → ℂ
     simp_rw [← mul_assoc, mul_comm _ (a i), mul_assoc]
     have := Complex.GammaIntegral_convergent hs
     rw [← mul_zero (p i), ← integrableOn_Ioi_comp_mul_left_iff _ _ hpi] at this
-    refine (IntegrableOn.congr_fun (this.const_mul (1 / p i ^ (s - 1)))
+    refine (IntegrableOn.congr_fun (this.const_mul (1 / (p i : ℂ) ^ (s - 1)))
       (fun t (ht : 0 < t) ↦ ?_) measurableSet_Ioi).const_mul _
     simp_rw [mul_comm (↑(rexp _) : ℂ), ← mul_assoc, neg_mul, ofReal_mul]
     rw [mul_cpow_ofReal_nonneg hpi.le ht.le, ← mul_assoc, one_div₀,

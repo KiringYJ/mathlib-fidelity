@@ -7,6 +7,7 @@ module
 
 public meta import Lean.Elab.Command
 public import Mathlib.Init
+public meta import Mathlib.Lean.Elab.NativeDivision
 
 /-!
 # The "ppRoundtrip" linter
@@ -76,7 +77,7 @@ This is useful to figure out the difference between the output of `polishSource 
 It plays a role similar to the `fileMap`. -/
 def posToShiftedPos (lths : Array Nat) (diff : Nat) : Nat := Id.run do
   let mut (ws, noWS) := (diff, 0)
-  for con in [:lths.size / 2] do
+  for con in [:Nat.euclideanDiv lths.size 2] do
     let curr := lths[2 * con]!
     if noWS + curr < diff then
       noWS := noWS + curr

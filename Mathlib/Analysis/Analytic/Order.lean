@@ -379,10 +379,10 @@ just on a neighbourhood of 0.) -/
 lemma AnalyticAt.exists_eventuallyEq_sum_add_pow_mul [CharZero 𝕜] [CompleteSpace E]
     {f : 𝕜 → E} (hf : AnalyticAt 𝕜 f 0) (n : ℕ) :
     ∃ F : 𝕜 → E, AnalyticAt 𝕜 F 0 ∧ ∀ᶠ z in 𝓝 0,
-      f z = (∑ i ∈ .range n, (z ^ i / i.factorial) • iteratedDeriv i f 0) + z ^ n • F z := by
+      f z = (∑ i ∈ .range n, (z ^ i / (i.factorial : 𝕜)) • iteratedDeriv i f 0) + z ^ n • F z := by
   simp only [← sub_eq_iff_eq_add']
   have : AnalyticAt 𝕜
-      (fun z : 𝕜 ↦ ∑ i ∈ .range n, (z ^ i / i.factorial) • iteratedDeriv i f 0) 0 := by
+      (fun z : 𝕜 ↦ ∑ i ∈ .range n, (z ^ i / (i.factorial : 𝕜)) • iteratedDeriv i f 0) 0 := by
     refine Finset.analyticAt_fun_sum _ fun i hi ↦ ?_
     simp only [div_eq_mul_inv₀]
     fun_prop
@@ -407,7 +407,7 @@ neighbourhood of `0` rather than globally.) -/
 lemma AnalyticAt.exists_eq_sum_add_pow_mul [CharZero 𝕜] [CompleteSpace E]
     {f : 𝕜 → E} (hf : AnalyticAt 𝕜 f 0) (n : ℕ) :
     ∃ F : 𝕜 → E, AnalyticAt 𝕜 F 0 ∧ ∀ z,
-      f z = (∑ i ∈ .range n, (z ^ i / i.factorial) • iteratedDeriv i f 0) + z ^ n • F z := by
+      f z = (∑ i ∈ .range n, (z ^ i / (i.factorial : 𝕜)) • iteratedDeriv i f 0) + z ^ n • F z := by
   classical
   obtain ⟨F, hFa, hF⟩ := hf.exists_eventuallyEq_sum_add_pow_mul n
   obtain ⟨U, hU0, hU'⟩ := by rwa [eventually_iff_exists_mem] at hF
@@ -415,7 +415,7 @@ lemma AnalyticAt.exists_eq_sum_add_pow_mul [CharZero 𝕜] [CompleteSpace E]
   refine ⟨fun z ↦ if hz : z ∈ U then F z else
     Checked.inv (z ^ n) (pow_ne_zero (a := z) n (fun hzero ↦
       hz (by simpa only [hzero] using hz₀))).isUnit • (f z
-      - (∑ i ∈ .range n, (z ^ i / i.factorial) • iteratedDeriv i f 0)), ?_, fun z ↦ ?_⟩
+      - (∑ i ∈ .range n, (z ^ i / (i.factorial : 𝕜)) • iteratedDeriv i f 0)), ?_, fun z ↦ ?_⟩
   · exact hFa.congr (by filter_upwards [hU0] using by simp +contextual)
   · by_cases hz : z ∈ U
     · simpa [hz] using hU' z hz

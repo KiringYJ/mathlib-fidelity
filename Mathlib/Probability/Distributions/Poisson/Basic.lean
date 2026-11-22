@@ -39,7 +39,7 @@ namespace ProbabilityTheory
 @[wikidata Q205692]
 noncomputable
 def poissonMeasure (r : ℝ≥0) : Measure ℕ :=
-  Measure.sum (fun n ↦ ENNReal.ofReal (exp (-r) * r ^ n / (n)!) • (.dirac n))
+  Measure.sum (fun n ↦ ENNReal.ofReal (exp (-r) * r ^ n / (n ! : ℝ)) • (.dirac n))
 
 /-- The Poisson probability distribution with rate `r`. -/
 scoped notation3 "Po(" r ")" => poissonMeasure r
@@ -49,11 +49,11 @@ scoped notation3 "Po(" R ", " r ")" =>
   (poissonMeasure r).map (Nat.cast : ℕ → R) Measurable.of_discrete.aemeasurable
 
 lemma poissonMeasure_singleton (r : ℝ≥0) (n : ℕ) :
-    Po(r) {n} = ENNReal.ofReal (exp (-r) * r ^ n / (n)!) := by
+    Po(r) {n} = ENNReal.ofReal (exp (-r) * r ^ n / (n ! : ℝ)) := by
   rw [poissonMeasure, Measure.sum_smul_dirac_singleton]
 
 lemma poissonMeasure_real_singleton (r : ℝ≥0) (n : ℕ) :
-    Po(r).real {n} = exp (-r) * r ^ n / (n)! := by
+    Po(r).real {n} = exp (-r) * r ^ n / (n ! : ℝ) := by
   rw [measureReal_def, poissonMeasure_singleton, ENNReal.toReal_ofReal (by positivity)]
 
 lemma poissonMeasure_real_singleton_pos {r : ℝ≥0} (n : ℕ) (hr : 0 < r) :
@@ -61,7 +61,7 @@ lemma poissonMeasure_real_singleton_pos {r : ℝ≥0} (n : ℕ) (hr : 0 < r) :
   rw [poissonMeasure_real_singleton]
   positivity
 
-lemma hasSum_one_poissonMeasure (r : ℝ≥0) : HasSum (fun n ↦ exp (-r) * r ^ n / (n)!) 1 := by
+lemma hasSum_one_poissonMeasure (r : ℝ≥0) : HasSum (fun n ↦ exp (-r) * r ^ n / (n ! : ℝ)) 1 := by
   convert! (NormedSpace.expSeries_div_hasSum_exp (r : ℝ)).mul_left (exp (-r)) using 1
   · simp_rw [mul_div_assoc₀]
   · simp [← exp_eq_exp_ℝ, ← exp_add]
@@ -75,7 +75,7 @@ variable {E : Type*} [NormedAddCommGroup E]
 variable {R : Type*} [NatCast R] [SigmaAlgebra R]
 
 lemma integrable_poissonMeasure_iff {r : ℝ≥0} {f : ℕ → E} :
-    Integrable f Po(r) ↔ Summable (fun n ↦ exp (-r) * r ^ n / (n)! * ‖f n‖) := by
+    Integrable f Po(r) ↔ Summable (fun n ↦ exp (-r) * r ^ n / (n ! : ℝ) * ‖f n‖) := by
   rw [poissonMeasure, integrable_sum_dirac_iff (by simp)]
   congrm Summable (fun n ↦ ?_ * _)
   rw [ENNReal.toReal_ofReal (by positivity)]
@@ -88,9 +88,9 @@ variable [NormedSpace ℝ E]
 
 lemma hasSum_integral_poissonMeasure [CompleteSpace E] {r : ℝ≥0} {f : ℕ → E}
     (hf : Integrable f Po(r)) :
-    HasSum (fun n ↦ (exp (-r) * r ^ n / (n)!) • f n) (∫ n, f n ∂Po(r)) := by
-  have : (fun n ↦ (exp (-r) * r ^ n / (n)!) • f n) =
-      fun n ↦ (ENNReal.ofReal (exp (-r) * r ^ n / (n)!)).toReal • f n := by
+    HasSum (fun n ↦ (exp (-r) * r ^ n / (n ! : ℝ)) • f n) (∫ n, f n ∂Po(r)) := by
+  have : (fun n ↦ (exp (-r) * r ^ n / (n ! : ℝ)) • f n) =
+      fun n ↦ (ENNReal.ofReal (exp (-r) * r ^ n / (n ! : ℝ))).toReal • f n := by
     ext; rw [ENNReal.toReal_ofReal (by positivity)]
   rw [this]
   apply hasSum_integral_sum_dirac (by simp)
@@ -104,12 +104,12 @@ See `integral_poissonMeasure` for a version where the codomain is finite-dimensi
 and does not require the integrability hypothesis. -/
 lemma integral_poissonMeasure' [CompleteSpace E] {r : ℝ≥0} {f : ℕ → E}
     (hf : Integrable f Po(r)) :
-    ∫ n, f n ∂Po(r) = ∑' n, (exp (-r) * r ^ n / (n)!) • f n :=
+    ∫ n, f n ∂Po(r) = ∑' n, (exp (-r) * r ^ n / (n ! : ℝ)) • f n :=
   (hasSum_integral_poissonMeasure hf).tsum_eq.symm
 
 lemma integral_map_cast_poissonMeasure' [CompleteSpace E] [Countable R] [MeasurableSingletonClass R]
     {r : ℝ≥0} {f : R → E} (hf : Integrable f Po(R, r)) :
-    ∫ x, f x ∂Po(R, r) = ∑' n, (exp (-r) * r ^ n / (n)!) • f n := by
+    ∫ x, f x ∂Po(R, r) = ∑' n, (exp (-r) * r ^ n / (n ! : ℝ)) • f n := by
   rw [integral_map .of_discrete .of_discrete]
   rw [integrable_map_cast_poissonMeasure_iff] at hf
   exact integral_poissonMeasure' hf
@@ -121,14 +121,14 @@ they are both defined to be zero.
 
 See `integral_poissonMeasure'` with a general codomain which assumes integrability. -/
 lemma integral_poissonMeasure [FiniteDimensional ℝ E] (r : ℝ≥0) (f : ℕ → E) :
-    ∫ n, f n ∂Po(r) = ∑' n, (exp (-r) * r ^ n / (n)!) • f n := by
+    ∫ n, f n ∂Po(r) = ∑' n, (exp (-r) * r ^ n / (n ! : ℝ)) • f n := by
   rw [poissonMeasure, integral_sum_dirac (by simp)]
   congr with n
   rw [ENNReal.toReal_ofReal (by positivity)]
 
 lemma integral_map_cast_poissonMeasure [FiniteDimensional ℝ E] (r : ℝ≥0) [Countable R]
   [MeasurableSingletonClass R] (f : R → E) :
-    ∫ x, f x ∂Po(R, r) = ∑' n, (exp (-r) * r ^ n / (n)!) • f n := by
+    ∫ x, f x ∂Po(R, r) = ∑' n, (exp (-r) * r ^ n / (n ! : ℝ)) • f n := by
   rw [integral_map .of_discrete .of_discrete, integral_poissonMeasure]
 
 end Integral
@@ -143,13 +143,13 @@ lemma charFun_map_cast_poissonMeasure (r : ℝ≥0) (t : ℝ) :
     charFun Po(ℝ, r) t = cexp (r * (cexp (t * I) - 1)) := by
   rw [charFun_apply, integral_map .of_discrete (by fun_prop), integral_poissonMeasure r]
   simp_rw [Real.inner_apply]
-  calc ∑' a, (rexp (-r) * r ^ a / a ! : ℝ) * cexp ((a * t : ℝ) * I)
-  _ = ∑' a, (rexp (-r)) * ((r * cexp (t * I)) ^ a / a !) := by
+  calc ∑' a, (rexp (-r) * r ^ a / (a ! : ℝ) : ℝ) * cexp ((a * t : ℝ) * I)
+  _ = ∑' a, (rexp (-r)) * ((r * cexp (t * I)) ^ a / (a ! : ℂ)) := by
       congr with a
       push_cast
       rw [mul_pow, ← Complex.exp_nat_mul]
       ring_nf
-  _ = (rexp (-r)) * ∑' a, ((r * cexp (t * I)) ^ a / a !) := tsum_mul_left
+  _ = (rexp (-r)) * ∑' a, ((r * cexp (t * I)) ^ a / (a ! : ℂ)) := tsum_mul_left
   _ = (rexp (-r)) * cexp (r * cexp (t * I)) := by
       rw [(NormedSpace.expSeries_div_hasSum_exp (r * cexp (t * I))).tsum_eq, exp_eq_exp_ℂ]
   _ = cexp (r * (cexp (t * I) - 1)) := by
@@ -226,7 +226,7 @@ section PoissonPMF
 /-- The pmf of the Poisson distribution depending on its rate, as a function to ℝ -/
 @[deprecated poissonMeasure (since := "2026-03-08")]
 noncomputable
-def poissonPMFReal (r : ℝ≥0) (n : ℕ) : ℝ := exp (-r) * r ^ n / (n)!
+def poissonPMFReal (r : ℝ≥0) (n : ℕ) : ℝ := exp (-r) * r ^ n / (n ! : ℝ)
 
 @[deprecated (since := "2026-03-08")]
 alias poissonPMFRealSum := hasSum_one_poissonMeasure

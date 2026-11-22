@@ -286,7 +286,7 @@ This version can be used when `R` is not a field, e.g., `ℤ/8ℤ`. -/
 theorem Char.card_pow_char_pow {χ : MulChar R R'} (hχ : IsQuadratic χ) (ψ : AddChar R R') (p n : ℕ)
     [fp : Fact p.Prime] [hch : CharP R' p] (hp : IsUnit (p : R)) (hp' : p ≠ 2)
     (hg : gaussSum χ ψ ^ 2 = χ (-1) * Fintype.card R) :
-    (χ (-1) * Fintype.card R) ^ (p ^ n / 2) = χ ((p : R) ^ n) := by
+    (χ (-1) * Fintype.card R) ^ Nat.euclideanDiv (p ^ n) 2 = χ ((p : R) ^ n) := by
   have : gaussSum χ ψ ≠ 0 := by
     intro hf
     rw [hf, zero_pow two_ne_zero, eq_comm, mul_eq_zero] at hg
@@ -294,15 +294,16 @@ theorem Char.card_pow_char_pow {χ : MulChar R R'} (hχ : IsQuadratic χ) (ψ : 
         ((CharP.cast_eq_zero_iff R' p _).mp <| hg.resolve_left (isUnit_one.neg.map χ).ne_zero) hp
   rw [← hg]
   apply mul_right_cancel₀ this
-  rw [← hχ.gaussSum_frob_iter p n hp ψ, ← pow_mul, ← pow_succ,
-    Nat.two_mul_div_two_add_one_of_odd (fp.1.eq_two_or_odd'.resolve_left hp').pow]
+  have he := Nat.euclideanDiv_mul_add_mod (p ^ n) 2 (by decide)
+  rw [Nat.odd_iff.mp ((fp.1.eq_two_or_odd'.resolve_left hp').pow)] at he
+  rw [← hχ.gaussSum_frob_iter p n hp ψ, ← pow_mul, ← pow_succ, he]
 
 /-- When `F` and `F'` are finite fields and `χ : F → F'` is a nontrivial quadratic character,
 then `(χ(-1) * #F)^(#F'/2) = χ #F'`. -/
 theorem Char.card_pow_card {F : Type*} [Field F] [Fintype F] {F' : Type*} [Field F'] [Fintype F']
     {χ : MulChar F F'} (hχ₁ : χ ≠ 1) (hχ₂ : IsQuadratic χ)
     (hch₁ : ringChar F' ≠ ringChar F) (hch₂ : ringChar F' ≠ 2) :
-    (χ (-1) * Fintype.card F) ^ (Fintype.card F' / 2) = χ (Fintype.card F') := by
+    (χ (-1) * Fintype.card F) ^ Nat.euclideanDiv (Fintype.card F') 2 = χ (Fintype.card F') := by
   obtain ⟨n, hp, hc⟩ := FiniteField.card F (ringChar F)
   obtain ⟨n', hp', hc'⟩ := FiniteField.card F' (ringChar F')
   let ψ := FiniteField.primitiveChar F F' hch₁
@@ -339,7 +340,7 @@ open ZMod
 set_option backward.isDefEq.respectTransparency false in
 /-- For every finite field `F` of odd characteristic, we have `2^(#F/2) = χ₈ #F` in `F`. -/
 theorem FiniteField.two_pow_card {F : Type*} [Fintype F] [Field F] (hF : ringChar F ≠ 2) :
-    (2 : F) ^ (Fintype.card F / 2) = χ₈ (Fintype.card F) := by
+    (2 : F) ^ Nat.euclideanDiv (Fintype.card F) 2 = χ₈ (Fintype.card F) := by
   have hp2 (n : ℕ) : (2 ^ n : F) ≠ 0 := pow_ne_zero n (Ring.two_ne_zero hF)
   obtain ⟨n, hp, hc⟩ := FiniteField.card F (ringChar F)
   -- we work in `FF`, the eighth cyclotomic field extension of `F`
@@ -393,7 +394,7 @@ theorem FiniteField.two_pow_card {F : Type*} [Fintype F] [Field F] (hF : ringCha
   have h := Char.card_pow_char_pow (R := ZMod 8) hq ψ₈char (ringChar FF) n hu hFF hg
   rw [ZMod.card, ← hchar, hχ, one_mul, ← hc, ← Nat.cast_pow (ringChar F), ← hc] at h
   -- finally, we change `2` to `8` on the left-hand side
-  convert_to (8 : F) ^ (Fintype.card F / 2) = _
+  convert_to (8 : F) ^ Nat.euclideanDiv (Fintype.card F) 2 = _
   · rw [(by norm_num : (8 : F) = 2 ^ 2 * 2), mul_pow,
       (FiniteField.isSquare_iff hF <| hp2 2).mp ⟨2, pow_two 2⟩, one_mul]
   apply (algebraMap F FF).injective

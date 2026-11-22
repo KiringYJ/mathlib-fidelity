@@ -45,10 +45,11 @@ namespace Wallis
 
 /-- The product of the first `k` terms in Wallis' formula for `π`. -/
 noncomputable def W (k : ℕ) : ℝ :=
-  ∏ i ∈ range k, (2 * i + 2) / (2 * i + 1) * ((2 * i + 2) / (2 * i + 3))
+  ∏ i ∈ range k, (2 * (i : ℝ) + 2) / (2 * (i : ℝ) + 1) * ((2 * (i : ℝ) + 2) / (2 * (i : ℝ) + 3))
 
 theorem W_succ (k : ℕ) :
-    W (k + 1) = W k * ((2 * k + 2) / (2 * k + 1) * ((2 * k + 2) / (2 * k + 3))) :=
+    W (k + 1) =
+      W k * ((2 * (k : ℝ) + 2) / (2 * (k : ℝ) + 1) * ((2 * (k : ℝ) + 2) / (2 * (k : ℝ) + 3))) :=
   prod_range_succ _ _
 
 theorem W_pos (k : ℕ) : 0 < W k := by
@@ -59,7 +60,7 @@ theorem W_pos (k : ℕ) : 0 < W k := by
     refine mul_pos hk (mul_pos (div_pos ?_ ?_) (div_pos ?_ ?_)) <;> positivity
 
 theorem W_eq_factorial_ratio (n : ℕ) :
-    W n = 2 ^ (4 * n) * n ! ^ 4 / ((2 * n)! ^ 2 * (2 * n + 1)) := by
+    W n = 2 ^ (4 * n) * (n ! : ℝ) ^ 4 / (((2 * n)! : ℝ) ^ 2 * (2 * (n : ℝ) + 1)) := by
   induction n with
   | zero =>
     simp only [W, prod_range_zero, Nat.factorial_zero, mul_zero, pow_zero]
@@ -74,8 +75,8 @@ theorem W_eq_factorial_ratio (n : ℕ) :
 theorem W_eq_integral_sin_pow_div_integral_sin_pow (k : ℕ) : (π / 2)⁻¹ * W k =
     Checked.div (∫ x : ℝ in 0..π, sin x ^ (2 * k + 1))
       (∫ x : ℝ in 0..π, sin x ^ (2 * k)) (integral_sin_pow_pos (2 * k)).ne'.isUnit := by
-  have hprod : W k * (∏ i ∈ range k, (2 * (i : ℝ) + 1) / (2 * i + 2)) =
-      ∏ i ∈ range k, (2 * (i : ℝ) + 2) / (2 * i + 3) := by
+  have hprod : W k * (∏ i ∈ range k, (2 * (i : ℝ) + 1) / (2 * (i : ℝ) + 2)) =
+      ∏ i ∈ range k, (2 * (i : ℝ) + 2) / (2 * (i : ℝ) + 3) := by
     rw [W, ← prod_mul_distrib]
     refine prod_congr rfl fun i _ ↦ ?_
     field_simp
@@ -84,7 +85,8 @@ theorem W_eq_integral_sin_pow_div_integral_sin_pow (k : ℕ) : (π / 2)⁻¹ * W
   apply eq_div_iff.mpr
   rw [integral_sin_pow_odd, integral_sin_pow_even]
   calc
-    _ = ((π / 2)⁻¹ * π) * (W k * (∏ i ∈ range k, (2 * (i : ℝ) + 1) / (2 * i + 2))) := by ring
+    _ = ((π / 2)⁻¹ * π) *
+        (W k * (∏ i ∈ range k, (2 * (i : ℝ) + 1) / (2 * (i : ℝ) + 2))) := by ring
     _ = _ := by rw [hπ, hprod]
 
 theorem W_le (k : ℕ) : W k ≤ π / 2 := by
@@ -92,7 +94,7 @@ theorem W_le (k : ℕ) : W k ≤ π / 2 := by
   rw [W_eq_integral_sin_pow_div_integral_sin_pow, div_le_one (integral_sin_pow_pos _)]
   apply integral_sin_pow_succ_le
 
-theorem le_W (k : ℕ) : ((2 : ℝ) * k + 1) / (2 * k + 2) * (π / 2) ≤ W k := by
+theorem le_W (k : ℕ) : ((2 : ℝ) * k + 1) / (2 * (k : ℝ) + 2) * (π / 2) ≤ W k := by
   rw [← le_div_iff₀ pi_div_two_pos, div_eq_inv_mul₀ (W k) _]
   rw [W_eq_integral_sin_pow_div_integral_sin_pow, le_div_iff₀ (integral_sin_pow_pos _)]
   convert! integral_sin_pow_succ_le (2 * k + 1)
@@ -104,7 +106,7 @@ theorem tendsto_W_nhds_pi_div_two : Tendsto W atTop (𝓝 <| π / 2) := by
   have : 𝓝 (π / 2) = 𝓝 ((1 - 0) * (π / 2)) := by rw [sub_zero, one_mul]
   rw [this]
   refine Tendsto.mul ?_ tendsto_const_nhds
-  have h : ∀ n : ℕ, ((2 : ℝ) * n + 1) / (2 * n + 2) = 1 - 1 / (2 * n + 2) := by
+  have h : ∀ n : ℕ, ((2 : ℝ) * n + 1) / (2 * (n : ℝ) + 2) = 1 - 1 / (2 * (n : ℝ) + 2) := by
     intro n
     rw [sub_div', one_mul]
     congr 1; ring
@@ -120,6 +122,7 @@ end Real
 
 /-- Wallis' product formula for `π / 2`. -/
 theorem Real.tendsto_prod_pi_div_two :
-    Tendsto (fun k => ∏ i ∈ range k, ((2 : ℝ) * i + 2) / (2 * i + 1) * ((2 * i + 2) / (2 * i + 3)))
+    Tendsto (fun k => ∏ i ∈ range k,
+      ((2 : ℝ) * i + 2) / (2 * (i : ℝ) + 1) * ((2 * (i : ℝ) + 2) / (2 * (i : ℝ) + 3)))
       atTop (𝓝 (π / 2)) :=
   Real.Wallis.tendsto_W_nhds_pi_div_two

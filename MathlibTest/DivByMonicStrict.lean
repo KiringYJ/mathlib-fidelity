@@ -80,15 +80,17 @@ noncomputable example (p q : ℚ[X]) (hq : q ≠ 0) : ℚ[X] := p /ₘ (q * C (l
 example (p : ℚ[X]) : p % 0 = p := EuclideanDomain.mod_zero p
 
 example (p q : ℚ[X]) (hq : q ≠ 0) :
-    p / q = C (leadingCoeff q)⁻¹ * (p /ₘ (q * C (leadingCoeff q)⁻¹)) :=
+    EuclideanDomain.quotient p q hq = C (leadingCoeff q)⁻¹ * (p /ₘ (q * C (leadingCoeff q)⁻¹)) :=
   div_def hq
 
-example (p q : ℚ[X]) (hq : q.Monic) : p / q = p /ₘ q := (divByMonic_eq_div p hq).symm
+example (p q : ℚ[X]) (hq : q.Monic) :
+    EuclideanDomain.quotient p q hq.ne_zero = p /ₘ q := (divByMonic_eq_div p hq).symm
 
-example (p : ℚ[X]) : (X : ℚ[X]) * (p / X) + p % X = p :=
+example (p : ℚ[X]) : (X : ℚ[X]) * EuclideanDomain.quotient p X X_ne_zero + p % X = p :=
   EuclideanDomain.div_add_mod _ _ X_ne_zero
 
-example (p q : ℚ[X]) (hp : p ≠ 0) (hq : 0 < q.degree) : (p / q).degree < p.degree :=
+example (p q : ℚ[X]) (hp : p ≠ 0) (hq : 0 < q.degree) :
+    (EuclideanDomain.quotient p q (ne_zero_of_degree_gt hq)).degree < p.degree :=
   degree_div_lt hp hq
 
 noncomputable example (p q : ℚ[X]) : ℚ[X] := by

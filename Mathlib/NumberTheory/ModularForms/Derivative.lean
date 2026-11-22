@@ -180,7 +180,7 @@ open ModularGroup
 lemma normalizedDerivOfComplex_slash {k : ℤ} {F : ℍ → ℂ} (hF : MDiff F)
     {g : GL (Fin 2) ℝ} (hg : 0 < g.val.det) :
     D (F ∣[k] g) = fun z : ℍ ↦ (g.val.det : ℂ)⁻¹ * (D F ∣[k + 2] g) z -
-      (k : ℂ) * (2 * π * I)⁻¹ * (g 1 0 / denom g z) * (F ∣[k] g) z := by
+      (k : ℂ) * (2 * π * I)⁻¹ * ((g 1 0 : ℂ) / denom g z) * (F ∣[k] g) z := by
   have hdet : g.det.val = g.val.det := Matrix.GeneralLinearGroup.val_det_apply g
   have hdetℂ : (g.val.det : ℂ) ≠ 0 := Complex.ofReal_ne_zero.mpr hg.ne'
   have hσ (x) : σ g x = x := by grind [σ, ContinuousAlgEquiv.refl_apply]
@@ -214,7 +214,7 @@ lemma normalizedDerivOfComplex_slash {k : ℤ} {F : ℍ → ℂ} (hF : MDiff F)
 /-- The `SL(2, ℤ)` case of `normalizedDerivOfComplex_slash`, where the determinant factor is `1`. -/
 lemma normalizedDerivOfComplex_SL_slash {k : ℤ} {F : ℍ → ℂ} (hF : MDiff F) {γ : SL(2, ℤ)} :
     D (F ∣[k] γ) = (D F ∣[k + 2] γ) -
-      (fun z : ℍ ↦ (k : ℂ) * (2 * π * I)⁻¹ * (γ 1 0 / denom γ z) * (F ∣[k] γ) z) := by
+      (fun z : ℍ ↦ (k : ℂ) * (2 * π * I)⁻¹ * ((γ 1 0 : ℂ) / denom γ z) * (F ∣[k] γ) z) := by
   have hdet : (γ : GL (Fin 2) ℝ).val.det = 1 := by
     rw [← Matrix.GeneralLinearGroup.val_det_apply]; simp
   have hdetℂ : ((γ : GL (Fin 2) ℝ).val.det : ℂ) = 1 := by exact_mod_cast hdet
@@ -237,7 +237,7 @@ theorem serreDerivative_slash_equivariant {k : ℤ} {F : ℍ → ℂ} (hF : MDif
     grind [ModularForm.SL_slash_apply, serreDerivative_apply, Pi.mul_apply,
       congrFun (ModularForm.mul_slash_SL2 2 k γ EisensteinSeries.E2 F) z]
   have hDz : (D (F ∣[k] γ)) z = (D F ∣[k + 2] γ) z -
-      (k * (2 * π * I)⁻¹ * (γ 1 0 / denom γ z) * (F ∣[k] γ) z) := by
+      (k * (2 * π * I)⁻¹ * ((γ 1 0 : ℂ) / denom γ z) * (F ∣[k] γ) z) := by
     simp [normalizedDerivOfComplex_SL_slash hF]
   let c := Checked.div 1 (2 * riemannZeta 2) EisensteinSeries.isUnit_two_mul_riemannZeta_two
   have hE2z : (EisensteinSeries.E2 ∣[(2 : ℤ)] γ) z =
@@ -250,10 +250,10 @@ theorem serreDerivative_slash_equivariant {k : ℤ} {F : ℍ → ℂ} (hF : MDif
     field_simp
     ring_nf
     simp [I_sq]
-  have hD2 : EisensteinSeries.D2 γ z = (2 * π * I) * (γ 1 0 / denom γ z) := by
+  have hD2 : EisensteinSeries.D2 γ z = (2 * π * I) * ((γ 1 0 : ℂ) / denom γ z) := by
     rw [EisensteinSeries.D2, mul_div_assoc₀]
   rw [hLHS, serreDerivative_apply, hDz, hE2z, hD2]
-  linear_combination (k : ℂ) * (γ 1 0 / denom γ z) * (F ∣[k] γ) z * hcor
+  linear_combination (k : ℂ) * ((γ 1 0 : ℂ) / denom γ z) * (F ∣[k] γ) z * hcor
 
 /--
 As a corollary, if `F` is invariant under the slash action of weight `k`, then

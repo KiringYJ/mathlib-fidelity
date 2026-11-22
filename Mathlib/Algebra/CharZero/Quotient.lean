@@ -26,7 +26,7 @@ namespace AddSubgroup
 `0 ≤ k < |z|`. -/
 theorem zsmul_mem_zmultiples_iff_exists_sub_div {r : R} {z : ℤ} (hz : z ≠ 0) :
     z • r ∈ AddSubgroup.zmultiples p ↔
-      ∃ k : Fin z.natAbs, r - (k : ℕ) • (p / z : R) ∈ AddSubgroup.zmultiples p := by
+      ∃ k : Fin z.natAbs, r - (k : ℕ) • (p / (z : R)) ∈ AddSubgroup.zmultiples p := by
   rw [AddSubgroup.mem_zmultiples_iff]
   simp_rw [AddSubgroup.mem_zmultiples_iff, div_eq_mul_inv₀,
     ← smul_mul_assoc, eq_sub_iff_add_eq]
@@ -38,18 +38,18 @@ theorem zsmul_mem_zmultiples_iff_exists_sub_div {r : R} {z : ℤ} (hz : z ≠ 0)
   constructor
   · rintro ⟨k, h⟩
     simp_rw [← h]
-    refine ⟨⟨(k % z).toNat, ?_⟩, k / z, ?_⟩
+    refine ⟨⟨(k % z).toNat, ?_⟩, k.euclideanDiv z hz, ?_⟩
     · rw [← Int.ofNat_lt, Int.toNat_of_nonneg (Int.emod_nonneg _ hz)]
       exact (Int.emod_lt_abs _ hz).trans_eq (Int.abs_eq_natAbs _)
     rw [Fin.val_mk, Int.toNat_of_nonneg (Int.emod_nonneg _ hz)]
-    nth_rewrite 3 [← Int.mul_ediv_add_emod k z]
+    nth_rewrite 3 [← Int.euclideanDiv_mul_add_mod k z hz]
     rfl
   · rintro ⟨k, n, h⟩
     exact ⟨_, h⟩
 
 theorem nsmul_mem_zmultiples_iff_exists_sub_div {r : R} {n : ℕ} (hn : n ≠ 0) :
     n • r ∈ AddSubgroup.zmultiples p ↔
-      ∃ k : Fin n, r - (k : ℕ) • (p / n : R) ∈ AddSubgroup.zmultiples p := by
+      ∃ k : Fin n, r - (k : ℕ) • (p / (n : R)) ∈ AddSubgroup.zmultiples p := by
   simpa only [natCast_zsmul, Int.natAbs_natCast, Int.cast_natCast] using
     (zsmul_mem_zmultiples_iff_exists_sub_div (R := R) (p := p) (r := r)
       (Int.natCast_ne_zero.mpr hn))
@@ -59,7 +59,7 @@ end AddSubgroup
 namespace QuotientAddGroup
 
 theorem zmultiples_zsmul_eq_zsmul_iff {ψ θ : R ⧸ AddSubgroup.zmultiples p} {z : ℤ} (hz : z ≠ 0) :
-    z • ψ = z • θ ↔ ∃ k : Fin z.natAbs, ψ = θ + ((k : ℕ) • (p / z) : R) := by
+    z • ψ = z • θ ↔ ∃ k : Fin z.natAbs, ψ = θ + ((k : ℕ) • (p / (z : R)) : R) := by
   induction ψ using Quotient.inductionOn
   induction θ using Quotient.inductionOn
   simp_rw [← QuotientAddGroup.mk_zsmul, ← QuotientAddGroup.mk_add,
@@ -67,7 +67,7 @@ theorem zmultiples_zsmul_eq_zsmul_iff {ψ θ : R ⧸ AddSubgroup.zmultiples p} {
   exact AddSubgroup.zsmul_mem_zmultiples_iff_exists_sub_div hz
 
 theorem zmultiples_nsmul_eq_nsmul_iff {ψ θ : R ⧸ AddSubgroup.zmultiples p} {n : ℕ} (hz : n ≠ 0) :
-    n • ψ = n • θ ↔ ∃ k : Fin n, ψ = θ + (k : ℕ) • (p / n : R) := by
+    n • ψ = n • θ ↔ ∃ k : Fin n, ψ = θ + ((k : ℕ) • (p / (n : R)) : R) := by
   simpa only [natCast_zsmul, Int.natAbs_natCast, Int.cast_natCast,
     QuotientAddGroup.mk_nsmul] using
     (zmultiples_zsmul_eq_zsmul_iff (R := R) (p := p) (ψ := ψ) (θ := θ)

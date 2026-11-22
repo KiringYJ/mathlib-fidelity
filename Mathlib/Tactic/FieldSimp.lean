@@ -386,7 +386,7 @@ private def cancellablePower (disch : ∀ {u : Level} (type : Q(Sort u)), MetaM 
       let h ← disch q(0 < $(x.expr iM))
       return (x.degree, h)
     catch _ =>
-      let k := x.degree / 2
+      let k := Nat.euclideanDiv x.degree 2
       guard (k != 0)
       let h ← getUnit
       return (2 * k, ← mkAppM ``unit_even_power_pos #[h, mkRawNatLit k])

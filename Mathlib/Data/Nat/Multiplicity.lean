@@ -99,20 +99,27 @@ theorem emultiplicity_pow_self {p n : ℕ} (hp : p.Prime) : emultiplicity p (p ^
 The multiplicity of a prime in `n!` is the sum of the quotients `n / p ^ i`. This sum is expressed
 over the finset `Ico 1 b` where `b` is any exponent with `n < p ^ b`. -/
 theorem emultiplicity_factorial {p : ℕ} (hp : p.Prime) :
-    ∀ {n b : ℕ}, n < p ^ b → emultiplicity p n ! = (∑ i ∈ Ico 1 b, n / p ^ i : ℕ)
-  | 0, b, _ => by simp [Ico, hp.emultiplicity_one]
+    ∀ {n b : ℕ}, n < p ^ b →
+      emultiplicity p n ! =
+        (∑ i ∈ Ico 1 b, Nat.euclideanDiv n (p ^ i) (pow_ne_zero i hp.ne_zero) : ℕ)
+  | 0, b, _ => by simp [Ico, Nat.euclideanDiv_eq_core, hp.emultiplicity_one]
   | n + 1, b, hb =>
     calc
       emultiplicity p (n + 1)! = emultiplicity p n ! + emultiplicity p (n + 1) := by
         rw [factorial_succ, hp.emultiplicity_mul, add_comm]
-      _ = (∑ i ∈ Ico 1 b, n / p ^ i : ℕ) + #{i ∈ Ico 1 b | p ^ i ∣ n + 1} := by
+      _ = (∑ i ∈ Ico 1 b, Nat.euclideanDiv n (p ^ i) (pow_ne_zero i hp.ne_zero) : ℕ) +
+          #{i ∈ Ico 1 b | p ^ i ∣ n + 1} := by
         rw [emultiplicity_factorial hp ((le_succ n).trans_lt hb), ←
           emultiplicity_eq_card_pow_dvd hp.ne_one (succ_pos _) hb]
-      _ = (∑ i ∈ Ico 1 b, (n / p ^ i + if p ^ i ∣ n + 1 then 1 else 0) : ℕ) := by
+      _ = (∑ i ∈ Ico 1 b,
+          (Nat.euclideanDiv n (p ^ i) (pow_ne_zero i hp.ne_zero) +
+            if p ^ i ∣ n + 1 then 1 else 0) : ℕ) := by
         rw [sum_add_distrib, sum_boole]
         simp
-      _ = (∑ i ∈ Ico 1 b, (n + 1) / p ^ i : ℕ) :=
-        congr_arg _ <| Finset.sum_congr rfl fun _ _ => Nat.succ_div.symm
+      _ = (∑ i ∈ Ico 1 b, Nat.euclideanDiv (n + 1) (p ^ i) (pow_ne_zero i hp.ne_zero) : ℕ) :=
+        congr_arg _ <| Finset.sum_congr rfl fun _ _ => by
+          simp only [Nat.euclideanDiv_eq_core]
+          exact Nat.succ_div.symm
 
 /-- For a prime number `p`, taking `(p - 1)` times the multiplicity of `p` in `n!` equals `n` minus
 the sum of base `p` digits of `n`. -/
@@ -179,11 +186,11 @@ theorem multiplicity_factorial_pow {n p : ℕ} (hp : p.Prime) :
 /-- A prime power divides `n!` iff it is at most the sum of the quotients `n / p ^ i`.
   This sum is expressed over the set `Ico 1 b` where `b` is any exponent with `n < p ^ b`. -/
 theorem pow_dvd_factorial_iff {p : ℕ} {n r b : ℕ} (hp : p.Prime) (hbn : n < p ^ b) :
-    p ^ r ∣ n ! ↔ r ≤ ∑ i ∈ Ico 1 b, n / p ^ i := by
+    p ^ r ∣ n ! ↔ r ≤ ∑ i ∈ Ico 1 b, Nat.euclideanDiv n (p ^ i) (pow_ne_zero i hp.ne_zero) := by
   rw [← ENat.natCast_le_natCast, ← hp.emultiplicity_factorial hbn, pow_dvd_iff_le_emultiplicity]
 
 theorem emultiplicity_factorial_le_div_pred {p : ℕ} (hp : p.Prime) (n : ℕ) :
-    emultiplicity p n ! ≤ (n / (p - 1) : ℕ) := by
+    emultiplicity p n ! ≤ Nat.euclideanDiv n (p - 1) (Nat.sub_pos_of_lt hp.one_lt).ne' := by
   rw [hp.emultiplicity_factorial (Nat.lt_pow_self hp.one_lt)]
   apply WithTop.coe_mono
   exact Nat.geom_sum_Ico_le hp.two_le _ _

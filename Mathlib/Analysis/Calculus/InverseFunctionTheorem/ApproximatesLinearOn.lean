@@ -196,7 +196,7 @@ theorem surjOn_closedBall_of_nonlinearRightInverse
   -- to check that `w` is in the ball on which one has controls. Will be used to check that `u n`
   -- belongs to this ball for all `n`.
   have C : ∀ (n : ℕ) (w : E), dist w b ≤ f'symm.nnnorm * (1 - ((c : ℝ) * f'symm.nnnorm) ^ n) /
-      (1 - c * f'symm.nnnorm) * dist (f b) y →
+      (1 - (c : ℝ) * f'symm.nnnorm) * dist (f b) y →
       w ∈ closedBall b (f'symm.nnnorm * ε) := fun n w hw ↦ by
     apply hw.trans
     rw [div_mul_eq_mul_div₀, div_le_iff₀]; swap; · linarith
@@ -212,7 +212,7 @@ theorem surjOn_closedBall_of_nonlinearRightInverse
         rw [mul_one]
         gcongr
         exact mem_closedBall'.1 hy
-      _ = (f'symm.nnnorm * ε) * (1 - c * f'symm.nnnorm) := by ring
+      _ = (f'symm.nnnorm * ε) * (1 - (c : ℝ) * f'symm.nnnorm) := by ring
   /- Main inductive control: `f (u n)` becomes exponentially close to `y`, and therefore
     `dist (u (n+1)) (u n)` becomes exponentially small, making it possible to get an inductive
     bound on `dist (u n) b`, from which one checks that `u n` remains in the ball on which we
@@ -225,12 +225,12 @@ theorem surjOn_closedBall_of_nonlinearRightInverse
     | succ n IH => ?_
     rw [usucc]
     have Ign : dist (g (u n)) b ≤ f'symm.nnnorm * (1 - ((c : ℝ) * f'symm.nnnorm) ^ n.succ) /
-        (1 - c * f'symm.nnnorm) * dist (f b) y :=
+        (1 - (c : ℝ) * f'symm.nnnorm) * dist (f b) y :=
       calc
         dist (g (u n)) b ≤ dist (g (u n)) (u n) + dist (u n) b := dist_triangle _ _ _
         _ ≤ f'symm.nnnorm * dist (f (u n)) y + dist (u n) b := add_le_add (A _) le_rfl
         _ ≤ f'symm.nnnorm * (((c : ℝ) * f'symm.nnnorm) ^ n * dist (f b) y) +
-              f'symm.nnnorm * (1 - ((c : ℝ) * f'symm.nnnorm) ^ n) / (1 - c * f'symm.nnnorm) *
+              f'symm.nnnorm * (1 - ((c : ℝ) * f'symm.nnnorm) ^ n) / (1 - (c : ℝ) * f'symm.nnnorm) *
                 dist (f b) y := by
                   gcongr
                   · exact IH.1
@@ -285,7 +285,7 @@ theorem open_image (hf : ApproximatesLinearOn f f' s c) (f'symm : f'.NonlinearRi
   rcases hs x hx with ⟨r, hr, hball⟩
   have hsmall : (c : ℝ) * f'symm.nnnorm < 1 := by exact_mod_cast hc
   have hden : 0 < (f'symm.nnnorm : ℝ) + 1 := by positivity
-  let ε : ℝ := r / (f'symm.nnnorm + 1)
+  let ε : ℝ := r / ((f'symm.nnnorm : ℝ) + 1)
   have hεpos : 0 < ε := div_pos hr hden
   have hscale : (f'symm.nnnorm : ℝ) * ε ≤ r := by
     dsimp only [ε]

@@ -29,7 +29,7 @@ noncomputable def orderIsoIooNegOneOne (k : Type*) [Field k] [LinearOrder k]
     [IsStrictOrderedRing k] : k ≃o Ioo (-1 : k) 1 := by
   have hpos (x : k) : 0 < 1 + |x| := (abs_nonneg x).trans_lt (lt_one_add _)
   refine StrictMono.orderIsoOfRightInverse ?_ ?_
-    (fun x ↦ have := abs_lt.2 x.2; x / (1 - |↑x|)) ?_
+    (fun x ↦ have := abs_lt.2 x.2; (x : k) / (1 - |(x : k)|)) ?_
   · refine codRestrict (fun x ↦ have := hpos x; x / (1 + |x|)) _ fun x ↦ abs_lt.1 ?_
     have H := hpos x
     calc

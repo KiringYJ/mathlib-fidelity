@@ -291,7 +291,7 @@ theorem integral_Ioi_cpow_of_lt {a : ℂ} (ha : a.re < -1) {c : ℝ} (hc : 0 < c
       (intervalIntegral_tendsto_integral_Ioi c (integrableOn_Ioi_cpow_of_lt ha hc) tendsto_id) ?_
   suffices
     Tendsto (fun x : ℝ => ((x : ℂ) ^ (a + 1) - (c : ℂ) ^ (a + 1)) / (a + 1)) atTop
-      (𝓝 <| -c ^ (a + 1) / (a + 1)) by
+      (𝓝 <| -(c : ℂ) ^ (a + 1) / (a + 1)) by
     refine this.congr' ((eventually_gt_atTop 0).mp (Eventually.of_forall fun x hx => ?_))
     have ha' : a ≠ -1 := fun h ↦ ha.ne (by
       simpa only [Complex.neg_re, Complex.one_re] using congrArg Complex.re h)

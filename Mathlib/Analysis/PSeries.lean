@@ -320,11 +320,11 @@ theorem summable_one_div_nat_rpow {p : ℝ} :
 
 /-- The successor-indexed real reciprocal power series. -/
 theorem summable_one_div_nat_add_one_rpow {p : ℝ} :
-    Summable (fun n : ℕ ↦ (1 / (n + 1) ^ p : ℝ)) ↔ 1 < p := by
+    Summable (fun n : ℕ ↦ 1 / ((n : ℝ) + 1) ^ p) ↔ 1 < p := by
   have he := Equiv.pnatEquivNat.symm.summable_iff
     (f := fun n : ℕ+ ↦ Checked.div 1 (((n : ℕ) : ℝ) ^ p)
       (rpow_ne_zero_of_pos (Nat.cast_pos.mpr n.pos) p).isUnit)
-  have hshift : Summable (fun n : ℕ ↦ (1 / (n + 1) ^ p : ℝ)) ↔
+  have hshift : Summable (fun n : ℕ ↦ 1 / ((n : ℝ) + 1) ^ p) ↔
       Summable (fun n : ℕ+ ↦ Checked.div 1 (((n : ℕ) : ℝ) ^ p)
         (rpow_ne_zero_of_pos (Nat.cast_pos.mpr n.pos) p).isUnit) := by
     simpa only [Function.comp_def, Equiv.pnatEquivNat, Equiv.coe_fn_symm_mk,
@@ -362,7 +362,7 @@ theorem not_summable_one_div_natCast : ¬Summable (fun n : ℕ+ => 1 / ((n : ℕ
 
 /-- **Divergence of the Harmonic Series** -/
 theorem tendsto_sum_range_one_div_nat_succ_atTop :
-    Tendsto (fun n => ∑ i ∈ Finset.range n, (1 / (i + 1) : ℝ)) atTop atTop := by
+    Tendsto (fun n => ∑ i ∈ Finset.range n, (1 / ((i : ℝ) + 1))) atTop atTop := by
   rw [← not_summable_iff_tendsto_nat_atTop_of_nonneg]
   · simpa only [rpow_one] using
       (mt (summable_one_div_nat_add_one_rpow (p := 1)).mp (by norm_num : ¬(1 : ℝ) < 1))
@@ -451,7 +451,7 @@ theorem sum_Ioc_inv_sq_le_sub {k n : ℕ} (hk : k ≠ 0) (h : k ≤ n) :
       simpa only [Nat.add_sub_of_le h] using sum_range_inv_sq_le_sub (α := α) hk (n - k)
 
 private theorem sum_range_inv_sq_le (k m : ℕ) :
-    (∑ i ∈ range m, (((k + i + 1 : ℕ) : α) ^ 2)⁻¹) ≤ 2 / (k + 1) := by
+    (∑ i ∈ range m, (((k + i + 1 : ℕ) : α) ^ 2)⁻¹) ≤ 2 / ((k : α) + 1) := by
   cases m with
   | zero =>
     simp only [range_zero, sum_empty]
@@ -481,7 +481,7 @@ private theorem sum_range_inv_sq_le (k m : ℕ) :
 theorem sum_Ioo_inv_sq_le (k n : ℕ) :
     (∑ i : Ioo k n, Checked.inv (((i : ℕ) : α) ^ 2)
       ((Nat.cast_ne_zero.mpr (ne_of_gt ((Nat.zero_le k).trans_lt
-        (Finset.mem_Ioo.mp i.2).1))).isUnit.pow 2)) ≤ 2 / (k + 1) := by
+        (Finset.mem_Ioo.mp i.2).1))).isUnit.pow 2)) ≤ 2 / ((k : α) + 1) := by
   let e : Ioo k n ≃ Fin (n - (k + 1)) :=
     { toFun := fun i ↦ ⟨(i : ℕ) - (k + 1), by have := i.2; simp only [mem_Ioo] at this; omega⟩
       invFun := fun j ↦ ⟨k + j + 1, by simp only [mem_Ioo]; have := j.2; omega⟩
@@ -517,7 +517,7 @@ lemma Real.not_summable_one_div_natCast_residueClass {m : ℕ} (hm : m ≠ 0) (k
       1 / (((n : ℕ+) : ℕ) : ℝ)) := by
   let : NeZero m := ⟨hm⟩
   have hnot : ¬ Summable ({n : ℕ | (n : ZMod m) = k - 1}.indicator
-      (fun n : ℕ ↦ (1 / (n + 1) : ℝ))) := by
+      (fun n : ℕ ↦ 1 / ((n : ℝ) + 1))) := by
     rw [summable_indicator_mod_iff (fun n₁ n₂ h ↦ by gcongr) (k - 1)]
     simpa only [Real.rpow_one] using
       (mt (Real.summable_one_div_nat_add_one_rpow (p := 1)).mp
@@ -535,13 +535,13 @@ lemma Real.not_summable_one_div_natCast_residueClass {m : ℕ} (hm : m ≠ 0) (k
     dsimp only [toPositive] at hv
     exact Nat.succ.inj (by simpa only [Nat.succPNat_coe] using hv)
   have hsub : Summable (fun n : {n : ℕ // (n : ZMod m) = k - 1} ↦
-      (1 / ((n : ℕ) + 1) : ℝ)) := by
+      1 / (((n : ℕ) : ℝ) + 1)) := by
     convert h.comp_injective htoPositive using 1
     funext n
     simp only [toPositive, Function.comp_def, Nat.succPNat_coe, Nat.cast_succ]
   apply hnot
   exact (summable_subtype_iff_indicator
-    (s := {n : ℕ | (n : ZMod m) = k - 1}) (f := fun n : ℕ ↦ (1 / (n + 1) : ℝ))).mp hsub
+    (s := {n : ℕ | (n : ZMod m) = k - 1}) (f := fun n : ℕ ↦ 1 / ((n : ℝ) + 1))).mp hsub
 
 /-!
 ## Translating the `p`-series by a real number

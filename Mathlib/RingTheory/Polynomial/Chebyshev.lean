@@ -181,23 +181,33 @@ theorem T_eval_neg_one (n : ℤ) : (T R n).eval (-1) = n.negOnePow := by
       Int.negOnePow_sub]
     ring
 
+private theorem euclideanDiv_two_add_two (n : ℤ) :
+    Int.euclideanDiv (n + 2) 2 = Int.euclideanDiv n 2 + 1 := by
+  refine Int.euclideanDiv_eq_of_remainder (r := n % 2) (by decide) ?_
+    (Int.emod_nonneg _ (by decide)) (Int.emod_lt_of_pos _ (by decide))
+  have h := Int.euclideanDiv_mul_add_mod n 2 (by decide)
+  omega
+
 theorem T_eval_zero (n : ℤ) :
-    (T R n).eval 0 = (if Even n then (n / 2).negOnePow else 0 : ℤ) := by
+    (T R n).eval 0 = (if Even n then (Int.euclideanDiv n 2).negOnePow else 0 : ℤ) := by
   induction n using Polynomial.Chebyshev.induct with
-  | zero => simp
+  | zero => simp [Int.euclideanDiv_eq_core]
   | one => simp
   | add_two n ih1 ih2 =>
-    have : ((n : ℤ) + 2) / 2 = (n : ℤ) / 2 + 1 := by lia
+    have := euclideanDiv_two_add_two (n : ℤ)
     by_cases Even n <;> simp_all [Int.negOnePow_add]
   | neg_add_one n ih1 ih2 =>
-    have : (-(n : ℤ) + 1) / 2 = (-(n : ℤ) - 1) / 2 + 1 := by lia
+    have : Int.euclideanDiv (-(n : ℤ) + 1) 2 = Int.euclideanDiv (-(n : ℤ) - 1) 2 + 1 := by
+      rw [show -(n : ℤ) + 1 = -(n : ℤ) - 1 + 2 by omega, euclideanDiv_two_add_two]
     by_cases Even n <;> simp_all [T_sub_one, ← Int.not_even_iff_odd, Int.negOnePow_add]
 
 @[simp]
-theorem T_eval_zero_of_even {n : ℤ} (hn : Even n) : (T R n).eval 0 = (n / 2).negOnePow := by
+theorem T_eval_zero_of_even {n : ℤ} (hn : Even n) :
+    (T R n).eval 0 = (Int.euclideanDiv n 2).negOnePow := by
   simp [T_eval_zero, hn]
 
-theorem T_eval_two_mul_zero (n : ℤ) : (T R (2 * n)).eval 0 = n.negOnePow := by simp
+theorem T_eval_two_mul_zero (n : ℤ) : (T R (2 * n)).eval 0 = n.negOnePow := by
+  simp [Int.euclideanDiv_eq_core]
 
 @[simp]
 theorem T_eval_zero_of_odd {n : ℤ} (hn : Odd n) : (T R n).eval 0 = 0 := by
@@ -357,22 +367,25 @@ theorem U_eval_neg_one (n : ℤ) : (U R n).eval (-1) = n.negOnePow * (n + 1) := 
     ring
 
 theorem U_eval_zero (n : ℤ) :
-    (U R n).eval 0 = (if Even n then (n / 2).negOnePow else 0 : ℤ) := by
+    (U R n).eval 0 = (if Even n then (Int.euclideanDiv n 2).negOnePow else 0 : ℤ) := by
   induction n using Polynomial.Chebyshev.induct with
-  | zero => simp
+  | zero => simp [Int.euclideanDiv_eq_core]
   | one => simp
   | add_two n ih1 ih2 =>
-    have : ((n : ℤ) + 2) / 2 = (n : ℤ) / 2 + 1 := by lia
+    have := euclideanDiv_two_add_two (n : ℤ)
     by_cases Even n <;> simp_all [Int.negOnePow_add]
   | neg_add_one n ih1 ih2 =>
-    have : (-(n : ℤ) + 1) / 2 = (-(n : ℤ) - 1) / 2 + 1 := by lia
+    have : Int.euclideanDiv (-(n : ℤ) + 1) 2 = Int.euclideanDiv (-(n : ℤ) - 1) 2 + 1 := by
+      rw [show -(n : ℤ) + 1 = -(n : ℤ) - 1 + 2 by omega, euclideanDiv_two_add_two]
     by_cases Even n <;> simp_all [U_sub_one, ← Int.not_even_iff_odd, Int.negOnePow_add]
 
 @[simp]
-theorem U_eval_zero_of_even {n : ℤ} (hn : Even n) : (U R n).eval 0 = (n / 2).negOnePow := by
+theorem U_eval_zero_of_even {n : ℤ} (hn : Even n) :
+    (U R n).eval 0 = (Int.euclideanDiv n 2).negOnePow := by
   simp [U_eval_zero, hn]
 
-theorem U_eval_two_mul_zero (n : ℤ) : (U R (2 * n)).eval 0 = n.negOnePow := by simp
+theorem U_eval_two_mul_zero (n : ℤ) : (U R (2 * n)).eval 0 = n.negOnePow := by
+  simp [Int.euclideanDiv_eq_core]
 
 @[simp]
 theorem U_eval_zero_of_odd {n : ℤ} (hn : Odd n) : (U R n).eval 0 = 0 := by
@@ -1050,16 +1063,19 @@ theorem iterate_derivative_T_eval_one_eq_div [CharZero 𝔽] (n : ℤ) (k : ℕ)
     haveI : ((∏ l ∈ Finset.range k, (2 * l + 1) : ℕ) : 𝔽) ≠ 0 :=
       Nat.cast_ne_zero.mpr (Finset.prod_ne_zero_iff.mpr fun _ _ => by positivity)
     (derivative^[k] (T 𝔽 n)).eval 1 =
-      (∏ l ∈ Finset.range k, (n ^ 2 - l ^ 2)) / (∏ l ∈ Finset.range k, (2 * l + 1)) := by
+      ((∏ l ∈ Finset.range k, (n ^ 2 - l ^ 2) : ℤ) : 𝔽) /
+        ((∏ l ∈ Finset.range k, (2 * l + 1) : ℕ) : 𝔽) := by
   rw [eq_div_iff, mul_comm, iterate_derivative_T_eval_one]
 
 theorem iterate_derivative_U_eval_one_eq_div [CharZero 𝔽] (n : ℤ) (k : ℕ) :
     haveI : ((∏ l ∈ Finset.range k, (2 * l + 3) : ℕ) : 𝔽) ≠ 0 :=
       Nat.cast_ne_zero.mpr (Finset.prod_ne_zero_iff.mpr fun _ _ => by positivity)
     (derivative^[k] (U 𝔽 n)).eval 1 =
-      ((∏ l ∈ Finset.range k, ((n + 1) ^ 2 - (l + 1) ^ 2) : ℤ) * (n + 1)) /
-      (∏ l ∈ Finset.range k, (2 * l + 3)) := by
+      (((∏ l ∈ Finset.range k, ((n + 1) ^ 2 - (l + 1) ^ 2) : ℤ) * (n + 1) : ℤ) : 𝔽) /
+        ((∏ l ∈ Finset.range k, (2 * l + 3) : ℕ) : 𝔽) := by
   rw [eq_div_iff, mul_comm, iterate_derivative_U_eval_one]
+  push_cast
+  rfl
 
 theorem iterate_derivative_T_eval_one_dvd (n : ℤ) (k : ℕ) :
     ((∏ l ∈ Finset.range k, (2 * l + 1) : ℕ) : 𝔽) ∣ (∏ l ∈ Finset.range k, (n ^ 2 - l ^ 2) : ℤ) :=
@@ -1071,7 +1087,7 @@ theorem iterate_derivative_U_eval_one_dvd (n : ℤ) (k : ℕ) :
   dvd_of_mul_right_eq _ <| iterate_derivative_U_eval_one n k
 
 theorem derivative_U_eval_one_eq_div [neZero3 : NeZero (3 : 𝔽)] (n : ℤ) :
-    (derivative (U 𝔽 n)).eval 1 = ((n + 2) * (n + 1) * n) / 3 :=
+    (derivative (U 𝔽 n)).eval 1 = (((n : 𝔽) + 2) * ((n : 𝔽) + 1) * (n : 𝔽)) / 3 :=
   eq_div_of_mul_eq ((mul_comm ..).trans (derivative_U_eval_one n))
 
 theorem derivative_U_eval_one_dvd (n : ℤ) :

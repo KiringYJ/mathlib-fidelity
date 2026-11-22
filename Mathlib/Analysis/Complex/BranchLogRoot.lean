@@ -69,7 +69,7 @@ theorem exists_continuousOn_pow_eq (hUc : IsSimplyConnected U) (hUo : IsOpen U)
     ∃ f : X → ℂ, ContinuousOn f U ∧ ∀ x, f x ^ n = g x := by
   classical
   rcases exists_continuousOn_eqOn_exp_comp hUc hUo hgc hU₀ with ⟨f, hfc, hf⟩
-  refine ⟨U.piecewise (exp <| f · / n) (g · ^ (1 / n : ℂ)), ?_, fun z ↦ ?_⟩
+  refine ⟨U.piecewise (exp <| f · / (n : ℂ)) (g · ^ (1 / (n : ℂ))), ?_, fun z ↦ ?_⟩
   · rw [continuousOn_iff_continuous_domRestrict, domRestrict_piecewise,
       ← continuousOn_iff_continuous_domRestrict]
     fun_prop

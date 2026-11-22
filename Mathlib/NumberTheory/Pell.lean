@@ -377,15 +377,12 @@ theorem exists_of_not_isSquare (h₀ : 0 < d) (hd : ¬IsSquare d) :
     rw [← Int.natAbs_dvd, ← ZMod.intCast_eq_intCast_iff_dvd_sub]
     push_cast
     rw [hq1, hq2]
-  refine ⟨(q₁.num * q₂.num - d * (q₁.den * q₂.den)) / m, (q₁.num * q₂.den - q₂.num * q₁.den) / m,
-      ?_, ?_⟩
+  refine ⟨Int.exactQuotient _ m hd₁ hm₀, Int.exactQuotient _ m hd₂ hm₀, ?_, ?_⟩
   · qify
-    rw [Int.cast_div_charZero hd₁ hm₀, Int.cast_div_charZero hd₂ hm₀]
     field_simp
     norm_cast
     grind
   · qify
-    rw [Int.cast_div_charZero hd₂ hm₀]
     refine div_ne_zero_iff.mpr ?_
     exact mod_cast mt sub_eq_zero.mp (mt Rat.eq_iff_mul_eq_mul.mpr hne)
 

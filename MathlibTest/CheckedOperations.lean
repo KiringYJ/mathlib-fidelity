@@ -40,7 +40,7 @@ example (h₁ h₂ : IsUnit a) : Checked.inv a h₁ = Checked.inv a h₂ := rfl
 
 example : a⁻¹ * a = 1 := inv_mul_cancel₀
 
-example : (a / b) * b = a := div_mul_cancel₀ a
+example : Checked.div a b * b = a := div_mul_cancel₀ a
 
 example : a ^ (-1 : Int) = Checked.zpow a (-1) := rfl
 
@@ -70,13 +70,13 @@ end UnitsCoercion
 
 section NumeralDenominators
 
-variable {K : Type*} [DivisionSemiring K] [NeZero (2 : K)] (a : K)
+variable {K : Type*} [Field K] [NeZero (2 : K)] (a : K)
 
 example : (a / 2) * 2 = a := div_mul_cancel₀ a
 
 example : a ^ (2 : Nat) = a * a := pow_two a
 
-example : (((3 : Nat) / 2 : K)) = Checked.div (3 : K) (2 : K) := rfl
+example : ((3 : K) / (2 : K)) = Checked.div (3 : K) (2 : K) := rfl
 
 end NumeralDenominators
 
@@ -113,7 +113,7 @@ end DelayedInference
 
 section AmbientOperations
 
-variable {K : Type*} [GroupWithZero K]
+variable {K : Type*} [Field K]
 
 local instance : Inv K := ⟨fun _ => 0⟩
 
@@ -135,14 +135,9 @@ section GenericEuclideanDivision
 
 variable {R : Type*} [EuclideanDomain R]
 
-example (a b : R) (hb : b ≠ 0) : a / b = EuclideanDomain.quotient a b hb := rfl
+example (a : R) (u : Rˣ) : a / (u : R) = Checked.div a (u : R) := rfl
 
-example (a b : R) (hb : b ≠ 0) :
-    a ^ 2 / b ^ 2 = EuclideanDomain.quotient (a ^ 2) (b ^ 2) (pow_ne_zero 2 hb) := rfl
-
-example (a : R) (u : Rˣ) : a / (u : R) = EuclideanDomain.quotient a u u.ne_zero := rfl
-
-example (a b : R) (hb : b ≠ 0) : b * (a / b) + a % b = a :=
+example (a b : R) (hb : b ≠ 0) : b * EuclideanDomain.quotient a b hb + a % b = a :=
   EuclideanDomain.div_add_mod a b hb
 
 example [DecidableEq R] : EuclideanDomain.lcm (0 : R) 0 = 0 :=
@@ -171,35 +166,37 @@ example (a : R) : R := EuclideanDomain.quotient a 0
 
 local instance : Div R := ⟨fun _ _ => 0⟩
 
-example (a b : R) (hb : b ≠ 0) : a / b = EuclideanDomain.quotient a b hb := rfl
+example (a b : R) (hb : IsUnit b) : a / b = Checked.div a b hb := rfl
 
 /--
 error: could not synthesize default value for parameter 'hb' using tactics
 ---
-error: a nonzero denominator proof is required
+error: an invertibility proof is required
 R : Type u_1
 inst✝ : EuclideanDomain R
 a : R
-⊢ 0 ≠ 0
+⊢ IsUnit 0
 -/
 #guard_msgs in
-example (a : R) : R := a / 0
+noncomputable example (a : R) : R := a / 0
 
 /--
 error: could not synthesize default value for parameter 'hb' using tactics
 ---
-error: a nonzero denominator proof is required
+error: an invertibility proof is required
 R : Type u_1
 inst✝ : EuclideanDomain R
 a : R
-⊢ 0 ^ 2 ≠ 0
+⊢ IsUnit (0 ^ 2)
 -/
 #guard_msgs in
-example (a : R) : R := a ^ 2 / (0 : R) ^ 2
+noncomputable example (a : R) : R := a ^ 2 / (0 : R) ^ 2
 
 end GenericEuclideanDivision
 
-example : EuclideanDomain.quotient (7 : ℤ) 2 (by decide) = 3 := by decide
+example : EuclideanDomain.quotient (7 : ℤ) 2 (by decide) = 3 := by
+  change Int.euclideanDiv (7 : ℤ) 2 (by decide) = 3
+  exact Int.euclideanDiv_eq_of_remainder (r := 1) (by decide) (by decide) (by decide) (by decide)
 
 section NamedEuclideanCarrier
 
@@ -209,17 +206,17 @@ private instance : EuclideanDomain EuclideanInt := Int.euclideanDomain
 
 local instance : Div EuclideanInt := ⟨fun _ _ => 0⟩
 
-example (a b : EuclideanInt) (hb : b ≠ 0) : a / b = EuclideanDomain.quotient a b hb := rfl
+example (a b : EuclideanInt) (hb : IsUnit b) : a / b = Checked.div a b hb := rfl
 
 /--
 error: could not synthesize default value for parameter 'hb' using tactics
 ---
-error: a nonzero denominator proof is required
+error: an invertibility proof is required
 a : EuclideanInt
-⊢ 0 ≠ 0
+⊢ IsUnit 0
 -/
 #guard_msgs in
-example (a : EuclideanInt) : EuclideanInt := a / 0
+noncomputable example (a : EuclideanInt) : EuclideanInt := a / 0
 
 end NamedEuclideanCarrier
 
@@ -264,7 +261,7 @@ variable {M : Type*} [Monoid M]
 
 def inverseValue (u v : Mˣ) : M := (u * v)⁻¹
 
-def quotientValue (a : M) (u v : Mˣ) : M := a / (u * v)
+def quotientValue (a : M) (u v : Mˣ) : M := a /ₚ (u * v)
 
 def powerValue (u v : Mˣ) (n : Int) : M := (u * v) ^ n
 
@@ -276,7 +273,7 @@ example (u v : Mˣ) (n : Int) : powerValue u v n = Units.val (HPow.hPow (u * v) 
 
 def inverseCoercedProduct (u v : Mˣ) : M := ((u : M) * (v : M))⁻¹
 
-def quotientCoercedPower (a : M) (u : Mˣ) (n : Nat) : M := a / ((u : M) ^ n)
+def quotientCoercedPower (a : M) (u : Mˣ) (n : Nat) : M := a /ₚ (u ^ n)
 
 example (u v : Mˣ) : inverseCoercedProduct u v = Units.val (Inv.inv (u * v)) := rfl
 
@@ -314,7 +311,7 @@ end NamedFieldCarrier
 
 section CanonicalFamily
 
-variable {K : Type*} [CommGroupWithZero K] (a b c x : K) (ha : a ≠ 0) (hb : b ≠ 0) (hc : c ≠ 0)
+variable {K : Type*} [Field K] (a b c x : K) (ha : a ≠ 0) (hb : b ≠ 0) (hc : c ≠ 0)
 
 /-- info: a / b * b = a : Prop -/
 #guard_msgs in
@@ -342,7 +339,7 @@ variable {G : Type*} [GroupWithZero G] (a b : G) (ha : a ≠ 0) (hb : b ≠ 0)
 
 -- Groups with zero are Dedekind-finite, so a product's evidence gives its factors' evidence.
 example : (a * b)⁻¹ = b⁻¹ * a⁻¹ := by rw [mul_inv_rev₀]
-example : b / (a * b) = a⁻¹ := by rw [div_mul_cancel_right₀]
+example : Checked.div b (a * b) = a⁻¹ := by rw [div_mul_cancel_right₀]
 
 end NoncommutativeGroupWithZero
 
@@ -352,6 +349,6 @@ variable {M : Type*} [Monoid M] (a b : M) (ha : IsUnit a) (hb : IsUnit b)
 
 example : a * a⁻¹ * b = b := by rw [mul_inv_cancel₀, one_mul]
 example : IsUnit (a⁻¹ * b) := by checked_unit
-example : IsUnit (a / b) := by checked_unit
+example : IsUnit (Checked.div a b) := by checked_unit
 
 end MonoidEvidence

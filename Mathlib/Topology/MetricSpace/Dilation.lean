@@ -394,7 +394,7 @@ theorem toContinuous : Continuous (f : α → β) :=
 theorem ediam_image (s : Set α) : ediam ((f : α → β) '' s) = ratio f * ediam s := by
   refine ((lipschitz f).ediam_image_le s).antisymm ?_
   apply ENNReal.mul_le_of_le_div'
-  rw [div_eq_mul_inv, mul_comm, ← ENNReal.coe_inv (hr := (ratio_ne_zero f).isUnit)]
+  rw [ENNReal.div_eq_inv_mul, ← ENNReal.coe_inv (hr := (ratio_ne_zero f).isUnit)]
   exact (antilipschitz f).le_mul_ediam_image s
 
 /-- A dilation scales the diameter of the range by `ratio f`. -/

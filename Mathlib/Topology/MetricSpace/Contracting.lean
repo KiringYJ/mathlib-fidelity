@@ -64,7 +64,7 @@ theorem one_sub_K_ne_top : (1 : ℝ≥0∞) - K ≠ ∞ := by
   exact ENNReal.coe_ne_top
 
 theorem edist_inequality (hf : ContractingWith K f) {x y} (h : edist x y ≠ ∞) :
-    edist x y ≤ (edist x (f x) + edist y (f y)) / (1 - K) :=
+    edist x y ≤ (edist x (f x) + edist y (f y)).div (1 - K) :=
   suffices edist x y ≤ edist x (f x) + edist y (f y) + K * edist x y by
     rwa [ENNReal.le_div_iff_mul_le (Or.inl hf.one_sub_K_ne_zero) (Or.inl one_sub_K_ne_top),
       mul_comm, ENNReal.sub_mul fun _ _ ↦ h, one_mul, tsub_le_iff_right]
@@ -74,7 +74,7 @@ theorem edist_inequality (hf : ContractingWith K f) {x y} (h : edist x y ≠ ∞
     _ ≤ edist x (f x) + edist y (f y) + K * edist x y := add_le_add le_rfl (hf.2 _ _)
 
 theorem edist_le_of_fixedPoint (hf : ContractingWith K f) {x y} (h : edist x y ≠ ∞)
-    (hy : IsFixedPt f y) : edist x y ≤ edist x (f x) / (1 - K) := by
+    (hy : IsFixedPt f y) : edist x y ≤ (edist x (f x)).div (1 - K) := by
   simpa only [hy.eq, edist_self, add_zero] using hf.edist_inequality h
 
 theorem eq_or_edist_eq_top_of_fixedPoints (hf : ContractingWith K f) {x y} (hx : IsFixedPt f x)
@@ -100,14 +100,15 @@ and lemmas about these functions. -/
 @[wikidata Q220680]
 theorem exists_fixedPoint (hf : ContractingWith K f) (x : α) (hx : edist x (f x) ≠ ∞) :
     ∃ y, IsFixedPt f y ∧ Tendsto (fun n ↦ f^[n] x) atTop (𝓝 y) ∧
-      ∀ n : ℕ, edist (f^[n] x) y ≤ edist x (f x) * (K : ℝ≥0∞) ^ n / (1 - K) :=
+      ∀ n : ℕ, edist (f^[n] x) y ≤ (edist x (f x) * (K : ℝ≥0∞) ^ n).div (1 - K) :=
   have : CauchySeq fun n ↦ f^[n] x :=
     cauchySeq_of_edist_le_geometric K (edist x (f x)) (ENNReal.coe_lt_one_iff.2 hf.1) hx
       (hf.toLipschitzWith.edist_iterate_succ_le_geometric x)
   let ⟨y, hy⟩ := cauchySeq_tendsto_of_complete this
-  ⟨y, isFixedPt_of_tendsto_iterate hy hf.2.continuous.continuousAt, hy,
-    edist_le_of_edist_le_geometric_of_tendsto K (edist x (f x))
-      (hf.toLipschitzWith.edist_iterate_succ_le_geometric x) hy⟩
+  ⟨y, isFixedPt_of_tendsto_iterate hy hf.2.continuous.continuousAt, hy, fun n ↦ by
+    simpa only [ENNReal.tsum_geometric, ENNReal.div] using
+      edist_le_of_edist_le_geometric_of_tendsto K (edist x (f x))
+        (hf.toLipschitzWith.edist_iterate_succ_le_geometric x) hy n⟩
 
 variable (f) in
 -- avoid `efixedPoint _` in pretty printer
@@ -127,11 +128,11 @@ theorem tendsto_iterate_efixedPoint (hf : ContractingWith K f) {x : α} (hx : ed
 
 theorem apriori_edist_iterate_efixedPoint_le (hf : ContractingWith K f) {x : α}
     (hx : edist x (f x) ≠ ∞) (n : ℕ) :
-    edist (f^[n] x) (efixedPoint f hf x hx) ≤ edist x (f x) * (K : ℝ≥0∞) ^ n / (1 - K) :=
+    edist (f^[n] x) (efixedPoint f hf x hx) ≤ (edist x (f x) * (K : ℝ≥0∞) ^ n).div (1 - K) :=
   (Classical.choose_spec <| hf.exists_fixedPoint x hx).2.2 n
 
 theorem edist_efixedPoint_le (hf : ContractingWith K f) {x : α} (hx : edist x (f x) ≠ ∞) :
-    edist x (efixedPoint f hf x hx) ≤ edist x (f x) / (1 - K) := by
+    edist x (efixedPoint f hf x hx) ≤ (edist x (f x)).div (1 - K) := by
   convert! hf.apriori_edist_iterate_efixedPoint_le hx 0
   simp only [pow_zero, mul_one]
 
@@ -158,7 +159,7 @@ end
 theorem exists_fixedPoint' {s : Set α} (hsc : IsComplete s) (hsf : MapsTo f s s)
     (hf : ContractingWith K <| hsf.restrict f s s) {x : α} (hxs : x ∈ s) (hx : edist x (f x) ≠ ∞) :
     ∃ y ∈ s, IsFixedPt f y ∧ Tendsto (fun n ↦ f^[n] x) atTop (𝓝 y) ∧
-      ∀ n : ℕ, edist (f^[n] x) y ≤ edist x (f x) * (K : ℝ≥0∞) ^ n / (1 - K) := by
+      ∀ n : ℕ, edist (f^[n] x) y ≤ (edist x (f x) * (K : ℝ≥0∞) ^ n).div (1 - K) := by
   have := hsc.completeSpace_coe
   rcases hf.exists_fixedPoint ⟨x, hxs⟩ hx with ⟨y, hfy, h_tendsto, hle⟩
   refine ⟨y, y.2, Subtype.ext_iff.1 hfy, ?_, fun n ↦ ?_⟩
@@ -197,12 +198,12 @@ theorem apriori_edist_iterate_efixedPoint_le' {s : Set α} (hsc : IsComplete s) 
     (hf : ContractingWith K <| hsf.restrict f s s) {x : α} (hxs : x ∈ s) (hx : edist x (f x) ≠ ∞)
     (n : ℕ) :
     edist (f^[n] x) (efixedPoint' f hsc hsf hf x hxs hx) ≤
-      edist x (f x) * (K : ℝ≥0∞) ^ n / (1 - K) :=
+      (edist x (f x) * (K : ℝ≥0∞) ^ n).div (1 - K) :=
   (Classical.choose_spec <| hf.exists_fixedPoint' hsc hsf hxs hx).2.2.2 n
 
 theorem edist_efixedPoint_le' {s : Set α} (hsc : IsComplete s) (hsf : MapsTo f s s)
     (hf : ContractingWith K <| hsf.restrict f s s) {x : α} (hxs : x ∈ s) (hx : edist x (f x) ≠ ∞) :
-    edist x (efixedPoint' f hsc hsf hf x hxs hx) ≤ edist x (f x) / (1 - K) := by
+    edist x (efixedPoint' f hsc hsf hf x hxs hx) ≤ (edist x (f x)).div (1 - K) := by
   convert! hf.apriori_edist_iterate_efixedPoint_le' hsc hsf hxs hx 0
   rw [pow_zero, mul_one]
 
@@ -256,14 +257,15 @@ include hf
 theorem dist_le_mul (x y : α) : dist (f x) (f y) ≤ K * dist x y :=
   hf.toLipschitzWith.dist_le_mul x y
 
-theorem dist_inequality (x y) : dist x y ≤ (dist x (f x) + dist y (f y)) / (1 - K) :=
+theorem dist_inequality (x y) : dist x y ≤ (dist x (f x) + dist y (f y)) / (1 - (K : ℝ)) :=
   suffices dist x y ≤ dist x (f x) + dist y (f y) + K * dist x y by
     rwa [le_div_iff₀ hf.one_sub_K_pos, mul_comm, _root_.sub_mul, one_mul, sub_le_iff_le_add]
   calc
     dist x y ≤ dist x (f x) + dist y (f y) + dist (f x) (f y) := dist_triangle4_right _ _ _ _
     _ ≤ dist x (f x) + dist y (f y) + K * dist x y := by grw [hf.dist_le_mul]
 
-theorem dist_le_of_fixedPoint (x) {y} (hy : IsFixedPt f y) : dist x y ≤ dist x (f x) / (1 - K) := by
+theorem dist_le_of_fixedPoint (x) {y} (hy : IsFixedPt f y) :
+    dist x y ≤ dist x (f x) / (1 - (K : ℝ)) := by
   simpa only [hy.eq, dist_self, add_zero] using hf.dist_inequality x y
 
 theorem fixedPoint_unique' {x y} (hx : IsFixedPt f x) (hy : IsFixedPt f y) : x = y :=
@@ -272,12 +274,12 @@ theorem fixedPoint_unique' {x y} (hx : IsFixedPt f x) (hy : IsFixedPt f y) : x =
 /-- Let `f` be a contracting map with constant `K`; let `g` be another map uniformly
 `C`-close to `f`. If `x` and `y` are their fixed points, then `dist x y ≤ C / (1 - K)`. -/
 theorem dist_fixedPoint_fixedPoint_of_dist_le' (g : α → α) {x y} (hx : IsFixedPt f x)
-    (hy : IsFixedPt g y) {C} (hfg : ∀ z, dist (f z) (g z) ≤ C) : dist x y ≤ C / (1 - K) :=
+    (hy : IsFixedPt g y) {C} (hfg : ∀ z, dist (f z) (g z) ≤ C) : dist x y ≤ C / (1 - (K : ℝ)) :=
   calc
     dist x y = dist y x := dist_comm x y
-    _ ≤ dist y (f y) / (1 - K) := hf.dist_le_of_fixedPoint y hx
-    _ = dist (f y) (g y) / (1 - K) := by rw [hy.eq, dist_comm]
-    _ ≤ C / (1 - K) := (div_le_div_iff_of_pos_right hf.one_sub_K_pos).2 (hfg y)
+    _ ≤ dist y (f y) / (1 - (K : ℝ)) := hf.dist_le_of_fixedPoint y hx
+    _ = dist (f y) (g y) / (1 - (K : ℝ)) := by rw [hy.eq, dist_comm]
+    _ ≤ C / (1 - (K : ℝ)) := (div_le_div_iff_of_pos_right hf.one_sub_K_pos).2 (hfg y)
 
 variable [Nonempty α] [CompleteSpace α]
 
@@ -293,19 +295,20 @@ theorem fixedPoint_isFixedPt : IsFixedPt f (fixedPoint f hf) :=
 theorem fixedPoint_unique {x} (hx : IsFixedPt f x) : x = fixedPoint f hf :=
   hf.fixedPoint_unique' hx hf.fixedPoint_isFixedPt
 
-theorem dist_fixedPoint_le (x) : dist x (fixedPoint f hf) ≤ dist x (f x) / (1 - K) :=
+theorem dist_fixedPoint_le (x) : dist x (fixedPoint f hf) ≤ dist x (f x) / (1 - (K : ℝ)) :=
   hf.dist_le_of_fixedPoint x hf.fixedPoint_isFixedPt
 
 /-- A posteriori estimates on the convergence of iterates to the fixed point. -/
 theorem aposteriori_dist_iterate_fixedPoint_le (x n) :
-    dist (f^[n] x) (fixedPoint f hf) ≤ dist (f^[n] x) (f^[n + 1] x) / (1 - K) := by
+    dist (f^[n] x) (fixedPoint f hf) ≤ dist (f^[n] x) (f^[n + 1] x) / (1 - (K : ℝ)) := by
   rw [iterate_succ']
   apply hf.dist_fixedPoint_le
 
 theorem apriori_dist_iterate_fixedPoint_le (x n) :
-    dist (f^[n] x) (fixedPoint f hf) ≤ dist x (f x) * (K : ℝ) ^ n / (1 - K) :=
+    dist (f^[n] x) (fixedPoint f hf) ≤ dist x (f x) * (K : ℝ) ^ n / (1 - (K : ℝ)) :=
   calc
-    _ ≤ dist (f^[n] x) (f^[n + 1] x) / (1 - K) := hf.aposteriori_dist_iterate_fixedPoint_le x n
+    _ ≤ dist (f^[n] x) (f^[n + 1] x) / (1 - (K : ℝ)) :=
+      hf.aposteriori_dist_iterate_fixedPoint_le x n
     _ ≤ _ := by
       gcongr; exacts [hf.one_sub_K_pos.le, hf.toLipschitzWith.dist_iterate_succ_le_geometric x n]
 
@@ -316,7 +319,8 @@ theorem tendsto_iterate_fixedPoint (x) :
   apply efixedPoint_isFixedPt
 
 theorem fixedPoint_lipschitz_in_map {g : α → α} (hg : ContractingWith K g) {C}
-    (hfg : ∀ z, dist (f z) (g z) ≤ C) : dist (fixedPoint f hf) (fixedPoint g hg) ≤ C / (1 - K) :=
+    (hfg : ∀ z, dist (f z) (g z) ≤ C) :
+    dist (fixedPoint f hf) (fixedPoint g hg) ≤ C / (1 - (K : ℝ)) :=
   hf.dist_fixedPoint_fixedPoint_of_dist_le' g hf.fixedPoint_isFixedPt hg.fixedPoint_isFixedPt hfg
 
 end

@@ -194,7 +194,8 @@ theorem _root_.IsPrimitiveRoot.lcm_totient_le_finrank [FiniteDimensional K L] {p
   · simp
   rcases Nat.eq_zero_or_pos q with (rfl | hqpos)
   · simp
-  let z := x ^ (p / factorizationLCMLeft p q) * y ^ (q / factorizationLCMRight p q)
+  let z := x ^ Nat.euclideanDiv p (factorizationLCMLeft p q) (factorizationLCMLeft_pos _ _).ne' *
+    y ^ Nat.euclideanDiv q (factorizationLCMRight p q) (factorizationLCMRight_pos _ _).ne'
   let k := PNat.lcm ⟨p, hppos⟩ ⟨q, hqpos⟩
   have : IsPrimitiveRoot z k := hx.pow_mul_pow_lcm hy hppos.ne' hqpos.ne'
   have := IsPrimitiveRoot.adjoin_isCyclotomicExtension K this
@@ -480,7 +481,9 @@ theorem norm_pow_sub_one_two {k : ℕ} (hζ : IsPrimitiveRoot ζ (2 ^ (k + 1)))
     norm K (ζ ^ 2 ^ k - 1) = (-2 : K) ^ 2 ^ k := by
   have := hζ.pow_of_dvd
     (fun h => two_ne_zero (eq_zero_of_pow_eq_zero h)) (pow_dvd_pow 2 (le_succ k))
-  rw [Nat.pow_div (le_succ k) zero_lt_two, Nat.succ_sub (le_refl k), Nat.sub_self, pow_one] at this
+  have he : Nat.euclideanDiv (2 ^ (k + 1)) (2 ^ k) (pow_ne_zero _ two_ne_zero) = 2 := by
+    rw [pow_succ, Nat.euclideanDiv_mul_left_cancel]
+  rw [he] at this
   have H : (-1 : L) - (1 : L) = algebraMap K L (-2) := by
     simp only [map_neg, map_ofNat]
     ring

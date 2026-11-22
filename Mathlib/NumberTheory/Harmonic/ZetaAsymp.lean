@@ -112,7 +112,7 @@ section s_eq_one
 -/
 
 lemma term_one (n : ℕ) :
-    term n 1 = (log (n + 2) - log (n + 1)) - 1 / (n + 2) := by
+    term n 1 = (log (n + 2) - log (n + 1)) - 1 / ((n : ℝ) + 2) := by
   let F : Ioi (0 : ℝ) → ℝ := fun x ↦
     log (x : ℝ) + Checked.div ((n : ℝ) + 1) (x : ℝ) x.2.ne'.isUnit
   let path : Icc (0 : ℝ) 1 → Ioi (0 : ℝ) :=
@@ -161,7 +161,7 @@ lemma term_one (n : ℕ) :
     term n 1 = F (path ⟨1, zero_le_one, le_rfl⟩) - F (path ⟨0, le_rfl, zero_le_one⟩) := by
       change term n 1 = F (path 1) - F (path 0)
       simpa only [term, one_smul] using h
-    _ = (log (n + 2) - log (n + 1)) - 1 / (n + 2) := by
+    _ = (log (n + 2) - log (n + 1)) - 1 / ((n : ℝ) + 2) := by
       dsimp [F, path]
       have hn : (0 : ℝ) < n + 1 := by positivity
       have hn' : (0 : ℝ) < n + 2 := by positivity
@@ -207,7 +207,7 @@ section s_gt_one
 
 lemma term_of_lt (n : ℕ) {s : ℝ} (hs : 1 < s) :
     term n s = 1 / (s - 1) * (1 / (n + 1 : ℝ) ^ (s - 1) - 1 / (n + 2 : ℝ) ^ (s - 1))
-      - (n + 1) / s * (1 / (n + 1 : ℝ) ^ s - 1 / (n + 2 : ℝ) ^ s) := by
+      - ((n : ℝ) + 1) / s * (1 / (n + 1 : ℝ) ^ s - 1 / (n + 2 : ℝ) ^ s) := by
   have hs0 : 0 < s := zero_lt_one.trans hs
   let F : Ioi (0 : ℝ) → ℝ := fun x ↦
     -(1 / (s - 1)) * (x : ℝ) ^ (-(s - 1)) + ((n : ℝ) + 1) / s * (x : ℝ) ^ (-s)
@@ -256,8 +256,8 @@ lemma term_of_lt (n : ℕ) {s : ℝ} (hs : 1 < s) :
       ring
 
 lemma termSum_of_lt (N : ℕ) {s : ℝ} (hs : 1 < s) :
-    termSum s N = 1 / (s - 1) * (1 - 1 / (N + 1) ^ (s - 1))
-    - 1 / s * ((∑ n ∈ Finset.range N, 1 / (n + 1 : ℝ) ^ s) - N / (N + 1) ^ s) := by
+    termSum s N = 1 / (s - 1) * (1 - 1 / ((N : ℝ) + 1) ^ (s - 1))
+    - 1 / s * ((∑ n ∈ Finset.range N, 1 / (n + 1 : ℝ) ^ s) - (N : ℝ) / ((N : ℝ) + 1) ^ s) := by
   have hs0 : 0 < s := zero_lt_one.trans hs
   simp only [termSum]
   conv => enter [1, 2, n]; rw [term_of_lt n hs]
@@ -269,7 +269,7 @@ lemma termSum_of_lt (N : ℕ) {s : ℝ} (hs : 1 < s) :
       rw [Finset.sum_range_succ, hN]
       simp only [Nat.cast_add_one, add_assoc, one_add_one_eq_two]
       ring
-  · have hmul (n : ℕ) (x : ℝ) : (n + 1) / s * x = 1 / s * ((n + 1) * x) := by
+  · have hmul (n : ℕ) (x : ℝ) : ((n : ℝ) + 1) / s * x = 1 / s * ((n + 1) * x) := by
       rw [div_eq_inv_mul₀ _ s, one_div₀ s, mul_assoc]
     simp_rw [hmul, ← Finset.mul_sum]
     congr 1
@@ -311,7 +311,7 @@ lemma termTSum_of_lt {s : ℝ} (hs : 1 < s) :
         positivity
       · intro n
         dsimp only
-        transitivity (n + 1) / (n + 1) ^ s
+        transitivity ((n : ℝ) + 1) / ((n : ℝ) + 1) ^ s
         · gcongr
           linarith
         · apply le_of_eq
@@ -498,7 +498,7 @@ lemma completedRiemannZeta₀_one : completedRiemannZeta₀ 1 = (γ - log (4 * �
   have hR := tendsto_nhds_unique
     (HurwitzZeta.tendsto_hurwitzZetaEven_sub_principalPart_nhds_one 0)
     ZetaAsymptotics.tendsto_riemannZeta_sub_one_div_Gammaℝ
-  have hG : reciprocalGammaℝ (1 + 2) / 2 / π = 1 := by
+  have hG : reciprocalGammaℝ (1 + 2) / 2 / (π : ℂ) = 1 := by
     simpa only [reciprocalGammaℝ_one, one_mul] using
       (reciprocalGammaℝ_eq_self_mul_reciprocalGammaℝ_add_two 1).symm
   simp only [HurwitzZeta.hurwitzZetaEvenRegularPart, HurwitzZeta.completedHurwitzZetaEven₀_zero,
@@ -525,7 +525,7 @@ lemma riemannZeta_eq_inv_sub_mul {s : ℂ} (hs : s ≠ 1) :
 
 @[simp]
 lemma deriv_riemannZeta₁_one : deriv riemannZeta₁ 1 = γ := by
-  have hG : reciprocalGammaℝ (1 + 2) / 2 / π = 1 := by
+  have hG : reciprocalGammaℝ (1 + 2) / 2 / (π : ℂ) = 1 := by
     simpa only [reciprocalGammaℝ_one, one_mul] using
       (reciprocalGammaℝ_eq_self_mul_reciprocalGammaℝ_add_two 1).symm
   have hR : HurwitzZeta.hurwitzZetaEvenRegularPart 0 1 = (γ - log (4 * π)) / 2 := by

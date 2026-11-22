@@ -444,13 +444,21 @@ theorem Nat.isSemilinearSet_iff_ultimately_periodic {s : Set ℕ} :
       by_cases hx' : x < k
       · exact Or.inl ⟨hx, hx'⟩
       · rw [not_lt] at hx'
-        refine Or.inr ⟨k + (x - k) % p, ⟨⟨?_1, ?_2⟩, ?_1, ?_3⟩, (x - k) / p, ?_4⟩
-        · rw [← add_tsub_cancel_of_le hx', ← Nat.mod_add_div' (x - k) p, ← add_assoc] at hx
-          generalize (x - k) / p = m at hx
-          induction m with grind
-        · grind
-        · exact Nat.add_lt_add_left (Nat.mod_lt _ hp) _
-        · rw [add_assoc, Nat.mod_add_div', add_tsub_cancel_of_le hx']
+        let r := (x - k) % p
+        let q := Nat.euclideanDiv (x - k) p (Nat.ne_of_gt hp)
+        have hrec : k + r + q * p = x := by
+          rw [Nat.add_assoc, Nat.add_comm r, Nat.mul_comm q p,
+            show p * q + r = x - k from Nat.euclideanDiv_mul_add_mod (x - k) p (Nat.ne_of_gt hp)]
+          exact Nat.add_sub_of_le hx'
+        have hperiod (m : ℕ) : k + r ∈ s ↔ k + r + m * p ∈ s := by
+          induction m with
+          | zero => simp
+          | succ m ih =>
+            rw [Nat.succ_mul, ← Nat.add_assoc, ← hs _ (by omega)]
+            exact ih
+        have hmem := (hperiod q).mpr (hrec.symm ▸ hx)
+        exact Or.inr ⟨k + r, ⟨⟨hmem, Nat.le_add_right _ _⟩, hmem,
+          Nat.add_lt_add_left (Nat.mod_lt _ hp) _⟩, q, hrec⟩
     · rintro (⟨hx, hx'⟩ | ⟨x, ⟨⟨hx, hx'⟩, _⟩, m, rfl⟩)
       · exact hx
       · induction m with grind

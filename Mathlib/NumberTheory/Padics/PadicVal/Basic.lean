@@ -227,7 +227,7 @@ theorem finite_int_prime_iff {a : ℤ} : FiniteMultiplicity (p : ℤ) a ↔ a �
 /-- A rewrite lemma for `padicValRat p q` when `q` is expressed as a quotient `n / d` of
 integers. -/
 protected theorem defn (p : ℕ) [hp : Fact p.Prime] {q : ℚ} {n d : ℤ} {hd : IsUnit (d : ℚ)}
-    (hqz : q ≠ 0) (qdf : q = n / d) :
+    (hqz : q ≠ 0) (qdf : q = (n : ℚ) / (d : ℚ)) :
     padicValRat p q =
       multiplicity (p : ℤ) n (finite_int_prime_iff.2 fun hn ↦ hqz (by simp [qdf, hn])) -
         multiplicity (p : ℤ) d (finite_int_prime_iff.2 (Int.cast_ne_zero.1 hd.ne_zero)) := by
@@ -308,14 +308,14 @@ protected theorem div {q r : ℚ} (hq : q ≠ 0) (hr : r ≠ 0) :
 divisibility by `p^n`. -/
 theorem padicValRat_le_padicValRat_iff {n₁ n₂ d₁ d₂ : ℤ} (hn₁ : n₁ ≠ 0) (hn₂ : n₂ ≠ 0)
     (hd₁ : d₁ ≠ 0) (hd₂ : d₂ ≠ 0) :
-    padicValRat p (n₁ / d₁) (hq := div_ne_zero (Int.cast_ne_zero.2 hn₁)) ≤
-        padicValRat p (n₂ / d₂) (hq := div_ne_zero (Int.cast_ne_zero.2 hn₂)) ↔
+    padicValRat p ((n₁ : ℚ) / (d₁ : ℚ)) (hq := div_ne_zero (Int.cast_ne_zero.2 hn₁)) ≤
+        padicValRat p ((n₂ : ℚ) / (d₂ : ℚ)) (hq := div_ne_zero (Int.cast_ne_zero.2 hn₂)) ↔
       ∀ n : ℕ, (p : ℤ) ^ n ∣ n₁ * d₂ → (p : ℤ) ^ n ∣ n₂ * d₁ := by
   have hf1 : FiniteMultiplicity (p : ℤ) (n₁ * d₂) := finite_int_prime_iff.2 (mul_ne_zero hn₁ hd₂)
   have hf2 : FiniteMultiplicity (p : ℤ) (n₂ * d₁) := finite_int_prime_iff.2 (mul_ne_zero hn₂ hd₁)
   have hp' : Prime (p : ℤ) := Nat.prime_iff_prime_int.1 hp.1
-  rw [padicValRat.defn p (q := (n₁ : ℚ) / d₁) (div_ne_zero (Int.cast_ne_zero.2 hn₁)) rfl,
-    padicValRat.defn p (q := (n₂ : ℚ) / d₂) (div_ne_zero (Int.cast_ne_zero.2 hn₂)) rfl,
+  rw [padicValRat.defn p (q := (n₁ : ℚ) / (d₁ : ℚ)) (div_ne_zero (Int.cast_ne_zero.2 hn₁)) rfl,
+    padicValRat.defn p (q := (n₂ : ℚ) / (d₂ : ℚ)) (div_ne_zero (Int.cast_ne_zero.2 hn₂)) rfl,
     sub_le_iff_le_add', ← add_sub_assoc, le_sub_iff_add_le]
   norm_cast
   rw [← multiplicity_mul hp' hf1, add_comm, ← multiplicity_mul hp' hf2,
@@ -507,18 +507,19 @@ protected theorem mul (ha : a ≠ 0) (hb : b ≠ 0) :
     padicValNat_eq_emultiplicity ha, padicValNat_eq_emultiplicity hb,
     emultiplicity_mul (Nat.prime_iff.1 hp.out)]
 
-protected theorem div_of_dvd (ha : a ≠ 0) (h : b ∣ a) {hab : a / b ≠ 0} :
-    padicValNat p (a / b) hp.out.ne_one hab =
+protected theorem div_of_dvd (ha : a ≠ 0) (h : b ∣ a)
+    {hab : Nat.euclideanDiv a b (ne_zero_of_dvd_ne_zero ha h) ≠ 0} :
+    padicValNat p (Nat.euclideanDiv a b (ne_zero_of_dvd_ne_zero ha h)) hp.out.ne_one hab =
       padicValNat p a - padicValNat p b (hn := ne_zero_of_dvd_ne_zero ha h) := by
   obtain ⟨k, rfl⟩ := h
   obtain ⟨hb, hk⟩ := mul_ne_zero_iff.mp ha
-  have e : b * k / b = k := k.mul_div_cancel_left (Nat.pos_of_ne_zero hb)
-  have : padicValNat p (b * k / b) hp.out.ne_one hab = padicValNat p k := by simp only [e]
+  have : padicValNat p (Nat.euclideanDiv (b * k) b hb) hp.out.ne_one hab = padicValNat p k := by
+    simp only [Nat.euclideanDiv_mul_left_cancel]
   rw [this, padicValNat.mul hb hk, Nat.add_sub_cancel_left]
 
 /-- Dividing out by a prime factor reduces the `padicValNat` by `1`. -/
-protected theorem div (hb : b ≠ 0) (dvd : p ∣ b) {h : b / p ≠ 0} :
-    padicValNat p (b / p) hp.out.ne_one h = padicValNat p b - 1 := by
+protected theorem div (hb : b ≠ 0) (dvd : p ∣ b) {h : Nat.euclideanDiv b p hp.out.ne_zero ≠ 0} :
+    padicValNat p (Nat.euclideanDiv b p hp.out.ne_zero) hp.out.ne_one h = padicValNat p b - 1 := by
   rw [padicValNat.div_of_dvd hb dvd, padicValNat_self]
 
 /-- A version of `padicValRat.pow` for `padicValNat`. -/
@@ -531,12 +532,16 @@ protected theorem pow (a n : ℕ) (ha : a ≠ 0) : padicValNat p (a ^ n) = n * p
 protected theorem prime_pow (n : ℕ) : padicValNat p (p ^ n) = n := by
   rw [padicValNat.pow p n hp.out.ne_zero, padicValNat_self, mul_one]
 
-protected theorem div_pow (hb : b ≠ 0) (dvd : p ^ a ∣ b) {h : b / p ^ a ≠ 0} :
-    padicValNat p (b / p ^ a) hp.out.ne_one h = padicValNat p b - a := by
+protected theorem div_pow (hb : b ≠ 0) (dvd : p ^ a ∣ b)
+    {h : Nat.euclideanDiv b (p ^ a) (pow_ne_zero a hp.out.ne_zero) ≠ 0} :
+    padicValNat p (Nat.euclideanDiv b (p ^ a) (pow_ne_zero a hp.out.ne_zero)) hp.out.ne_one h =
+      padicValNat p b - a := by
   rw [padicValNat.div_of_dvd hb dvd, padicValNat.prime_pow]
 
 protected theorem div' {m : ℕ} (cpm : Coprime p m) {b : ℕ} (hb : b ≠ 0) (dvd : m ∣ b)
-    {h : b / m ≠ 0} : padicValNat p (b / m) hp.out.ne_one h = padicValNat p b := by
+    {h : Nat.euclideanDiv b m (ne_zero_of_dvd_ne_zero hb dvd) ≠ 0} :
+    padicValNat p (Nat.euclideanDiv b m (ne_zero_of_dvd_ne_zero hb dvd)) hp.out.ne_one h =
+      padicValNat p b := by
   rw [padicValNat.div_of_dvd hb dvd, eq_zero_of_not_dvd (hp.out.coprime_iff_not_dvd.mp cpm),
     Nat.sub_zero]
 
@@ -705,17 +710,19 @@ theorem padicValNat_factorial_mul_add {n : ℕ} (m : ℕ) [hp : Fact p.Prime] (h
 /-- The `p`-adic valuation of `n!` is equal to the `p`-adic valuation of the factorial of the
 largest multiple of `p` below `n`, i.e. `(p * ⌊n / p⌋)!`. -/
 @[simp] theorem padicValNat_mul_div_factorial (n : ℕ) [hp : Fact p.Prime] :
-    padicValNat p (p * (n / p))! = padicValNat p n ! := by
-  have := (padicValNat_factorial_mul_add (p := p) (n / p) <| mod_lt n hp.out.pos).symm
+    padicValNat p (p * Nat.euclideanDiv n p hp.out.ne_zero)! = padicValNat p n ! := by
+  have := (padicValNat_factorial_mul_add (Nat.euclideanDiv n p hp.out.ne_zero)
+    (mod_lt n hp.out.pos)).symm
   convert this using 3
-  exact (div_add_mod n p).symm
+  exact (Nat.euclideanDiv_mul_add_mod n p hp.out.ne_zero).symm
 
 /-- **Legendre's Theorem**
 
 The `p`-adic valuation of `n!` is the sum of the quotients `n / p ^ i`. This sum is expressed
 over the finset `Ico 1 b` where `b` is any exponent with `n < p ^ b`. -/
 theorem padicValNat_factorial {n b : ℕ} [hp : Fact p.Prime] (hnb : n < p ^ b) :
-    padicValNat p (n !) = ∑ i ∈ Finset.Ico 1 b, n / p ^ i := by
+    padicValNat p (n !) =
+      ∑ i ∈ Finset.Ico 1 b, Nat.euclideanDiv n (p ^ i) (pow_ne_zero i hp.out.ne_zero) := by
   exact_mod_cast ((padicValNat_eq_emultiplicity (p := p) <| factorial_ne_zero _) ▸
       Prime.emultiplicity_factorial hp.out hnb)
 

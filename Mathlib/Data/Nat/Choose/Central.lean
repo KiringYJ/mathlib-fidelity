@@ -53,8 +53,8 @@ theorem centralBinom_zero : centralBinom 0 = 1 :=
 -/
 theorem choose_le_centralBinom (r n : ℕ) : choose (2 * n) r ≤ centralBinom n :=
   calc
-    (2 * n).choose r ≤ (2 * n).choose (2 * n / 2) := choose_le_middle r (2 * n)
-    _ = (2 * n).choose n := by rw [Nat.mul_div_cancel_left n zero_lt_two]
+    (2 * n).choose r ≤ (2 * n).choose (Nat.euclideanDiv (2 * n) 2) := choose_le_middle r (2 * n)
+    _ = (2 * n).choose n := by rw [Nat.euclideanDiv_eq_core, Nat.mul_div_cancel_left n zero_lt_two]
 
 theorem centralBinom_strictMono : StrictMono centralBinom :=
   strictMono_nat_of_lt_succ (by grind [Nat.choose_pos, centralBinom])

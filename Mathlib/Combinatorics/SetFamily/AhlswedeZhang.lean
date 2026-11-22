@@ -114,9 +114,9 @@ private lemma binomial_sum_eq (h : n < m) :
     have em := congr_arg ((↑) : ℕ → ℚ) (choose_succ_right_eq m i)
     have en := congr_arg ((↑) : ℕ → ℚ) (choose_succ_right_eq n i)
     push_cast [Nat.cast_sub him.le, Nat.cast_sub hin] at em en
-    have hX : (n.choose (i + 1) : ℚ) = n.choose i * (n - i) / (i + 1) := by
+    have hX : (n.choose (i + 1) : ℚ) = (n.choose i : ℚ) * ((n : ℚ) - i) / ((i : ℚ) + 1) := by
       rw [eq_div_iff]; exact en
-    have hY : (m.choose (i + 1) : ℚ) = m.choose i * (m - i) / (i + 1) := by
+    have hY : (m.choose (i + 1) : ℚ) = (m.choose i : ℚ) * ((m : ℚ) - i) / ((i : ℚ) + 1) := by
       rw [eq_div_iff]; exact em
     simp only [hX, hY]
     field_simp

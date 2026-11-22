@@ -233,7 +233,7 @@ lemma measure_univ_le_one (h : HasSubgaussianMGF X c κ ν) :
 end BasicProperties
 
 protected lemma of_rat (h_int : ∀ t : ℝ, Integrable (fun ω ↦ exp (t * X ω)) (κ ∘ₘ ν))
-    (h_mgf : ∀ q : ℚ, ∀ᵐ ω' ∂ν, mgf X (κ ω') q ≤ exp (c * q ^ 2 / 2)) :
+    (h_mgf : ∀ q : ℚ, ∀ᵐ ω' ∂ν, mgf X (κ ω') q ≤ exp ((c : ℝ) * (q : ℝ) ^ 2 / 2)) :
     Kernel.HasSubgaussianMGF X c κ ν where
   integrable_exp_mul := h_int
   mgf_le := by
@@ -344,14 +344,14 @@ lemma measure_ge_le_exp_add (h : HasSubgaussianMGF X c κ ν) (ε : ℝ) :
 /-- Chernoff bound on the right tail of a sub-Gaussian random variable. -/
 lemma measure_ge_le (h : HasSubgaussianMGF X c κ ν) {ε : ℝ} (hε : 0 ≤ ε)
     {hc : IsUnit (2 * (c : ℝ))} :
-    ∀ᵐ ω' ∂ν, (κ ω').real {ω | ε ≤ X ω} ≤ exp (-ε ^ 2 / (2 * c)) := by
+    ∀ᵐ ω' ∂ν, (κ ω').real {ω | ε ≤ X ω} ≤ exp (-ε ^ 2 / (2 * (c : ℝ))) := by
   have hc' : IsUnit (c : ℝ) := isUnit_of_mul_isUnit_right hc
   let r := Checked.div ε (c : ℝ) hc'
   have hrc : r * c = ε := div_mul_cancel₀ ε
   filter_upwards [measure_ge_le_exp_add h ε] with ω' h
   calc (κ ω').real {ω | ε ≤ X ω}
   _ ≤ exp (-r * ε + c * r ^ 2 / 2) := h r (div_nonneg hε c.coe_nonneg)
-  _ = exp (-ε ^ 2 / (2 * c)) := by
+  _ = exp (-ε ^ 2 / (2 * (c : ℝ))) := by
     apply congrArg exp
     apply eq_div_iff.2
     calc
@@ -448,21 +448,21 @@ lemma add {Y : Ω → ℝ} {cX cY : ℝ≥0} (hX : HasSubgaussianMGF X cX κ ν)
       have hs' : 0 < (s : ℝ) := NNReal.coe_pos.2 hs
       let p := Checked.div s x hx.ne'.isUnit
       let q := Checked.div s y hy.ne'.isUnit
-      have hp_def : (p : ℝ) = (s : ℝ) / x := NNReal.coe_div s x
-      have hq_def : (q : ℝ) = (s : ℝ) / y := NNReal.coe_div s y
+      have hp_def : (p : ℝ) = (s : ℝ) / (x : ℝ) := NNReal.coe_div s x
+      have hq_def : (q : ℝ) = (s : ℝ) / (y : ℝ) := NNReal.coe_div s y
       have hp : 0 < (p : ℝ) := hp_def.symm ▸ div_pos hs' hx'
       have hq : 0 < (q : ℝ) := hq_def.symm ▸ div_pos hs' hy'
       have hp_mul : (p : ℝ) * x = s := by rw [hp_def, div_mul_cancel₀]
       have hq_mul : (q : ℝ) * y = s := by rw [hq_def, div_mul_cancel₀]
-      have hp_inv : (1 : ℝ) / p = (x : ℝ) / s := by
+      have hp_inv : 1 / (p : ℝ) = (x : ℝ) / (s : ℝ) := by
         apply div_eq_div_iff.2
         simpa only [one_mul, mul_one, mul_comm] using hp_mul.symm
-      have hq_inv : (1 : ℝ) / q = (y : ℝ) / s := by
+      have hq_inv : 1 / (q : ℝ) = (y : ℝ) / (s : ℝ) := by
         apply div_eq_div_iff.2
         simpa only [one_mul, mul_one, mul_comm] using hq_mul.symm
       have hpq : (p : ℝ).HolderConjugate q := by
         refine ⟨hp, hq, one_ne_zero, ?_⟩
-        have hsum : (1 : ℝ) / p + (1 : ℝ) / q = 1 := by
+        have hsum : 1 / (p : ℝ) + 1 / (q : ℝ) = 1 := by
           rw [hp_inv, hq_inv, ← add_div]
           exact div_self
         simpa only [one_div₀, inv_one₀] using hsum
@@ -556,14 +556,14 @@ lemma add_compProd {η : Kernel (Ω' × Ω) Ω''} [IsZeroOrMarkovKernel η]
   _ = ∫ x, exp (q * X x) * ∫ y, exp (q * Y y) ∂(η (ω', x)) ∂(κ ω') := by
     simp_rw [mgf, mul_add, exp_add] at h_int_mul ⊢
     simp_rw [integral_compProd h_int_mul, integral_const_mul]
-  _ ≤ ∫ x, exp (q * X x) * exp (cY * q ^ 2 / 2) ∂(κ ω') := by
+  _ ≤ ∫ x, exp (q * X x) * exp ((cY : ℝ) * (q : ℝ) ^ 2 / 2) ∂(κ ω') := by
     refine integral_mono_of_nonneg ?_ (hX_int.mul_const _) ?_
     · exact ae_of_all _ fun ω ↦ mul_nonneg (by positivity)
         (integral_nonneg (fun _ ↦ by positivity))
     · filter_upwards [all_ae_of hY_mgf q] with ω hY_mgf
       gcongr
       exact hY_mgf
-  _ ≤ exp (↑(c + cY) * q ^ 2 / 2) := by
+  _ ≤ exp (((c + cY : ℝ≥0) : ℝ) * (q : ℝ) ^ 2 / 2) := by
     rw [integral_mul_const, NNReal.coe_add, add_mul, add_div, exp_add]
     gcongr
     exact hX_mgf q
@@ -827,7 +827,7 @@ section ChernoffBound
 /-- Chernoff bound on the right tail of a sub-Gaussian random variable. -/
 lemma measure_ge_le (h : HasSubgaussianMGF X c μ) {ε : ℝ} (hε : 0 ≤ ε)
     {hc : IsUnit (2 * (c : ℝ))} :
-    μ.real {ω | ε ≤ X ω} ≤ exp (-ε ^ 2 / (2 * c)) := by
+    μ.real {ω | ε ≤ X ω} ≤ exp (-ε ^ 2 / (2 * (c : ℝ))) := by
   rw [HasSubgaussianMGF_iff_kernel] at h
   simpa using h.measure_ge_le hε (hc := hc)
 
@@ -912,7 +912,7 @@ lemma measure_sum_ge_le_of_iIndepFun {ι : Type*} {X : ι → Ω → ℝ} (h_ind
 lemma measure_sum_range_ge_le_of_iIndepFun {X : ℕ → Ω → ℝ} (h_indep : iIndepFun X μ) {c : ℝ≥0}
     {n : ℕ} (h_subG : ∀ i < n, HasSubgaussianMGF (X i) c μ) {ε : ℝ} (hε : 0 ≤ ε)
     {hc : IsUnit (2 * (n : ℝ) * c)} :
-    μ.real {ω | ε ≤ ∑ i ∈ Finset.range n, X i ω} ≤ exp (-ε ^ 2 / (2 * n * c)) := by
+    μ.real {ω | ε ≤ ∑ i ∈ Finset.range n, X i ω} ≤ exp (-ε ^ 2 / (2 * (n : ℝ) * (c : ℝ))) := by
   have hden : 2 * ((∑ _i ∈ Finset.range n, c : ℝ≥0) : ℝ) = 2 * (n : ℝ) * c := by
     simp [nsmul_eq_mul, mul_assoc]
   have hunit : IsUnit (2 * ((∑ _i ∈ Finset.range n, c : ℝ≥0) : ℝ)) := hden.symm ▸ hc
@@ -977,7 +977,6 @@ lemma hasSubgaussianMGF_of_mem_Icc_of_integral_eq_zero [IsProbabilityMeasure μ]
     HasSubgaussianMGF X ((‖b - a‖₊ / 2) ^ 2) μ where
   integrable_exp_mul t := integrable_exp_mul_of_mem_Icc hm hb
   mgf_le t := by
-    simp only [NNReal.coe_pow, NNReal.coe_div, NNReal.coe_ofNat]
     obtain ht | ht | ht := lt_trichotomy 0 t
     · exact ProbabilityTheory.mgf_le_of_mem_Icc_of_integral_eq_zero hm hb hc ht
     · simp [← ht]

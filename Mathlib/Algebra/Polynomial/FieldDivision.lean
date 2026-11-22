@@ -714,7 +714,7 @@ divisors that have smaller degree.
 See also: `Polynomial.Monic.irreducible_iff_natDegree`.
 -/
 theorem irreducible_iff_degree_lt (p : R[X]) (hp0 : p ≠ 0) (hpu : ¬ IsUnit p) :
-    Irreducible p ↔ ∀ q, q.degree ≤ ↑(natDegree p / 2) → q ∣ p → IsUnit q := by
+    Irreducible p ↔ ∀ q, q.degree ≤ ↑(Nat.euclideanDiv (natDegree p) 2) → q ∣ p → IsUnit q := by
   rw [← irreducible_mul_leadingCoeff_inv (hp := (leadingCoeff_ne_zero.2 hp0).isUnit),
       (monic_mul_leadingCoeff_inv hp0).irreducible_iff_degree_lt]
   · simp [hp0, natDegree_mul_leadingCoeff_inv]
@@ -727,7 +727,8 @@ divisors of degree `0 < d ≤ degree p / 2`.
 See also: `Polynomial.Monic.irreducible_iff_natDegree'`.
 -/
 theorem irreducible_iff_lt_natDegree_lt {p : R[X]} (hp0 : p ≠ 0) (hpu : ¬ IsUnit p) :
-    Irreducible p ↔ ∀ q, Monic q → natDegree q ∈ Finset.Ioc 0 (natDegree p / 2) → ¬ q ∣ p := by
+    Irreducible p ↔ ∀ q, Monic q →
+      natDegree q ∈ Finset.Ioc 0 (Nat.euclideanDiv (natDegree p) 2) → ¬ q ∣ p := by
   have : p * C (leadingCoeff p)⁻¹ ≠ 1 := by
     contrapose hpu
     exact .of_mul_eq_one _ hpu

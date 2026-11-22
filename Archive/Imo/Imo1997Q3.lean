@@ -70,8 +70,8 @@ lemma lt_abs_add_of_sign_eq {a b c : ℝ} (ha : c / 2 < |a|) (hb : c / 2 < |b|) 
 /-- For fixed nonempty `x`, assuming the opposite of what is to be proven,
 the signs of `S x p` are all the same. -/
 lemma sign_eq_of_contra
-    {x : Fin (n + 1) → ℝ} (hx₂ : ∀ i, |x i| ≤ ((n + 1 : ℕ) + 1) / 2)
-    (h : ∀ (p : Perm (Fin (n + 1))), ((n + 1 : ℕ) + 1) / 2 < |S x p|) :
+    {x : Fin (n + 1) → ℝ} (hx₂ : ∀ i, |x i| ≤ (((n + 1 : ℕ) : ℝ) + 1) / 2)
+    (h : ∀ (p : Perm (Fin (n + 1))), (((n + 1 : ℕ) : ℝ) + 1) / 2 < |S x p|) :
     ∀ p, sign (S x 1) = sign (S x p) := fun p ↦ by
   induction p using Submonoid.induction_of_closure_eq_top_right
     (Perm.mclosure_swap_castSucc_succ n) with
@@ -94,7 +94,7 @@ lemma sign_eq_of_contra
       one_mul, neg_one_mul]
     calc
       _ ≤ |x (p i.succ)| + |-x (p i.castSucc)| := abs_add_le ..
-      _ ≤ ((n + 1 : ℕ) + 1) / 2 + ((n + 1 : ℕ) + 1) / 2 := by
+      _ ≤ (((n + 1 : ℕ) : ℝ) + 1) / 2 + (((n + 1 : ℕ) : ℝ) + 1) / 2 := by
         rw [abs_neg]; exact add_le_add (hx₂ _) (hx₂ _)
       _ = _ := add_halves _
 
@@ -106,8 +106,8 @@ lemma S_one_add_S_revPerm
     congr! 2 with i; norm_cast; lia
   rw [cg, ← mul_sum, abs_mul, hx₁, mul_one]; exact abs_of_nonneg (by norm_cast; lia)
 
-theorem result {x : Fin n → ℝ} (hx₁ : |∑ i, x i| = 1) (hx₂ : ∀ i, |x i| ≤ (n + 1) / 2) :
-    ∃ p, |S x p| ≤ (n + 1) / 2 := by
+theorem result {x : Fin n → ℝ} (hx₁ : |∑ i, x i| = 1) (hx₂ : ∀ i, |x i| ≤ ((n : ℝ) + 1) / 2) :
+    ∃ p, |S x p| ≤ ((n : ℝ) + 1) / 2 := by
   match n with
   | 0 => simp [S]
   | n + 1 =>

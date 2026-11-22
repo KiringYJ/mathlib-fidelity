@@ -56,7 +56,7 @@ def bell (m : Multiset ℕ) : ℕ :=
     ∏ k ∈ m.toFinset.erase 0, ∏ j ∈ .range (m.count k), (j * k + k - 1).choose (k - 1)
 
 @[simp]
-theorem bell_zero : bell 0 = 1 := rfl
+theorem bell_zero : bell 0 = 1 := by simp [bell]
 
 private theorem bell_mul_eq_lemma {x : ℕ} (hx : x ≠ 0) :
     ∀ c, x ! ^ c * c ! * ∏ j ∈ Finset.range c, (j * x + x - 1).choose (x - 1) = (x * c)!
@@ -101,14 +101,10 @@ theorem bell_mul_eq (m : Multiset ℕ) :
     simp only [smul_eq_mul, mul_comm]
 
 theorem bell_eq (m : Multiset ℕ) :
-    m.bell = m.sum ! / ((m.map fun j ↦ j !).prod * ∏ j ∈ m.toFinset.erase 0, (m.count j)!) := by
-  rw [← Nat.mul_left_inj, Nat.div_mul_cancel _]
-  · rw [← mul_assoc]
-    exact bell_mul_eq m
-  · rw [← bell_mul_eq, mul_assoc]
-    apply Nat.dvd_mul_left
-  · rw [← Nat.pos_iff_ne_zero]
-    exact Nat.mul_pos (by simp [Nat.factorial_pos]) (by positivity)
+    m.bell = Nat.euclideanDiv (m.sum !)
+      ((m.map fun j ↦ j !).prod * ∏ j ∈ m.toFinset.erase 0, (m.count j)!)
+      (Nat.mul_pos (by simp [Nat.factorial_pos]) (by positivity)).ne' := by
+  rw [← bell_mul_eq m, Nat.mul_assoc, Nat.euclideanDiv_mul_right_cancel]
 
 private theorem bell_cons_mul_count (m : Multiset ℕ) {a : ℕ} (ha : a ≠ 0) :
     (a ::ₘ m).bell * (a ::ₘ m).count a = (m.sum + a).choose a * m.bell := by
@@ -188,11 +184,9 @@ theorem uniformBell_mul_eq (m : ℕ) {n : ℕ} (hn : n ≠ 0) :
   · simp
 
 theorem uniformBell_eq_div (m : ℕ) {n : ℕ} (hn : n ≠ 0) :
-    uniformBell m n = (m * n)! / (n ! ^ m * m !) := by
-  rw [eq_comm]
-  apply Nat.div_eq_of_eq_mul_left
-  · exact Nat.mul_pos (Nat.pow_pos n.factorial_pos) m.factorial_pos
-  · rw [← mul_assoc, ← uniformBell_mul_eq _ hn]
+    uniformBell m n = Nat.euclideanDiv ((m * n)!) (n ! ^ m * m !)
+      (Nat.mul_pos (Nat.pow_pos n.factorial_pos) m.factorial_pos).ne' := by
+  rw [← uniformBell_mul_eq m hn, Nat.mul_assoc, Nat.euclideanDiv_mul_right_cancel]
 
 /--
 The `n`th standard Bell number,

@@ -85,7 +85,7 @@ theorem quadraticCharFun_eq_one_of_char_two (hF : ringChar F = 2) {a : F} (ha : 
 /-- If `ringChar F` is odd, then `quadraticCharFun F a` can be computed in
 terms of `a ^ (Fintype.card F / 2)`. -/
 theorem quadraticCharFun_eq_pow_of_char_ne_two (hF : ringChar F ≠ 2) {a : F} (ha : a ≠ 0) :
-    quadraticCharFun F a = if a ^ (Fintype.card F / 2) = 1 then 1 else -1 := by
+    quadraticCharFun F a = if a ^ Nat.euclideanDiv (Fintype.card F) 2 = 1 then 1 else -1 := by
   simp only [quadraticCharFun, ha, ite_false]
   simp_rw [FiniteField.isSquare_iff hF ha]
 
@@ -179,16 +179,19 @@ theorem quadraticChar_eq_one_of_char_two (hF : ringChar F = 2) {a : F} (ha : a �
 /-- If `ringChar F` is odd, then `quadraticChar F a` can be computed in
 terms of `a ^ (Fintype.card F / 2)`. -/
 theorem quadraticChar_eq_pow_of_char_ne_two (hF : ringChar F ≠ 2) {a : F} (ha : a ≠ 0) :
-    quadraticChar F a = if a ^ (Fintype.card F / 2) = 1 then 1 else -1 :=
+    quadraticChar F a = if a ^ Nat.euclideanDiv (Fintype.card F) 2 = 1 then 1 else -1 :=
   quadraticCharFun_eq_pow_of_char_ne_two hF ha
 
 theorem quadraticChar_eq_pow_of_char_ne_two' (hF : ringChar F ≠ 2) (a : F) :
-    (quadraticChar F a : F) = a ^ (Fintype.card F / 2) := by
+    (quadraticChar F a : F) = a ^ Nat.euclideanDiv (Fintype.card F) 2 := by
   by_cases ha : a = 0
-  · have : 0 < Fintype.card F / 2 := Nat.div_pos Fintype.one_lt_card two_pos
+  · have : 0 < Nat.euclideanDiv (Fintype.card F) 2 := by
+      have hc : 1 < Fintype.card F := Fintype.one_lt_card
+      have := Nat.two_mul_odd_div_two (FiniteField.odd_card_of_char_ne_two hF)
+      omega
     simp only [ha, quadraticChar_apply, quadraticCharFun_zero, Int.cast_zero, zero_pow this.ne']
   · rw [quadraticChar_eq_pow_of_char_ne_two hF ha]
-    by_cases ha' : a ^ (Fintype.card F / 2) = 1
+    by_cases ha' : a ^ Nat.euclideanDiv (Fintype.card F) 2 = 1
     · simp only [ha', ite_true, Int.cast_one]
     · have ha'' := Or.resolve_left (FiniteField.pow_dichotomy hF ha) ha'
       simp only [ha'', Int.cast_ite, Int.cast_one, Int.cast_neg, ite_eq_right_iff]
@@ -259,7 +262,7 @@ theorem quadraticChar_neg_one [DecidableEq F] (hF : ringChar F ≠ 2) :
     quadraticChar F (-1) = χ₄ (Fintype.card F) := by
   have h := quadraticChar_eq_pow_of_char_ne_two hF (neg_ne_zero.mpr one_ne_zero)
   rw [h, χ₄_eq_neg_one_pow (FiniteField.odd_card_of_char_ne_two hF)]
-  generalize Fintype.card F / 2 = n
+  generalize Nat.euclideanDiv (Fintype.card F) 2 = n
   rcases Nat.even_or_odd n with h₂ | h₂
   · simp only [Even.neg_one_pow h₂, ite_true]
   · simp only [Odd.neg_one_pow h₂, Ring.neg_one_ne_one_of_char_ne_two hF, ite_false]

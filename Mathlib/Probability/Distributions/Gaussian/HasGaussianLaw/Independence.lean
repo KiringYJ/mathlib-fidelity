@@ -316,7 +316,7 @@ lemma HasGaussianLaw.indepFun_of_covariance_strongDual [NormedSpace ℝ E] [Norm
   have : L ∘ (fun ω ↦ (X ω, Y ω)) = (L ∘L (.inl ℝ E F)) ∘ X + (L ∘L (.inr ℝ E F)) ∘ Y := by
     ext; simp [-comp_apply, ← comp_inl_add_comp_inr]
   rw [hXY.charFunDual_map_eq, hXY.fst.charFunDual_map_eq, hXY.snd.charFunDual_map_eq, ← exp_add,
-    sub_add_sub_comm, ← add_mul, ← ofReal_add, ← integral_add, ← add_div, ← ofReal_add, this,
+    sub_add_sub_comm, ← add_mul, ← ofReal_add, ← integral_add, ← ofReal_add, ← add_div, this,
     variance_add, h, mul_zero, add_zero]
   · simp
   · exact (hXY.fst.map _).memLp_two
@@ -430,7 +430,7 @@ lemma IndepFun.hasGaussianLaw_sub_of_sub {X Y : Ω → E} (hX : HasGaussianLaw X
     simp
   rw [Measure.map_congr (ae_of_all _ fun ω ↦ congrFun hfun ω) hsum,
     hX.charFunDual_map_eq,
-    ← exp_add, sub_add_sub_comm, ← add_mul, ← ofReal_add, ← integral_add, ← add_div, ← ofReal_add,
+    ← exp_add, sub_add_sub_comm, ← add_mul, ← ofReal_add, ← integral_add, ← ofReal_add, ← add_div,
     ← IndepFun.variance_add, hY.charFunDual_map_eq]
   · congr with ω <;> simp
   · exact (hX.map L).memLp_two

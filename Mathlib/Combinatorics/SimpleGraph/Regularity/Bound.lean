@@ -62,9 +62,22 @@ open SzemerediRegularity
 variable {α : Type*} [DecidableEq α] [Fintype α] {P : Finpartition (univ : Finset α)}
   {u : Finset α} {ε : ℝ}
 
-local notation3 "m" => (card α / stepBound #P.parts : ℕ)
+/-- The target size of the small parts in a regularity refinement. A nonempty partition
+has positive step bound, so its Euclidean quotient is defined. -/
+def SzemerediRegularity.chunkSize (P : Finpartition (univ : Finset α))
+    (hparts : P.parts.Nonempty := by
+      first
+      | assumption
+      | exact P.parts_nonempty Finset.univ_nonempty.ne_empty
+      | exact ⟨_, by assumption⟩
+      | fail "chunk size requires a nonempty partition") : ℕ :=
+  Nat.euclideanDiv (card α) (stepBound #P.parts) (stepBound_pos hparts.card_pos).ne'
 
-local notation3 "a" => (card α / #P.parts - m * 4 ^ #P.parts : ℕ)
+local notation3 (prettyPrint := false) "m" => chunkSize P
+
+local notation3 (prettyPrint := false) "excess" =>
+  fun hparts : P.parts.Nonempty ↦
+    Nat.euclideanDiv (card α) #P.parts hparts.card_pos.ne' - chunkSize P hparts * 4 ^ #P.parts
 
 namespace SzemerediRegularity.Positivity
 
@@ -74,8 +87,9 @@ private theorem eps_pos {ε : ℝ} {n : ℕ} (h : 100 ≤ (4 : ℝ) ^ n * ε ^ 5
     (pos_of_mul_pos_right ((show 0 < (100 : ℝ) by simp).trans_le h) (by positivity))
 
 set_option backward.privateInPublic true in
-private theorem m_pos [Nonempty α] (hPα : #P.parts * 16 ^ #P.parts ≤ card α) : 0 < m :=
-  Nat.div_pos (hPα.trans' <| by unfold stepBound; gcongr; simp) <|
+private theorem m_pos [Nonempty α] (hPα : #P.parts * 16 ^ #P.parts ≤ card α) : 0 < m := by
+  rw [chunkSize, Nat.euclideanDiv_eq_core]
+  exact Nat.div_pos (hPα.trans' <| by unfold stepBound; gcongr; simp) <|
     stepBound_pos (P.parts_nonempty <| univ_nonempty.ne_empty).card_pos
 
 /-- Local extension for the `positivity` tactic: A few facts that are needed many times for the
@@ -86,19 +100,6 @@ scoped macro "sz_positivity" : tactic =>
         try have := eps_pos ‹_›
         positivity })
 
--- Original meta code
-/- meta def positivity_szemeredi_regularity : expr → tactic strictness
-| `(%%n / step_bound (finpartition.parts %%P).card) := do
-    p ← to_expr
-      ``((finpartition.parts %%P).card * 16^(finpartition.parts %%P).card ≤ %%n)
-      >>= find_assumption,
-    positive <$> mk_app ``m_pos [p]
-| ε := do
-    typ ← infer_type ε,
-    unify typ `(ℝ),
-    p ← to_expr ``(100 ≤ 4 ^ _ * %%ε ^ 5) >>= find_assumption,
-    positive <$> mk_app ``eps_pos [p] -/
-
 end SzemerediRegularity.Positivity
 
 namespace SzemerediRegularity
@@ -108,7 +109,7 @@ open scoped SzemerediRegularity.Positivity
 theorem m_pos [Nonempty α] (hPα : #P.parts * 16 ^ #P.parts ≤ card α) : 0 < m := by
   sz_positivity
 
-theorem coe_m_add_one_pos : 0 < (m : ℝ) + 1 := by positivity
+theorem coe_m_add_one_pos {n : ℕ} : 0 < (n : ℝ) + 1 := by positivity
 
 theorem one_le_m_coe [Nonempty α] (hPα : #P.parts * 16 ^ #P.parts ≤ card α) : (1 : ℝ) ≤ m :=
   Nat.one_le_cast.2 <| m_pos hPα
@@ -124,8 +125,9 @@ theorem hundred_div_ε_pow_five_le_m [Nonempty α] (hPα : #P.parts * 16 ^ #P.pa
     Checked.div 100 (ε ^ 5) (pow_pos (eps_pos hPε) 5).ne'.isUnit ≤ m :=
   ((div_le_iff₀ (pow_pos (eps_pos hPε) 5)).2 hPε).trans <| by
     norm_cast
-    rwa [Nat.le_div_iff_mul_le (stepBound_pos (P.parts_nonempty <|
-      univ_nonempty.ne_empty).card_pos), stepBound, mul_left_comm, ← mul_pow]
+    rwa [chunkSize, Nat.euclideanDiv_eq_core,
+      Nat.le_div_iff_mul_le (stepBound_pos (P.parts_nonempty univ_nonempty.ne_empty).card_pos),
+      stepBound, mul_left_comm, ← mul_pow]
 
 theorem hundred_le_m [Nonempty α] (hPα : #P.parts * 16 ^ #P.parts ≤ card α)
     (hPε : 100 ≤ (4 : ℝ) ^ #P.parts * ε ^ 5) (hε : ε ≤ 1) : 100 ≤ m :=
@@ -133,33 +135,52 @@ theorem hundred_le_m [Nonempty α] (hPα : #P.parts * 16 ^ #P.parts ≤ card α)
     (hundred_div_ε_pow_five_le_m hPα hPε).trans'
       (le_div_self (by simp) (by sz_positivity) <| pow_le_one₀ (by sz_positivity) hε)
 
-theorem a_add_one_le_four_pow_parts_card : a + 1 ≤ 4 ^ #P.parts := by
-  have h : 1 ≤ 4 ^ #P.parts := one_le_pow₀ (by simp)
-  rw [stepBound, ← Nat.div_div_eq_div_mul]
-  conv_rhs => rw [← Nat.sub_add_cancel h]
-  rw [add_le_add_iff_right, tsub_le_iff_left, ← Nat.add_sub_assoc h]
-  exact Nat.le_sub_one_of_lt (Nat.lt_div_mul_add h)
+private theorem chunkSize_mul_add_mod (hparts : P.parts.Nonempty) :
+    m * 4 ^ #P.parts + Nat.euclideanDiv (card α) #P.parts hparts.card_pos.ne' % (4 ^ #P.parts) =
+      Nat.euclideanDiv (card α) #P.parts hparts.card_pos.ne' := by
+  have hsize : m = Nat.euclideanDiv (Nat.euclideanDiv (card α) #P.parts hparts.card_pos.ne')
+      (4 ^ #P.parts) (by positivity) := by
+    simp only [chunkSize, Nat.euclideanDiv_eq_core, stepBound, Nat.div_div_eq_div_mul]
+  rw [hsize, mul_comm]
+  exact Nat.euclideanDiv_mul_add_mod _ _ (by positivity)
 
-theorem card_aux₁ (hucard : #u = m * 4 ^ #P.parts + a) :
-    (4 ^ #P.parts - a) * m + a * (m + 1) = #u := by
+private theorem chunkSize_mul_le_average (hparts : P.parts.Nonempty) :
+    m * 4 ^ #P.parts ≤ Nat.euclideanDiv (card α) #P.parts hparts.card_pos.ne' :=
+  (Nat.le_add_right _ _).trans (chunkSize_mul_add_mod hparts).le
+
+theorem a_add_one_le_four_pow_parts_card (hparts : P.parts.Nonempty) :
+    excess hparts + 1 ≤ 4 ^ #P.parts := by
+  have h := chunkSize_mul_add_mod hparts
+  have hr := Nat.mod_lt (Nat.euclideanDiv (card α) #P.parts hparts.card_pos.ne')
+    (pow_pos (by decide : 0 < 4) #P.parts)
+  dsimp only
+  omega
+
+theorem card_aux₁ (hparts : P.parts.Nonempty)
+    (hucard : #u = m * 4 ^ #P.parts + excess hparts) :
+    (4 ^ #P.parts - excess hparts) * m + excess hparts * (m + 1) = #u := by
   rw [hucard, mul_add, mul_one, ← add_assoc, ← add_mul,
-    Nat.sub_add_cancel ((Nat.le_succ _).trans a_add_one_le_four_pow_parts_card), mul_comm]
+    Nat.sub_add_cancel ((Nat.le_succ _).trans (a_add_one_le_four_pow_parts_card hparts)), mul_comm]
 
-theorem card_aux₂ (hP : P.IsEquipartition) (hu : u ∈ P.parts) (hucard : #u ≠ m * 4 ^ #P.parts + a) :
-    (4 ^ #P.parts - (a + 1)) * m + (a + 1) * (m + 1) = #u := by
-  have : m * 4 ^ #P.parts ≤ card α / #P.parts := by
-    rw [stepBound, ← Nat.div_div_eq_div_mul]
-    exact Nat.div_mul_le_self _ _
+theorem card_aux₂ (hP : P.IsEquipartition) (hu : u ∈ P.parts)
+    (hucard : #u ≠ m * 4 ^ #P.parts + excess ⟨u, hu⟩) :
+    (4 ^ #P.parts - (excess ⟨u, hu⟩ + 1)) * m + (excess ⟨u, hu⟩ + 1) * (m + 1) = #u := by
+  have hp : P.parts.Nonempty := ⟨u, hu⟩
+  have := chunkSize_mul_le_average hp
   rw [Nat.add_sub_of_le this] at hucard
-  rw [(hP.card_parts_eq_average hu).resolve_left hucard, mul_add, mul_one, ← add_assoc, ← add_mul,
-    Nat.sub_add_cancel a_add_one_le_four_pow_parts_card, ← add_assoc, mul_comm,
-    Nat.add_sub_of_le this, card_univ]
+  have hcard : #u = Nat.euclideanDiv (card α) #P.parts hp.card_pos.ne' ∨
+      #u = Nat.euclideanDiv (card α) #P.parts hp.card_pos.ne' + 1 := by
+    simpa only [card_univ] using hP.card_parts_eq_average hu
+  rw [hcard.resolve_left hucard, mul_add, mul_one, ← add_assoc, ← add_mul,
+    Nat.sub_add_cancel (a_add_one_le_four_pow_parts_card hp), ← add_assoc, mul_comm,
+    Nat.add_sub_of_le this]
 
 theorem pow_mul_m_le_card_part (hP : P.IsEquipartition) (hu : u ∈ P.parts) :
     (4 : ℝ) ^ #P.parts * m ≤ #u := by
   norm_cast
-  rw [stepBound, ← Nat.div_div_eq_div_mul]
-  exact (Nat.mul_div_le _ _).trans (hP.average_le_card_part hu)
+  rw [mul_comm]
+  apply (chunkSize_mul_le_average ⟨u, hu⟩).trans
+  simpa only [card_univ] using hP.average_le_card_part hu
 
 variable (P ε) (l : ℕ)
 
@@ -205,8 +226,8 @@ theorem bound_pos {hε : ε ≠ 0} : 0 < bound ε l :=
 variable {ι 𝕜 : Type*} [Field 𝕜] [LinearOrder 𝕜] [IsStrictOrderedRing 𝕜] {s t : Finset ι} {x : 𝕜}
 
 theorem mul_sq_le_sum_sq {hsUnit : IsUnit (#s : 𝕜)} (hst : s ⊆ t) (f : ι → 𝕜)
-    (hs : x ^ 2 ≤ ((∑ i ∈ s, f i) / #s) ^ 2) : (#s : 𝕜) * x ^ 2 ≤ ∑ i ∈ t, f i ^ 2 := calc
-  _ ≤ (#s : 𝕜) * ((∑ i ∈ s, f i ^ 2) / #s) := by
+    (hs : x ^ 2 ≤ ((∑ i ∈ s, f i) / (#s : 𝕜)) ^ 2) : (#s : 𝕜) * x ^ 2 ≤ ∑ i ∈ t, f i ^ 2 := calc
+  _ ≤ (#s : 𝕜) * ((∑ i ∈ s, f i ^ 2) / (#s : 𝕜)) := by
     gcongr
     exact hs.trans sum_div_card_sq_le_sum_sq_div_card
   _ = ∑ i ∈ s, f i ^ 2 := mul_div_cancel₀ _
@@ -214,23 +235,24 @@ theorem mul_sq_le_sum_sq {hsUnit : IsUnit (#s : 𝕜)} (hst : s ⊆ t) (f : ι �
 
 theorem add_div_le_sum_sq_div_card {hsUnit : IsUnit (#s : 𝕜)} {htUnit : IsUnit (#t : 𝕜)}
     (hst : s ⊆ t) (f : ι → 𝕜) (d : 𝕜) (hx : 0 ≤ x)
-    (hs : x ≤ |(∑ i ∈ s, f i) / #s - (∑ i ∈ t, f i) / #t|) (ht : d ≤ ((∑ i ∈ t, f i) / #t) ^ 2) :
-    d + #s / #t * x ^ 2 ≤ (∑ i ∈ t, f i ^ 2) / #t := by
+    (hs : x ≤ |(∑ i ∈ s, f i) / (#s : 𝕜) - (∑ i ∈ t, f i) / (#t : 𝕜)|)
+    (ht : d ≤ ((∑ i ∈ t, f i) / (#t : 𝕜)) ^ 2) :
+    d + (#s : 𝕜) / (#t : 𝕜) * x ^ 2 ≤ (∑ i ∈ t, f i ^ 2) / (#t : 𝕜) := by
   have hs' : s.Nonempty := card_pos.1 <| Nat.pos_of_ne_zero fun h ↦ by simp [h] at hsUnit
   have hscard : (0 : 𝕜) < #s := by positivity
   have htcard : (0 : 𝕜) < #t := hscard.trans_le (Nat.cast_le.2 (card_le_card hst))
-  have h₁ : x ^ 2 ≤ ((∑ i ∈ s, f i) / #s - (∑ i ∈ t, f i) / #t) ^ 2 :=
+  have h₁ : x ^ 2 ≤ ((∑ i ∈ s, f i) / (#s : 𝕜) - (∑ i ∈ t, f i) / (#t : 𝕜)) ^ 2 :=
     sq_le_sq.2 (by rwa [abs_of_nonneg hx])
-  have h₂ : x ^ 2 ≤ ((∑ i ∈ s, (f i - (∑ j ∈ t, f j) / #t)) / #s) ^ 2 := by
+  have h₂ : x ^ 2 ≤ ((∑ i ∈ s, (f i - (∑ j ∈ t, f j) / (#t : 𝕜))) / (#s : 𝕜)) ^ 2 := by
     apply h₁.trans
     rw [sum_sub_distrib, sum_const, nsmul_eq_mul, sub_div, mul_div_cancel_left₀]
   grw [ht]
   rw [← mul_div_right_comm₀, le_div_iff₀ htcard, add_mul, div_mul_cancel₀]
-  have h₃ := mul_sq_le_sum_sq hst (fun i => (f i - (∑ j ∈ t, f j) / #t)) h₂
+  have h₃ := mul_sq_le_sum_sq hst (fun i => (f i - (∑ j ∈ t, f j) / (#t : 𝕜))) h₂
   grw [h₃]
   apply le_of_eq
-  have hμ : ∑ i ∈ t, f i = #t * ((∑ i ∈ t, f i) / #t) := (mul_div_cancel₀ _).symm
-  generalize (∑ i ∈ t, f i) / #t = μ at hμ ⊢
+  have hμ : ∑ i ∈ t, f i = #t * ((∑ i ∈ t, f i) / (#t : 𝕜)) := (mul_div_cancel₀ _).symm
+  generalize (∑ i ∈ t, f i) / (#t : 𝕜) = μ at hμ ⊢
   simp only [sub_sq, sum_add_distrib, sum_sub_distrib, ← sum_mul, ← mul_sum, sum_const,
     nsmul_eq_mul, hμ]
   ring

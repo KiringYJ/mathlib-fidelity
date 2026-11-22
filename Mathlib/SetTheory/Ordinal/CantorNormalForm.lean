@@ -69,7 +69,7 @@ We special-case `CNF 0 o = CNF 1 o = [(0, o)]` for `o ≠ 0`.
 `CNF b (b ^ u₁ * v₁ + b ^ u₂ * v₂) = [(u₁, v₁), (u₂, v₂)]` -/
 @[pp_nodot]
 def _root_.Ordinal.CNF (b o : Ordinal) : List (Ordinal × Ordinal) :=
-  CNF.rec b [] (fun o _ IH ↦ (log b o, o / b ^ log b o)::IH) o
+  CNF.rec b [] (fun o _ IH ↦ (log b o, quotient o (b ^ log b o) (opow_log_ne_zero b o))::IH) o
 
 @[simp]
 theorem zero_right (b : Ordinal) : CNF b 0 = [] :=
@@ -77,7 +77,7 @@ theorem zero_right (b : Ordinal) : CNF b 0 = [] :=
 
 /-- Recursive definition for the Cantor normal form. -/
 protected theorem ne_zero {b o : Ordinal} (ho : o ≠ 0) :
-    CNF b o = (log b o, o / b ^ log b o)::CNF b (o % b ^ log b o) :=
+    CNF b o = (log b o, quotient o (b ^ log b o) (opow_log_ne_zero b o))::CNF b (o % b ^ log b o) :=
   rec_pos b ho _ _
 
 protected theorem opow_mul_add {b e x y : Ordinal}
@@ -85,7 +85,7 @@ protected theorem opow_mul_add {b e x y : Ordinal}
     CNF b (b ^ e * x + y) = (e, x) :: CNF b y := by
   have hb' := hb.ne_bot
   rw [CNF.ne_zero]
-  · rw [log_opow_mul_add hb hx hy, log_eq_zero hxb, add_zero,
+  · simp only [log_opow_mul_add hb hx hy, log_eq_zero hxb, add_zero,
       mul_add_div _ (opow_ne_zero _ hb'), Ordinal.div_eq_zero_of_lt hy, add_zero,
       mul_add_mod_self, mod_eq_of_lt hy]
   · simp_all
@@ -101,7 +101,7 @@ protected theorem of_le_one {b o : Ordinal} (hb : b ≤ 1) (ho : o ≠ 0) : CNF 
   exacts [CNF.zero_left ho, CNF.one_left ho]
 
 protected theorem of_lt {b o : Ordinal} (ho : o ≠ 0) (hb : o < b) : CNF b o = [(0, o)] := by
-  rw [CNF.ne_zero ho, log_eq_zero hb, opow_zero, div_one, mod_one, zero_right]
+  simp only [CNF.ne_zero ho, log_eq_zero hb, opow_zero, div_one, mod_one, zero_right]
 
 /-- Evaluating the Cantor normal form of an ordinal returns the ordinal. -/
 protected theorem foldr (b o : Ordinal) : (CNF b o).foldr (fun p r ↦ b ^ p.1 * p.2 + r) 0 = o := by

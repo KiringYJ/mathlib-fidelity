@@ -60,7 +60,8 @@ or `D = 4 * d` with `d` squarefree and `d ≡ 2, 3 mod 4`. -/
 theorem isFundamentalDiscr_iff_squarefree :
     IsFundamentalDiscr D ↔
       (D % 4 = 1 ∧ Squarefree D) ∨
-        (D % 4 = 0 ∧ Squarefree (D / 4) ∧ (D / 4 % 4 = 2 ∨ D / 4 % 4 = 3)) := by
+        (D % 4 = 0 ∧ Squarefree (Int.euclideanDiv D 4) ∧
+          (Int.euclideanDiv D 4 % 4 = 2 ∨ Int.euclideanDiv D 4 % 4 = 3)) := by
   -- The two `have`s below are picked up from the context by the `grind` calls at the end.
   have {m} : Squarefree m ↔ ¬ 4 ∣ m ∧ ∀ p : ℕ, p.Prime → Odd p → ¬ (p : ℤ) ^ 2 ∣ m := by
     rw [squarefree_iff_prime_sq_not_dvd, Nat.forall_prime_iff_two_and_odd]
@@ -70,7 +71,7 @@ theorem isFundamentalDiscr_iff_squarefree :
     exact (IsCoprime.pow hp.isCoprime_two).dvd_mul_left_iff
   by_cases h : 4 ∣ D
   · obtain ⟨d, rfl⟩ := h
-    simp +contextual only [Int.mul_ediv_cancel_left d four_ne_zero]
+    simp +contextual only [Int.euclideanDiv_eq_core, Int.mul_ediv_cancel_left d four_ne_zero]
     grind [isFundamentalDiscr_def]
   · grind [isFundamentalDiscr_def]
 
@@ -94,6 +95,6 @@ theorem isFundamentalDiscr_four_mul_add_one {m : ℤ} :
 
 theorem isFundamentalDiscr_four_mul {m : ℤ} :
     IsFundamentalDiscr (4 * m) ↔ Squarefree m ∧ (m % 4 = 2 ∨ m % 4 = 3) := by
-  simp [isFundamentalDiscr_iff_squarefree]
+  simp [isFundamentalDiscr_iff_squarefree, Int.euclideanDiv_eq_core]
 
 end Int

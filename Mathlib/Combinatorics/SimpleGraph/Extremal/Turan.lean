@@ -8,6 +8,7 @@ module
 public import Mathlib.Combinatorics.SimpleGraph.Clique
 public import Mathlib.Combinatorics.SimpleGraph.Extremal.Basic
 public import Mathlib.Combinatorics.SimpleGraph.DegreeSum
+public import Mathlib.Lean.Elab.NativeDivision
 public import Mathlib.Order.Partition.Equipartition
 
 /-!
@@ -369,48 +370,58 @@ lemma turanNumber_add : turanNumber (n + r) r = turanNumber n r + n * (r - 1) + 
     rw [← smul_eq_mul, ← sum_const]
     congr!; exact sum_ne_add_mod_eq_sub_one
 
-/-- The exact formula for the number of edges in `turanGraph n r`. -/
-theorem turanNumber_eq {n r : ℕ} :
-    turanNumber n r = (n ^ 2 - (n % r) ^ 2) * (r - 1) / (2 * r) + (n % r).choose 2 := by
-  rcases r.eq_zero_or_pos with rfl | hr
-  · rw [Nat.mod_zero, tsub_self, zero_mul, Nat.zero_div, zero_add]
-    have := card_edgeFinset_top_eq_card_choose_two (V := Fin n)
-    rw [Fintype.card_fin] at this; convert! this; exact turanGraph_zero
-  · have ring₁ (n) : (n ^ 2 - (n % r) ^ 2) * (r - 1) / (2 * r) =
-        n % r * (n / r) * (r - 1) + r * (r - 1) * (n / r) ^ 2 / 2 := by
-      nth_rw 1 [← Nat.mod_add_div n r, Nat.sq_sub_sq, add_tsub_cancel_left,
-        show (n % r + r * (n / r) + n % r) * (r * (n / r)) * (r - 1) =
-          (2 * ((n % r) * (n / r) * (r - 1)) + r * (r - 1) * (n / r) ^ 2) * r by grind]
-      rw [Nat.mul_div_mul_right _ _ hr, Nat.mul_add_div zero_lt_two]
-    rcases lt_or_ge n r with h | h
-    · rw [Nat.mod_eq_of_lt h, tsub_self, zero_mul, Nat.zero_div, zero_add]
-      have := card_edgeFinset_top_eq_card_choose_two (V := Fin n)
-      rw [Fintype.card_fin] at this; convert! this
-      rw [turanGraph_eq_top]; exact .inr h.le
-    · let n' := n - r
-      have n'r : n = n' + r := by lia
-      rw [n'r, turanNumber_add, turanNumber_eq, ring₁, ring₁,
-        add_rotate, ← add_assoc, Nat.add_mod_right, Nat.add_div_right _ hr]
-      congr 1
-      have rd : 2 ∣ r * (r - 1) := (Nat.even_mul_pred_self _).two_dvd
-      rw [← Nat.div_mul_right_comm rd, ← Nat.div_mul_right_comm rd, ← Nat.choose_two_right]
-      have ring₂ : n' % r * (n' / r + 1) * (r - 1) + r.choose 2 * (n' / r + 1) ^ 2 =
-          n' % r * (n' / r + 1) * (r - 1) + r.choose 2 +
-          r.choose 2 * 2 * (n' / r) + r.choose 2 * (n' / r) ^ 2 := by grind
-      rw [ring₂, ← add_assoc]; congr 1
-      rw [← add_rotate, ← add_rotate _ _ (r.choose 2)]; congr 1
-      rw [Nat.choose_two_right, Nat.div_mul_cancel rd, mul_add_one, add_mul, ← add_assoc,
-        ← add_rotate, add_comm _ (_ * _)]; congr 1
-      rw [← mul_rotate, ← add_mul, add_comm, mul_comm _ r, Nat.div_add_mod n' r]
+@[simp] lemma turanNumber_zero : turanNumber n 0 = n.choose 2 := by
+  have h := card_edgeFinset_top_eq_card_choose_two (V := Fin n)
+  rw [Fintype.card_fin] at h
+  convert! h
+  exact turanGraph_zero
 
-lemma turanNumber_two : turanNumber n 2 = n ^ 2 / 4 := by
-  rw [turanNumber_eq]
+/-- The exact formula for the number of edges in a Turán graph with a positive number of parts. -/
+theorem turanNumber_eq {n r : ℕ} (hr : 0 < r) :
+    turanNumber n r = Nat.euclideanDiv ((n ^ 2 - (n % r) ^ 2) * (r - 1)) (2 * r)
+      (Nat.mul_ne_zero two_ne_zero hr.ne') + (n % r).choose 2 := by
+  have ring₁ (n : ℕ) : Nat.euclideanDiv ((n ^ 2 - (n % r) ^ 2) * (r - 1)) (2 * r)
+        (Nat.mul_ne_zero two_ne_zero hr.ne') =
+      n % r * (n.euclideanDiv r hr.ne') * (r - 1) +
+        Nat.euclideanDiv (r * (r - 1) * (n.euclideanDiv r hr.ne') ^ 2) 2 := by
+    have expand (q : ℕ) : (n % r + r * q + n % r) * (r * q) * (r - 1) =
+        (2 * (n % r * q * (r - 1)) + r * (r - 1) * q ^ 2) * r := by grind
+    simp only [Nat.euclideanDiv_eq_core]
+    nth_rw 1 [← Nat.mod_add_div n r, Nat.sq_sub_sq, add_tsub_cancel_left, expand]
+    rw [Nat.mul_div_mul_right _ _ hr, Nat.mul_add_div zero_lt_two]
+  rcases lt_or_ge n r with h | h
+  · rw [Nat.euclideanDiv_eq_core, Nat.mod_eq_of_lt h, tsub_self, zero_mul, Nat.zero_div, zero_add]
+    have := card_edgeFinset_top_eq_card_choose_two (V := Fin n)
+    rw [Fintype.card_fin] at this; convert! this
+    rw [turanGraph_eq_top]; exact .inr h.le
+  · let n' := n - r
+    have n'r : n = n' + r := by lia
+    rw [n'r, turanNumber_add, turanNumber_eq hr, ring₁, ring₁]
+    simp only [Nat.euclideanDiv_eq_core]
+    rw [add_rotate, ← add_assoc, Nat.add_mod_right, Nat.add_div_right _ hr]
+    congr 1
+    have rd : 2 ∣ r * (r - 1) := (Nat.even_mul_pred_self _).two_dvd
+    rw [← Nat.div_mul_right_comm rd, ← Nat.div_mul_right_comm rd,
+      ← Nat.euclideanDiv_eq_core _ 2 two_ne_zero, ← Nat.choose_two_right]
+    have ring₂ (q : ℕ) : n' % r * (q + 1) * (r - 1) + r.choose 2 * (q + 1) ^ 2 =
+        n' % r * (q + 1) * (r - 1) + r.choose 2 +
+        r.choose 2 * 2 * q + r.choose 2 * q ^ 2 := by grind
+    rw [ring₂, ← add_assoc]; congr 1
+    rw [← add_rotate, ← add_rotate _ _ (r.choose 2)]; congr 1
+    rw [Nat.choose_two_right, Nat.euclideanDiv_eq_core, Nat.div_mul_cancel rd, mul_add_one, add_mul,
+      ← add_assoc, ← add_rotate, add_comm _ (_ * _)]; congr 1
+    rw [← mul_rotate, ← add_mul, add_comm, mul_comm _ r, Nat.div_add_mod n' r]
+
+lemma turanNumber_two : turanNumber n 2 = Nat.euclideanDiv (n ^ 2) 4 := by
+  rw [turanNumber_eq (r := 2) (by decide)]
+  simp only [Nat.euclideanDiv_eq_core]
   obtain ⟨k, rfl⟩ | ⟨k, rfl⟩ := n.even_or_odd
   · simp [← two_mul]
   · simp; lia
 
-lemma turanNumber_three : turanNumber n 3 = n ^ 2 / 3 := by
-  rw [turanNumber_eq]
+lemma turanNumber_three : turanNumber n 3 = Nat.euclideanDiv (n ^ 2) 3 := by
+  rw [turanNumber_eq (r := 3) (by decide)]
+  simp only [Nat.euclideanDiv_eq_core]
   obtain hn | hn | hn : n % 3 = 0 ∨ n % 3 = 1 ∨ n % 3 = 2 := by lia
   all_goals
     nth_rw 1 [← n.mod_add_div 3]
@@ -418,24 +429,26 @@ lemma turanNumber_three : turanNumber n 3 = n ^ 2 / 3 := by
 
 /-- A looser, but simpler than `turanNumber_eq`, bound on `turanNumber n r`. -/
 theorem mul_turanNumber_le : 2 * r * turanNumber n r ≤ (r - 1) * n ^ 2 := by
-  grw [turanNumber_eq, mul_add, Nat.mul_div_le]
+  rcases r.eq_zero_or_pos with rfl | hr
+  · simp
+  rw [turanNumber_eq hr, Nat.euclideanDiv_eq_core]
+  grw [mul_add, Nat.mul_div_le]
   rw [tsub_mul, ← Nat.sub_add_comm]; swap
   · grw [Nat.mod_le]
     exact Nat.zero_le _
   rw [Nat.sub_le_iff_le_add, mul_comm, Nat.add_le_add_iff_left, Nat.choose_two_right,
+    Nat.euclideanDiv_eq_core,
     ← Nat.mul_div_assoc _ (Nat.even_mul_pred_self _).two_dvd, mul_assoc,
-    MulDivCancelClass.mul_div_cancel_left₀ _ two_ne_zero, ← mul_assoc, ← mul_rotate, sq,
+    Nat.mul_div_cancel_left _ zero_lt_two, ← mul_assoc, ← mul_rotate, sq,
     ← mul_rotate (r - 1)]
   gcongr ?_ * _
-  rcases r.eq_zero_or_pos with rfl | hr; · lia
   rw [Nat.sub_one_mul, Nat.sub_one_mul, mul_comm]
   exact Nat.sub_le_sub_left (Nat.mod_lt _ hr).le _
 
 theorem CliqueFree.card_edgeFinset_le (cf : G.CliqueFree (r + 1)) :
     #G.edgeFinset ≤ turanNumber (Fintype.card V) r := by
   rcases r.eq_zero_or_pos with rfl | hr
-  · rw [cliqueFree_one, ← Fintype.card_eq_zero_iff] at cf
-    simp [turanNumber_eq, card_edgeFinset_le_card_choose_two]
+  · simpa only [turanNumber_zero] using card_edgeFinset_le_card_choose_two (G := G)
   · obtain ⟨H, _, maxH⟩ := exists_isTuranMaximal (V := V) hr
     convert! maxH.2 cf
     rw [((isTuranMaximal_iff_nonempty_iso_turanGraph hr).mp maxH).some.card_edgeFinset_eq]

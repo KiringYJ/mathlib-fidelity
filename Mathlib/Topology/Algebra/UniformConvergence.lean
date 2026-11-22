@@ -99,23 +99,23 @@ lemma UniformOnFun.toFun_inv [Inv β] (f : α →ᵤ[𝔖] β) : toFun 𝔖 (f�
 @[to_additive (attr := simp)]
 lemma UniformOnFun.ofFun_inv [Inv β] (f : α → β) : ofFun 𝔖 (f⁻¹) = (ofFun 𝔖 f)⁻¹ := rfl
 
-@[to_additive] instance [Div β] : Div (α →ᵤ β) := inferInstanceAs <| Div (α → β)
+instance [Sub β] : Sub (α →ᵤ β) := inferInstanceAs <| Sub (α → β)
 
-@[to_additive (attr := simp)]
-lemma UniformFun.toFun_div [Div β] (f g : α →ᵤ β) : toFun (f / g) = toFun f / toFun g := rfl
+@[simp]
+lemma UniformFun.toFun_sub [Sub β] (f g : α →ᵤ β) : toFun (f - g) = toFun f - toFun g := rfl
 
-@[to_additive (attr := simp)]
-lemma UniformFun.ofFun_div [Div β] (f g : α → β) : ofFun (f / g) = ofFun f / ofFun g := rfl
+@[simp]
+lemma UniformFun.ofFun_sub [Sub β] (f g : α → β) : ofFun (f - g) = ofFun f - ofFun g := rfl
 
-@[to_additive] instance [Div β] : Div (α →ᵤ[𝔖] β) := inferInstanceAs <| Div (α → β)
+instance [Sub β] : Sub (α →ᵤ[𝔖] β) := inferInstanceAs <| Sub (α → β)
 
-@[to_additive (attr := simp)]
-lemma UniformOnFun.toFun_div [Div β] (f g : α →ᵤ[𝔖] β) :
-    toFun 𝔖 (f / g) = toFun 𝔖 f / toFun 𝔖 g :=
+@[simp]
+lemma UniformOnFun.toFun_sub [Sub β] (f g : α →ᵤ[𝔖] β) :
+    toFun 𝔖 (f - g) = toFun 𝔖 f - toFun 𝔖 g :=
   rfl
 
-@[to_additive (attr := simp)]
-lemma UniformOnFun.ofFun_div [Div β] (f g : α → β) : ofFun 𝔖 (f / g) = ofFun 𝔖 f / ofFun 𝔖 g := rfl
+@[simp]
+lemma UniformOnFun.ofFun_sub [Sub β] (f g : α → β) : ofFun 𝔖 (f - g) = ofFun 𝔖 f - ofFun 𝔖 g := rfl
 
 @[to_additive]
 instance {M : Type*} [Pow β M] : Pow (α →ᵤ β) M := inferInstanceAs <| Pow (α → β) M
@@ -155,11 +155,30 @@ instance [CommMonoid β] : CommMonoid (α →ᵤ β) := inferInstanceAs <| CommM
 @[to_additive]
 instance [CommMonoid β] : CommMonoid (α →ᵤ[𝔖] β) := inferInstanceAs <| CommMonoid (α → β)
 
-@[to_additive]
+instance [AddGroup β] : AddGroup (α →ᵤ β) := inferInstanceAs <| AddGroup (α → β)
+
+@[to_additive existing]
 instance [Group β] : Group (α →ᵤ β) := inferInstanceAs <| Group (α → β)
 
-@[to_additive]
+instance [AddGroup β] : AddGroup (α →ᵤ[𝔖] β) := inferInstanceAs <| AddGroup (α → β)
+
+@[to_additive existing]
 instance [Group β] : Group (α →ᵤ[𝔖] β) := inferInstanceAs <| Group (α → β)
+
+@[simp]
+lemma UniformFun.toFun_div [Group β] (f g : α →ᵤ β) : toFun (f / g) = toFun f / toFun g := rfl
+
+@[simp]
+lemma UniformFun.ofFun_div [Group β] (f g : α → β) : ofFun (f / g) = ofFun f / ofFun g := rfl
+
+@[simp]
+lemma UniformOnFun.toFun_div [Group β] (f g : α →ᵤ[𝔖] β) :
+    toFun 𝔖 (f / g) = toFun 𝔖 f / toFun 𝔖 g :=
+  rfl
+
+@[simp]
+lemma UniformOnFun.ofFun_div [Group β] (f g : α → β) :
+    ofFun 𝔖 (f / g) = ofFun 𝔖 f / ofFun 𝔖 g := rfl
 
 @[to_additive]
 instance [CommGroup β] : CommGroup (α →ᵤ β) := inferInstanceAs <| CommGroup (α → β)
@@ -212,14 +231,13 @@ variable {α G ι : Type*} [Group G] {𝔖 : Set <| Set α} [UniformSpace G] [Is
 /-- If `G` is a uniform group, then `α →ᵤ G` is a uniform group as well. -/
 @[to_additive /-- If `G` is a uniform additive group,
 then `α →ᵤ G` is a uniform additive group as well. -/]
-instance : IsUniformGroup (α →ᵤ G) :=
-  ⟨(-- Since `(/) : G × G → G` is uniformly continuous,
-    -- `UniformFun.postcomp_uniformContinuous` tells us that
-    -- `((/) ∘ —) : (α →ᵤ G × G) → (α →ᵤ G)` is uniformly continuous too. By precomposing with
-    -- `UniformFun.uniformEquivProdArrow`, this gives that
-    -- `(/) : (α →ᵤ G) × (α →ᵤ G) → (α →ᵤ G)` is also uniformly continuous
-    UniformFun.postcomp_uniformContinuous uniformContinuous_div).comp
-    UniformFun.uniformEquivProdArrow.symm.uniformContinuous⟩
+instance : IsUniformGroup (α →ᵤ G) where
+  uniformContinuous_div := by
+    change UniformContinuous (fun p : (α →ᵤ G) × (α →ᵤ G) ↦
+      UniformFun.ofFun (UniformFun.toFun p.1 / UniformFun.toFun p.2))
+    simp only [Pi.div_def]
+    exact (UniformFun.postcomp_uniformContinuous uniformContinuous_div).comp
+      UniformFun.uniformEquivProdArrow.symm.uniformContinuous
 
 @[to_additive]
 protected theorem UniformFun.hasBasis_nhds_one_of_basis {p : ι → Prop} {b : ι → Set G}
@@ -238,14 +256,13 @@ protected theorem UniformFun.hasBasis_nhds_one :
 well. -/
 @[to_additive /-- Let `𝔖 : Set (Set α)`. If `G` is a uniform additive group,
 then `α →ᵤ[𝔖] G` is a uniform additive group as well. -/]
-instance : IsUniformGroup (α →ᵤ[𝔖] G) :=
-  ⟨(-- Since `(/) : G × G → G` is uniformly continuous,
-    -- `UniformOnFun.postcomp_uniformContinuous` tells us that
-    -- `((/) ∘ —) : (α →ᵤ[𝔖] G × G) → (α →ᵤ[𝔖] G)` is uniformly continuous too. By precomposing with
-    -- `UniformOnFun.uniformEquivProdArrow`, this gives that
-    -- `(/) : (α →ᵤ[𝔖] G) × (α →ᵤ[𝔖] G) → (α →ᵤ[𝔖] G)` is also uniformly continuous
-    UniformOnFun.postcomp_uniformContinuous uniformContinuous_div).comp
-    UniformOnFun.uniformEquivProdArrow.symm.uniformContinuous⟩
+instance : IsUniformGroup (α →ᵤ[𝔖] G) where
+  uniformContinuous_div := by
+    change UniformContinuous (fun p : (α →ᵤ[𝔖] G) × (α →ᵤ[𝔖] G) ↦
+      UniformOnFun.ofFun 𝔖 (UniformOnFun.toFun 𝔖 p.1 / UniformOnFun.toFun 𝔖 p.2))
+    simp only [Pi.div_def]
+    exact (UniformOnFun.postcomp_uniformContinuous uniformContinuous_div).comp
+      UniformOnFun.uniformEquivProdArrow.symm.uniformContinuous
 
 @[to_additive]
 protected theorem UniformOnFun.hasBasis_nhds_one_of_basis (𝔖 : Set <| Set α) (h𝔖₁ : 𝔖.Nonempty)

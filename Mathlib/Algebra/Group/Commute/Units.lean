@@ -143,18 +143,16 @@ end Monoid
 
 namespace Commute
 
-variable [DivisionMonoid M] {a b c d : M}
-
-@[to_additive]
-lemma div_eq_div_iff_of_isUnit (hbd : Commute b d) (hb : IsUnit b) (hd : IsUnit d) :
-    a / b = c / d ↔ a * d = c * b := by
+lemma div_eq_div_iff_of_isUnit [Monoid M] {a b c d : M} (hbd : Commute b d)
+    (hb : IsUnit b) (hd : IsUnit d) : a /ₚ hb.unit = c /ₚ hd.unit ↔ a * d = c * b := by
   rw [← (hb.mul hd).mul_left_inj, ← mul_assoc, hb.div_mul_cancel, ← mul_assoc, hbd.right_comm,
     hd.div_mul_cancel]
 
-@[to_additive]
+variable [DivisionMonoid M] {a b c d : M}
+
 lemma mul_inv_eq_mul_inv_iff_of_isUnit (hbd : Commute b d) (hb : IsUnit b) (hd : IsUnit d) :
     a * b⁻¹ = c * d⁻¹ ↔ a * d = c * b := by
-  rw [← div_eq_mul_inv, ← div_eq_mul_inv, hbd.div_eq_div_iff_of_isUnit hb hd]
+  simpa only [divp_eq_mul_inv, IsUnit.unit_spec] using hbd.div_eq_div_iff_of_isUnit hb hd
 
 @[to_additive]
 lemma inv_mul_eq_inv_mul_iff_of_isUnit (hbd : Commute b d) (hb : IsUnit b) (hd : IsUnit d) :
@@ -163,3 +161,18 @@ lemma inv_mul_eq_inv_mul_iff_of_isUnit (hbd : Commute b d) (hb : IsUnit b) (hd :
     ← mul_assoc, mul_assoc d, hbd.symm.left_comm, hd.mul_inv_cancel, mul_one]
 
 end Commute
+
+namespace AddCommute
+
+variable [SubtractionMonoid M] {a b c d : M}
+
+lemma sub_eq_sub_iff_of_isAddUnit (hbd : AddCommute b d) (hb : IsAddUnit b) (hd : IsAddUnit d) :
+    a - b = c - d ↔ a + d = c + b := by
+  rw [← (hb.add hd).add_left_inj, ← add_assoc, hb.sub_add_cancel, ← add_assoc, hbd.right_comm,
+    hd.sub_add_cancel]
+
+lemma add_neg_eq_add_neg_iff_of_isAddUnit (hbd : AddCommute b d) (hb : IsAddUnit b)
+    (hd : IsAddUnit d) : a + -b = c + -d ↔ a + d = c + b := by
+  simpa only [sub_eq_add_neg] using hbd.sub_eq_sub_iff_of_isAddUnit hb hd
+
+end AddCommute

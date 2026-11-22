@@ -171,7 +171,7 @@ theorem remainder_lt (n : ℕ) {m : ℝ} (m2 : 2 ≤ m) :
 numbers where the denominator is `m ^ k!`. -/
 theorem partialSum_eq_rat {m : ℕ} (hm : 0 < m) (k : ℕ) :
     ∃ p : ℕ, partialSum m (hm := (Nat.cast_pos.mpr hm : (0 : ℝ) < m).ne'.isUnit) k =
-      p / ((m ^ k ! :) : ℝ) := by
+      (p : ℝ) / ((m ^ k ! : ℕ) : ℝ) := by
   induction k with
   | zero =>
     exact ⟨1, by simp only [partialSum, Nat.zero_add, range_one, sum_singleton, Nat.cast_one,

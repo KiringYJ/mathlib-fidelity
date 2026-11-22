@@ -466,14 +466,14 @@ theorem coe_inv [Inv G] (f : α → G) : ↑f⁻¹ = (f⁻¹ : Germ l G) :=
 theorem const_inv [Inv G] (a : G) : (↑(a⁻¹) : Germ l G) = (↑a)⁻¹ :=
   rfl
 
-@[to_additive] instance instDiv [Div M] : Div (Germ l M) := ⟨map₂ (· / ·)⟩
+instance instSub [Sub M] : Sub (Germ l M) := ⟨map₂ (· - ·)⟩
 
-@[to_additive (attr := simp, norm_cast)]
-theorem coe_div [Div M] (f g : α → M) : ↑(f / g) = (f / g : Germ l M) :=
+@[simp, norm_cast]
+theorem coe_sub [Sub M] (f g : α → M) : ↑(f - g) = (f - g : Germ l M) :=
   rfl
 
-@[to_additive (attr := simp, norm_cast)]
-theorem const_div [Div M] (a b : M) : (↑(a / b) : Germ l M) = ↑a / ↑b :=
+@[simp, norm_cast]
+theorem const_sub [Sub M] (a b : M) : (↑(a - b) : Germ l M) = ↑a - ↑b :=
   rfl
 
 @[to_additive]
@@ -488,8 +488,19 @@ instance instHasDistribNeg [Mul G] [HasDistribNeg G] : HasDistribNeg (Germ l G) 
 instance instInvOneClass [InvOneClass G] : InvOneClass (Germ l G) :=
   ⟨congr_arg ofFun inv_one⟩
 
-@[to_additive subNegMonoid]
+instance subNegMonoid [SubNegMonoid G] : SubNegMonoid (Germ l G) where
+  zsmul z f := z • f
+  zsmul_zero' := Quotient.ind' fun _ => congrArg ofFun <|
+    funext fun _ => SubNegMonoid.zsmul_zero' _
+  zsmul_succ' _ := Quotient.ind' fun _ => congrArg ofFun <|
+    funext fun _ => SubNegMonoid.zsmul_succ' ..
+  zsmul_neg' _ := Quotient.ind' fun _ => congrArg ofFun <|
+    funext fun _ => SubNegMonoid.zsmul_neg' ..
+  sub_eq_add_neg := Quotient.ind₂' fun _ _ ↦ congrArg ofFun <| sub_eq_add_neg ..
+
+@[to_additive existing subNegMonoid]
 instance instDivInvMonoid [DivInvMonoid G] : DivInvMonoid (Germ l G) where
+  div f g := f * g⁻¹
   zpow z f := f ^ z
   zpow_zero' := Quotient.ind' fun _ => congrArg ofFun <|
     funext fun _ => DivInvMonoid.zpow_zero' _
@@ -497,7 +508,7 @@ instance instDivInvMonoid [DivInvMonoid G] : DivInvMonoid (Germ l G) where
     funext fun _ => DivInvMonoid.zpow_succ' ..
   zpow_neg' _ := Quotient.ind' fun _ => congrArg ofFun <|
     funext fun _ => DivInvMonoid.zpow_neg' ..
-  div_eq_mul_inv := Quotient.ind₂' fun _ _ ↦ congrArg ofFun <| div_eq_mul_inv ..
+  div_eq_mul_inv _ _ := rfl
 
 @[to_additive]
 instance instDivisionMonoid [DivisionMonoid G] : DivisionMonoid (Germ l G) where
@@ -509,6 +520,17 @@ instance instDivisionMonoid [DivisionMonoid G] : DivisionMonoid (Germ l G) where
 @[to_additive]
 instance instGroup [Group G] : Group (Germ l G) :=
   { inv_mul_cancel := Quotient.ind' fun _ => congrArg ofFun <| inv_mul_cancel _ }
+
+@[simp, norm_cast]
+theorem coe_div [Group G] (f g : α → G) :
+    (↑(f / g) : Germ l G) = (f : Germ l G) / (g : Germ l G) := by
+  simp only [div_eq_mul_inv, coe_mul, coe_inv]
+
+@[simp, norm_cast]
+theorem const_div [Group G] (a b : G) :
+    (↑(a / b) : Germ l G) = (a : Germ l G) / (b : Germ l G) := by
+  rw [div_eq_mul_inv, div_eq_mul_inv]
+  rfl
 
 @[to_additive]
 instance instCommGroup [CommGroup G] : CommGroup (Germ l G) :=

@@ -83,7 +83,7 @@ example : Matrix.rank (R := ℚ)
   eval_rank
 
 -- compound entries: 1/2 * 5/2 = 5/4, det ≠ 0
-example : Matrix.rank (R := ℚ) !![1/2 * 5/2, 1; 1, 1] = 2 := by eval_rank
+example : Matrix.rank (R := ℚ) !![(1 / 2 : ℚ) * 5 / (2 : ℚ), 1; 1, 1] = 2 := by eval_rank
 
 -- 1/2 * 4 = 2 collapses the rank
 example : Matrix.rank (R := ℚ) !![1/2 * 4, 2; 1, 1] = 1 := by eval_rank

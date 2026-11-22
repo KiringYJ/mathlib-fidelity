@@ -155,43 +155,52 @@ end Ring
 
 /-! ### Geometric sum with `ℕ`-division -/
 
-lemma Nat.pred_mul_geom_sum_le (a b n : ℕ) :
-    ((b - 1) * ∑ i ∈ range n.succ, a / b ^ i) ≤ a * b - a / b ^ n :=
+lemma Nat.pred_mul_geom_sum_le (a b n : ℕ) (hb : b ≠ 0 := by checked_native_nonzero) :
+    (b - 1) * ∑ i ∈ range n.succ, Nat.euclideanDiv a (b ^ i) (pow_ne_zero _ hb) ≤
+      a * b - Nat.euclideanDiv a (b ^ n) (pow_ne_zero _ hb) := by
+  let q (i : ℕ) := Nat.euclideanDiv a (b ^ i) (pow_ne_zero _ hb)
   calc
-    ((b - 1) * ∑ i ∈ range n.succ, a / b ^ i) =
-    (∑ i ∈ range n, a / b ^ (i + 1) * b) + a * b - ((∑ i ∈ range n, a / b ^ i) + a / b ^ n) := by
-      rw [Nat.sub_mul, mul_comm, sum_mul, one_mul, sum_range_succ', sum_range_succ, pow_zero,
-        Nat.div_one]
-    _ ≤ (∑ i ∈ range n, a / b ^ i) + a * b - ((∑ i ∈ range n, a / b ^ i) + a / b ^ n) := by
+    (b - 1) * ∑ i ∈ range n.succ, q i =
+        (∑ i ∈ range n, q (i + 1) * b) + a * b - ((∑ i ∈ range n, q i) + q n) := by
+      rw [Nat.sub_mul, mul_comm, sum_mul, one_mul, sum_range_succ', sum_range_succ]
+      simp only [q, Nat.euclideanDiv_eq_core, pow_zero, Nat.div_one]
+    _ ≤ (∑ i ∈ range n, q i) + a * b - ((∑ i ∈ range n, q i) + q n) := by
       gcongr with i hi
-      rw [pow_succ, ← Nat.div_div_eq_div_mul]
+      simp only [q, Nat.euclideanDiv_eq_core, pow_succ, ← Nat.div_div_eq_div_mul]
       exact Nat.div_mul_le_self _ _
-    _ = a * b - a / b ^ n := add_tsub_add_eq_tsub_left _ _ _
+    _ = a * b - q n := add_tsub_add_eq_tsub_left _ _ _
 
 lemma Nat.geom_sum_le {b : ℕ} (hb : 2 ≤ b) (a n : ℕ) :
-    ∑ i ∈ range n, a / b ^ i ≤ a * b / (b - 1) := by
+    ∑ i ∈ range n, Nat.euclideanDiv a (b ^ i) (pow_ne_zero _ (by omega)) ≤
+      Nat.euclideanDiv (a * b) (b - 1) (by omega) := by
+  rw [Nat.euclideanDiv_eq_core (a * b) (b - 1)]
   refine (Nat.le_div_iff_mul_le <| tsub_pos_of_lt hb).2 ?_
   rcases n with - | n
   · rw [sum_range_zero, zero_mul]
     exact Nat.zero_le _
   rw [mul_comm]
-  exact (Nat.pred_mul_geom_sum_le a b n).trans tsub_le_self
+  exact (Nat.pred_mul_geom_sum_le a b n (by omega)).trans tsub_le_self
 
 lemma Nat.geom_sum_Ico_le {b : ℕ} (hb : 2 ≤ b) (a n : ℕ) :
-    ∑ i ∈ Ico 1 n, a / b ^ i ≤ a / (b - 1) := by
+    ∑ i ∈ Ico 1 n, Nat.euclideanDiv a (b ^ i) (pow_ne_zero _ (by omega)) ≤
+      Nat.euclideanDiv a (b - 1) (by omega) := by
   rcases n with - | n
   · rw [Ico_eq_empty_of_le (by lia), sum_empty]
     exact Nat.zero_le _
+  let q (i : ℕ) := Nat.euclideanDiv a (b ^ i) (pow_ne_zero _ (by omega))
   rw [← add_le_add_iff_left a]
   calc
-    (a + ∑ i ∈ Ico 1 n.succ, a / b ^ i) = a / b ^ 0 + ∑ i ∈ Ico 1 n.succ, a / b ^ i := by
-      rw [pow_zero, Nat.div_one]
-    _ = ∑ i ∈ range n.succ, a / b ^ i := by
+    (a + ∑ i ∈ Ico 1 n.succ, q i) = q 0 + ∑ i ∈ Ico 1 n.succ, q i := by
+      simp only [q, Nat.euclideanDiv_eq_core, pow_zero, Nat.div_one]
+    _ = ∑ i ∈ range n.succ, q i := by
       rw [range_eq_Ico, ← Finset.insert_Ico_add_one_left_eq_Ico (Nat.succ_pos _), sum_insert] <;>
         simp
-    _ ≤ a * b / (b - 1) := Nat.geom_sum_le hb a _
-    _ = (a * 1 + a * (b - 1)) / (b - 1) := by rw [← mul_add, add_tsub_cancel_of_le (by lia)]
-    _ = a + a / (b - 1) := by rw [mul_one, Nat.add_mul_div_right _ _ (tsub_pos_of_lt hb), add_comm]
+    _ ≤ Nat.euclideanDiv (a * b) (b - 1) (by omega) := Nat.geom_sum_le hb a _
+    _ = a + Nat.euclideanDiv a (b - 1) (by omega) := by
+      simp only [Nat.euclideanDiv_eq_core]
+      conv_lhs => rw [show a * b = a + a * (b - 1) by
+        rw [Nat.add_comm a (a * (b - 1)), ← mul_add_one, Nat.sub_add_cancel (by omega)]]
+      rw [Nat.add_mul_div_right _ _ (tsub_pos_of_lt hb), add_comm]
 
 variable {m n : ℕ} {s : Finset ℕ}
 
@@ -201,6 +210,7 @@ lemma Nat.geomSum_lt (hm : 2 ≤ m) (hs : ∀ k ∈ s, k < n) : ∑ k ∈ s, m ^
   calc
     ∑ k ∈ s, m ^ k ≤ ∑ k ∈ range n, m ^ k := sum_le_sum_of_subset fun _ hk ↦
       mem_range.2 <| hs _ hk
-    _ = (m ^ n - 1) / (m - 1) := Nat.geomSum_eq hm _
-    _ ≤ m ^ n - 1 := Nat.div_le_self _ _
+    _ = Nat.euclideanDiv (m ^ n - 1) (m - 1) (by omega) := by
+      simpa only [Nat.euclideanDiv_eq_core] using Nat.geomSum_eq hm n
+    _ ≤ m ^ n - 1 := by rw [Nat.euclideanDiv_eq_core]; exact Nat.div_le_self _ _
     _ < m ^ n := tsub_lt_self (Nat.pow_pos <| by lia) (by lia)

@@ -190,9 +190,8 @@ theorem isGaussian_iff_charFunDual_eq {μ : Measure E} [IsFiniteMeasure μ] :
   simp only [smul_apply, smul_eq_mul, Real.coe_toNNReal']
   congr
   · rw [integral_const_mul, ofReal_mul]
-  · rw [max_eq_left (variance_nonneg _ _), mul_comm, ← ofReal_pow, ← ofReal_mul,
-      ← variance_const_mul]
-    congr
+  · rw [max_eq_left (variance_nonneg _ _), mul_comm]
+    exact variance_const_mul u L μ
 
 alias ⟨_, isGaussian_of_charFunDual_eq⟩ := isGaussian_iff_charFunDual_eq
 
@@ -285,5 +284,6 @@ instance [SecondCountableTopologyEither E F] {ν : Measure F} [IsGaussian ν] :
       variance_dual_prod' (IsGaussian.memLp_dual μ (L.comp (.inl ℝ E F)) 2 (by simp))
       (IsGaussian.memLp_dual ν (L.comp (.inr ℝ E F)) 2 (by simp))]
     norm_cast
+    exact (add_div _ _ _).symm
 
 end ProbabilityTheory

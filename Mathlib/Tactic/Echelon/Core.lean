@@ -6,6 +6,7 @@ Authors: Rao Xiaojia
 module
 
 public import Mathlib.Init
+public meta import Mathlib.Lean.Elab.NativeDivision
 
 /-!
 # Parameterized computation core for the Bareiss elimination
@@ -56,10 +57,16 @@ structure RingOps (V : Type) where
   mul : V → V → V
   /-- Subtraction. -/
   sub : V → V → V
-  /-- Exact division: total on the quotients of the elimination -/
-  divExact : V → V → V
+  /-- Divide exactly, reporting a model error if the quotient is undefined. -/
+  divExact : V → V → MetaM V
   /-- The pivot zero test. -/
   isZero : V → Bool
+
+/-- Exact division of the integer coefficients used by the computation models. -/
+def intExactQuotient (a b : Int) : MetaM Int :=
+  if hb : b = 0 then throwError "Bareiss elimination attempted integer division by zero"
+  else if h : b ∣ a then pure (Int.exactQuotient a b h hb)
+  else throwError "Bareiss elimination expected {b} to divide {a}"
 
 /-- Decomposition data with entries in `V`: the values of the elimination, or the
 ring expressions constructed (`V := Expr`). -/
@@ -102,8 +109,8 @@ def bareissDecomp {V : Type} (ops : RingOps V) (A : Array (Array V)) :
   let rows := A.size
   let cols := (A.getD 0 #[]).size
   let getEntry (M : Array (Array V)) (i j : Nat) : V := (M.getD i #[]).getD j ops.zero
-  let eliminate (pivot coef prev : V) (row pivotRow : Array V) : Array V :=
-    Array.zipWith (fun a b => ops.divExact (ops.sub (ops.mul pivot a) (ops.mul coef b)) prev)
+  let eliminate (pivot coef prev : V) (row pivotRow : Array V) : MetaM (Array V) :=
+    Array.zipWithM (fun a b => ops.divExact (ops.sub (ops.mul pivot a) (ops.mul coef b)) prev)
       row pivotRow
   let mut W := A
   let mut L : Array (Array V) :=
@@ -140,8 +147,8 @@ def bareissDecomp {V : Type} (ops : RingOps V) (A : Array (Array V)) :
       let lRow := L.getD r #[]
       for i in r<...rows do
         let coef := getEntry W i c
-        W := W.set! i (eliminate pivot coef prevPivot (W.getD i #[]) wRow)
-        L := L.set! i (eliminate pivot coef prevPivot (L.getD i #[]) lRow)
+        W := W.set! i (← eliminate pivot coef prevPivot (W.getD i #[]) wRow)
+        L := L.set! i (← eliminate pivot coef prevPivot (L.getD i #[]) lRow)
       prevPivot := pivot
       r := r + 1
   return { L, U := W, swaps, pivot := pivotCols }

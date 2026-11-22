@@ -125,7 +125,7 @@ lemma analyticOn_mgf : AnalyticOn ℝ (mgf X μ) (interior (integrableExpSet X �
 lemma hasFPowerSeriesAt_mgf (hv : v ∈ interior (integrableExpSet X μ)) :
     HasFPowerSeriesAt (mgf X μ)
       (FormalMultilinearSeries.ofScalars ℝ
-        (fun n ↦ (∫ ω, X ω ^ n * exp (v * X ω) ∂μ : ℝ) / n !)) v := by
+        (fun n ↦ (∫ ω, X ω ^ n * exp (v * X ω) ∂μ : ℝ) / (n ! : ℝ))) v := by
   convert! (analyticAt_mgf hv).hasFPowerSeriesAt
   rw [iteratedDeriv_mgf hv]
 

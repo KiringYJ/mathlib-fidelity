@@ -65,8 +65,8 @@ def mkCommDiag (sub : String) (embeds : ExprEmbeds) : MetaM Html := do
   return (
     <PenroseDiagram
       embeds={embeds}
-      dsl={include_str ".."/".."/".."/"widget"/"src"/"penrose"/"commutative.dsl"}
-      sty={include_str ".."/".."/".."/"widget"/"src"/"penrose"/"commutative.sty"}
+      dsl={include_str "../../../widget/src/penrose/commutative.dsl"}
+      sty={include_str "../../../widget/src/penrose/commutative.sty"}
       sub={sub} />)
 
 /-! ## Commutative triangles -/
@@ -79,7 +79,7 @@ A f B
     C
 ```
 -/
-def subTriangle := include_str ".."/".."/".."/"widget"/"src"/"penrose"/"triangle.sub"
+def subTriangle := include_str "../../../widget/src/penrose/triangle.sub"
 
 /-- Given a commutative triangle `f ≫ g = h` or `e ≡ h = f ≫ g`, return a triangle diagram.
 Otherwise `none`. -/
@@ -119,7 +119,7 @@ i   g
 D h C
 ```
 -/
-def subSquare := include_str ".."/".."/".."/"widget"/"src"/"penrose"/"square.sub"
+def subSquare := include_str "../../../widget/src/penrose/square.sub"
 
 /-- Given a commutative square `f ≫ g = i ≫ h`, return a square diagram. Otherwise `none`. -/
 def commSquareM? (e : Expr) : MetaM (Option Html) := do

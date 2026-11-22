@@ -220,12 +220,16 @@ lemma tower_inequality {m n : ℕ} (hm : m = 2010) (hn : n = 11) :
       lia
 
 /-- `(0, 0, 0, 2010 ^ 2010 ^ 2010 / 4, 0, 0)` is reachable. -/
-lemma quarter_target {m : ℕ} (hm : m = 2010) : Reachable (single 3 (2010 ^ 2010 ^ m / 4)) := by
+lemma quarter_target {m : ℕ} (hm : m = 2010) :
+    Reachable (single 3 (Nat.euclideanDiv (2010 ^ 2010 ^ m) 4)) := by
   have R := five_eleven.exp_mid (by lia)
   set n : ℕ := 11
   iterate 4 replace R := R.exp_mid (Nat.two_pow_pos _)
   rw [single_zero, zero_add] at R
-  exact R.reduce ((Nat.div_le_self ..).trans (tower_inequality hm rfl))
+  have hq : Nat.euclideanDiv (2010 ^ 2010 ^ m) 4 ≤ 2010 ^ 2010 ^ m := by
+    have h := Nat.euclideanDiv_mul_add_mod (2010 ^ 2010 ^ m) 4 (by decide)
+    omega
+  exact R.reduce (hq.trans (tower_inequality hm rfl))
 
 end Reachable
 
@@ -237,7 +241,7 @@ theorem result : Reachable (single 5 (2010 ^ 2010 ^ 2010)) := by
   have hm : m = 2010 := by rfl
   convert! ((quarter_target hm).push (show 3 < 5 by decide)).push (show 4 < 5 by decide)
   simp only [single_eq_same, tsub_self, Fin.reduceAdd, zero_add, single_inj]
-  rw [← mul_assoc, show 2 * 2 = 4 by rfl, mul_comm, Nat.div_mul_cancel]
+  rw [← mul_assoc, show 2 * 2 = 4 by rfl, mul_comm, Nat.euclideanDiv_eq_core, Nat.div_mul_cancel]
   trans 2010 ^ 2
   · lia
   · apply pow_dvd_pow

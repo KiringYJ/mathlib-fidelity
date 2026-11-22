@@ -229,23 +229,27 @@ theorem isConditionable_countedSequence_int_neg (p q : ℕ) :
   exact .count_of_finite ((countedSequence_finite _ _).image _)
     ((countedSequence_nonempty _ _).image _)
 
+theorem ballot_total_isUnit (p q : ℕ) (h : 0 < p + q) : IsUnit ((p : ℝ≥0∞) + q) := by
+  refine ENNReal.isUnit_iff.2 ⟨?_, by finiteness⟩
+  exact_mod_cast h.ne'
+
 theorem first_vote_pos :
-    ∀ p q, 0 < p + q →
+    ∀ (p q : ℕ) (h : 0 < p + q),
       uniformOn (countedSequence p q : Set (List ℤ)) (isConditionable_countedSequence p q)
-        {l | l.headI = 1} = p / (p + q)
+        {l | l.headI = 1} = Checked.div (p : ℝ≥0∞) ((p : ℝ≥0∞) + q) (ballot_total_isUnit p q h)
   | p + 1, 0, _ => by
     simp only [counted_right_zero]
     rw [uniformOn_singleton]
-    simp [ENNReal.div_self _ _, List.replicate_succ]
+    simp [List.replicate_succ]
   | 0, q + 1, _ => by
     simp only [counted_left_zero]
     rw [uniformOn_singleton]
     simp [List.replicate]
   | p + 1, q + 1, _ => by
-    rw [uniformOn, cond_apply (isConditionable_countedSequence _ _),
+    rw [ENNReal.checkedDiv_eq_div, uniformOn, cond_apply (isConditionable_countedSequence _ _),
       countedSequence_int_pos_counted_succ_succ, count_injective_image List.cons_injective,
       count_countedSequence, count_countedSequence, Nat.cast_add, Nat.cast_one, mul_comm,
-      ← div_eq_mul_inv, ENNReal.div_eq_div_iff]
+      ← ENNReal.div_eq_mul_inv, ENNReal.div_eq_div_iff]
     · norm_cast
       rw [mul_comm _ (p + 1), add_right_comm, Nat.add_one_mul_choose_eq, mul_comm]
     all_goals simp [(Nat.choose_pos <| le_add_of_nonneg_right zero_le).ne']
@@ -256,10 +260,11 @@ theorem headI_mem_of_nonempty {α : Type*} [Inhabited α] : ∀ {l : List α} (_
 
 theorem first_vote_neg (p q : ℕ) (h : 0 < p + q) :
     uniformOn (countedSequence p q) (isConditionable_countedSequence p q) {l | l.headI = 1}ᶜ =
-      q / (p + q) := by
+      Checked.div (q : ℝ≥0∞) ((p : ℝ≥0∞) + q) (ballot_total_isUnit p q h) := by
+  rw [ENNReal.checkedDiv_eq_div]
   have h' : (p + q : ℝ≥0∞) ≠ 0 := mod_cast h.ne'
   have := uniformOn_compl {l : List ℤ | l.headI = 1}ᶜ (isConditionable_countedSequence p q)
-  rw [compl_compl, first_vote_pos _ _ h] at this
+  rw [compl_compl, first_vote_pos _ _ h, ENNReal.checkedDiv_eq_div] at this
   rw [ENNReal.eq_sub_of_add_eq _ this, ENNReal.eq_div_iff, ENNReal.mul_sub, mul_one,
     ENNReal.mul_div_cancel, ENNReal.add_sub_cancel_left]
   all_goals simp_all [ENNReal.div_eq_top]
@@ -331,18 +336,18 @@ private theorem ballot_den_unit (p q : ℕ) (h : 0 < p + q) : IsUnit ((p : ℝ) 
   exact_mod_cast h.ne'
 
 private theorem ballot_toReal_div (s : ℝ≥0∞) (p q : ℕ) (h : 0 < p + q) :
-    (s / ((p : ℝ≥0∞) + q)).toReal =
+    (Checked.div s ((p : ℝ≥0∞) + q) (ballot_total_isUnit p q h)).toReal =
       Checked.div s.toReal ((p : ℝ) + q) (ballot_den_unit p q h) := by
   have hd : ((p : ℝ≥0∞) + q).toReal = (p : ℝ) + q := by
     rw [← Nat.cast_add, ENNReal.toReal_natCast, Nat.cast_add]
   have hu : IsUnit (((p : ℝ≥0∞) + q).toReal) := hd.symm ▸ ballot_den_unit p q h
-  rw [ENNReal.toReal_div _ _ (hb := hu)]
+  rw [ENNReal.checkedDiv_eq_div, ENNReal.toReal_div _ _ (hb := hu)]
   exact div_eq_div_iff.mpr (congrArg (s.toReal * ·) hd.symm)
 
 private theorem ballot_ratio_ind :
     ∀ q p : ℕ, q < p → ∀ u : IsUnit ((p : ℝ) + q),
       (uniformOn (countedSequence p q) (isConditionable_countedSequence p q)
-        staysPositive).toReal = Checked.div ((p : ℝ) - q) ((p : ℝ) + q) u := by
+        staysPositive).toReal = ((p : ℝ) - q) / ((p : ℝ) + q) := by
   apply Nat.diag_induction
   · intro p u
     rw [ballot_same]
@@ -362,7 +367,9 @@ private theorem ballot_ratio_ind :
       simp only [ENNReal.toReal_natCast]
       simp only [Nat.cast_add, Nat.cast_one]
       field
-    all_goals exact ENNReal.mul_ne_top (by finiteness) (by simp [Ne, ENNReal.div_eq_top])
+    all_goals
+      exact ENNReal.mul_ne_top (by finiteness)
+        (by simp [Ne, ENNReal.checkedDiv_eq_div, ENNReal.div_eq_top])
 
 theorem ballot_problem' (q p : ℕ) (qp : q < p) :
     (uniformOn (countedSequence p q) (isConditionable_countedSequence p q) staysPositive).toReal =
@@ -373,23 +380,24 @@ theorem ballot_problem' (q p : ℕ) (qp : q < p) :
 
 /-- The ballot problem. -/
 theorem ballot_problem :
-    ∀ q p, q < p →
+    ∀ (q p : ℕ) (qp : q < p),
       uniformOn (countedSequence p q) (isConditionable_countedSequence p q) staysPositive =
-        (p - q) / (p + q) := by
+        Checked.div ((p : ℝ≥0∞) - q) ((p : ℝ≥0∞) + q) (ballot_total_isUnit p q (by omega)) := by
   intro q p qp
   have hd : 0 < p + q := by omega
+  have : IsUnit ((p : ℝ≥0∞) + q) := ballot_total_isUnit p q hd
   have hs : ((p : ℝ≥0∞) - q).toReal = (p : ℝ) - q := by
     rw [ENNReal.toReal_sub_of_le, ENNReal.toReal_natCast, ENNReal.toReal_natCast]
     exacts [Nat.cast_le.2 qp.le, ENNReal.natCast_ne_top _]
   have he :
       (uniformOn (countedSequence p q) (isConditionable_countedSequence p q)
-        staysPositive).toReal = ((p - q) / (p + q) : ℝ≥0∞).toReal := by
+        staysPositive).toReal = (((p : ℝ≥0∞) - q) / ((p : ℝ≥0∞) + q)).toReal := by
     rw [ballot_toReal_div _ p q hd]
     simpa only [hs] using ballot_problem' q p qp
   have hzero : (p : ℝ≥0∞) + q ≠ 0 := by exact_mod_cast hd.ne'
   have hnum : (p : ℝ≥0∞) - q ≠ ⊤ :=
     (tsub_le_self.trans_lt (ENNReal.natCast_ne_top p).lt_top).ne
   exact (ENNReal.toReal_eq_toReal_iff' (measure_lt_top _ _).ne
-    (ENNReal.div_ne_top hnum hzero)).mp he
+    (by simpa only [ENNReal.checkedDiv_eq_div] using ENNReal.div_ne_top hnum hzero)).mp he
 
 end Ballot

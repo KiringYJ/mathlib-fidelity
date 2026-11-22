@@ -49,9 +49,15 @@ namespace ZMod
 /-- If `p` is odd, pairing each factor above `(p - 1) / 2` with its negative gives
 `(p - 1)! = (-1) ^ ((p - 1) / 2) * (((p - 1) / 2)!) ^ 2` in `ZMod p`. -/
 theorem factorial_eq_neg_one_pow_mul_half_factorial_sq {p : ℕ} (hp : Odd p) :
-    ((p - 1)! : ZMod p) = (-1) ^ ((p - 1) / 2) * (((p - 1) / 2)! : ZMod p) ^ 2 := by
-  rw [pow_two, ← Nat.factorial_mul_descFactorial (show (p - 1) / 2 ≤ p - 1 by lia),
-    show p - 1 - (p - 1) / 2 = (p - 1) / 2 by grind, Nat.cast_mul,
+    ((p - 1)! : ZMod p) =
+      (-1) ^ Nat.euclideanDiv (p - 1) 2 * ((Nat.euclideanDiv (p - 1) 2)! : ZMod p) ^ 2 := by
+  have hhalf : 2 * Nat.euclideanDiv (p - 1) 2 = p - 1 := by
+    rw [Nat.euclideanDiv_eq_core]
+    apply Nat.mul_div_cancel'
+    obtain ⟨k, rfl⟩ := hp
+    simp
+  rw [pow_two, ← Nat.factorial_mul_descFactorial (show Nat.euclideanDiv (p - 1) 2 ≤ p - 1 by lia),
+    show p - 1 - Nat.euclideanDiv (p - 1) 2 = Nat.euclideanDiv (p - 1) 2 by grind, Nat.cast_mul,
     cast_descFactorial (by lia), mul_rotate']
 
 variable (p : ℕ) [Fact p.Prime]
@@ -86,14 +92,16 @@ theorem wilsons_lemma : ((p - 1)! : ZMod p) = -1 := by
   · rintro a -; simp only [cast_id, natCast_val]
 
 variable {p} in
-/-- Let `p` be prime with `p % 4 ≠ 3`. Then `((p - 1) / 2)!` is a specified square root of `-1`
-in `ZMod p`. -/
+/-- Let `p` be prime with `p % 4 ≠ 3`. The factorial of half of `p - 1` is a specified square root
+of `-1` in `ZMod p`. -/
 theorem half_factorial_sq_eq_neg_one (hp : p % 4 ≠ 3) :
-    (((p - 1) / 2)! : ZMod p) ^ 2 = -1 := by
+    ((Nat.euclideanDiv (p - 1) 2)! : ZMod p) ^ 2 = -1 := by
   rcases (Fact.out (p := p.Prime)).eq_two_or_odd' with rfl | hodd
-  · decide +revert
+  · rw [Nat.euclideanDiv_eq_core]
+    decide +revert
   have hp_mod_two : p % 2 = 1 := Nat.odd_iff.mp hodd
-  have hm : Even ((p - 1) / 2) := Nat.even_iff.mpr (by lia)
+  have hm : Even (Nat.euclideanDiv (p - 1) 2) :=
+    Nat.even_iff.mpr (by rw [Nat.euclideanDiv_eq_core]; lia)
   rw [← wilsons_lemma p, factorial_eq_neg_one_pow_mul_half_factorial_sq hodd,
     hm.neg_one_pow, one_mul]
 

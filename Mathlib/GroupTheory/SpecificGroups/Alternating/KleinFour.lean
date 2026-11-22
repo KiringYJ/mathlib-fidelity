@@ -89,7 +89,8 @@ theorem mem_kleinFour_of_order_two_pow (hα4 : Nat.card α = 4) {g : Perm α}
       replace h : t = 0 := by simpa [h1 ▸ ht, Multiset.mem_replicate] using h
       simp [ht, h, Units.ext_iff]
   rw [← Multiset.eq_replicate_card] at h2
-  rw [h2, Multiset.sum_replicate, smul_eq_mul, ← Nat.le_div_iff_mul_le two_pos] at h1
+  rw [h2, Multiset.sum_replicate, smul_eq_mul] at h1
+  have : g.cycleType.card ≤ 2 := by omega
   interval_cases g.cycleType.card <;> simp [h2, Units.ext_iff] at hg0 ⊢
 
 theorem card_of_card_eq_four (hα4 : Nat.card α = 4) :
@@ -98,7 +99,7 @@ theorem card_of_card_eq_four (hα4 : Nat.card α = 4) :
     rw [← Finite.one_lt_card_iff_nontrivial, hα4]
     simp
   rw [nat_card_alternatingGroup, hα4]
-  decide
+  exact Nat.euclideanDiv_eq_of_remainder (r := 0) (by decide) (by decide) (by decide)
 
 theorem card_two_sylow_of_card_eq_four (hα4 : Nat.card α = 4) (S : Sylow 2 (alternatingGroup α)) :
     Nat.card S = 4 := by
@@ -125,8 +126,11 @@ theorem coe_two_sylow_of_card_eq_four
     refine (card_two_sylow_of_card_eq_four hα4 S).trans_ge ?_
     rw [Nat.card_eq_card_toFinset, Set.toFinset_union, Set.toFinset_singleton, Set.toFinset_ofPred]
     apply (Finset.card_union_le _ _).trans
-    rw [Finset.card_singleton, AlternatingGroup.card_of_cycleType, ← Nat.card_eq_fintype_card, hα4]
-    decide
+    rw [Finset.card_singleton]
+    have h := AlternatingGroup.card_of_cycleType_mul_eq α {2, 2}
+    rw [← Nat.card_eq_fintype_card, hα4] at h
+    change _ * 8 = 24 at h
+    omega
 
 theorem two_sylow_eq_kleinFour_of_card_eq_four
     (hα4 : Nat.card α = 4) (S : Sylow 2 (alternatingGroup α)) :

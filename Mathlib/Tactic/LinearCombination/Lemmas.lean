@@ -127,8 +127,6 @@ theorem smul_const_lt_weak [Semiring K] [PartialOrder K]
 
 /-! ### Division -/
 
-theorem div_eq_const [Div α] (p : a = b) (c : α) : a / c = b / c := p ▸ rfl
-
 theorem div_le_const [Semifield α] [LinearOrder α] [IsStrictOrderedRing α]
     (p : b ≤ c) {a : α} (ha : 0 ≤ a) (hu : IsUnit a) :
     Checked.div b a hu ≤ Checked.div c a hu :=
@@ -259,14 +257,6 @@ def smulConstRelData : Ineq.WithStrictness → Name
   | .le => ``smul_const_le
   | .lt true => ``smul_const_lt
   | .lt false => ``smul_const_lt_weak
-
-/-- Given an (in)equality, look up the lemma to divide it by a constant.  If relevant, also take
-into account the degree of positivity which can be proved of the constant: strict or non-strict. -/
-def divRelConstData : Ineq.WithStrictness → Name
-  | .eq => ``div_eq_const
-  | .le => ``div_le_const
-  | .lt true => ``div_lt_const
-  | .lt false => ``div_lt_const_weak
 
 /-- Given two (in)equalities `P` and `Q`, look up the lemma to deduce `Q` from `P`, and the relation
 appearing in the side condition produced by this lemma. -/

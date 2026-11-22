@@ -50,8 +50,9 @@ theorem coe_floor (q : ℚ≥0) : ↑⌊q⌋₊ = ⌊(q : ℚ)⌋ := Int.natCast
 @[simp, norm_cast]
 theorem coe_ceil (q : ℚ≥0) : ↑⌈q⌉₊ = ⌈(q : ℚ)⌉ := Int.natCast_ceil_eq_ceil q.coe_nonneg
 
-protected theorem floor_def (q : ℚ≥0) : ⌊q⌋₊ = q.num / q.den := by
-  rw [← Int.natCast_inj, NNRat.coe_floor, Rat.floor_def', Int.natCast_ediv, den_coe, num_coe]
+protected theorem floor_def (q : ℚ≥0) : ⌊q⌋₊ = Nat.euclideanDiv q.num q.den q.den_ne_zero := by
+  rw [← Int.natCast_inj, NNRat.coe_floor, Rat.floor_def']
+  simp only [Int.euclideanDiv_eq_core, Nat.euclideanDiv_eq_core, Int.natCast_ediv, den_coe, num_coe]
 
 section Semifield
 
@@ -93,7 +94,7 @@ end Field
 
 @[norm_cast]
 theorem floor_natCast_div_natCast (n d : ℕ) {hd : IsUnit (d : ℚ≥0)} :
-    ⌊(↑n / ↑d : ℚ≥0)⌋₊ = n / d := by
+    ⌊(n : ℚ≥0) / (d : ℚ≥0)⌋₊ = Nat.euclideanDiv n d (Nat.cast_ne_zero.mp hd.ne_zero) := by
   rw [← floor_coe, coe_div]
   simp only [coe_natCast]
   exact Rat.natFloor_natCast_div_natCast n d

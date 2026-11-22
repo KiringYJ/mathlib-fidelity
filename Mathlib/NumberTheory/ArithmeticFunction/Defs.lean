@@ -265,7 +265,16 @@ theorem mul_smul' (f g : ArithmeticFunction R) (h : ArithmeticFunction M) :
 set_option backward.isDefEq.respectTransparency.types false in
 theorem one_smul' (b : ArithmeticFunction M) : (1 : ArithmeticFunction R) • b = b := by
   ext x
-  simp_all [← map_div_right_divisors, sum_eq_single 1]
+  by_cases hx : x = 0; · simp [hx]
+  rw [smul_apply, sum_eq_single (1, x)]
+  · simp
+  · rintro ⟨i, j⟩ hij hne
+    by_cases hi : i = 1
+    · subst i
+      have hj : j = x := by simpa using (mem_divisorsAntidiagonal.mp hij).1
+      exact (hne (by simp [hj])).elim
+    · simp [one_apply_ne hi]
+  · simp [hx]
 
 end Module
 
@@ -278,7 +287,16 @@ instance instMonoid : Monoid (ArithmeticFunction R) where
   one_mul := one_smul'
   mul_one f := by
     ext x
-    simp_all [← map_div_left_divisors, sum_eq_single 1]
+    by_cases hx : x = 0; · simp [hx]
+    rw [mul_apply, sum_eq_single (x, 1)]
+    · simp
+    · rintro ⟨i, j⟩ hij hne
+      by_cases hj : j = 1
+      · subst j
+        have hi : i = x := by simpa using (mem_divisorsAntidiagonal.mp hij).1
+        exact (hne (by simp [hi])).elim
+      · simp [one_apply_ne hj]
+    · simp [hx]
   mul_assoc := mul_smul'
 
 instance instSemiring : Semiring (ArithmeticFunction R) where
@@ -360,7 +378,8 @@ def dirichletInverseFun (n : ℕ) : R :=
   else if n = 1 then ⅟(f 1)
   else - ⅟(f 1) * ∑ d : n.properDivisors,
     have : d < n := (Nat.mem_properDivisors.mp d.2).2
-    f (n / d) * dirichletInverseFun d
+    f (Nat.euclideanDiv n d.val (Nat.pos_of_mem_properDivisors d.property).ne') *
+      dirichletInverseFun d
 
 @[simp]
 theorem dirichletInverseFun_apply_zero : dirichletInverseFun f hf 0 = 0 := by
@@ -373,9 +392,10 @@ theorem dirichletInverseFun_apply_one : dirichletInverseFun f hf 1 = ⅟(f 1) :=
 @[simp]
 theorem dirichletInverseFun_apply_ne {n : ℕ} (hn0 : n ≠ 0) (hn1 : n ≠ 1) :
     dirichletInverseFun f hf n =
-      - ⅟(f 1) * ∑ d ∈ n.properDivisors, f (n / d) * dirichletInverseFun f hf d := by
+      - ⅟(f 1) * ∑ d : n.properDivisors,
+        f (Nat.euclideanDiv n d.val (Nat.pos_of_mem_properDivisors d.property).ne') *
+          dirichletInverseFun f hf d := by
   rw [dirichletInverseFun, ite_eq_right hn0, ite_eq_right hn1]
-  conv_rhs => rw [← Finset.sum_attach, Finset.attach_eq_univ]
 
 /-- Given an inverse of `f 1`, construct the Dirichlet inverse of `f`. -/
 @[simp]
@@ -390,10 +410,24 @@ theorem self_mul_dirichletInverse (f : ArithmeticFunction R) (hf : Invertible (f
   · simp [hn0]
   by_cases hn1 : n = 1
   · simp [hn1]
+  let term (d : ℕ) := if hd : d = 0 then 0
+    else f (Nat.euclideanDiv n d hd) * dirichletInverseFun f hf d
+  have sum_terms (s : Finset ℕ) (hs : ∀ d ∈ s, d ≠ 0) :
+      (∑ d ∈ s.attach,
+        f (Nat.euclideanDiv n d.val (hs _ d.property)) * dirichletInverseFun f hf d) =
+        ∑ d ∈ s, term d := by
+    rw [← Finset.sum_attach s term]
+    exact sum_congr rfl fun d _ ↦ by simp only [term, dite_eq_right (hs _ d.property)]
   rw [dirichletInverse, mul_apply, coe_mk,
     Nat.sum_divisorsAntidiagonal' fun x y ↦ f x * dirichletInverseFun f hf y,
-    ← Nat.cons_self_properDivisors hn0]
-  simp [hn0, hn1, pos_of_ne_zero]
+    sum_terms n.divisors (fun _ hd ↦ (Nat.pos_of_mem_divisors hd).ne'),
+    ← Nat.cons_self_properDivisors hn0, sum_cons]
+  rw [show term n = f 1 * dirichletInverseFun f hf n by
+    simp [term, hn0, Nat.euclideanDiv_eq_core, Nat.div_self (Nat.pos_of_ne_zero hn0)],
+    dirichletInverseFun_apply_ne _ _ hn0 hn1,
+    ← n.properDivisors.attach_eq_univ,
+    sum_terms n.properDivisors (fun _ hd ↦ (Nat.pos_of_mem_properDivisors hd).ne')]
+  simp [hn1]
 
 end Ring
 
@@ -470,10 +504,11 @@ theorem prod_primeFactors [CommMonoidWithZero R] {f : ArithmeticFunction R}
     prod_primeFactors_of_squarefree hl]
 
 theorem map_div_of_coprime [GroupWithZero R] {f : ArithmeticFunction R}
-    (hf : IsMultiplicative f) {l d : ℕ} (hdl : d ∣ l) (hl : (l / d).Coprime d) (hd : f d ≠ 0) :
-    f (l / d) = f l / f d := by
+    (hf : IsMultiplicative f) {l d : ℕ} (hdl : d ∣ l) (hd : f d ≠ 0)
+    (hl : (Nat.euclideanDiv l d (fun h ↦ hd (h ▸ f.map_zero))).Coprime d) :
+    f (Nat.euclideanDiv l d (fun h ↦ hd (h ▸ f.map_zero))) = Checked.div (f l) (f d) hd.isUnit := by
   apply (div_eq_of_eq_mul ..).symm
-  rw [← hf.right hl, Nat.div_mul_cancel hdl]
+  rw [← hf.right hl, Nat.euclideanDiv_eq_core, Nat.div_mul_cancel hdl]
 
 @[arith_mult]
 theorem natCast {f : ArithmeticFunction ℕ} [Semiring R] (h : f.IsMultiplicative) :

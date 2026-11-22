@@ -69,8 +69,8 @@ namespace ENNReal
 private theorem lintegral_rpow_div_add_rpow_div_eq_one_of_lintegral_rpow_eq_one {p q : ℝ}
     (hpq : p.HolderConjugate q) {f g : α → ℝ≥0∞} (hf : AEMeasurable f μ)
     (hf_norm : ∫⁻ a, f a ^ p ∂μ = 1) (hg_norm : ∫⁻ a, g a ^ q ∂μ = 1) :
-    ∫⁻ a, f a ^ p / .ofReal p + g a ^ q / .ofReal q ∂μ = 1 := by
-  simp_rw [div_eq_mul_inv]
+    ∫⁻ a, ENNReal.div (f a ^ p) (.ofReal p) + ENNReal.div (g a ^ q) (.ofReal q) ∂μ = 1 := by
+  simp_rw [ENNReal.div_eq_mul_inv]
   rw [lintegral_add_left' (by fun_prop), lintegral_mul_const'' _ (hf.pow_const p),
     lintegral_mul_const', hf_norm, hg_norm, one_mul, one_mul, hpq.inv_add_inv_ennreal]
   simp [hpq.symm.pos]

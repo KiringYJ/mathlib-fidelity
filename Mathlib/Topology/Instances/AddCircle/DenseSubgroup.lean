@@ -29,7 +29,7 @@ theorem dense_addSubgroupClosure_pair_iff {a b : ℝ} {hb : IsUnit b} :
   have hb₀ : b ≠ 0 := hb.ne_zero
   constructor
   · rintro hd ⟨r, hr⟩
-    refine not_denseRange_zsmul (a := b / r.den) <| hd.mono ?_
+    refine not_denseRange_zsmul (a := b / (r.den : ℝ)) <| hd.mono ?_
     rw [← AddSubgroup.coe_zmultiples, SetLike.coe_subset_coe, AddSubgroup.closure_le,
       AddSubgroup.coe_zmultiples, pair_subset_iff]
     refine ⟨⟨r.num, ?_⟩, r.den, ?_⟩

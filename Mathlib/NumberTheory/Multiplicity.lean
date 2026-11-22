@@ -128,7 +128,7 @@ theorem odd_sq_dvd_geom_sum₂_sub (hp : Odd p) :
           ((Finset.sum (range p) (fun (x : ℕ) ↦ (x : ℕ)))) := by simp only [Nat.cast_sum]
       simp only [add_eq_right, ← Finset.mul_sum, this]
       norm_cast
-      simp only [Finset.sum_range_id]
+      simp only [Finset.sum_range_id, Nat.euclideanDiv_eq_core]
       norm_cast
       simp only [Nat.cast_mul, map_mul,
           Nat.mul_div_assoc p (even_iff_two_dvd.mp (Nat.Odd.sub_odd hp odd_one))]

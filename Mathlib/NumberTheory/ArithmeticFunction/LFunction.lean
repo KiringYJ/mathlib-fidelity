@@ -160,7 +160,7 @@ theorem ofPowerSeries_pow {q : ℕ} (hq : 1 < q) {k : ℕ} (hk : k ≠ 0) (f : P
     split_ifs with hn
     · obtain ⟨j, rfl⟩ := hn
       rw [pow_mul, ofPowerSeries_apply_pow (one_lt_pow' hq hk)]
-      simp [hk]
+      simp
     · rw [ofPowerSeries_apply (one_lt_pow' hq hk), Function.extend_apply', Pi.zero_apply]
       simp_rw [← pow_mul, Nat.pow_right_inj hq, eq_comm, ← dvd_def]
       exact hn

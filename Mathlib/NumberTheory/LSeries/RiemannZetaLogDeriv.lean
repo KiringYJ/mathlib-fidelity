@@ -77,7 +77,7 @@ theorem logDeriv_riemannZeta_one_sub {s : ℂ} (hs : ∀ n : ℤ, s ≠ n)
         (by exact existsUnique_hasDerivAt_riemannZeta _)
         (by exact riemannZeta_one_sub_isUnit hs hz.isUnit) +
         log (2 * π) - digamma s (by exact regular_of_not_int hs) +
-          π / 2 * tan (π * s / 2) (by exact cos_pi_mul_div_two_ne_zero_of_not_int hs) := by
+          (π : ℂ) / 2 * tan (π * s / 2) (by exact cos_pi_mul_div_two_ne_zero_of_not_int hs) := by
   have h0 : s ≠ 0 := by simpa using hs 0
   have h1 := ne_one_of_not_int hs
   have h1' := one_sub_ne_one_of_not_int hs
@@ -107,16 +107,16 @@ theorem logDeriv_riemannZeta_one_sub {s : ℂ} (hs : ∀ n : ℤ, s ≠ n)
     change HasDerivAt P (P s * log (2 * π) * (-1)) s at hh
     convert hh using 1
     ring
-  have dC : HasDerivAt C (-(π / 2 : ℂ) * sin (π * s / 2)) s := by
+  have dC : HasDerivAt C (-((π : ℂ) / 2) * sin (π * s / 2)) s := by
     have h := ((hasDerivAt_id' s).const_mul (π : ℂ)).div_const (2 : ℂ)
       (hd := (two_ne_zero : (2 : ℂ) ≠ 0).isUnit)
     have hd := HasDerivAt.comp (h := fun z : ℂ ↦ π * z / 2) (coord' := id) s
       (hasDerivAt_cos (π * s / 2)) h
-    change HasDerivAt C (-sin (π * s / 2) * (π * 1 / 2)) s at hd
+    change HasDerivAt C (-sin (π * s / 2) * ((π : ℂ) * 1 / 2)) s at hd
     convert hd using 1
     ring
   let dF := (2 * (-(log (2 * π)) * P s) * Gamma s + 2 * P s * deriv Gamma s) * C s +
-    2 * P s * Gamma s * (-(π / 2 : ℂ) * sin (π * s / 2))
+    2 * P s * Gamma s * (-((π : ℂ) / 2) * sin (π * s / 2))
   have hdΓ := (differentiableAt_Gamma s (regular_of_not_int hs)).hasDerivAt
   have hdF : HasDerivAt F dF s :=
     ((dP.const_mul 2).fun_mul hdΓ).fun_mul dC
@@ -130,7 +130,8 @@ theorem logDeriv_riemannZeta_one_sub {s : ℂ} (hs : ∀ n : ℤ, s ≠ n)
   have hlogarithmic :
       -(deriv riemannZeta₁ (1 - s) / riemannZeta₁ (1 - s)) + (s - 1)⁻¹ =
         s⁻¹ - log (2 * π) + deriv Gamma s / Gamma s -
-          π / 2 * (sin (π * s / 2) / cos (π * s / 2)) + deriv riemannZeta₁ s / riemannZeta₁ s := by
+          (π : ℂ) / 2 * (sin (π * s / 2) / cos (π * s / 2)) +
+          deriv riemannZeta₁ s / riemannZeta₁ s := by
     calc
       _ = (deriv riemannZeta₁ (1 - s) * (-1) * (s - 1) + riemannZeta₁ (1 - s)) /
           (riemannZeta₁ (1 - s) * (s - 1)) := by field

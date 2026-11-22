@@ -32,7 +32,8 @@ theorem tendsto_fib_succ_div_fib_atTop :
   have h₁ : (1 : ℝ) ≤ (fib (n : ℕ) : ℝ) := by
     exact_mod_cast Nat.succ_le_of_lt (Nat.fib_pos.mpr (Nat.pos_of_ne_zero n.property))
   have hn : (fib (n : ℕ) : ℝ) ≠ 0 := (zero_lt_one.trans_le h₁).ne'
-  have he : (fib ((n : ℕ) + 1) / fib (n : ℕ) : ℝ) - φ = ψ ^ (n : ℕ) / fib (n : ℕ) := by
+  have he : (fib ((n : ℕ) + 1) : ℝ) / (fib (n : ℕ) : ℝ) - φ =
+      ψ ^ (n : ℕ) / (fib (n : ℕ) : ℝ) := by
     apply eq_div_iff.2
     rw [sub_mul, div_mul_cancel₀, fib_succ_sub_goldenRatio_mul_fib]
   rw [he, Real.norm_eq_abs, abs_div, abs_pow, div_le_iff₀ (abs_pos.mpr hn)]
@@ -40,7 +41,8 @@ theorem tendsto_fib_succ_div_fib_atTop :
 
 /-- The limit of `fib n / fib (n + 1)` as `n → ∞` is the negative conjugate of the golden ratio. -/
 theorem tendsto_fib_div_fib_succ_atTop :
-    Tendsto (fun n ↦ (fib n / fib (n + 1) : ℝ)) atTop (𝓝 (-ψ)) := by
+    Tendsto (fun n ↦ Checked.div (fib n : ℝ) (fib (n + 1) : ℝ)
+      (Nat.cast_ne_zero.mpr (Nat.fib_pos.mpr (Nat.succ_pos n)).ne').isUnit) atTop (𝓝 (-ψ)) := by
   have hnum (n : {n : ℕ // n ≠ 0}) : (fib ((n : ℕ) + 1) : ℝ) ≠ 0 :=
     Nat.cast_ne_zero.mpr (Nat.fib_pos.mpr (Nat.succ_pos _)).ne'
   have hinv := tendsto_fib_succ_div_fib_atTop.inv₀

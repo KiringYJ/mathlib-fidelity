@@ -121,14 +121,14 @@ lemma card_edgeFinset_between_verts_le (hr_pos : 0 < r) (ht'_pos : 0 < t') :
 
 This is an auxiliary lemma for the Erdős-Stone theorem. -/
 lemma mul_le_card_filter_mul (hr_pos : 0 < r) (ht'_pos : 0 < t')
-    (hδ : G.minDegree ≥ (1 - 1 / r + ε) * n)
+    (hδ : G.minDegree ≥ (1 - 1 / (r : ℝ) + ε) * n)
     {N : ℕ} (hN : (N + r * t') * (t' - t) ≤ n * (r * t' * ε - t)) :
     (N * (t' - t) : ℝ) ≤ (#(filter K t) * (t' - t) : ℝ) :=
   calc (N * (t' - t) : ℝ)
     _ ≤ n * (r * t' * ε - t) - r * t' * (t' - t) := by
         rw [← add_sub_cancel_right (N : ℝ) (r * t' : ℝ), sub_mul]
         exact sub_le_sub_right hN _
-    _ = #K.verts * ((1 - 1 / r + ε) * n - #K.verts)
+    _ = #K.verts * ((1 - 1 / (r : ℝ) + ε) * n - #K.verts)
       - (n - #K.verts) * (#K.verts - (t' - t)) := by
         conv_rhs => rw [sub_eq_add_neg, ← neg_mul, neg_sub, sub_mul, mul_sub, ← add_sub_assoc,
           mul_sub, ← add_sub_assoc, sub_add_cancel, sub_right_comm, ← mul_assoc, ← mul_rotate,
@@ -162,7 +162,7 @@ are least `t` vertices in the fiber `ErdosStone.filter.pi A · = y`.
 
 This is an auxiliary theorem for the Erdős-Stone theorem. -/
 theorem filter.pi.exists_le_card_fiber (hr_pos : 0 < r) (ht'_pos : 0 < t')
-    (ht_lt_t' : t < t') (hδ : G.minDegree ≥ (1 - 1 / r + ε) * n)
+    (ht_lt_t' : t < t') (hδ : G.minDegree ≥ (1 - 1 / (r : ℝ) + ε) * n)
     (hN : (t'.choose t ^ r * t + r * t') * (t' - t) ≤ n * (r * t' * ε - t)) :
     ∃ y : K.parts.pi (·.powersetCard t), t ≤ #{ w | filter.pi K w = y } := by
   have : Nonempty (K.parts.pi (·.powersetCard t)) := by
@@ -196,7 +196,7 @@ This is the minimal-degree version of the **Erdős-Stone theorem**. -/
 public theorem eventually_completeEquipartiteGraph_isContained_of_minDegree
     {ε : ℝ} (hε : 0 < ε) (r t : ℕ) (hr : r ≠ 0) :
     ∀ᶠ n in atTop, ∀ {G : SimpleGraph (Fin n)} [DecidableRel G.Adj],
-      G.minDegree ≥ (1 - 1 / r + ε) * n
+      G.minDegree ≥ (1 - 1 / (r : ℝ) + ε) * n
         → completeEquipartiteGraph (r + 1) t ⊑ G := by
   rcases eq_or_ne t 0 with h0 | ht_pos
   · rw [eventually_atTop]
@@ -207,14 +207,14 @@ public theorem eventually_completeEquipartiteGraph_isContained_of_minDegree
   · have hr_pos : 0 < r := Nat.pos_of_ne_zero hr
     rw [← Nat.pos_iff_ne_zero] at ht_pos
     -- choose `t'` larger than `t / (r * ε)`
-    let t' := ⌊t / (r * ε)⌋₊ + 1
+    let t' := ⌊(t : ℝ) / ((r : ℝ) * ε)⌋₊ + 1
     have ht_lt_rt'ε : t < r * t' * ε := by
       rw [mul_comm (r : ℝ) (t' : ℝ), mul_assoc, ← div_lt_iff₀ (by positivity), Nat.cast_add_one]
-      exact Nat.lt_floor_add_one (t / (r * ε))
+      exact Nat.lt_floor_add_one ((t : ℝ) / ((r : ℝ) * ε))
     have ht'_pos : 0 < t' := by positivity
     -- `G` contains a `completeEquipartiteGraph r t'` when `n` is large enough
     have ⟨N', ih⟩ : ∃ N', ∀ n ≥ N', ∀ {G : SimpleGraph (Fin n)} [DecidableRel G.Adj],
-        G.minDegree ≥ (1 - 1 / r + ε) * n → completeEquipartiteGraph r t' ⊑ G := by
+        G.minDegree ≥ (1 - 1 / (r : ℝ) + ε) * n → completeEquipartiteGraph r t' ⊑ G := by
       rcases eq_or_ne r 1 with hr_eq_1 | hr_ne_1
       -- if `r = 1` then `completeEquipartiteGraph r t' = ⊥`
       · refine ⟨t', fun n hn {G} _ _ ↦ ?_⟩
@@ -223,19 +223,20 @@ public theorem eventually_completeEquipartiteGraph_isContained_of_minDegree
         exact hn
       -- if `r > 1` then `G` satisfies the inductive hypothesis
       · -- choose `ε'` to ensure `G.minDegree` is large enough
-        let ε' := 1 / (↑(r - 1) * r) + ε
+        have hr₁ : IsUnit ((r - 1 : ℕ) : ℝ) := (Nat.cast_ne_zero.mpr (by omega)).isUnit
+        have hr₀ : IsUnit (r : ℝ) := (Nat.cast_ne_zero.mpr hr).isUnit
+        let ε' := 1 / (((r - 1 : ℕ) : ℝ) * (r : ℝ)) + ε
         have hε' : 0 < ε' := by positivity
         have ⟨N', ih⟩ := eventually_atTop.mp <|
           eventually_completeEquipartiteGraph_isContained_of_minDegree hε' (r - 1) t' (by omega)
         refine ⟨N', fun n hn {G} _ hδ ↦ ?_⟩
-        have hr₁ : IsUnit ((r - 1 : ℕ) : ℝ) := (Nat.cast_ne_zero.mpr (by omega)).isUnit
-        have hr₀ : IsUnit (r : ℝ) := (Nat.cast_ne_zero.mpr hr).isUnit
-        have hsub : (1 / ↑(r - 1) - 1 / r : ℝ) = 1 / (↑(r - 1) * r) := by
+        have hsub : (1 / ((r - 1 : ℕ) : ℝ) - 1 / (r : ℝ)) =
+            1 / (((r - 1 : ℕ) : ℝ) * (r : ℝ)) := by
           have h1 : (r : ℝ) - ↑(r - 1) = 1 := by rw [Nat.cast_pred hr_pos, sub_sub_cancel]
           rw [← one_div_mul_sub_mul_one_div_eq_one_div_add_one_div (ha := hr₁) (hb := hr₀), h1,
             mul_one, one_div_mul_one_div₀]
-        have hδ' : G.minDegree ≥ (1 - 1 / ↑(r - 1) + ε') * n := by
-          have key : (1 - 1 / ↑(r - 1) + ε' : ℝ) = 1 - 1 / r + ε := by
+        have hδ' : G.minDegree ≥ (1 - 1 / ((r - 1 : ℕ) : ℝ) + ε') * n := by
+          have key : (1 - 1 / ((r - 1 : ℕ) : ℝ) + ε' : ℝ) = 1 - 1 / (r : ℝ) + ε := by
             simp only [ε', ← hsub]
             ring
           rw [key]
@@ -244,7 +245,9 @@ public theorem eventually_completeEquipartiteGraph_isContained_of_minDegree
         exact ih n hn hδ'
     -- choose `N` at least `(t'.choose t ^ r * t + r * t') * (t '- t) / (r * t' * ε - t)` to
     -- satisfy the pigeonhole principle
-    let N := max (max 1 N') ⌈(t'.choose t ^ r * t + r * t') * (t' - t) / (r * t' * ε - t)⌉₊
+    have hgap : 0 < r * t' * ε - t := sub_pos.mpr ht_lt_rt'ε
+    let N := max (max 1 N')
+      ⌈(((t'.choose t : ℝ) ^ r * t + r * t') * ((t' : ℝ) - t)) / (r * t' * ε - t)⌉₊
     refine eventually_atTop.mpr ⟨N, fun n hn {G} _ hδ ↦ ?_⟩
     have : Nonempty (Fin n) := by
       rw [← Fin.pos_iff_nonempty]

@@ -43,7 +43,9 @@ theorem Prime.eq_two_or_odd {p : ℕ} (hp : Prime p) : p = 2 ∨ p % 2 = 1 :=
     ((hp.eq_one_or_self_of_dvd 2 (dvd_of_mod_eq_zero h)).resolve_left (by decide)).symm
 
 theorem Prime.eq_two_or_odd' {p : ℕ} (hp : Prime p) : p = 2 ∨ Odd p :=
-  Or.imp_right (fun h => ⟨p / 2, (div_add_mod p 2).symm.trans (congr_arg _ h)⟩) hp.eq_two_or_odd
+  hp.eq_two_or_odd.imp_right fun h ↦
+    ⟨Nat.euclideanDiv p 2,
+      (Nat.euclideanDiv_mul_add_mod p 2 (by decide)).symm.trans (congr_arg _ h)⟩
 
 section
 
@@ -261,16 +263,13 @@ theorem eq_one_iff_not_exists_prime_dvd {n : ℕ} : n = 1 ↔ ∀ p : ℕ, p.Pri
 theorem succ_dvd_or_succ_dvd_of_succ_sum_dvd_mul {p : ℕ} (p_prime : Prime p) {m n k l : ℕ}
     (hpm : p ^ k ∣ m) (hpn : p ^ l ∣ n) (hpmn : p ^ (k + l + 1) ∣ m * n) :
     p ^ (k + 1) ∣ m ∨ p ^ (l + 1) ∣ n := by
-  have hpd : p ^ (k + l) * p ∣ m * n := by
-      let hpmn' : p ^ (succ (k + l)) ∣ m * n := hpmn
-      rwa [pow_succ'] at hpmn'
-  have hpd2 : p ∣ m * n / p ^ (k + l) := dvd_div_of_mul_dvd hpd
-  have hpd3 : p ∣ m * n / (p ^ k * p ^ l) := by simpa [pow_add] using hpd2
-  have hpd4 : p ∣ m / p ^ k * (n / p ^ l) := by simpa [Nat.div_mul_div_comm hpm hpn] using hpd3
-  have hpd5 : p ∣ m / p ^ k ∨ p ∣ n / p ^ l :=
-    (Prime.dvd_mul p_prime).1 hpd4
-  suffices p ^ k * p ∣ m ∨ p ^ l * p ∣ n by rwa [_root_.pow_succ, _root_.pow_succ]
-  exact hpd5.elim (fun h : p ∣ m / p ^ k => Or.inl <| mul_dvd_of_dvd_div hpm h)
-    fun h : p ∣ n / p ^ l => Or.inr <| mul_dvd_of_dvd_div hpn h
+  obtain ⟨a, rfl⟩ := hpm
+  obtain ⟨b, rfl⟩ := hpn
+  have hd : p ^ (k + l) * p ∣ p ^ (k + l) * (a * b) := by
+    simpa only [pow_succ, pow_add, Nat.mul_assoc, Nat.mul_left_comm, Nat.mul_comm] using hpmn
+  have hp := (Nat.mul_dvd_mul_iff_left (Nat.pow_pos p_prime.pos)).1 hd
+  rcases p_prime.dvd_mul.mp hp with ha | hb
+  · exact Or.inl (by simpa only [pow_succ] using Nat.mul_dvd_mul_left (p ^ k) ha)
+  · exact Or.inr (by simpa only [pow_succ] using Nat.mul_dvd_mul_left (p ^ l) hb)
 
 end Nat

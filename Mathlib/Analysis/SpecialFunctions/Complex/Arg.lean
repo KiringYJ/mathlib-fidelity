@@ -201,10 +201,10 @@ theorem arg_mul_real {r : ℝ} (hr : 0 < r) (x : ℂ) : arg (x * r) = arg x :=
   mul_comm x r ▸ arg_real_mul x hr
 
 theorem arg_eq_arg_iff {x y : ℂ} (hx : x ≠ 0) (hy : y ≠ 0) :
-    arg x = arg y ↔ (‖y‖ / ‖x‖ : ℂ) * x = y := by
+    arg x = arg y ↔ ((‖y‖ / ‖x‖ : ℝ) : ℂ) * x = y := by
   simp only [ext_norm_arg_iff, norm_mul, norm_div, norm_real, norm_norm,
     div_mul_cancel₀, true_and]
-  rw [← ofReal_div, arg_real_mul]
+  rw [arg_real_mul]
   exact div_pos (norm_pos_iff.mpr hy) (norm_pos_iff.mpr hx)
 
 @[simp] lemma arg_one : arg 1 = 0 := by simp [arg, zero_le_one]

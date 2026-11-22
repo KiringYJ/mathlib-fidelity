@@ -108,10 +108,10 @@ theorem support_expand :
   rw [expand, MvPowerSeries.support_expand]
 
 theorem coeff_expand {n : ℕ} :
-    (φ.expand p hp).coeff n = if p ∣ n then φ.coeff (n / p) else 0 := by
+    (φ.expand p hp).coeff n = if p ∣ n then φ.coeff (Nat.euclideanDiv n p hp) else 0 := by
   split_ifs with h
   · obtain ⟨q, hq⟩ := h
-    rw [hq, coeff_expand_mul, Nat.mul_div_cancel_left _ (p.pos_of_ne_zero hp)]
+    rw [hq, coeff_expand_mul, Nat.euclideanDiv_mul_left_cancel]
   exact coeff_expand_of_not_dvd p hp _ h
 
 @[simp]

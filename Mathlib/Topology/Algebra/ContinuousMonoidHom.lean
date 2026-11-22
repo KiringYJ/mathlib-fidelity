@@ -271,7 +271,10 @@ instance : CommGroup (ContinuousMonoidHom A E) where
   __ : CommMonoid (ContinuousMonoidHom A E) := inferInstance
   inv f := (inv E).comp f
   inv_mul_cancel f := ext fun x => inv_mul_cancel (f x)
-  div f g := .comp ⟨divMonoidHom, continuous_div'⟩ (f.prod g)
+  div f g := .comp ⟨divMonoidHom, by
+    change Continuous fun p : E × E => p.1 / p.2
+    simpa only [div_eq_mul_inv, Function.comp_apply] using continuous_mul.comp₂ continuous_fst
+      (continuous_inv.comp continuous_snd)⟩ (f.prod g)
   div_eq_mul_inv f g := ext fun x => div_eq_mul_inv (f x) (g x)
 
 end CommGroup

@@ -658,14 +658,19 @@ theorem finprod_mul_distrib (hf : HasFiniteMulSupport f) (hg : HasFiniteMulSuppo
     rintro ⟨hf, hg⟩
     simp [hf, hg]
 
-/-- If the multiplicative supports of `f` and `g` are finite, then the product of `f i / g i`
-equals the product of `f i` divided by the product of `g i`. -/
-@[to_additive
-      /-- If the additive supports of `f` and `g` are finite, then the sum of `f i - g i`
-      equals the sum of `f i` minus the sum of `g i`. -/]
+/-- The product of `f i * (g i)⁻¹` equals the product of `f i` times the inverse
+of the product of `g i`, when both multiplicative supports are finite. -/
 theorem finprod_div_distrib [DivisionCommMonoid G] {f g : α → G} (hf : HasFiniteMulSupport f)
-    (hg : HasFiniteMulSupport g) : ∏ᶠ i, f i / g i = (∏ᶠ i, f i) / ∏ᶠ i, g i := by
-  simp only [div_eq_mul_inv, finprod_mul_distrib hf <| hg.fun_inv, finprod_inv_distrib]
+    (hg : HasFiniteMulSupport g) :
+    (∏ᶠ i, f i * (g i)⁻¹) = (∏ᶠ i, f i) * (∏ᶠ i, g i)⁻¹ := by
+  simp only [finprod_mul_distrib hf hg.fun_inv, finprod_inv_distrib]
+
+/-- If the additive supports of `f` and `g` are finite, the sum of `f i - g i`
+equals the sum of `f i` minus the sum of `g i`. -/
+theorem finsum_sub_distrib [SubtractionCommMonoid G] {f g : α → G} (hf : HasFiniteSupport f)
+    (hg : HasFiniteSupport g) :
+    (∑ᶠ i, (f i - g i)) = (∑ᶠ i, f i) - (∑ᶠ i, g i) := by
+  simp only [sub_eq_add_neg, finsum_add_distrib hf hg.fun_neg, finsum_neg_distrib]
 
 /-- A more general version of `finprod_mem_mul_distrib` that only requires `s ∩ mulSupport f` and
 `s ∩ mulSupport g` rather than `s` to be finite. -/
@@ -764,14 +769,17 @@ theorem finprod_mem_inv_distrib [DivisionCommMonoid G] (f : α → G) (hs : s.Fi
     (∏ᶠ x ∈ s, (f x)⁻¹) = (∏ᶠ x ∈ s, f x)⁻¹ :=
   ((MulEquiv.inv G).map_finprod_mem f hs).symm
 
-/-- Given a finite set `s`, the product of `f i / g i` over `i ∈ s` equals the product of `f i`
-over `i ∈ s` divided by the product of `g i` over `i ∈ s`. -/
-@[to_additive
-      /-- Given a finite set `s`, the sum of `f i / g i` over `i ∈ s` equals the sum of `f i`
-      over `i ∈ s` minus the sum of `g i` over `i ∈ s`. -/]
+/-- Over a finite set `s`, the product of `f i * (g i)⁻¹` equals the product of `f i`
+times the inverse of the product of `g i`. -/
 theorem finprod_mem_div_distrib [DivisionCommMonoid G] (f g : α → G) (hs : s.Finite) :
-    ∏ᶠ i ∈ s, f i / g i = (∏ᶠ i ∈ s, f i) / ∏ᶠ i ∈ s, g i := by
-  simp only [div_eq_mul_inv, finprod_mem_mul_distrib hs, finprod_mem_inv_distrib g hs]
+    (∏ᶠ i ∈ s, f i * (g i)⁻¹) = (∏ᶠ i ∈ s, f i) * (∏ᶠ i ∈ s, g i)⁻¹ := by
+  simp only [finprod_mem_mul_distrib hs, finprod_mem_inv_distrib g hs]
+
+/-- Over a finite set `s`, the sum of `f i - g i` equals the sum of `f i`
+minus the sum of `g i`. -/
+theorem finsum_mem_sub_distrib [SubtractionCommMonoid G] (f g : α → G) (hs : s.Finite) :
+    (∑ᶠ i ∈ s, (f i - g i)) = (∑ᶠ i ∈ s, f i) - (∑ᶠ i ∈ s, g i) := by
+  simp only [sub_eq_add_neg, finsum_mem_add_distrib hs, finsum_mem_neg_distrib g hs]
 
 /-!
 ### `∏ᶠ x ∈ s, f x` and set operations

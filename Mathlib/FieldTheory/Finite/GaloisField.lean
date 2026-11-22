@@ -227,7 +227,9 @@ section norm
 variable [Algebra K K'] [Finite K']
 
 theorem algebraMap_norm_eq_pow {x : K'} :
-    algebraMap K K' (Algebra.norm K x) = x ^ ((Nat.card K' - 1) / (Nat.card K - 1)) := by
+    algebraMap K K' (Algebra.norm K x) = x ^ Nat.euclideanDiv (Nat.card K' - 1) (Nat.card K - 1) (by
+      have := Finite.of_injective _ (algebraMap K K').injective
+      exact (Nat.sub_pos_of_lt Finite.one_lt_card).ne') := by
   have := Finite.of_injective _ (algebraMap K K').injective
   have := Fintype.ofFinite K
   have := Fintype.ofFinite K'
@@ -241,6 +243,7 @@ variable (K K')
 theorem unitsMap_norm_surjective : Function.Surjective (Units.map <| Algebra.norm K (S := K')) :=
   have := Finite.of_injective_finite_range (algebraMap K K').injective
   MonoidHom.surjective_of_card_ker_le_div _ <| by
+    rw [Nat.euclideanDiv_eq_core]
     simp_rw [Nat.card_units]
     classical
     have := Fintype.ofFinite K'ˣ
@@ -251,7 +254,8 @@ theorem unitsMap_norm_surjective : Function.Surjective (Units.map <| Algebra.nor
               _) <|
           Nat.sub_pos_of_lt Finite.one_lt_card
     rw [← Set.ncard_coe_finset, ← SetLike.coe_sort_coe, Nat.card_coe_set_eq]; congr 1; ext
-    simp [Units.ext_iff, ← (algebraMap K K').injective.eq_iff, algebraMap_norm_eq_pow]
+    simp [Units.ext_iff, ← (algebraMap K K').injective.eq_iff, algebraMap_norm_eq_pow,
+      Nat.euclideanDiv_eq_core]
 
 theorem norm_surjective : Function.Surjective (Algebra.norm K (S := K')) := fun k ↦ by
   obtain rfl | ne := eq_or_ne k 0

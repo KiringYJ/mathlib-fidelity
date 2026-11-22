@@ -173,7 +173,7 @@ theorem bernoulli'PowerSeries_mul_exp_sub_one :
   cases n with | zero => simp | succ n =>
   rw [bernoulli'PowerSeries, coeff_mul, mul_comm X, sum_antidiagonal_succ']
   suffices (∑ p ∈ antidiagonal n,
-      bernoulli' p.1 / p.1! * ((p.2 + 1) * p.2! : ℚ)⁻¹) = (n ! : ℚ)⁻¹ by
+      bernoulli' p.1 / (p.1! : ℚ) * ((p.2 + 1) * p.2! : ℚ)⁻¹) = (n ! : ℚ)⁻¹ by
     simpa [map_sum, Nat.factorial, Rat.fraction_eq_div, one_div₀, div_eq_mul_inv₀] using
       congr_arg (algebraMap ℚ A) this
   apply eq_inv_of_mul_eq_one_left₀ (hb := (Nat.cast_ne_zero.mpr (factorial_ne_zero n)).isUnit)
@@ -260,7 +260,7 @@ theorem sum_bernoulli (n : ℕ) :
   cases n with
   | zero => simp
   | succ n =>
-  suffices (∑ i ∈ range n, ↑((n + 2).choose (i + 2)) * bernoulli (i + 2)) = n / 2 by
+  suffices (∑ i ∈ range n, ↑((n + 2).choose (i + 2)) * bernoulli (i + 2)) = (n : ℚ) / 2 by
     simp only [this, sum_range_succ', cast_succ, bernoulli_one, bernoulli_zero, choose_one_right,
       mul_one, choose_zero_right, cast_zero, ite_false, zero_add, succ_succ_ne_one]
     ring
@@ -275,7 +275,7 @@ theorem sum_bernoulli (n : ℕ) :
     ring
 
 theorem bernoulli_spec' (n : ℕ) :
-    (∑ k ∈ antidiagonal n, ((k.1 + k.2).choose k.2 : ℚ) / (k.2 + 1) * bernoulli k.1) =
+    (∑ k ∈ antidiagonal n, ((k.1 + k.2).choose k.2 : ℚ) / (k.2 + 1 : ℚ) * bernoulli k.1) =
       if n = 0 then 1 else 0 := by
   cases n with | zero => simp | succ n =>
   rw [ite_eq_right (succ_ne_zero _)]
@@ -314,15 +314,16 @@ See https://proofwiki.org/wiki/Faulhaber%27s_Formula and [orosi2018faulhaber] fo
 the proof provided here. -/
 theorem sum_range_pow (n p : ℕ) :
     (∑ k ∈ range n, (k : ℚ) ^ p) =
-      ∑ i ∈ range (p + 1), bernoulli i * ((p + 1).choose i) * (n : ℚ) ^ (p + 1 - i) / (p + 1) := by
+      ∑ i ∈ range (p + 1),
+        bernoulli i * ((p + 1).choose i) * (n : ℚ) ^ (p + 1 - i) / (p + 1 : ℚ) := by
   have hne : ∀ m : ℕ, (m ! : ℚ) ≠ 0 := fun m => mod_cast factorial_ne_zero m
   -- compute the Cauchy product of two power series
   have h_cauchy :
-    ((mk fun p => bernoulli p / p !) * mk fun q => coeff (q + 1) (exp ℚ ^ n)) =
+    ((mk fun p => bernoulli p / (p ! : ℚ)) * mk fun q => coeff (q + 1) (exp ℚ ^ n)) =
       mk fun p => ∑ i ∈ range (p + 1),
-          bernoulli i * (p + 1).choose i * (n : ℚ) ^ (p + 1 - i) / (p + 1)! := by
+          bernoulli i * (p + 1).choose i * (n : ℚ) ^ (p + 1 - i) / ((p + 1)! : ℚ) := by
     ext q : 1
-    let f a b := bernoulli a / a ! * coeff (b + 1) (exp ℚ ^ n)
+    let f a b := bernoulli a / (a ! : ℚ) * coeff (b + 1) (exp ℚ ^ n)
     -- key step: use `PowerSeries.coeff_mul` and then rewrite sums
     simp only [f, coeff_mul, coeff_mk, sum_antidiagonal_eq_sum_range_succ f]
     apply sum_congr rfl
@@ -340,11 +341,12 @@ theorem sum_range_pow (n p : ℕ) :
   have hps :
     (∑ k ∈ range n, (k : ℚ) ^ p) =
       (∑ i ∈ range (p + 1),
-          bernoulli i * (p + 1).choose i * (n : ℚ) ^ (p + 1 - i) / (p + 1)!) * p ! := by
+          bernoulli i * (p + 1).choose i * (n : ℚ) ^ (p + 1 - i) / ((p + 1)! : ℚ)) * p ! := by
     suffices
       (mk fun p => ∑ k ∈ range n, (k : ℚ) ^ p * algebraMap ℚ ℚ p !⁻¹) =
         mk fun p =>
-          ∑ i ∈ range (p + 1), bernoulli i * (p + 1).choose i * (n : ℚ) ^ (p + 1 - i) / (p + 1)! by
+          ∑ i ∈ range (p + 1),
+            bernoulli i * (p + 1).choose i * (n : ℚ) ^ (p + 1 - i) / ((p + 1)! : ℚ) by
       rw [← div_eq_iff (hb := (hne p).isUnit), div_eq_mul_inv₀, sum_mul]
       rw [PowerSeries.ext_iff] at this
       simpa using this p
@@ -378,12 +380,13 @@ $$\sum_{k=1}^{n} k^p = \sum_{i=0}^p (-1)^iB_i\binom{p+1}{i}\frac{n^{p+1-i}}{p+1}
 Deduced from `sum_range_pow`. -/
 theorem sum_Ico_pow (n p : ℕ) :
     (∑ k ∈ Ico 1 (n + 1), (k : ℚ) ^ p) =
-      ∑ i ∈ range (p + 1), bernoulli' i * (p + 1).choose i * (n : ℚ) ^ (p + 1 - i) / (p + 1) := by
+      ∑ i ∈ range (p + 1),
+        bernoulli' i * (p + 1).choose i * (n : ℚ) ^ (p + 1 - i) / (p + 1 : ℚ) := by
   simp only [← Nat.cast_succ]
   -- dispose of the trivial case
   cases p with | zero => simp | succ p =>
-  let f i := bernoulli i * p.succ.succ.choose i * (n : ℚ) ^ (p.succ.succ - i) / p.succ.succ
-  let f' i := bernoulli' i * p.succ.succ.choose i * (n : ℚ) ^ (p.succ.succ - i) / p.succ.succ
+  let f i := bernoulli i * p.succ.succ.choose i * (n : ℚ) ^ (p.succ.succ - i) / (p.succ.succ : ℚ)
+  let f' i := bernoulli' i * p.succ.succ.choose i * (n : ℚ) ^ (p.succ.succ - i) / (p.succ.succ : ℚ)
   suffices (∑ k ∈ Ico 1 n.succ, (k : ℚ) ^ p.succ) = ∑ i ∈ range p.succ.succ, f' i by convert!
     this
   -- prove some algebraic facts that will make things easier for us later on
@@ -477,7 +480,7 @@ private lemma prod_one_div_prime_den_coprime (k : ℕ) {p : ℕ} [Fact p.Prime] 
 plus the rest. -/
 private lemma sum_one_div_prime_eq_indicator_div_add {k p : ℕ} (hk : k > 0) [Fact p.Prime] :
     (∑ q ∈ vonStaudtPrimes k, Rat.fraction 1 q.val q.prop.ne_zero) =
-    vonStaudtIndicator (2 * k) p / p + ∑ q ∈ vonStaudtPrimes k with q ≠ ⟨p, Fact.out⟩,
+    vonStaudtIndicator (2 * k) p / (p : ℚ) + ∑ q ∈ vonStaudtPrimes k with q ≠ ⟨p, Fact.out⟩,
       Rat.fraction 1 q.val q.prop.ne_zero := by
   let q : {p : ℕ // p.Prime} := ⟨p, Fact.out⟩
   rw [Finset.filter_ne' (vonStaudtPrimes k) q]
@@ -495,9 +498,9 @@ private lemma sum_one_div_prime_eq_indicator_div_add {k p : ℕ} (hk : k > 0) [F
 
 /- If the `p`-adic valuation of `M` is at most `N`, then `p^N / M` is `p`-integral. -/
 private lemma pIntegral_pow_div {p M N : ℕ} [Fact p.Prime] (hM : M ≠ 0)
-    (hv : M.factorization p ≤ N) : pIntegral p ((p : ℚ) ^ N / M) := by
+    (hv : M.factorization p ≤ N) : pIntegral p ((p : ℚ) ^ N / (M : ℚ)) := by
   set e := M.factorization p
-  set M' := M / p ^ e
+  set M' := M.ordCompl p
   have hM'_cop : M'.Coprime p := (Nat.coprime_ordCompl Fact.out hM).symm
   have hp_ne : (p : ℚ) ≠ 0 := Nat.cast_ne_zero.mpr (Nat.Prime.ne_zero Fact.out)
   -- Rewrite p^N / M as p^(N-e) / M' where M' = M / p^e is coprime to p
@@ -507,12 +510,12 @@ private lemma pIntegral_pow_div {p M N : ℕ} [Fact p.Prime] (hM : M ≠ 0)
     apply hM
     rw [← hdecomp, h, Nat.mul_zero]
   have hM_eq : (M : ℚ) = ↑(p ^ e) * ↑M' := by rw [← hdecomp]; simp
-  have hrw : (p : ℚ) ^ N / M = (p : ℚ) ^ (N - e) / M' := by
+  have hrw : (p : ℚ) ^ N / (M : ℚ) = (p : ℚ) ^ (N - e) / (M' : ℚ) := by
     apply div_eq_iff.mpr
     calc
       (p : ℚ) ^ N = (p : ℚ) ^ (N - e) * p ^ e := by rw [← pow_add, Nat.sub_add_cancel hv]
-      _ = ((p : ℚ) ^ (N - e) / M') * M' * p ^ e := by rw [div_mul_cancel₀]
-      _ = ((p : ℚ) ^ (N - e) / M') * M := by rw [hM_eq, Nat.cast_pow]; ring
+      _ = ((p : ℚ) ^ (N - e) / (M' : ℚ)) * M' * p ^ e := by rw [div_mul_cancel₀]
+      _ = ((p : ℚ) ^ (N - e) / (M' : ℚ)) * M := by rw [hM_eq, Nat.cast_pow]; ring
   have hM'_eq : ((p : ℚ) ^ (N - e) / (M' : ℚ)) =
       Rat.fraction (p ^ (N - e) : ℤ) M' hM'_nz := by
     simp only [Rat.fraction_eq_div, Int.cast_pow, Int.cast_natCast]
@@ -543,7 +546,7 @@ private lemma factorization_succ_le_sub_one {p d : ℕ} [Fact p.Prime] (hd : d �
 /- Multiplicative variant of the binomial coefficient denominator rewrite
 as in Rado's summand. -/
 private lemma choose_two_mul_succ_mul_div_eq {k m : ℕ} (x : ℚ) (hm_lt : m < k) :
-    ((2 * k + 1).choose (2 * m) : ℚ) * x / (2 * k + 1) =
+    ((2 * k + 1).choose (2 * m) : ℚ) * x / (2 * k + 1 : ℚ) =
     ((2 * k).choose (2 * m) : ℚ) * x / ((2 * k - 2 * m + 1 : ℕ) : ℚ) := by
   rw [div_eq_div_iff, mul_right_comm _ x, mul_right_comm _ x]
   refine congrArg (· * x) ?_
@@ -562,19 +565,19 @@ private lemma pIntegral_choose_mul_pow_div {k m p : ℕ} [Fact p.Prime]
 /- Uses the induction hypothesis on `B_{2m} + e_{2m}(p)/p`
 to prove `p`-integrality of the even term. -/
 private lemma pIntegral_bernoulli_even_term {k m p : ℕ} (hm_lt : m < k) [Fact p.Prime]
-    (ih : pIntegral p (bernoulli (2 * m) + vonStaudtIndicator (2 * m) p / p)) :
+    (ih : pIntegral p (bernoulli (2 * m) + vonStaudtIndicator (2 * m) p / (p : ℚ))) :
     pIntegral p (bernoulli (2 * m) * ((2 * k + 1).choose (2 * m)) *
-      (p : ℚ) ^ (2 * k - 2 * m) / (2 * k + 1)) := by
+      (p : ℚ) ^ (2 * k - 2 * m) / (2 * k + 1 : ℚ)) := by
   have hp_ne : (p : ℚ) ≠ 0 := mod_cast (Nat.Prime.ne_zero Fact.out)
   set P := (p : ℚ) ^ (2 * k - 2 * m - 1)
   have hpow : (p : ℚ) ^ (2 * k - 2 * m) = P * p := by
     rw [show 2 * k - 2 * m = (2 * k - 2 * m - 1) + 1 by lia, pow_succ]
   have hdecomp : bernoulli (2 * m) * ((2 * k + 1).choose (2 * m)) *
-      (p : ℚ) ^ (2 * k - 2 * m) / (2 * k + 1) =
-    (bernoulli (2 * m) + vonStaudtIndicator (2 * m) p / p) *
-      ((2 * k + 1).choose (2 * m)) * (p : ℚ) ^ (2 * k - 2 * m) / (2 * k + 1) -
+      (p : ℚ) ^ (2 * k - 2 * m) / (2 * k + 1 : ℚ) =
+    (bernoulli (2 * m) + vonStaudtIndicator (2 * m) p / (p : ℚ)) *
+      ((2 * k + 1).choose (2 * m)) * (p : ℚ) ^ (2 * k - 2 * m) / (2 * k + 1 : ℚ) -
     vonStaudtIndicator (2 * m) p * ((2 * k + 1).choose (2 * m)) *
-      P / (2 * k + 1) := by rw [hpow]; field_simp [hp_ne]; ring
+      P / (2 * k + 1 : ℚ) := by rw [hpow]; field_simp [hp_ne]; ring
   rw [hdecomp]
   have hcmp := pIntegral_choose_mul_pow_div (k := k) (m := m) (p := p) (by lia)
   have H x := choose_two_mul_succ_mul_div_eq x hm_lt
@@ -594,9 +597,10 @@ private lemma pIntegral_bernoulli_even_term {k m p : ℕ} (hm_lt : m < k) [Fact 
 
 /- The full remainder sum in Faulhaber's formula is `p`-integral. -/
 private lemma pIntegral_faulhaber_sum {k p : ℕ} (hk : k > 0) [Fact p.Prime]
-    (ih : ∀ m, 0 < m → m < k → pIntegral p (bernoulli (2 * m) + vonStaudtIndicator (2 * m) p / p)) :
+    (ih : ∀ m, 0 < m → m < k →
+      pIntegral p (bernoulli (2 * m) + vonStaudtIndicator (2 * m) p / (p : ℚ))) :
     pIntegral p (∑ i ∈ range (2 * k),
-      bernoulli i * ((2 * k + 1).choose i) * p ^ (2 * k - i) / (2 * k + 1)) := by
+      bernoulli i * ((2 * k + 1).choose i) * p ^ (2 * k - i) / (2 * k + 1 : ℚ)) := by
   refine (Rat.padicValuation p).map_sum_le fun i hi ↦ ?_
   rw [Finset.mem_range] at hi
   rcases i with _ | _ | i
@@ -604,7 +608,7 @@ private lemma pIntegral_faulhaber_sum {k p : ℕ} (hk : k > 0) [Fact p.Prime]
     exact_mod_cast pIntegral_pow_div (by lia)
       (factorization_succ_le_sub_one (by lia) |>.trans tsub_le_self)
   · have hterm : bernoulli 1 * ((2 * k + 1).choose 1 : ℚ) * (p : ℚ) ^ (2 * k - 1) /
-        (2 * k + 1) = -((p : ℚ) ^ (2 * k - 1) / 2) := by
+        (2 * k + 1 : ℚ) = -((p : ℚ) ^ (2 * k - 1) / 2) := by
       rw [Nat.choose_one_right, bernoulli_one]
       push_cast
       field_simp
@@ -625,7 +629,7 @@ private lemma pIntegral_faulhaber_sum {k p : ℕ} (hk : k > 0) [Fact p.Prime]
 private lemma sum_pow_filter_eq_faulhaber {k : ℕ} (p : ℕ) (hk : 0 < k) :
     (∑ v ∈ Ico 1 p, (v : ℚ) ^ (2 * k)) =
       (∑ i ∈ range (2 * k), bernoulli i * ((2 * k + 1).choose i) *
-        (p : ℚ) ^ (2 * k + 1 - i) / (2 * k + 1)) + p * bernoulli (2 * k) := by
+        (p : ℚ) ^ (2 * k + 1 - i) / (2 * k + 1 : ℚ)) + p * bernoulli (2 * k) := by
   have hfilter : (∑ v ∈ Ico 1 p, (v : ℚ) ^ (2 * k)) = ∑ v ∈ range p, (v : ℚ) ^ (2 * k) := by
     cases p <;> simp [Finset.sum_range_eq_add_Ico, show 2 * k ≠ 0 by lia]
   rw [hfilter, sum_range_pow, Finset.sum_range_succ, Nat.choose_succ_self_right,
@@ -648,9 +652,9 @@ private lemma faulhaber_sum_div_prime_eq {k p : ℕ} [Fact p.Prime] :
 /- Rearranges the Faulhaber identity and power-sum congruence to isolate
 `bernoulli (2*k) + vonStaudtIndicator (2*k) p / p`. -/
 private lemma bernoulli_add_indicator_eq_sub {k p : ℕ} (hk : k > 0) [Fact p.Prime] :
-    ∃ T : ℤ, bernoulli (2 * k) + vonStaudtIndicator (2 * k) p / p =
+    ∃ T : ℤ, bernoulli (2 * k) + vonStaudtIndicator (2 * k) p / (p : ℚ) =
       T - (∑ i ∈ range (2 * k),
-        bernoulli i * ((2 * k + 1).choose i) * (p : ℚ) ^ (2 * k - i) / (2 * k + 1)) := by
+        bernoulli i * ((2 * k + 1).choose i) * (p : ℚ) ^ (2 * k - i) / (2 * k + 1 : ℚ)) := by
   have hcast : (↑((∑ v ∈ Ico 1 p, (v : ℤ) ^ (2 * k)) +
       (if (p - 1) ∣ 2 * k then 1 else 0)) : ZMod p) = 0 :=
     mod_cast sum_pow_add_indicator_eq_zero (p := p) _
@@ -659,16 +663,16 @@ private lemma bernoulli_add_indicator_eq_sub {k p : ℕ} (hk : k > 0) [Fact p.Pr
   have hT : (∑ v ∈ Ico 1 p, (v : ℚ) ^ (2 * k)) + vonStaudtIndicator (2 * k) p =
       p * T := by unfold vonStaudtIndicator; exact_mod_cast hT_int
   have hp_ne : (p : ℚ) ≠ 0 := Nat.cast_ne_zero.mpr (Fact.out : p.Prime).ne_zero
-  have hAlg : bernoulli (2 * k) + vonStaudtIndicator (2 * k) p / p =
+  have hAlg : bernoulli (2 * k) + vonStaudtIndicator (2 * k) p / (p : ℚ) =
       T - (∑ i ∈ range (2 * k), bernoulli i * ((2 * k + 1).choose i) *
-        (p : ℚ) ^ (2 * k + 1 - i) / (2 * k + 1)) / p := by
+        (p : ℚ) ^ (2 * k + 1 - i) / (2 * k + 1 : ℚ)) / (p : ℚ) := by
     field_simp [hp_ne]
     linear_combination hT - sum_pow_filter_eq_faulhaber p hk
   rw [hAlg]; congr 1; simpa using faulhaber_sum_div_prime_eq
 
 /- For fixed prime `p`, the denominator of `B_{2k} + e_{2k}(p)/p` is not divisible by `p`. -/
 private lemma not_dvd_den_bernoulli_add_indicator {k p : ℕ} (hk : k > 0) [Fact p.Prime] :
-    ¬ p ∣ (bernoulli (2 * k) + vonStaudtIndicator (2 * k) p / p).den := by
+    ¬ p ∣ (bernoulli (2 * k) + vonStaudtIndicator (2 * k) p / (p : ℚ)).den := by
   induction k using Nat.strong_induction_on with
   | _ k ih =>
     obtain ⟨T, hT⟩ := bernoulli_add_indicator_eq_sub (p := p) hk

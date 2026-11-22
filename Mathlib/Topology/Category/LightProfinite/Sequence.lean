@@ -40,7 +40,7 @@ lemma isClosedEmbedding_natUnionInftyEmbedding : IsClosedEmbedding natUnionInfty
     · rfl
     · exact (one_div_ne_zero h.symm).elim
     · exact (one_div_ne_zero h).elim
-    · change (1 : ℝ) / (n + 1) = 1 / (m + 1) at h
+    · change (1 : ℝ) / (n + 1 : ℝ) = 1 / (m + 1 : ℝ) at h
       have hnm : n = m := by
         simpa only [one_div₀, inv_inj₀, add_left_inj, Nat.cast_inj] using h
       exact congrArg OnePoint.some hnm

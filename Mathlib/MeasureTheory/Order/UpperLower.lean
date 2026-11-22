@@ -61,8 +61,8 @@ that the frontier of an order-connected set is null. -/
 private lemma aux₀
     (h : ∀ δ, 0 < δ →
       ∃ y, closedBall y (δ / 4) ⊆ closedBall x δ ∧ closedBall y (δ / 4) ⊆ interior s) :
-    ¬Tendsto (fun r ↦ volume (closure s ∩ closedBall x r) / volume (closedBall x r)) (𝓝[>] 0)
-        (𝓝 0) := by
+    ¬Tendsto (fun r ↦ ENNReal.div (volume (closure s ∩ closedBall x r)) (volume (closedBall x r)))
+        (𝓝[>] 0) (𝓝 0) := by
   choose f hf₀ hf₁ using h
   intro H
   obtain ⟨ε, -, hε', hε₀⟩ := exists_seq_strictAnti_tendsto_nhdsWithin (0 : ℝ)
@@ -73,8 +73,9 @@ private lemma aux₀
   on_goal 2 =>
     calc
       ENNReal.ofReal (4⁻¹ ^ Fintype.card ι)
-        = volume (closedBall (f (ε n) (hε' n)) (ε n / 4)) / volume (closedBall x (ε n)) := ?_
-      _ ≤ volume (closure s ∩ closedBall x (ε n)) / volume (closedBall x (ε n)) := by
+        = ENNReal.div (volume (closedBall (f (ε n) (hε' n)) (ε n / 4)))
+            (volume (closedBall x (ε n))) := ?_
+      _ ≤ ENNReal.div (volume (closure s ∩ closedBall x (ε n))) (volume (closedBall x (ε n))) := by
         gcongr
         exact subset_inter ((hf₁ _ <| hε' n).trans interior_subset_closure) <| hf₀ _ <| hε' n
     have := hε' n
@@ -90,8 +91,8 @@ that the frontier of an order-connected set is null. -/
 private lemma aux₁
     (h : ∀ δ, 0 < δ →
       ∃ y, closedBall y (δ / 4) ⊆ closedBall x δ ∧ closedBall y (δ / 4) ⊆ interior sᶜ) :
-    ¬Tendsto (fun r ↦ volume (closure s ∩ closedBall x r) / volume (closedBall x r)) (𝓝[>] 0)
-        (𝓝 1) := by
+    ¬Tendsto (fun r ↦ ENNReal.div (volume (closure s ∩ closedBall x r)) (volume (closedBall x r)))
+        (𝓝[>] 0) (𝓝 1) := by
   choose f hf₀ hf₁ using h
   intro H
   obtain ⟨ε, -, hε', hε₀⟩ := exists_seq_strictAnti_tendsto_nhdsWithin (0 : ℝ)
@@ -102,9 +103,9 @@ private lemma aux₁
         fun n ↦ lt_of_le_of_lt' ?_)
   on_goal 2 =>
     calc
-      volume (closure s ∩ closedBall x (ε n)) / volume (closedBall x (ε n))
-        ≤ volume (closedBall x (ε n) \ closedBall (f (ε n) <| hε' n) (ε n / 4)) /
-          volume (closedBall x (ε n)) := by
+      ENNReal.div (volume (closure s ∩ closedBall x (ε n))) (volume (closedBall x (ε n)))
+        ≤ ENNReal.div (volume (closedBall x (ε n) \ closedBall (f (ε n) <| hε' n) (ε n / 4)))
+          (volume (closedBall x (ε n))) := by
         gcongr
         rw [sdiff_eq_compl_inter]
         refine inter_subset_inter_left _ ?_

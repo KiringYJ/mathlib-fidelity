@@ -48,10 +48,10 @@ over `n ≥ 1`. The fact that the sequence indeed tends to this limit is given i
 `Subadditive.tendsto_lim` -/
 @[nolint unusedArguments, irreducible]
 protected def lim (_h : Subadditive u) :=
-  sInf (range fun n : ℕ => u (n + 1) / (n + 1 : ℕ))
+  sInf (range fun n : ℕ => u (n + 1) / ((n + 1 : ℕ) : ℝ))
 
-theorem lim_le_div (hbdd : BddBelow (range fun n : ℕ => u (n + 1) / (n + 1 : ℕ))) {n : ℕ}
-    (hn : n ≠ 0) : h.lim ≤ u n / n := by
+theorem lim_le_div (hbdd : BddBelow (range fun n : ℕ => u (n + 1) / ((n + 1 : ℕ) : ℝ))) {n : ℕ}
+    (hn : n ≠ 0) : h.lim ≤ u n / (n : ℝ) := by
   rw [Subadditive.lim]
   obtain ⟨m, rfl⟩ := Nat.exists_eq_add_one_of_ne_zero hn
   exact csInf_le hbdd ⟨m, rfl⟩
@@ -68,8 +68,8 @@ theorem apply_mul_add_le (k n r) : u (k * n + r) ≤ k * u n + u r := by
       _ = (k + 1 : ℕ) * u n + u r := by simp; ring
 
 include h in
-theorem eventually_div_lt_of_div_lt {L : ℝ} {n : ℕ} (hn : n ≠ 0) (hL : u n / n < L) :
-    ∀ᶠ p in atTop, u (p + 1) / (p + 1 : ℕ) < L := by
+theorem eventually_div_lt_of_div_lt {L : ℝ} {n : ℕ} (hn : n ≠ 0) (hL : u n / (n : ℝ) < L) :
+    ∀ᶠ p in atTop, u (p + 1) / ((p + 1 : ℕ) : ℝ) < L := by
   /- It suffices to prove the statement for each arithmetic progression `(n * · + r)`. -/
   refine .atTop_of_arithmetic hn fun r _ => ?_
   /- Since `u n < L * n`, we have `k * u n + u (r + 1) < L * (k * n + r + 1)` for sufficiently
@@ -88,11 +88,11 @@ theorem eventually_div_lt_of_div_lt {L : ℝ} {n : ℕ} (hn : n ≠ 0) (hL : u n
 
 /-- Fekete's lemma: a subadditive sequence `u` such that `u n / n` is bounded below satisfies
 `u n / n → Subadditive.lim h`. -/
-theorem tendsto_lim (hbdd : BddBelow (range fun n : ℕ => u (n + 1) / (n + 1 : ℕ))) :
-    Tendsto (fun n : ℕ => u (n + 1) / (n + 1 : ℕ)) atTop (𝓝 h.lim) := by
+theorem tendsto_lim (hbdd : BddBelow (range fun n : ℕ => u (n + 1) / ((n + 1 : ℕ) : ℝ))) :
+    Tendsto (fun n : ℕ => u (n + 1) / ((n + 1 : ℕ) : ℝ)) atTop (𝓝 h.lim) := by
   refine tendsto_order.2 ⟨fun l hl => ?_, fun L hL => ?_⟩
   · exact .of_forall fun n => hl.trans_le (h.lim_le_div hbdd n.add_one_ne_zero)
-  · obtain ⟨n, hn⟩ : ∃ n : ℕ, u (n + 1) / (n + 1 : ℕ) < L := by
+  · obtain ⟨n, hn⟩ : ∃ n : ℕ, u (n + 1) / ((n + 1 : ℕ) : ℝ) < L := by
       rw [Subadditive.lim] at hL
       rcases exists_lt_of_csInf_lt (range_nonempty _) hL with ⟨x, ⟨n, rfl⟩, xL⟩
       exact ⟨n, xL⟩

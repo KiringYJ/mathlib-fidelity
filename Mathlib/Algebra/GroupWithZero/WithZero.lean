@@ -236,7 +236,10 @@ theorem coe_unitsWithZeroEquiv_eq_units_val (γ : (WithZero α)ˣ) :
   refine (inv_eq_of_mul_eq_one_right₀ ?_).symm
   rw [← coe_mul, mul_inv_cancel, coe_one]
 
-@[norm_cast] lemma coe_div (a b : α) : ↑(a / b : α) = (a / b : WithZero α) := by
+@[norm_cast] lemma coe_div (a b : α) :
+    (↑(a / b) : WithZero α) =
+      Checked.div (a : WithZero α) (b : WithZero α)
+        (GroupWithZero.isUnit_of_ne_zero coe_ne_zero) := by
   rw [div_eq_mul_inv, coe_mul, coe_inv, div_eq_mul_inv₀]
 
 @[simp, norm_cast] lemma coe_zpow (a : α) (n : ℤ) : ↑(a ^ n) = (↑a : WithZero α) ^ n := by
@@ -393,11 +396,13 @@ lemma logEquiv_unitsMk0 (x : Gᵐ⁰) (hx) : logEquiv (.mk0 x hx) = log x := log
 -- The `simp` lemma pushing `⁻¹` inside `exp` is `WithZero.inv_exp` above.
 lemma exp_neg (a : G) : exp (-a) = (exp a)⁻¹ := (inv_exp a).symm
 
-@[simp] lemma exp_sub (a b : G) : exp (a - b) = exp a / exp b := by
+@[simp] lemma exp_sub (a b : G) :
+    exp (a - b) = Checked.div (exp a) (exp b) (GroupWithZero.isUnit_of_ne_zero exp_ne_zero) := by
   rw [sub_eq_add_neg, exp_add, exp_neg, div_eq_mul_inv₀]
 
 @[simp]
-lemma log_div {x y : Gᵐ⁰} (hx : x ≠ 0) {hy : IsUnit y} : log (x / y) = log x - log y := by
+lemma log_div {x y : Gᵐ⁰} (hx : x ≠ 0) {hy : IsUnit y} :
+    log (Checked.div x y hy) = log x - log y := by
   lift x to Multiplicative G using hx
   lift y to Multiplicative G using hy.ne_zero
   rw [← coe_div]

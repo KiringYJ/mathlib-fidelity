@@ -178,8 +178,8 @@ theorem sum_range_id_mul_two (n : ℕ) : (∑ i ∈ range n, i) * 2 = n * (n - 1
     _ = n * (n - 1) := by rw [sum_const, card_range, Nat.nsmul_eq_mul]
 
 /-- Gauss' summation formula -/
-theorem sum_range_id (n : ℕ) : ∑ i ∈ range n, i = n * (n - 1) / 2 := by
-  rw [← sum_range_id_mul_two n, Nat.mul_div_cancel _ Nat.zero_lt_two]
+theorem sum_range_id (n : ℕ) : ∑ i ∈ range n, i = Nat.euclideanDiv (n * (n - 1)) 2 := by
+  rw [← sum_range_id_mul_two n, Nat.euclideanDiv_mul_right_cancel _ (by decide)]
 
 end GaussSum
 

@@ -210,11 +210,6 @@ instance Metric.unitSphere.instDiv [NormedDivisionRing 𝕜] : Div (sphere (0 : 
       simpa only [mem_sphere_zero_iff_norm.1 x.2, mem_sphere_zero_iff_norm.1 y.coe_prop,
         div_one₀] using norm_div (x : 𝕜) (y : 𝕜) (hb := (ne_zero_of_mem_unit_sphere y).isUnit)
 
-@[simp, norm_cast]
-protected theorem Metric.unitSphere.coe_div [NormedDivisionRing 𝕜] (x y : sphere (0 : 𝕜) 1) :
-    ↑(x / y) = Checked.div (x : 𝕜) (y : 𝕜) (ne_zero_of_mem_unit_sphere y).isUnit :=
-  rfl
-
 instance Metric.unitSphere.instZPow [NormedDivisionRing 𝕜] : Pow (sphere (0 : 𝕜) 1) ℤ where
   pow x n := .mk (Checked.zpow (x : 𝕜) n (fun _ ↦ (ne_zero_of_mem_unit_sphere x).isUnit)) <| by
     apply mem_sphere_zero_iff_norm.2
@@ -277,6 +272,11 @@ instance Metric.unitSphere.instGroup [NormedDivisionRing 𝕜] : Group (sphere (
       rw [(ne_zero_of_mem_unit_sphere x).isUnit.zpow_eq_val_unit_zpow]
       apply congrArg (fun u : 𝕜ˣ ↦ (↑(u ^ n) : 𝕜))
       exact Units.ext rfl
+
+@[simp, norm_cast]
+protected theorem Metric.unitSphere.coe_div [NormedDivisionRing 𝕜] (x y : sphere (0 : 𝕜) 1) :
+    ↑(x / y) = Checked.div (x : 𝕜) (y : 𝕜) (ne_zero_of_mem_unit_sphere y).isUnit :=
+  rfl
 
 instance Metric.sphere.instHasDistribNeg [SeminormedRing 𝕜] [NormMulClass 𝕜] [NormOneClass 𝕜] :
     HasDistribNeg (sphere (0 : 𝕜) 1) :=

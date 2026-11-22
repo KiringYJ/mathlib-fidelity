@@ -222,7 +222,7 @@ private lemma baseOf_root_eq_baseOf_coroot_aux
     replace contra := congr_arg ((2 / l' i)⁻¹ • ·) contra
     have aux (j : ι) (hj : 0 < l j) : (2 / l' i)⁻¹ * (2 / l' j) = l i / l j := by
       ring_nf; simp [hll']
-    simp only [smul_add, smul_smul, aux _ (hl _), div_self, one_smul] at contra
+    simp only [smul_add, smul_smul, aux _ (hl _), div_self, Rat.cast_one, one_smul] at contra
     rw [contra]
     module
   have hjk {l : ι} (hl : 0 < g (P.coroot l)) :

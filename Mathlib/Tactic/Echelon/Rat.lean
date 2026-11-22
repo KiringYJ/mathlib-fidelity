@@ -78,7 +78,7 @@ def ratProducer (R : Expr) : MetaM Producer := do
     one := 1
     mul := (· * ·)
     sub := (· - ·)
-    divExact := (· / ·)
+    divExact := intExactQuotient
     isZero := if p == 0 then (· == 0) else fun v => v % p == 0 }
   let prepare (entries : Array (Array Expr)) :
       MetaM (Array (Array Int) × (BareissData Int → BareissData Int)) := do

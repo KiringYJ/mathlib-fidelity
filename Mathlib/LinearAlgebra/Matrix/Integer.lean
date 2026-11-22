@@ -76,7 +76,7 @@ lemma den_dvd_iff {A : Matrix m n ℚ} {r : ℕ} :
   simp [Matrix.den]
 
 lemma num_div_den (A : Matrix m n ℚ) (i : m) (j : n) :
-    A.num i j / A.den = A i j := by
+    (A.num i j : ℚ) / (A.den : ℚ) = A i j := by
   obtain ⟨k, hk⟩ := den_dvd_iff.mp (dvd_refl A.den) i j
   rw [Matrix.num, map_apply, smul_apply, smul_eq_mul, mul_comm, div_eq_iff, hk, Nat.cast_mul,
     ← mul_assoc, Rat.mul_den_eq_num, ← Int.cast_natCast k, ← Int.cast_mul, Rat.num_intCast]

@@ -259,34 +259,52 @@ theorem gcd_mul_gcd_eq_iff_dvd_mul_of_coprime (hcop : Coprime n m) :
   refine h ▸ Nat.mul_dvd_mul ?_ ?_ <;> exact x.gcd_dvd_right _
   refine (hcop.gcd_both x x).mul_dvd_of_dvd_of_dvd ?_ ?_ <;> exact x.gcd_dvd_left _
 
-lemma div_mul_div (hkm : m ∣ k) (hkn : n ∣ m) : (k / m) * (m / n) = k / n := by
-  rcases n.eq_zero_or_pos with hn | hn
-  · simp [hn]
+lemma div_mul_div (hkm : m ∣ k) (hkn : n ∣ m) (hm : m ≠ 0 := by checked_native_nonzero) :
+    Nat.euclideanDiv k m hm *
+        Nat.euclideanDiv m n (Nat.ne_of_gt (Nat.pos_of_dvd_of_pos hkn (Nat.pos_of_ne_zero hm))) =
+      Nat.euclideanDiv k n (Nat.ne_of_gt (Nat.pos_of_dvd_of_pos hkn (Nat.pos_of_ne_zero hm))) := by
+  have hn := Nat.pos_of_dvd_of_pos hkn (Nat.pos_of_ne_zero hm)
+  simp only [Nat.euclideanDiv_eq_core]
   refine (Nat.div_eq_of_eq_mul_left hn ?_).symm
   rw [mul_assoc, Nat.div_mul_cancel hkn, Nat.div_mul_cancel hkm]
 
-lemma div_dvd_div_left (hkm : m ∣ k) (hkn : n ∣ m) : k / m ∣ k / n :=
+lemma div_dvd_div_left (hkm : m ∣ k) (hkn : n ∣ m) (hm : m ≠ 0 := by checked_native_nonzero) :
+    Nat.euclideanDiv k m hm ∣
+      Nat.euclideanDiv k n (Nat.ne_of_gt (Nat.pos_of_dvd_of_pos hkn (Nat.pos_of_ne_zero hm))) :=
   ⟨_, (div_mul_div hkm hkn).symm⟩
 
-/-- `k / m ∣ k / n` iff `n ∣ m`, when both `m` and `n` divide `k`. -/
+/-- `Nat.euclideanDiv k m ∣ Nat.euclideanDiv k n` iff `n ∣ m`, when both `m` and `n` divide `k`. -/
 lemma div_dvd_div_iff_left (hk : 0 < k) (hmk : m ∣ k) (hnk : n ∣ k) :
-    k / m ∣ k / n ↔ n ∣ m := by
-  grind [Nat.div_div_self, div_dvd_div_left, div_dvd_of_dvd]
+    Nat.euclideanDiv k m (Nat.ne_of_gt (Nat.pos_of_dvd_of_pos hmk hk)) ∣
+      Nat.euclideanDiv k n (Nat.ne_of_gt (Nat.pos_of_dvd_of_pos hnk hk)) ↔ n ∣ m := by
+  constructor
+  · intro h
+    have hn := Nat.pos_of_dvd_of_pos hnk hk
+    have hq := Nat.div_pos (Nat.le_of_dvd hk hnk) hn
+    simp only [Nat.euclideanDiv_eq_core] at h
+    have rev := div_dvd_div_left (Nat.div_dvd_of_dvd hnk) h (Nat.ne_of_gt hq)
+    simpa only [Nat.euclideanDiv_eq_core, Nat.div_div_self hmk (Nat.ne_of_gt hk),
+      Nat.div_div_self hnk (Nat.ne_of_gt hk)] using rev
+  · intro h
+    exact div_dvd_div_left hmk h (Nat.ne_of_gt (Nat.pos_of_dvd_of_pos hmk hk))
 
-/-- `m / k ∣ n / k` iff `m ∣ n`, when `k` divides both `m` and `n`. -/
-lemma div_dvd_div_iff_right (hkm : k ∣ m) (hkn : k ∣ n) : m / k ∣ n / k ↔ m ∣ n := by
-  rcases k.eq_zero_or_pos with rfl | hk
-  · simp_all
-  · rw [← Nat.mul_dvd_mul_iff_left hk, Nat.mul_div_cancel' hkm, Nat.mul_div_cancel' hkn]
+/-- `Nat.euclideanDiv m k ∣ Nat.euclideanDiv n k` iff `m ∣ n`, when `k` divides both `m` and `n`. -/
+lemma div_dvd_div_iff_right (hkm : k ∣ m) (hkn : k ∣ n) (hk : k ≠ 0 := by checked_native_nonzero) :
+    Nat.euclideanDiv m k ∣ Nat.euclideanDiv n k ↔ m ∣ n := by
+  simp only [Nat.euclideanDiv_eq_core]
+  have hk := Nat.pos_of_ne_zero hk
+  rw [← Nat.mul_dvd_mul_iff_left hk, Nat.mul_div_cancel' hkm, Nat.mul_div_cancel' hkn]
 
-lemma div_lcm_eq_div_gcd (hkm : m ∣ k) (hkn : n ∣ k) : (k / m).lcm (k / n) = k / (m.gcd n) := by
+lemma div_lcm_eq_div_gcd (hkm : m ∣ k) (hkn : n ∣ k) (hm : m ≠ 0 := by checked_native_nonzero)
+    (hn : n ≠ 0 := by checked_native_nonzero) :
+    (Nat.euclideanDiv k m).lcm (Nat.euclideanDiv k n) =
+      Nat.euclideanDiv k (m.gcd n) (Nat.gcd_ne_zero_left hm) := by
   rw [Nat.lcm_eq_iff]
   refine ⟨div_dvd_div_left hkm (Nat.gcd_dvd_left m n),
         div_dvd_div_left hkn (Nat.gcd_dvd_right m n), fun c hmc hnc ↦ ?_⟩
-  rcases m.eq_zero_or_pos with hm | hm
-  · simp_all
-  rcases n.eq_zero_or_pos with hn | hn
-  · simp_all
+  have hm := Nat.pos_of_ne_zero hm
+  have hn := Nat.pos_of_ne_zero hn
+  simp only [Nat.euclideanDiv_eq_core] at hmc hnc ⊢
   rw [Nat.div_dvd_iff_dvd_mul hkm hm] at hmc
   rw [Nat.div_dvd_iff_dvd_mul hkn hn] at hnc
   simpa [Nat.div_dvd_iff_dvd_mul (Nat.dvd_trans (Nat.gcd_dvd_left m n) hkm)

@@ -30,11 +30,13 @@ its natural number input. -/
 def bit (b : Bool) (n : Nat) : Nat :=
   cond b (2 * n + 1) (2 * n)
 
-theorem shiftRight_one (n) : n >>> 1 = n / 2 := rfl
+theorem shiftRight_one (n) : n >>> 1 = Nat.euclideanDiv n 2 := by
+  rw [Nat.euclideanDiv_eq_core]
+  rfl
 
 @[simp]
 theorem bit_decide_mod_two_eq_one_shiftRight_one (n : Nat) : bit (n % 2 = 1) (n >>> 1) = n := by
-  simp only [bit, shiftRight_one]
+  simp only [bit, shiftRight_one, Nat.euclideanDiv_eq_core]
   cases mod_two_eq_zero_or_one n with | _ h => simpa [h] using Nat.div_add_mod n 2
 
 theorem bit_testBit_zero_shiftRight_one (n : Nat) : bit (n.testBit 0) (n >>> 1) = n := by
@@ -129,8 +131,8 @@ theorem bit_val (b n) : bit b n = 2 * n + b.toNat := by
   cases b <;> rfl
 
 @[simp]
-theorem bit_div_two (b n) : bit b n / 2 = n := by
-  rw [bit_val, Nat.add_comm, add_mul_div_left, div_eq_of_lt, Nat.zero_add]
+theorem bit_div_two (b n) : Nat.euclideanDiv (bit b n) 2 = n := by
+  rw [Nat.euclideanDiv_eq_core, bit_val, Nat.add_comm, add_mul_div_left, div_eq_of_lt, Nat.zero_add]
   · cases b <;> decide
   · decide
 
@@ -139,8 +141,7 @@ theorem bit_mod_two (b n) : bit b n % 2 = b.toNat := by
   cases b <;> simp [bit_val]
 
 @[simp]
-theorem bit_shiftRight_one (b n) : bit b n >>> 1 = n :=
-  bit_div_two b n
+theorem bit_shiftRight_one (b n) : bit b n >>> 1 = n := by rw [shiftRight_one, bit_div_two]
 
 theorem testBit_bit_zero (b n) : (bit b n).testBit 0 = b := by
   simp

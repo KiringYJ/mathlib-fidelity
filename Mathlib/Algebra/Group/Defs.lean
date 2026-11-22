@@ -50,6 +50,16 @@ section Group
 
 variable [Group G] {a b : G}
 
+@[to_additive AddGroup.neg_eq_zero_sub]
+theorem inv_eq_one_div (x : G) : x⁻¹ = 1 / x := by rw [div_eq_mul_inv, one_mul]
+
+@[to_additive AddGroup.add_sub_assoc]
+theorem mul_div_assoc (a b c : G) : a * b / c = a * (b / c) := by
+  rw [div_eq_mul_inv, div_eq_mul_inv, mul_assoc]
+
+@[to_additive AddGroup.zero_sub, simp]
+theorem one_div (a : G) : 1 / a = a⁻¹ := (inv_eq_one_div a).symm
+
 @[to_additive (attr := simp)]
 theorem inv_mul_cancel (a : G) : a⁻¹ * a = 1 :=
   Group.inv_mul_cancel a

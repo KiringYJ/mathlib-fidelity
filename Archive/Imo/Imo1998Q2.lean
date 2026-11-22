@@ -212,7 +212,7 @@ theorem A_card_lower_bound [Fintype C] {z : ℕ} (hJ : Fintype.card J = 2 * z + 
 end
 
 theorem clear_denominators {a b k : ℕ} (ha : 0 < a) (hb : 0 < b) :
-    (b - 1 : ℚ) / (2 * b) ≤ k / a ↔ ((b : ℕ) - 1) * a ≤ k * (2 * b) := by
+    ((b : ℚ) - 1) / (2 * (b : ℚ)) ≤ (k : ℚ) / (a : ℚ) ↔ ((b : ℕ) - 1) * a ≤ k * (2 * b) := by
   rw [div_le_div_iff₀]
   on_goal 1 => convert! Nat.cast_le (α := ℚ)
   all_goals simp [ha, hb]
@@ -227,7 +227,7 @@ theorem imo1998_q2 [Fintype J] [Fintype C] (a b k : ℕ) (hC : Fintype.card C = 
     (hJ : Fintype.card J = b) (ha : 0 < a) (hb : Odd b)
     (hk : ∀ p : JudgePair J, p.Distinct → (agreedContestants r p).card ≤ k) :
     Checked.div (b - 1 : ℚ) (2 * (b : ℚ))
-        (mul_ne_zero two_ne_zero (Nat.cast_ne_zero.mpr hb.pos.ne')).isUnit ≤ k / a := by
+        (mul_ne_zero two_ne_zero (Nat.cast_ne_zero.mpr hb.pos.ne')).isUnit ≤ (k : ℚ) / (a : ℚ) := by
   rw [clear_denominators ha hb.pos]
   obtain ⟨z, hz⟩ := hb; rw [hz] at hJ; rw [hz]
   have h := le_trans (A_card_lower_bound r hJ) (A_card_upper_bound r hk)

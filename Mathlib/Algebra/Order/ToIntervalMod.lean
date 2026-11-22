@@ -694,8 +694,8 @@ theorem toIcoMod_le_toIocMod (a b : α) : toIcoMod hp a b ≤ toIocMod hp a b :=
   exact zsmul_left_mono hp.le (toIocDiv_wcovBy_toIcoDiv _ _ _).le
 
 theorem toIocMod_le_toIcoMod_add (a b : α) : toIocMod hp a b ≤ toIcoMod hp a b + p := by
-  rw [toIcoMod, toIocMod, sub_add, sub_le_sub_iff_left, sub_le_iff_le_add, ← add_one_zsmul,
-    (zsmul_left_strictMono hp).le_iff_le]
+  rw [toIcoMod, toIocMod, _root_.sub_add, sub_le_sub_iff_left, sub_le_iff_le_add,
+    ← add_one_zsmul, (zsmul_left_strictMono hp).le_iff_le]
   apply (toIocDiv_wcovBy_toIcoDiv _ _ _).le_succ
 
 end IcoIoc

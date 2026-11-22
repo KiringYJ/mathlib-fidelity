@@ -43,8 +43,8 @@ theorem exists_norm_eq_iInf_of_complete_convex {K : Set F} (ne : K.Nonempty) (h�
   -- Step 1: since `δ` is the infimum, can find a sequence `w : ℕ → K` in `K`
   -- such that `‖u - w n‖ < δ + 1 / (n + 1)` (which implies `‖u - w n‖ --> δ`);
   -- maybe this should be a separate lemma
-  have exists_seq : ∃ w : ℕ → K, ∀ n, ‖u - w n‖ < δ + 1 / (n + 1) := by
-    have hδ : ∀ n : ℕ, δ < δ + 1 / (n + 1) := fun n =>
+  have exists_seq : ∃ w : ℕ → K, ∀ n, ‖u - w n‖ < δ + 1 / ((n : ℝ) + 1) := by
+    have hδ : ∀ n : ℕ, δ < δ + 1 / ((n : ℝ) + 1) := fun n =>
       lt_add_of_le_of_pos le_rfl Nat.one_div_pos_of_nat
     have h := fun n => exists_lt_of_ciInf_lt (hδ n)
     let w : ℕ → K := fun n => Classical.choose (h n)
@@ -52,7 +52,7 @@ theorem exists_norm_eq_iInf_of_complete_convex {K : Set F} (ne : K.Nonempty) (h�
   rcases exists_seq with ⟨w, hw⟩
   have norm_tendsto : Tendsto (fun n => ‖u - w n‖) atTop (𝓝 δ) := by
     have h : Tendsto (fun _ : ℕ => δ) atTop (𝓝 δ) := tendsto_const_nhds
-    have h' : Tendsto (fun n : ℕ => δ + 1 / (n + 1)) atTop (𝓝 δ) := by
+    have h' : Tendsto (fun n : ℕ => δ + 1 / ((n : ℝ) + 1)) atTop (𝓝 δ) := by
       convert! h.add tendsto_one_div_add_atTop_nhds_zero_nat
       simp only [add_zero]
     exact tendsto_of_tendsto_of_tendsto_of_le_of_le h h' (fun x => δ_le _) fun x => le_of_lt (hw _)
@@ -60,7 +60,8 @@ theorem exists_norm_eq_iInf_of_complete_convex {K : Set F} (ne : K.Nonempty) (h�
   have seq_is_cauchy : CauchySeq fun n => (w n : F) := by
     rw [cauchySeq_iff_le_tendsto_0]
     -- splits into three goals
-    let b := fun n : ℕ => 8 * δ * (1 / (n + 1)) + 4 * (1 / (n + 1)) * (1 / (n + 1))
+    let b := fun n : ℕ =>
+      8 * δ * (1 / ((n : ℝ) + 1)) + 4 * (1 / ((n : ℝ) + 1)) * (1 / ((n : ℝ) + 1))
     use fun n => √(b n)
     constructor
     -- first goal :  `∀ (n : ℕ), 0 ≤ √(b n)`

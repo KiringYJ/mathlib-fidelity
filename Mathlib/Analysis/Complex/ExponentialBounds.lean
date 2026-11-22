@@ -99,7 +99,7 @@ theorem log_two_lt_d9 : log 2 < 0.6931471808 :=
 
 theorem log_three_near_10 : |log 3 - 109861228867 / 100000000000| ≤ 1 / 10 ^ 10 := by
   suffices |log 3 - 109861228867 / 100000000000| ≤
-      (2 / 3) ^ 71 / 3⁻¹ + (1 / 10 ^ 10 - (2 / 3) ^ 71 / 3⁻¹) by
+      ((2 : ℝ) / 3) ^ 71 / 3⁻¹ + (1 / 10 ^ 10 - ((2 : ℝ) / 3) ^ 71 / 3⁻¹) by
     norm_num1 at *
     assumption
   have t : |2 / 3| = (2 : ℝ) / 3 := by norm_num
@@ -122,7 +122,7 @@ theorem log_four_eq : log 4 = 2 * log 2 := by norm_num [← log_rpow]
 
 theorem log_five_near_10 : |log 5 - 160943791243 / 100000000000| ≤ 1 / 10 ^ 10 := by
   suffices |log 5 - 160943791243 / 100000000000| ≤
-      (4 / 5) ^ 131 / 5⁻¹ + (1 / 10 ^ 10 - (4 / 5) ^ 131 / 5⁻¹) by
+      ((4 : ℝ) / 5) ^ 131 / 5⁻¹ + (1 / 10 ^ 10 - ((4 : ℝ) / 5) ^ 131 / 5⁻¹) by
     norm_num1 at *
     assumption
   have t : |4 / 5| = (4 : ℝ) / 5 := by norm_num

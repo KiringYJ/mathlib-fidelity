@@ -400,10 +400,14 @@ theorem update_inv [∀ i, Inv (f i)] [DecidableEq I] (f₁ : ∀ i, f i) (i : I
     update f₁⁻¹ i x₁⁻¹ = (update f₁ i x₁)⁻¹ :=
   funext fun j => (apply_update (fun _ => Inv.inv) f₁ i x₁ j).symm
 
-@[to_additive]
-theorem update_div [∀ i, Div (f i)] [DecidableEq I] (f₁ f₂ : ∀ i, f i) (i : I) (x₁ : f i)
-    (x₂ : f i) : update (f₁ / f₂) i (x₁ / x₂) = update f₁ i x₁ / update f₂ i x₂ :=
-  funext fun j => (apply_update₂ (fun _ => (· / ·)) f₁ f₂ i x₁ x₂ j).symm
+theorem update_sub [∀ i, Sub (f i)] [DecidableEq I] (f₁ f₂ : ∀ i, f i) (i : I) (x₁ : f i)
+    (x₂ : f i) : update (f₁ - f₂) i (x₁ - x₂) = update f₁ i x₁ - update f₂ i x₂ :=
+  funext fun j => (apply_update₂ (fun _ => (· - ·)) f₁ f₂ i x₁ x₂ j).symm
+
+theorem update_div [∀ i, Group (f i)] [DecidableEq I] (f₁ f₂ : ∀ i, f i) (i : I) (x₁ : f i)
+    (x₂ : f i) : update (f₁ / f₂) i (x₁ / x₂) = update f₁ i x₁ / update f₂ i x₂ := by
+  simpa only [Pi.div_def] using
+    (funext fun j => (apply_update₂ (fun k (x y : f k) => x / y) f₁ f₂ i x₁ x₂ j).symm)
 
 variable [One α] [Nonempty ι] {a : α}
 
@@ -430,11 +434,15 @@ theorem Set.piecewise_inv [∀ i, Inv (f i)] (s : Set I) [∀ i, Decidable (i �
     s.piecewise f₁⁻¹ g₁⁻¹ = (s.piecewise f₁ g₁)⁻¹ :=
   s.piecewise_op f₁ g₁ fun _ x => x⁻¹
 
-@[to_additive]
-theorem Set.piecewise_div [∀ i, Div (f i)] (s : Set I) [∀ i, Decidable (i ∈ s)]
-    (f₁ f₂ g₁ g₂ : ∀ i, f i) :
-    s.piecewise (f₁ / f₂) (g₁ / g₂) = s.piecewise f₁ g₁ / s.piecewise f₂ g₂ :=
-  s.piecewise_op₂ f₁ _ _ _ fun _ => (· / ·)
+theorem Set.piecewise_sub [∀ i, Sub (f i)] (s : Set I) [∀ i, Decidable (i ∈ s)]
+    (f₁ f₂ g₁ g₂ : ∀ i, f i) : s.piecewise (f₁ - f₂) (g₁ - g₂) =
+      s.piecewise f₁ g₁ - s.piecewise f₂ g₂ :=
+  s.piecewise_op₂ f₁ _ _ _ fun _ => (· - ·)
+
+theorem Set.piecewise_div [∀ i, Group (f i)] (s : Set I) [∀ i, Decidable (i ∈ s)]
+    (f₁ f₂ g₁ g₂ : ∀ i, f i) : s.piecewise (f₁ / f₂) (g₁ / g₂) =
+      s.piecewise f₁ g₁ / s.piecewise f₂ g₂ := by
+  simpa only [Pi.div_def] using (s.piecewise_op₂ f₁ g₁ f₂ g₂ fun i (x y : f i) => x / y)
 
 end Piecewise
 

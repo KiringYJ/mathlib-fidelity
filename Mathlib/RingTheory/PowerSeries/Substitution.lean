@@ -257,14 +257,16 @@ theorem constantCoeff_subst (ha : HasSubst a) (f : PowerSeries R) :
 
 @[simp]
 theorem coeff_subst_X_pow {k : ℕ} (hk : k ≠ 0) (f : PowerSeries R) (n : ℕ) :
-    coeff n (subst (X ^ k) f) = ite (k ∣ n) (algebraMap R S (coeff (n / k) f)) 0 := by
+    coeff n (subst (X ^ k) f) =
+      ite (k ∣ n) (algebraMap R S (coeff (Nat.euclideanDiv n k hk) f)) 0 := by
   split_ifs with h
-  · rw [coeff_subst' (.X_pow hk), finsum_eq_single _ (n / k), ← pow_mul, Nat.mul_div_cancel' h,
-      coeff_X_pow_self, Algebra.algebraMap_eq_smul_one]
+  · obtain ⟨q, rfl⟩ := h
+    rw [Nat.euclideanDiv_mul_left_cancel _ hk, coeff_subst' (.X_pow hk), finsum_eq_single _ q,
+      ← pow_mul, coeff_X_pow_self, Algebra.algebraMap_eq_smul_one]
     intro j hj
     rw [← pow_mul, coeff_X_pow, ite_eq_right, smul_zero]
     contrapose hj
-    rw [hj, Nat.mul_div_cancel_left j hk.pos]
+    exact Nat.eq_of_mul_eq_mul_left hk.pos hj.symm
   · rw [coeff_subst' (.X_pow hk), finsum_eq_zero_of_forall_eq_zero]
     intro j
     rw [← pow_mul, coeff_X_pow, ite_eq_right, smul_zero]
@@ -275,7 +277,7 @@ theorem coeff_subst_X_pow {k : ℕ} (hk : k ≠ 0) (f : PowerSeries R) (n : ℕ)
 theorem constantCoeff_subst_X_pow {k : ℕ} (hk : k ≠ 0) (f : PowerSeries R) :
     constantCoeff (subst (X ^ k) f) = algebraMap R S f.constantCoeff := by
   rw [← coeff_zero_eq_constantCoeff, coeff_subst_X_pow hk, ite_eq_left (dvd_zero k),
-    Nat.zero_div, coeff_zero_eq_constantCoeff]
+    Nat.euclideanDiv_eq_core, Nat.zero_div, coeff_zero_eq_constantCoeff]
 
 theorem constantCoeff_subst_of_constantCoeff_zero (ha : a.constantCoeff = 0) (f : PowerSeries R) :
     MvPowerSeries.constantCoeff (subst a f) = algebraMap R S f.constantCoeff := by

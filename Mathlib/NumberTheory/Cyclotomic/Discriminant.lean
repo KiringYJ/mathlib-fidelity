@@ -64,13 +64,14 @@ if `Irreducible (cyclotomic (p ^ (k + 1)) K))`, and `p ^ (k + 1) ≠ 2`. -/
 theorem discr_prime_pow_ne_two [IsCyclotomicExtension {p ^ (k + 1)} K L] [hp : Fact p.Prime]
     (hζ : IsPrimitiveRoot ζ (p ^ (k + 1))) (hirr : Irreducible (cyclotomic (p ^ (k + 1)) K))
     (hk : p ^ (k + 1) ≠ 2) : discr K (hζ.powerBasis K).basis =
-      (-1) ^ ((p ^ (k + 1)).totient / 2) * p ^ (p ^ k * ((p - 1) * (k + 1) - 1)) := by
+      (-1) ^ Nat.euclideanDiv (p ^ (k + 1)).totient 2 * p ^ (p ^ k * ((p - 1) * (k + 1) - 1)) := by
   have hne := IsCyclotomicExtension.neZero' (p ^ (k + 1)) K L
   have mf : Module.Finite K L := finiteDimensional {p ^ (k + 1)} K L
   have se : Algebra.IsSeparable K L := isSeparable {p ^ (k + 1)} K L
   rw [discr_powerBasis_eq_norm, finrank L hirr, hζ.powerBasis_gen _,
     ← hζ.minpoly_eq_cyclotomic_of_irreducible hirr, totient_prime_pow hp.out (succ_pos k),
     Nat.add_one_sub_one]
+  simp only [Nat.euclideanDiv_eq_core]
   have hp2 : p = 2 → k ≠ 0 := by
     rintro rfl rfl
     exact absurd rfl hk
@@ -122,7 +123,7 @@ if `Irreducible (cyclotomic (p ^ (k + 1)) K))`, and `p ^ (k + 1) ≠ 2`. -/
 theorem discr_prime_pow_ne_two' [IsCyclotomicExtension {p ^ (k + 1)} K L] [hp : Fact p.Prime]
     (hζ : IsPrimitiveRoot ζ (p ^ (k + 1))) (hirr : Irreducible (cyclotomic (p ^ (k + 1)) K))
     (hk : p ^ (k + 1) ≠ 2) : discr K (hζ.powerBasis K).basis =
-      (-1) ^ (p ^ k * (p - 1) / 2) * p ^ (p ^ k * ((p - 1) * (k + 1) - 1)) := by
+      (-1) ^ Nat.euclideanDiv (p ^ k * (p - 1)) 2 * p ^ (p ^ k * ((p - 1) * (k + 1) - 1)) := by
   simpa [totient_prime_pow hp.out (succ_pos k)] using discr_prime_pow_ne_two hζ hirr hk
 
 set_option backward.defeqAttrib.useBackward true in
@@ -130,15 +131,15 @@ set_option backward.isDefEq.respectTransparency false in
 /-- If `p` is a prime and `IsCyclotomicExtension {p ^ k} K L`, then the discriminant of
 `hζ.powerBasis K` is `(-1) ^ ((p ^ k).totient / 2) * p ^ (p ^ (k - 1) * ((p - 1) * k - 1))`
 if `Irreducible (cyclotomic (p ^ k) K))`. Beware that in the cases `p ^ k = 1` and `p ^ k = 2`
-the formula uses `1 / 2 = 0` and `0 - 1 = 0`. It is useful only to have a uniform result.
+the Euclidean quotient of `1` by `2` and the natural difference `0 - 1` both vanish.
 See also `IsCyclotomicExtension.discr_prime_pow_eq_unit_mul_pow`. -/
 theorem discr_prime_pow [hcycl : IsCyclotomicExtension {p ^ k} K L] [hp : Fact p.Prime]
     (hζ : IsPrimitiveRoot ζ (p ^ k)) (hirr : Irreducible (cyclotomic (p ^ k) K)) :
     discr K (hζ.powerBasis K).basis =
-      (-1) ^ ((p ^ k).totient / 2) * p ^ (p ^ (k - 1) * ((p - 1) * k - 1)) := by
+      (-1) ^ Nat.euclideanDiv (p ^ k).totient 2 * p ^ (p ^ (k - 1) * ((p - 1) * k - 1)) := by
   rcases k with - | k
   · simp only [coe_basis, _root_.pow_zero, powerBasis_gen _ hζ, totient_one, mul_zero,
-      show 1 / 2 = 0 by rfl, discr, traceMatrix]
+      Nat.euclideanDiv_eq_core, Nat.div_eq_of_lt Nat.one_lt_two, discr, traceMatrix]
     have hζone : ζ = 1 := by simpa using hζ
     rw [hζ.powerBasis_dim _, hζone, ← (algebraMap K L).map_one,
       minpoly.eq_X_sub_C_of_algebraMap_inj _ (algebraMap K L).injective, natDegree_X_sub_C]
@@ -161,7 +162,8 @@ theorem discr_prime_pow [hcycl : IsCyclotomicExtension {p ^ k} K L] [hp : Fact p
       rcases Fin.equiv_iff_eq.2 this with ⟨e⟩
       rw [← Algebra.discr_reindex K (hζ.powerBasis K).basis e, coe_basis, powerBasis_gen]
       simp only [powerBasis_dim,
-        zero_add, pow_one, totient_two, reduceDiv, pow_zero, cast_ofNat, tsub_self,
+        zero_add, pow_one, totient_two, Nat.euclideanDiv_eq_core, Nat.div_eq_of_lt Nat.one_lt_two,
+        pow_zero, cast_ofNat, tsub_self,
         Nat.add_one_sub_one, mul_one, mul_zero]
       simp_rw [hζ.eq_neg_one_of_two_right, show (-1 : L) = algebraMap K L (-1) by simp]
       convert_to (discr K fun i : Fin 1 ↦ (algebraMap K L) (-1) ^ ↑i) = _
@@ -185,7 +187,7 @@ theorem discr_prime_pow_eq_unit_mul_pow [IsCyclotomicExtension {p ^ k} K L]
     (hirr : Irreducible (cyclotomic (p ^ k) K)) :
     ∃ (u : ℤˣ) (n : ℕ), discr K (hζ.powerBasis K).basis = u * p ^ n := by
   rw [discr_prime_pow hζ hirr]
-  by_cases heven : Even ((p ^ k).totient / 2)
+  by_cases heven : Even (Nat.euclideanDiv (p ^ k).totient 2)
   · exact ⟨1, p ^ (k - 1) * ((p - 1) * k - 1), by rw [heven.neg_one_pow]; simp⟩
   · exact ⟨-1, p ^ (k - 1) * ((p - 1) * k - 1), by
       rw [(not_even_iff_odd.1 heven).neg_one_pow]; simp⟩
@@ -195,7 +197,7 @@ theorem discr_prime_pow_eq_unit_mul_pow [IsCyclotomicExtension {p ^ k} K L]
 `Irreducible (cyclotomic p K)`. -/
 theorem discr_odd_prime [IsCyclotomicExtension {p} K L] [hp : Fact p.Prime]
     (hζ : IsPrimitiveRoot ζ p) (hirr : Irreducible (cyclotomic p K)) (hodd : p ≠ 2) :
-    discr K (hζ.powerBasis K).basis = (-1) ^ ((p - 1) / 2) * p ^ (p - 2) := by
+    discr K (hζ.powerBasis K).basis = (-1) ^ Nat.euclideanDiv (p - 1) 2 * p ^ (p - 2) := by
   have : IsCyclotomicExtension {p ^ (0 + 1)} K L := by
     rw [zero_add, pow_one]
     infer_instance

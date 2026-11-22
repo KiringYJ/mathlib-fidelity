@@ -258,13 +258,16 @@ theorem ascFactorial_mul_ascFactorial (n l k : ℕ) :
     rw [Nat.add_comm 1 l, ← Nat.add_assoc, factorial_mul_ascFactorial, Nat.add_assoc]
 
 /-- Avoid in favor of `Nat.factorial_mul_ascFactorial` if you can. ℕ-division isn't worth it. -/
-theorem ascFactorial_eq_div (n k : ℕ) : (n + 1).ascFactorial k = (n + k)! / n ! :=
-  Nat.eq_div_of_mul_eq_right n.factorial_ne_zero (factorial_mul_ascFactorial _ _)
+theorem ascFactorial_eq_div (n k : ℕ) :
+    (n + 1).ascFactorial k = Nat.euclideanDiv ((n + k)!) (n !) n.factorial_ne_zero := by
+  rw [Nat.euclideanDiv_eq_core]
+  exact Nat.eq_div_of_mul_eq_right n.factorial_ne_zero (factorial_mul_ascFactorial _ _)
 
 /-- Avoid in favor of `Nat.factorial_mul_ascFactorial'` if you can. ℕ-division isn't worth it. -/
 theorem ascFactorial_eq_div' (n k : ℕ) (h : 0 < n) :
-    n.ascFactorial k = (n + k - 1)! / (n - 1)! :=
-  Nat.eq_div_of_mul_eq_right (n - 1).factorial_ne_zero (factorial_mul_ascFactorial' _ _ h)
+    n.ascFactorial k = Nat.euclideanDiv ((n + k - 1)!) ((n - 1)!) (n - 1).factorial_ne_zero := by
+  rw [Nat.euclideanDiv_eq_core]
+  exact Nat.eq_div_of_mul_eq_right (n - 1).factorial_ne_zero (factorial_mul_ascFactorial' _ _ h)
 
 theorem ascFactorial_of_sub {n k : ℕ} :
     (n - k) * (n - k + 1).ascFactorial k = (n - k).ascFactorial (k + 1) := by
@@ -423,7 +426,9 @@ theorem descFactorial_mul_descFactorial {k m n : ℕ} (hkm : k ≤ m) :
     · rw [descFactorial_eq_zero_iff_lt.mpr (show n < k by lia), Nat.mul_zero]
 
 /-- Avoid in favor of `Nat.factorial_mul_descFactorial` if you can. ℕ-division isn't worth it. -/
-theorem descFactorial_eq_div {n k : ℕ} (h : k ≤ n) : n.descFactorial k = n ! / (n - k)! := by
+theorem descFactorial_eq_div {n k : ℕ} (h : k ≤ n) :
+    n.descFactorial k = Nat.euclideanDiv (n !) ((n - k)!) (n - k).factorial_ne_zero := by
+  rw [Nat.euclideanDiv_eq_core]
   apply Nat.mul_left_cancel (n - k).factorial_pos
   rw [factorial_mul_descFactorial h]
   exact (Nat.mul_div_cancel' <| factorial_dvd_factorial <| Nat.sub_le n k).symm
@@ -525,15 +530,30 @@ def ascFactorialBinary (n k : ℕ) : ℕ :=
   match k with
   | 0 => 1
   | 1 => n
-  | k@(_ + 2) => ascFactorialBinary n (k / 2) * ascFactorialBinary (n + k / 2) ((k + 1) / 2)
+  | k + 2 =>
+    ascFactorialBinary n (Nat.euclideanDiv (k + 2) 2) *
+      ascFactorialBinary (n + Nat.euclideanDiv (k + 2) 2) (Nat.euclideanDiv (k + 3) 2)
+termination_by k
+decreasing_by
+  all_goals
+    rw [Nat.euclideanDiv_eq_core]
+    apply Nat.div_lt_of_lt_mul
+    omega
 
 @[csimp]
 lemma ascFactorial_eq_ascFactorialBinary : ascFactorial = ascFactorialBinary := by
+  have halves {n a b r s : ℕ} (ha : 2 * a + r = n) (hb : 2 * b + s = n + 1)
+      (hr : r < 2) (hs : s < 2) : n = a + b := by omega
   ext n k
   fun_induction ascFactorialBinary with
   | case1 => simp
   | case2 => simp [ascFactorial]
-  | case3 n k ih₁ ih₂ => grind [ascFactorial_mul_ascFactorial]
+  | case3 n k ih₁ ih₂ =>
+    rw [← ih₁, ← ih₂, ascFactorial_mul_ascFactorial]
+    congr 1
+    exact halves (Nat.euclideanDiv_mul_add_mod (k + 2) 2 (by decide))
+      (Nat.euclideanDiv_mul_add_mod (k + 3) 2 (by decide))
+      (Nat.mod_lt _ (by decide)) (Nat.mod_lt _ (by decide))
 
 /-- Factorial implemented using binary splitting.
 

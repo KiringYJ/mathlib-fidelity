@@ -56,7 +56,7 @@ theorem rfind' {f} (hf : Nat.Partrec f) :
     refine
       Partrec.map
         ((@Partrec₂.unpaired' fun a b : ℕ =>
-              Nat.rfind fun n => (fun m => m = 0) <$> f (Nat.pair a (n + b))).1
+              Nat.rfind fun n => (fun m : ℕ => decide (m = 0)) <$> f (Nat.pair a (n + b))).1
           ?_)
         (Primrec.nat_add.comp Primrec.snd <| Primrec.snd.comp Primrec.fst).to_comp.to₂
     have : Nat.Partrec (fun a => Nat.rfind (fun n => (fun m => decide (m = 0)) <$>
@@ -135,7 +135,7 @@ def ofNatCode : ℕ → Code
   | n + 4 =>
     let m := n.div2.div2
     have hm : m < n + 4 := by
-      simp only [m, div2_val]
+      simp only [m, div2_val, Nat.euclideanDiv_eq_core]
       exact
         lt_of_le_of_lt (le_trans (Nat.div_le_self _ _) (Nat.div_le_self _ _))
           (Nat.succ_le_succ (Nat.le_add_right _ _))
@@ -149,7 +149,7 @@ def ofNatCode : ℕ → Code
 
 set_option backward.privateInPublic true in
 /-- Proof that `Nat.Partrec.Code.ofNatCode` is the inverse of `Nat.Partrec.Code.encodeCode` -/
-private theorem encode_ofNatCode : ∀ n, encodeCode (ofNatCode n) = n
+theorem encode_ofNatCode : ∀ n, encodeCode (ofNatCode n) = n
   | 0 => by simp [ofNatCode, encodeCode]
   | 1 => by simp [ofNatCode, encodeCode]
   | 2 => by simp [ofNatCode, encodeCode]
@@ -157,7 +157,7 @@ private theorem encode_ofNatCode : ∀ n, encodeCode (ofNatCode n) = n
   | n + 4 => by
     let m := n.div2.div2
     have hm : m < n + 4 := by
-      simp only [m, div2_val]
+      simp only [m, div2_val, Nat.euclideanDiv_eq_core]
       exact
         lt_of_le_of_lt (le_trans (Nat.div_le_self _ _) (Nat.div_le_self _ _))
           (Nat.succ_le_succ (Nat.le_add_right _ _))
@@ -176,7 +176,7 @@ set_option backward.privateInPublic.warn false in
 instance instDenumerable : Denumerable Code :=
   mk'
     ⟨encodeCode, ofNatCode, fun c => by
-        induction c <;> simp [encodeCode, ofNatCode, Nat.div2_val, *],
+        induction c <;> simp [encodeCode, ofNatCode, Nat.div2_val, Nat.euclideanDiv_eq_core, *],
       encode_ofNatCode⟩
 
 theorem encodeCode_eq : encode = encodeCode :=
@@ -321,7 +321,7 @@ theorem primrec_recOn' {α σ}
   change G₁ ((a, (List.range (n + 4)).map fun n => F a (ofNat Code n)), n, m)
     = some (F a (ofNat Code (n + 4)))
   have hm : m < n + 4 := by
-    simp only [m, div2_val]
+    simp only [m, div2_val, Nat.euclideanDiv_eq_core]
     exact lt_of_le_of_lt
       (le_trans (Nat.div_le_self ..) (Nat.div_le_self ..))
       (Nat.succ_le_succ (Nat.le_add_right ..))
@@ -432,7 +432,7 @@ theorem computable_recOn {α σ} [Primcodable α] [Primcodable σ] {c : α → C
   change G₁ ((a, (List.range (n + 4)).map fun n => F a (ofNat Code n)), n, m)
     = some (F a (ofNat Code (n + 4)))
   have hm : m < n + 4 := by
-    simp only [m, div2_val]
+    simp only [m, div2_val, Nat.euclideanDiv_eq_core]
     exact lt_of_le_of_lt
       (le_trans (Nat.div_le_self ..) (Nat.div_le_self ..))
       (Nat.succ_le_succ (Nat.le_add_right ..))

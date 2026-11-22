@@ -104,7 +104,7 @@ private theorem pochhammer_two_ne_zero (n : ℕ) : (ascPochhammer ℝ n).eval 2 
 
 private theorem boundary_term (n : ℕ) :
     ordinaryHypergeometricSeries ℝ 1 1 2 factorial_ne_zero pochhammer_two_ne_zero n
-      (fun _ => -1) = (-1 : ℝ) ^ n * (1 / (n + 1)) := by
+      (fun _ => -1) = (-1 : ℝ) ^ n * (1 / ((n : ℝ) + 1)) := by
   rw [ordinaryHypergeometricSeries_apply_eq]
   simp only [ordinaryHypergeometricCoefficient, ascPochhammer_eval_one, pochhammer_two,
     Nat.factorial_succ, Nat.cast_mul, Nat.cast_add, Nat.cast_one, smul_eq_mul]
@@ -124,13 +124,13 @@ private theorem boundary_summable :
   simpa only [HasSum, SummationFilter.conditional_filter_eq_map_range,
     tendsto_map'_iff, Function.comp_def, boundary_term] using hl
 
-example : HasSum (fun n : ℕ => (-1 : ℝ) ^ n * (1 / (n + 1)))
+example : HasSum (fun n : ℕ => (-1 : ℝ) ^ n * (1 / ((n : ℝ) + 1)))
     (₂F₁ (1 : ℝ) 1 2 factorial_ne_zero pochhammer_two_ne_zero (-1) boundary_summable)
       (SummationFilter.conditional ℕ) := by
   simpa only [boundary_term] using ordinaryHypergeometric_hasSum (1 : ℝ) 1 2
     factorial_ne_zero pochhammer_two_ne_zero (-1 : ℝ) boundary_summable
 
-example : Tendsto (fun N => ∑ n ∈ Finset.range N, (-1 : ℝ) ^ n * (1 / (n + 1)))
+example : Tendsto (fun N => ∑ n ∈ Finset.range N, (-1 : ℝ) ^ n * (1 / ((n : ℝ) + 1)))
     atTop (𝓝 (₂F₁ (1 : ℝ) 1 2 factorial_ne_zero pochhammer_two_ne_zero (-1)
       boundary_summable)) := by
   simpa only [boundary_term] using ordinaryHypergeometric_tendsto_sum_range (1 : ℝ) 1 2

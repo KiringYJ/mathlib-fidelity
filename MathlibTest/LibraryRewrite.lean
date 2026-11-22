@@ -123,28 +123,12 @@ Pattern a + b
 #rw?? n + 1
 
 /--
-info: Pattern n / 2
+info: Pattern n.euclideanDiv 2 Nat.shiftRight_one._proof_1
 · n >>> 1
   Nat.shiftRight_one
-
-Pattern x / y
-· if 0 < 2 ∧ 2 ≤ n then (n - 2) / 2 + 1 else 0
-  Nat.div_eq_ite
-· (n - n % 2) / 2
-  Nat.div_eq_sub_mod_div
-· 0
-  ⊢ n < 2
-  Nat.div_eq_of_lt
-· (n + 1) / 2
-  ⊢ ¬2 ∣ n + 1
-  Nat.succ_div_of_not_dvd
-· (n - 2) / 2 + 1
-  ⊢ 0 < 2
-  ⊢ 2 ≤ n
-  Nat.div_eq_sub_div
 -/
 #guard_msgs in
-#rw?? n/2
+#rw?? Nat.euclideanDiv n 2
 
 /--
 info: Pattern n.gcd n

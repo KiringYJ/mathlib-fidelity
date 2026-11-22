@@ -249,44 +249,16 @@ lemma noZeroDivisors_iff_isDomain_or_subsingleton [Ring α] :
 end NoZeroDivisors
 
 section DivisionMonoid
-variable [DivisionMonoid R] [HasDistribNeg R] {a b : R}
+variable [DivisionMonoid R] [HasDistribNeg R] {a : R}
 
-lemma one_div_neg_one_eq_neg_one : (1 : R) / -1 = -1 :=
-  have : -1 * -1 = (1 : R) := by rw [neg_mul_neg, one_mul]
-  Eq.symm (eq_one_div_of_mul_eq_one_right this)
+lemma inv_neg_one : (-1 : R)⁻¹ = -1 :=
+  inv_eq_of_mul_eq_one_right (by rw [neg_mul_neg, one_mul])
 
-lemma one_div_neg_eq_neg_one_div (a : R) : 1 / -a = -(1 / a) :=
-  calc
-    1 / -a = 1 / (-1 * a) := by rw [neg_eq_neg_one_mul]
-    _ = 1 / a * (1 / -1) := by rw [one_div_mul_one_div_rev]
-    _ = 1 / a * -1 := by rw [one_div_neg_one_eq_neg_one]
-    _ = -(1 / a) := by rw [mul_neg, mul_one]
-
-lemma div_neg_eq_neg_div (a b : R) : b / -a = -(b / a) :=
-  calc
-    b / -a = b * (1 / -a) := by rw [← inv_eq_one_div, division_def]
-    _ = b * -(1 / a) := by rw [one_div_neg_eq_neg_one_div]
-    _ = -(b * (1 / a)) := by rw [neg_mul_eq_mul_neg]
-    _ = -(b / a) := by rw [mul_one_div]
-
-lemma neg_div (a b : R) : -b / a = -(b / a) := by
-  rw [neg_eq_neg_one_mul, mul_div_assoc, ← neg_eq_neg_one_mul]
-
-lemma neg_div' (a b : R) : -(b / a) = -b / a := by rw [neg_div]
+lemma neg_inv : -a⁻¹ = (-a)⁻¹ := by
+  rw [← mul_neg_one a⁻¹, ← neg_one_mul a, mul_inv_rev, inv_neg_one]
 
 @[simp]
-lemma neg_div_neg_eq (a b : R) : -a / -b = a / b := by rw [div_neg_eq_neg_div, neg_div, neg_neg]
-
-lemma neg_inv : -a⁻¹ = (-a)⁻¹ := by rw [inv_eq_one_div, inv_eq_one_div, div_neg_eq_neg_div]
-
-lemma div_neg (a : R) : a / -b = -(a / b) := by rw [← div_neg_eq_neg_div]
-
-lemma div_neg_eq_neg_div' (a : R) : a / -b = -a / b := neg_div b a ▸ div_neg _
-
-@[simp]
-lemma inv_neg : (-a)⁻¹ = -a⁻¹ := by rw [neg_inv]
-
-lemma inv_neg_one : (-1 : R)⁻¹ = -1 := by rw [← neg_inv, inv_one]
+lemma inv_neg : (-a)⁻¹ = -a⁻¹ := neg_inv.symm
 
 @[simp]
 lemma isSelfInv_neg_iff : IsSelfInv (-a) ↔ IsSelfInv a := by
@@ -301,3 +273,28 @@ lemma isSelfNeg_inv_iff : IsSelfNeg a⁻¹ ↔ IsSelfNeg a := by
 protected alias ⟨_, IsSelfNeg.inv⟩ := isSelfNeg_inv_iff
 
 end DivisionMonoid
+
+section Group
+variable [Group R] [HasDistribNeg R] {a b : R}
+
+lemma one_div_neg_one_eq_neg_one : (1 : R) / (-1) = -1 := by rw [one_div, inv_neg_one]
+
+lemma one_div_neg_eq_neg_one_div (a : R) : 1 / (-a) = -(1 / a) := by
+  simp only [one_div, inv_neg]
+
+lemma div_neg_eq_neg_div (a b : R) : b / (-a) = -(b / a) := by
+  simp only [div_eq_mul_inv, inv_neg, mul_neg]
+
+lemma neg_div (a b : R) : (-b) / a = -(b / a) := by simp only [div_eq_mul_inv, neg_mul]
+
+lemma neg_div' (a b : R) : -(b / a) = (-b) / a := (neg_div a b).symm
+
+@[simp]
+lemma neg_div_neg_eq (a b : R) : (-a) / (-b) = a / b := by
+  rw [div_neg_eq_neg_div, neg_div, neg_neg]
+
+lemma div_neg (a : R) : a / (-b) = -(a / b) := div_neg_eq_neg_div b a
+
+lemma div_neg_eq_neg_div' (a : R) : a / (-b) = (-a) / b := (div_neg a).trans (neg_div b a).symm
+
+end Group

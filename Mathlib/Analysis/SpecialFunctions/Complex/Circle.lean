@@ -149,8 +149,8 @@ theorem centeredArc_zero : centeredArc 0 = ∅ :=
   centeredArc_eq_empty le_rfl
 
 theorem mem_centeredArc_div {z : Circle} {s : ℝ} {n : ℕ} {hn0 : n ≠ 0} (hs : s ≤ π)
-    (h1 : z ∈ centeredArc (π / n)) (h2 : z ^ n ∈ centeredArc s) :
-    z ∈ centeredArc (s / n) := by
+    (h1 : z ∈ centeredArc (π / (n : ℝ))) (h2 : z ^ n ∈ centeredArc s) :
+    z ∈ centeredArc (s / (n : ℝ)) := by
   have hs0 : 0 < s := by
     contrapose! h2
     simp [centeredArc_eq_empty h2]

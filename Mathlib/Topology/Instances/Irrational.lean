@@ -75,7 +75,7 @@ instance : DenselyOrdered { x // Irrational x } :=
     ⟨⟨z, hz⟩, hxz, hzy⟩⟩
 
 theorem eventually_forall_le_dist_cast_div (hx : Irrational x) (n : ℕ) (hn : n ≠ 0) :
-    ∀ᶠ ε : ℝ in 𝓝 0, ∀ m : ℤ, ε ≤ dist x (m / n) := by
+    ∀ᶠ ε : ℝ in 𝓝 0, ∀ m : ℤ, ε ≤ dist x ((m : ℝ) / (n : ℝ)) := by
   have A : IsClosed (range (fun m => (n : ℝ)⁻¹ * m : ℤ → ℝ)) :=
     ((isClosedMap_smul₀ (n : ℝ)⁻¹).comp Int.isClosedEmbedding_coe_real.isClosedMap).isClosed_range
   have B : x ∉ range (fun m => (n : ℝ)⁻¹ * m : ℤ → ℝ) := by
@@ -88,7 +88,7 @@ theorem eventually_forall_le_dist_cast_div (hx : Irrational x) (n : ℕ) (hn : n
   simp [div_eq_inv_mul₀]
 
 theorem eventually_forall_le_dist_cast_div_of_denom_le (hx : Irrational x) (n : ℕ) :
-    ∀ᶠ ε : ℝ in 𝓝 0, ∀ k ≤ n, ∀ (_ : k ≠ 0) (m : ℤ), ε ≤ dist x (m / k) :=
+    ∀ᶠ ε : ℝ in 𝓝 0, ∀ k ≤ n, ∀ (_ : k ≠ 0) (m : ℤ), ε ≤ dist x ((m : ℝ) / (k : ℝ)) :=
   (finite_le_nat n).eventually_all.2 fun k _ => by
     rcases eq_or_ne k 0 with rfl | hk
     · exact .of_forall fun _ hk => absurd rfl hk

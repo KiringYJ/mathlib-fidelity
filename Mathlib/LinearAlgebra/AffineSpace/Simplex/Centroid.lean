@@ -467,8 +467,9 @@ theorem point_mem_median (s : Simplex k P n) (i : Fin (n + 1)) {hn : (n : k) ≠
 theorem centroid_mem_median [CharZero k] (s : Simplex k P n) (i : Fin (n + 1)) :
     s.centroid ∈ s.median i := by
   rw [median]
-  have h : s.centroid = ((n : k) * (1 / (n + 1))) • (s.faceOppositeCentroid i -ᵥ s.points i)
-    +ᵥ s.points i := by
+  have h : s.centroid =
+      ((n : k) * ((1 : k) / ((n : k) + 1))) • (s.faceOppositeCentroid i -ᵥ s.points i)
+        +ᵥ s.points i := by
     rw [eq_vadd_iff_vsub_eq, centroid_vsub_point_eq_smul_vsub,
       faceOppositeCentroid_vsub_point_eq_smul_vsub, smul_smul, one_div₀, mul_assoc,
       inv_mul_cancel₀, mul_one]
@@ -483,7 +484,7 @@ theorem median_eq_line_point_centroid [CharZero k] (s : Simplex k P n) (i : Fin 
     apply affineSpan_pair_le_of_right_mem
     rw [faceOppositeCentroid_eq_smul_vsub_vadd_point]
     have h : (n : k)⁻¹ • (s.centroid -ᵥ s.points i) =
-        (-1 / n : k) • (s.points i -ᵥ s.centroid) := by
+        ((-1 : k) / (n : k)) • (s.points i -ᵥ s.centroid) := by
       rw [← neg_vsub_eq_vsub_rev]
       have : -(s.points i -ᵥ s.centroid) = (-1 : k) • (s.points i -ᵥ s.centroid) := by simp
       rw [this, smul_smul]

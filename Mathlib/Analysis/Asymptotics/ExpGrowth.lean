@@ -42,12 +42,12 @@ open scoped Topology
 /-- Lower exponential growth of a sequence of extended nonnegative real numbers: the `liminf` of
 `log (u n) / n` as `n → ∞`, over the nonzero natural numbers, where the quotient is defined. -/
 noncomputable def expGrowthInf (u : ℕ → ℝ≥0∞) : EReal :=
-  liminf (fun n : {n : ℕ // n ≠ 0} ↦ log (u n) / (n : ℕ)) (comap Subtype.val atTop)
+  liminf (fun n : {n : ℕ // n ≠ 0} ↦ log (u n) / ((n : ℕ) : EReal)) (comap Subtype.val atTop)
 
 /-- Upper exponential growth of a sequence of extended nonnegative real numbers: the `limsup` of
 `log (u n) / n` as `n → ∞`, over the nonzero natural numbers, where the quotient is defined. -/
 noncomputable def expGrowthSup (u : ℕ → ℝ≥0∞) : EReal :=
-  limsup (fun n : {n : ℕ // n ≠ 0} ↦ log (u n) / (n : ℕ)) (comap Subtype.val atTop)
+  limsup (fun n : {n : ℕ // n ≠ 0} ↦ log (u n) / ((n : ℕ) : EReal)) (comap Subtype.val atTop)
 
 lemma expGrowthInf_def {u : ℕ → ℝ≥0∞} :
     expGrowthInf u = linearGrowthInf (log ∘ u) := by
@@ -434,13 +434,15 @@ lemma _root_.Monotone.le_expGrowthSup_comp (h : Monotone u)
   (log_monotone.comp h).le_linearGrowthSup_comp hv
 
 lemma _root_.Monotone.expGrowthInf_comp {a : EReal} (h : Monotone u)
-    (hv : Tendsto (fun n : {n : ℕ // n ≠ 0} ↦ (v n : EReal) / (n : ℕ)) (comap Subtype.val atTop)
+    (hv : Tendsto (fun n : {n : ℕ // n ≠ 0} ↦ (v n : EReal) / ((n : ℕ) : EReal))
+      (comap Subtype.val atTop)
       (𝓝 a)) (ha : a ≠ 0) (ha' : a ≠ ⊤) :
     expGrowthInf (u ∘ v) = a * expGrowthInf u :=
   (log_monotone.comp h).linearGrowthInf_comp hv ha ha'
 
 lemma _root_.Monotone.expGrowthSup_comp {a : EReal} (h : Monotone u)
-    (hv : Tendsto (fun n : {n : ℕ // n ≠ 0} ↦ (v n : EReal) / (n : ℕ)) (comap Subtype.val atTop)
+    (hv : Tendsto (fun n : {n : ℕ // n ≠ 0} ↦ (v n : EReal) / ((n : ℕ) : EReal))
+      (comap Subtype.val atTop)
       (𝓝 a)) (ha : a ≠ 0) (ha' : a ≠ ⊤) :
     expGrowthSup (u ∘ v) = a * expGrowthSup u :=
   (log_monotone.comp h).linearGrowthSup_comp hv ha ha'

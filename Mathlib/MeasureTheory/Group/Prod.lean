@@ -66,6 +66,10 @@ protected def MeasurableEquiv.shearMulRight [MeasurableInv G] : G × G ≃ᵐ G 
 /-- The map `(x, y) ↦ (x, y - x)` as a `MeasurableEquiv` with inverse `(x, y) ↦ (x, y + x)`. -/]
 protected def MeasurableEquiv.shearDivRight [MeasurableInv G] : G × G ≃ᵐ G × G where
   toEquiv := .prodShear (.refl _) .divRight
+  measurable_toFun := by
+    change Measurable (fun p : G × G ↦ (p.1, p.2 / p.1))
+    simp_rw [div_eq_mul_inv]
+    exact measurable_fst.prodMk (measurable_snd.mul measurable_fst.inv)
 
 variable {G}
 
@@ -219,7 +223,8 @@ theorem absolutelyContinuous_map_mul_right (g : G) : μ ≪ map (· * g) μ := b
   rw [map_apply hs (measurable_mul_const g).aemeasurable, measure_mul_right_null]; exact id
 
 @[to_additive]
-theorem absolutelyContinuous_map_div_left (g : G) : μ ≪ map (fun h => g / h) μ := by
+theorem absolutelyContinuous_map_div_left (g : G) :
+    μ ≪ map (fun h => g / h) μ (MeasurableEquiv.divLeft g).measurable.aemeasurable := by
   simp_rw [div_eq_mul_inv]
   have := map_map (μ := μ) measurable_inv.aemeasurable
     (measurable_const_mul g).aemeasurable
@@ -309,10 +314,11 @@ follows from §59, Th. D, but the second inequality is not justified. We prove t
 almost all `x` in `MeasureTheory.ae_measure_preimage_add_right_lt_top_of_ne_zero`. -/]
 theorem measure_lintegral_div_measure (sm : MeasurableSet s) (h2s : ν' s ≠ 0) (h3s : ν' s ≠ ∞)
     (f : G → ℝ≥0∞) (hf : Measurable f) :
-    (μ' s * ∫⁻ y, f y⁻¹ / ν' ((· * y⁻¹) ⁻¹' s) ∂ν') = ∫⁻ x, f x ∂μ' := by
-  set g := fun y => f y⁻¹ / ν' ((fun x => x * y⁻¹) ⁻¹' s)
+    (μ' s * ∫⁻ y, ENNReal.div (f y⁻¹) (ν' ((· * y⁻¹) ⁻¹' s)) ∂ν') = ∫⁻ x, f x ∂μ' := by
+  set g := fun y => ENNReal.div (f y⁻¹) (ν' ((fun x => x * y⁻¹) ⁻¹' s))
   have hg : Measurable g :=
-    (hf.comp measurable_inv).div ((measurable_measure_mul_right ν' sm).comp measurable_inv)
+    (hf.comp measurable_inv).mul (measurable_inv.comp
+      ((measurable_measure_mul_right ν' sm).comp measurable_inv))
   simp_rw [measure_mul_lintegral_eq μ' ν' sm g hg, g, inv_inv]
   refine lintegral_congr_ae ?_
   refine (ae_measure_preimage_mul_right_lt_top_of_ne_zero μ' ν' h2s h3s).mono fun x hx => ?_
@@ -338,10 +344,11 @@ theorem measure_mul_measure_eq (s t : Set G) (h2s : ν' s ≠ 0) (h3s : ν' s �
 @[to_additive
 /-- Left invariant Borel measures on an additive measurable group are unique (up to a scalar). -/]
 theorem measure_eq_div_smul (h2s : ν' s ≠ 0) (h3s : ν' s ≠ ∞) :
-    μ' = (μ' s / ν' s) • ν' := by
+    μ' = Checked.div (μ' s) (ν' s) (ENNReal.isUnit_iff.2 ⟨h2s, h3s⟩) • ν' := by
   ext1 t -
-  rw [Measure.smul_apply, smul_eq_mul, mul_comm, ← mul_div_assoc, mul_comm,
-    measure_mul_measure_eq μ' ν' s t h2s h3s, mul_div_assoc, ENNReal.mul_div_cancel h2s h3s]
+  rw [Measure.smul_apply, smul_eq_mul, ENNReal.checkedDiv_eq_div, mul_comm, ← ENNReal.mul_div_assoc,
+    mul_comm, measure_mul_measure_eq μ' ν' s t h2s h3s, ENNReal.mul_div_assoc,
+    ENNReal.mul_div_cancel h2s h3s]
 
 end SigmaFinite
 
@@ -467,8 +474,10 @@ theorem quasiMeasurePreserving_div_left_of_right_invariant [IsMulRightInvariant 
 @[to_additive]
 theorem quasiMeasurePreserving_div_of_right_invariant [IsMulRightInvariant μ] :
     QuasiMeasurePreserving (fun p : G × G => p.1 / p.2) (μ.productBySections ν) μ := by
-  refine QuasiMeasurePreserving.prod_of_left measurable_div (Eventually.of_forall fun y => ?_)
-  exact (measurePreserving_div_right μ y).quasiMeasurePreserving
+  refine QuasiMeasurePreserving.prod_of_left ?_ (Eventually.of_forall fun y =>
+    (measurePreserving_div_right μ y).quasiMeasurePreserving)
+  simp_rw [div_eq_mul_inv]
+  exact measurable_fst.mul measurable_snd.inv
 
 @[to_additive]
 theorem quasiMeasurePreserving_div [IsMulLeftInvariant μ] :

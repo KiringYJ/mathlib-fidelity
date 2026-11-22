@@ -67,23 +67,27 @@ from `s`, where `c ∈ s` appears with multiplicity `f c`.
 Defined as `(∑ i ∈ s, f i)! / ∏ i ∈ s, (f i)!`.
 -/
 def multinomial : ℕ :=
-  (∑ i ∈ s, f i)! / ∏ i ∈ s, (f i)!
+  Nat.euclideanDiv ((∑ i ∈ s, f i)!) (∏ i ∈ s, (f i)!) (prod_factorial_pos s f).ne'
 
-theorem multinomial_pos : 0 < multinomial s f :=
-  Nat.div_pos (le_of_dvd (factorial_pos _) (prod_factorial_dvd_factorial_sum s f))
+theorem multinomial_pos : 0 < multinomial s f := by
+  rw [multinomial, Nat.euclideanDiv_eq_core]
+  exact Nat.div_pos (le_of_dvd (factorial_pos _) (prod_factorial_dvd_factorial_sum s f))
     (prod_factorial_pos s f)
 
-theorem multinomial_spec : (∏ i ∈ s, (f i)!) * multinomial s f = (∑ i ∈ s, f i)! :=
-  Nat.mul_div_cancel' (prod_factorial_dvd_factorial_sum s f)
+theorem multinomial_spec : (∏ i ∈ s, (f i)!) * multinomial s f = (∑ i ∈ s, f i)! := by
+  rw [multinomial, Nat.euclideanDiv_eq_core]
+  exact Nat.mul_div_cancel' (prod_factorial_dvd_factorial_sum s f)
 
-@[simp] lemma multinomial_empty : multinomial ∅ f = 1 := by simp [multinomial]
+@[simp] lemma multinomial_empty : multinomial ∅ f = 1 := by
+  simp [multinomial, Nat.euclideanDiv_eq_core]
 
 variable {s f}
 
 lemma multinomial_cons (ha : a ∉ s) (f : α → ℕ) :
     multinomial (s.cons a ha) f = (f a + ∑ i ∈ s, f i).choose (f a) * multinomial s f := by
-  rw [multinomial, Nat.div_eq_iff_eq_mul_left _ (prod_factorial_dvd_factorial_sum _ _), prod_cons,
-    multinomial, mul_assoc, mul_left_comm _ (f a)!,
+  rw [multinomial, Nat.euclideanDiv_eq_core,
+    Nat.div_eq_iff_eq_mul_left _ (prod_factorial_dvd_factorial_sum _ _), prod_cons,
+    multinomial, Nat.euclideanDiv_eq_core, mul_assoc, mul_left_comm _ (f a)!,
     Nat.div_mul_cancel (prod_factorial_dvd_factorial_sum _ _), ← mul_assoc, Nat.choose_symm_add,
     Nat.add_choose_mul_factorial_mul_factorial, Finset.sum_cons]
   positivity
@@ -98,14 +102,14 @@ lemma multinomial_insert [DecidableEq α] (ha : a ∉ s) (f : α → ℕ) :
 @[simp]
 theorem multinomial_insert_one [DecidableEq α] (h : a ∉ s) (h₁ : f a = 1) :
     multinomial (insert a s) f = (s.sum f).succ * multinomial s f := by
-  simp only [multinomial]
+  simp only [multinomial, Nat.euclideanDiv_eq_core]
   rw [Finset.sum_insert h, Finset.prod_insert h, h₁, add_comm, ← succ_eq_add_one, factorial_succ]
   simp only [factorial, succ_eq_add_one, zero_add, mul_one, one_mul]
   rw [Nat.mul_div_assoc _ (prod_factorial_dvd_factorial_sum _ _)]
 
 theorem multinomial_congr {f g : α → ℕ} (h : ∀ a ∈ s, f a = g a) :
     multinomial s f = multinomial s g := by
-  simp only [multinomial]; congr 1
+  simp only [multinomial, Nat.euclideanDiv_eq_core]; congr 1
   · rw [Finset.sum_congr rfl h]
   · exact Finset.prod_congr rfl fun a ha => by rw [h a ha]
 
@@ -143,7 +147,8 @@ involve `Nat.multinomial {a, b}`.
 -/
 
 theorem binomial_eq [DecidableEq α] (h : a ≠ b) :
-    multinomial {a, b} f = (f a + f b)! / ((f a)! * (f b)!) := by
+    multinomial {a, b} f = Nat.euclideanDiv ((f a + f b)!) ((f a)! * (f b)!)
+      (mul_ne_zero (factorial_ne_zero _) (factorial_ne_zero _)) := by
   simp [multinomial, Finset.sum_pair h, Finset.prod_pair h]
 
 theorem binomial_eq_choose [DecidableEq α] (h : a ≠ b) :
@@ -179,13 +184,17 @@ theorem succ_mul_binomial [DecidableEq α] (h : a ≠ b) :
 
 
 theorem multinomial_univ_two (a b : ℕ) :
-    multinomial Finset.univ ![a, b] = (a + b)! / (a ! * b !) := by
-  rw [multinomial, Fin.sum_univ_two, Fin.prod_univ_two]
+    multinomial Finset.univ ![a, b] = Nat.euclideanDiv ((a + b)!) (a ! * b !)
+      (mul_ne_zero (factorial_ne_zero _) (factorial_ne_zero _)) := by
+  simp only [multinomial, Nat.euclideanDiv_eq_core]
+  rw [Fin.sum_univ_two, Fin.prod_univ_two]
   dsimp only [Matrix.cons_val]
 
 theorem multinomial_univ_three (a b c : ℕ) :
-    multinomial Finset.univ ![a, b, c] = (a + b + c)! / (a ! * b ! * c !) := by
-  rw [multinomial, Fin.sum_univ_three, Fin.prod_univ_three]
+    multinomial Finset.univ ![a, b, c] = Nat.euclideanDiv ((a + b + c)!) (a ! * b ! * c !)
+      (mul_ne_zero (mul_ne_zero a.factorial_ne_zero b.factorial_ne_zero) c.factorial_ne_zero) := by
+  simp only [multinomial, Nat.euclideanDiv_eq_core]
+  rw [Fin.sum_univ_three, Fin.prod_univ_three]
   rfl
 
 end Nat
@@ -200,14 +209,14 @@ variable {α : Type*}
   for the big operations
 -/
 def multinomial (f : α →₀ ℕ) : ℕ :=
-  (f.sum fun _ => id)! / f.prod fun _ n => n !
+  Nat.multinomial f.support f
 
 theorem multinomial_eq (f : α →₀ ℕ) : f.multinomial = Nat.multinomial f.support f :=
   rfl
 
 theorem multinomial_eq_of_support_subset {f : α →₀ ℕ} {s : Finset α} (h : f.support ⊆ s) :
     f.multinomial = Nat.multinomial s f := by
-  simp only [Finsupp.multinomial_eq, Nat.multinomial]
+  simp only [Finsupp.multinomial_eq, Nat.multinomial, Nat.euclideanDiv_eq_core]
   congr 1
   · simp [Finset.sum_subset h]
   · rw [Finset.prod_subset h]
@@ -248,7 +257,7 @@ theorem countPerms_filter_ne [DecidableEq α] (a : α) (m : Multiset α) :
 
 @[simp]
 theorem countPerms_zero [DecidableEq α] : countPerms (0 : Multiset α) = 1 := by
-  simp [countPerms, Finsupp.multinomial]
+  simp [countPerms, Finsupp.multinomial, Nat.multinomial, Nat.euclideanDiv_eq_core]
 
 end Multiset
 
@@ -366,7 +375,8 @@ variable {ι : Type*} {s : Finset ι} {f : ι → ℕ}
 
 lemma multinomial_two_mul_le_mul_multinomial :
     multinomial s (fun i ↦ 2 * f i) ≤ ((∑ i ∈ s, f i) ^ ∑ i ∈ s, f i) * multinomial s f := by
-  rw [multinomial, multinomial, ← mul_sum,
+  simp only [multinomial, Nat.euclideanDiv_eq_core]
+  rw [← mul_sum,
     ← Nat.mul_div_assoc _ (prod_factorial_dvd_factorial_sum ..)]
   refine Nat.div_le_div_of_mul_le_mul (by positivity)
     ((prod_factorial_dvd_factorial_sum ..).trans (Nat.dvd_mul_left ..)) ?_
@@ -404,10 +414,8 @@ theorem countPerms_coe_fill_of_notMem {m : Fin (n + 1)} {s : Sym α (n - m)} {x 
 end Sym
 
 theorem Finsupp.multinomial_of_support_subset {σ : Type*} {d : σ →₀ ℕ} {s : Finset σ}
-    (h : d.support ⊆ s) : Nat.multinomial s d = d.multinomial := by
-  rw [Nat.multinomial, Finsupp.multinomial,
-    sum_of_support_subset _ h _ (by simp), prod_of_support_subset _ h _ (by simp)]
-  simp
+    (h : d.support ⊆ s) : Nat.multinomial s d = d.multinomial :=
+  (multinomial_eq_of_support_subset h).symm
 
 namespace List
 
@@ -468,7 +476,8 @@ theorem multinomial_cons (x : ℕ) (m : Multiset ℕ) :
   exact List.multinomial_cons x l
 
 @[simp]
-theorem multinomial_zero : Multiset.multinomial 0 = 1 := rfl
+theorem multinomial_zero : Multiset.multinomial 0 = 1 :=
+  Nat.multinomial_empty (0 : ℕ →₀ ℕ)
 
 @[simp]
 theorem multinomial_singleton (n : ℕ) :

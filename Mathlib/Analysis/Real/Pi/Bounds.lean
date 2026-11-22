@@ -62,17 +62,17 @@ theorem pi_lt_sqrtTwoAddSeries (n : ℕ) :
 `sqrtTwoAddSeries 0 n ≤ 2 - (a / 2 ^ (n + 1)) ^ 2)`, one can deduce the lower bound `a < π`
 thanks to basic trigonometric inequalities as expressed in `pi_gt_sqrtTwoAddSeries`. -/
 theorem pi_lower_bound_start (n : ℕ) {a}
-    (h : sqrtTwoAddSeries ((0 : ℕ) / (1 : ℕ)) n ≤ (2 : ℝ) - (a / (2 : ℝ) ^ (n + 1)) ^ 2) :
+    (h : sqrtTwoAddSeries 0 n ≤ (2 : ℝ) - (a / (2 : ℝ) ^ (n + 1)) ^ 2) :
     a < π := by
   refine lt_of_le_of_lt ?_ (pi_gt_sqrtTwoAddSeries n); rw [mul_comm]
   refine (div_le_iff₀ (pow_pos (by simp) _)).mp (le_sqrt_of_sq_le ?_)
   rw [le_sub_comm]
-  simpa only [Nat.cast_zero, zero_div] using h
+  exact h
 
 theorem sqrtTwoAddSeries_step_up (c d : ℕ) {a b n : ℕ} {z : ℝ}
-    (hb : 0 < b) (hd : 0 < d) (hz : sqrtTwoAddSeries (c / d) n ≤ z)
+    (hb : 0 < b) (hd : 0 < d) (hz : sqrtTwoAddSeries ((c : ℝ) / (d : ℝ)) n ≤ z)
     (h : (2 * b + a) * d ^ 2 ≤ c ^ 2 * b) :
-    sqrtTwoAddSeries (a / b) (n + 1) ≤ z := by
+    sqrtTwoAddSeries ((a : ℝ) / (b : ℝ)) (n + 1) ≤ z := by
   refine le_trans ?_ hz; rw [sqrtTwoAddSeries_succ]; apply sqrtTwoAddSeries_monotone_left
   have hb' : 0 < (b : ℝ) := Nat.cast_pos.2 hb
   have hd' : 0 < (d : ℝ) := Nat.cast_pos.2 hd
@@ -85,7 +85,7 @@ theorem sqrtTwoAddSeries_step_up (c d : ℕ) {a b n : ℕ} {z : ℝ}
 `π < a` thanks to basic trigonometric formulas as expressed in `pi_lt_sqrtTwoAddSeries`. -/
 theorem pi_upper_bound_start (n : ℕ) {a}
     (h : (2 : ℝ) - ((a - 1 / (4 : ℝ) ^ n) / (2 : ℝ) ^ (n + 1)) ^ 2 ≤
-        sqrtTwoAddSeries ((0 : ℕ) / (1 : ℕ)) n)
+        sqrtTwoAddSeries 0 n)
     (h₂ : (1 : ℝ) / (4 : ℝ) ^ n ≤ a) : π < a := by
   refine lt_of_lt_of_le (pi_lt_sqrtTwoAddSeries n) ?_
   rw [← le_sub_iff_add_le, ← le_div_iff₀', sqrt_le_left, sub_le_comm]
@@ -94,8 +94,8 @@ theorem pi_upper_bound_start (n : ℕ) {a}
   · exact pow_pos zero_lt_two _
 
 theorem sqrtTwoAddSeries_step_down (a b : ℕ) {c d n : ℕ} {z : ℝ}
-    (hb : 0 < b) (hd : 0 < d) (hz : z ≤ sqrtTwoAddSeries (a / b) n)
-    (h : a ^ 2 * d ≤ (2 * d + c) * b ^ 2) : z ≤ sqrtTwoAddSeries (c / d) (n + 1) := by
+    (hb : 0 < b) (hd : 0 < d) (hz : z ≤ sqrtTwoAddSeries ((a : ℝ) / (b : ℝ)) n)
+    (h : a ^ 2 * d ≤ (2 * d + c) * b ^ 2) : z ≤ sqrtTwoAddSeries ((c : ℝ) / (d : ℝ)) (n + 1) := by
   apply le_trans hz; rw [sqrtTwoAddSeries_succ]; apply sqrtTwoAddSeries_monotone_left
   apply le_sqrt_of_sq_le
   have hb' : 0 < (b : ℝ) := Nat.cast_pos.2 hb
@@ -106,6 +106,11 @@ theorem sqrtTwoAddSeries_step_down (a b : ℕ) {c d n : ℕ} {z : ℝ}
 section Tactic
 
 open Lean Elab Tactic Qq Mathlib.Meta.NormNum
+
+/-- Start the certificate recurrence with numerator zero and denominator one. -/
+private meta def piBoundSeed (n : ℕ) : TacticM Unit := do
+  evalTactic (← `(tactic| rw [show sqrtTwoAddSeries 0 $(quote n) =
+    sqrtTwoAddSeries (((0 : ℕ) : ℝ) / ((1 : ℕ) : ℝ)) $(quote n) by norm_num]))
 
 private meta def piBoundWitness (witness : Syntax) : TacticM (ℕ × ℕ) := do
   let e : Q(ℚ) ← Term.elabTermAndSynthesize witness (some q(ℚ))
@@ -121,6 +126,7 @@ elab "pi_lower_bound " "[" l:term,* "]" : tactic => do
   have els := l.getElems
   let n := quote els.size
   evalTactic (← `(tactic| apply pi_lower_bound_start $n))
+  piBoundSeed els.size
   for l in els do
     let (num, den) ← piBoundWitness l
     evalTactic (← `(tactic| refine sqrtTwoAddSeries_step_up $(quote num) $(quote den)
@@ -135,6 +141,7 @@ elab "pi_upper_bound " "[" l:term,* "]" : tactic => do
   have els := l.getElems
   let n := quote els.size
   evalTactic (← `(tactic| apply pi_upper_bound_start $n))
+  piBoundSeed els.size
   for l in els do
     let (num, den) ← piBoundWitness l
     evalTactic (← `(tactic| refine sqrtTwoAddSeries_step_down $(quote num) $(quote den)

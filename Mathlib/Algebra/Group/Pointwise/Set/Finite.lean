@@ -127,29 +127,53 @@ variable [InvolutiveInv α] {s : Set α}
 
 end InvolutiveInv
 
-section Div
-variable [Div α] {s t : Set α}
+section Sub
+variable [Sub α] {s t : Set α}
 
-@[to_additive] lemma Finite.div : s.Finite → t.Finite → (s / t).Finite := .image2 _
+lemma Finite.sub : s.Finite → t.Finite → (s - t).Finite := .image2 _
 
-/-- Division preserves finiteness. -/
-@[to_additive /-- Subtraction preserves finiteness. -/]
-instance fintypeDiv [DecidableEq α] (s t : Set α) [Fintype s] [Fintype t] : Fintype (s / t) :=
+/-- Subtraction preserves finiteness. -/
+instance fintypeSub [DecidableEq α] (s t : Set α) [Fintype s] [Fintype t] :
+    Fintype (s - t) :=
   Set.fintypeImage2 _ _ _
+
+end Sub
+
+section Div
+variable [CommGroup α] {s t : Set α}
+
+lemma Finite.div (hs : s.Finite) (ht : t.Finite) : (s / t).Finite :=
+  hs.mul ht.inv
+
+/-- A quotient set of two finite subsets of a commutative group is finite. -/
+instance fintypeDiv [DecidableEq α] (s t : Set α) [Fintype s] [Fintype t] :
+    Fintype (s / t) := by
+  rw [← Set.image2_div]
+  exact Set.fintypeImage2 _ _ _
 
 end Div
 
-section Group
+section AddGroup
+variable [AddGroup α] {s t : Set α}
 
+lemma finite_sub : (s - t).Finite ↔ s.Finite ∧ t.Finite ∨ s = ∅ ∨ t = ∅ :=
+  finite_image2 (fun _ _ ↦ sub_left_injective.injOn) fun _ _ ↦ sub_right_injective.injOn
+
+lemma infinite_sub : (s - t).Infinite ↔ s.Infinite ∧ t.Nonempty ∨ t.Infinite ∧ s.Nonempty :=
+  infinite_image2 (fun _ _ ↦ sub_left_injective.injOn) fun _ _ ↦ sub_right_injective.injOn
+
+end AddGroup
+
+section Group
 variable [Group α] {s t : Set α}
 
-@[to_additive]
-lemma finite_div : (s / t).Finite ↔ s.Finite ∧ t.Finite ∨ s = ∅ ∨ t = ∅ :=
-  finite_image2 (fun _ _ ↦ div_left_injective.injOn) fun _ _ ↦ div_right_injective.injOn
+lemma finite_div : (s * t⁻¹).Finite ↔ s.Finite ∧ t.Finite ∨ s = ∅ ∨ t = ∅ := by
+  rw [finite_mul]
+  simp
 
-@[to_additive]
-lemma infinite_div : (s / t).Infinite ↔ s.Infinite ∧ t.Nonempty ∨ t.Infinite ∧ s.Nonempty :=
-  infinite_image2 (fun _ _ ↦ div_left_injective.injOn) fun _ _ ↦ div_right_injective.injOn
+lemma infinite_div : (s * t⁻¹).Infinite ↔ s.Infinite ∧ t.Nonempty ∨ t.Infinite ∧ s.Nonempty := by
+  rw [infinite_mul]
+  simp
 
 end Group
 

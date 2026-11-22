@@ -96,23 +96,25 @@ theorem lintegral_count [MeasurableSingletonClass α] (f : α → ℝ≥0∞) :
 /-- Markov's inequality for the counting measure with hypothesis using `tsum` in `ℝ≥0∞`. -/
 theorem _root_.ENNReal.count_const_le_le_of_tsum_le [MeasurableSingletonClass α] {a : α → ℝ≥0∞}
     (a_mble : Measurable a) {c : ℝ≥0∞} (tsum_le_c : ∑' i, a i ≤ c) {ε : ℝ≥0∞} (ε_ne_zero : ε ≠ 0)
-    (ε_ne_top : ε ≠ ∞) : Measure.count { i : α | ε ≤ a i } ≤ c / ε := by
+    (ε_ne_top : ε ≠ ∞) : Measure.count { i : α | ε ≤ a i } ≤
+      (have : IsUnit ε := ENNReal.isUnit_iff.2 ⟨ε_ne_zero, ε_ne_top⟩
+       c / ε) := by
   rw [← lintegral_count] at tsum_le_c
   apply (MeasureTheory.meas_ge_le_lintegral_div a_mble.aemeasurable ε_ne_zero ε_ne_top).trans
-  exact ENNReal.div_le_div tsum_le_c rfl.le
+  simpa only [ENNReal.checkedDiv_eq_div] using ENNReal.div_le_div tsum_le_c rfl.le
 
 /-- Markov's inequality for the counting measure with hypothesis using `tsum` in `ℝ≥0`. -/
 theorem _root_.NNReal.count_const_le_le_of_tsum_le [MeasurableSingletonClass α] {a : α → ℝ≥0}
     (a_mble : Measurable a) (a_summable : Summable a) {c : ℝ≥0} (tsum_le_c : ∑' i, a i ≤ c)
-    {ε : ℝ≥0} (ε_ne_zero : ε ≠ 0) : Measure.count { i : α | ε ≤ a i } ≤ c / ε := by
-  rw [show (fun i => ε ≤ a i) = fun i => (ε : ℝ≥0∞) ≤ ((↑) ∘ a) i by
-      simp only [ENNReal.coe_le_coe, Function.comp]]
-  apply
-    ENNReal.count_const_le_le_of_tsum_le (measurable_coe_nnreal_ennreal.comp a_mble) _
-      (mod_cast ε_ne_zero) (@ENNReal.coe_ne_top ε)
-  convert! ENNReal.coe_le_coe.mpr tsum_le_c
-  simp_rw [Function.comp_apply]
-  rw [ENNReal.tsum_coe_eq a_summable.hasSum]
+    {ε : ℝ≥0} (ε_ne_zero : ε ≠ 0) : Measure.count { i : α | ε ≤ a i } ≤
+      (have : IsUnit ε := ε_ne_zero.isUnit
+       c / ε) := by
+  have hsum : (∑' i, (a i : ℝ≥0∞)) ≤ (c : ℝ≥0∞) := by
+    rw [ENNReal.tsum_coe_eq a_summable.hasSum]
+    exact ENNReal.coe_le_coe.mpr tsum_le_c
+  simpa only [Function.comp_apply, ENNReal.coe_le_coe, ENNReal.checkedDiv_eq_div, ENNReal.coe_div]
+    using ENNReal.count_const_le_le_of_tsum_le (measurable_coe_nnreal_ennreal.comp a_mble)
+      hsum (ENNReal.coe_ne_zero.2 ε_ne_zero) (@ENNReal.coe_ne_top ε)
 
 end DiracAndCount
 
@@ -295,13 +297,12 @@ theorem SimpleFunc.exists_lt_lintegral_simpleFunc_of_lt_lintegral {m : SigmaAlge
     have c_ne_zero : c ≠ 0 := by
       intro hc
       simp only [hc, ENNReal.coe_zero, zero_mul, not_lt_zero] at hL
-    have : L / c < μ s := by
-      rwa [ENNReal.div_lt_iff, mul_comm]
-      · simp only [c_ne_zero, Ne, ENNReal.coe_eq_zero, not_false_iff, true_or]
-      · simp only [Ne, coe_ne_top, not_false_iff, true_or]
+    have hdiv {q : ℝ≥0∞} : ENNReal.div L (c : ℝ≥0∞) < q ↔ L < (c : ℝ≥0∞) * q := by
+      rw [ENNReal.div_lt_iff (Or.inl (ENNReal.coe_ne_zero.2 c_ne_zero))
+        (Or.inl ENNReal.coe_ne_top), mul_comm]
     obtain ⟨t, ht, ts, mlt, t_top⟩ :
-      ∃ t : Set α, MeasurableSet t ∧ t ⊆ s ∧ L / ↑c < μ t ∧ μ t < ∞ :=
-      Measure.exists_subset_measure_lt_top hs this
+      ∃ t : Set α, MeasurableSet t ∧ t ⊆ s ∧ ENNReal.div L (c : ℝ≥0∞) < μ t ∧ μ t < ∞ :=
+      Measure.exists_subset_measure_lt_top hs (hdiv.2 hL)
     refine ⟨piecewise t ht (const α c) (const α 0), fun x => ?_, ?_, ?_⟩
     · refine indicator_le_indicator_of_subset ts (fun x => ?_) x
       exact zero_le
@@ -311,9 +312,7 @@ theorem SimpleFunc.exists_lt_lintegral_simpleFunc_of_lt_lintegral {m : SigmaAlge
     · simp only [ht, const_zero, coe_piecewise, coe_const, SimpleFunc.coe_zero,
         piecewise_eq_indicator, ENNReal.coe_indicator, Function.const_apply, lintegral_indicator,
         lintegral_const, Measure.restrict_apply', univ_inter]
-      rwa [mul_comm, ← ENNReal.div_lt_iff]
-      · simp only [c_ne_zero, Ne, ENNReal.coe_eq_zero, not_false_iff, true_or]
-      · simp only [Ne, coe_ne_top, not_false_iff, true_or]
+      exact hdiv.1 mlt
   | @add f₁ f₂ _ h₁ h₂ =>
     replace hL : L < ∫⁻ x, f₁ x ∂μ + ∫⁻ x, f₂ x ∂μ := by
       rwa [← lintegral_add_left f₁.measurable.coe_nnreal_ennreal]

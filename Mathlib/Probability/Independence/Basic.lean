@@ -951,41 +951,72 @@ lemma iIndepFun.indepFun_mul_mul₀ (hf_indep : iIndepFun f μ)
 
 end Mul
 
-section Div
-variable {β : Type*} {m : SigmaAlgebra β} [Div β] [MeasurableDiv₂ β] {f : ι → Ω → β}
+section Sub
+variable {β : Type*} {m : SigmaAlgebra β} [Sub β] [MeasurableSub₂ β] {f : ι → Ω → β}
 
-@[to_additive]
+lemma iIndepFun.indepFun_sub_left (hf_indep : iIndepFun f μ)
+    (hf_meas : ∀ i, Measurable (f i)) (i j k : ι) (hik : i ≠ k) (hjk : j ≠ k) :
+    IndepFun (f i - f j) (f k) μ :=
+  Kernel.iIndepFun.indepFun_sub_left hf_indep hf_meas i j k hik hjk
+
+lemma iIndepFun.indepFun_sub_left₀ (hf_indep : iIndepFun f μ)
+    (hf_meas : ∀ i, AEMeasurable (f i) μ) (i j k : ι) (hik : i ≠ k) (hjk : j ≠ k) :
+    IndepFun (f i - f j) (f k) μ :=
+  Kernel.iIndepFun.indepFun_sub_left₀ hf_indep (by simp [hf_meas]) i j k hik hjk
+
+lemma iIndepFun.indepFun_sub_right (hf_indep : iIndepFun f μ)
+    (hf_meas : ∀ i, Measurable (f i)) (i j k : ι) (hij : i ≠ j) (hik : i ≠ k) :
+    IndepFun (f i) (f j - f k) μ :=
+  Kernel.iIndepFun.indepFun_sub_right hf_indep hf_meas i j k hij hik
+
+lemma iIndepFun.indepFun_sub_right₀ (hf_indep : iIndepFun f μ)
+    (hf_meas : ∀ i, AEMeasurable (f i) μ) (i j k : ι) (hij : i ≠ j) (hik : i ≠ k) :
+    IndepFun (f i) (f j - f k) μ :=
+  Kernel.iIndepFun.indepFun_sub_right₀ hf_indep (by simp [hf_meas]) i j k hij hik
+
+lemma iIndepFun.indepFun_sub_sub (hf_indep : iIndepFun f μ)
+    (hf_meas : ∀ i, Measurable (f i))
+    (i j k l : ι) (hik : i ≠ k) (hil : i ≠ l) (hjk : j ≠ k) (hjl : j ≠ l) :
+    IndepFun (f i - f j) (f k - f l) μ :=
+  Kernel.iIndepFun.indepFun_sub_sub hf_indep hf_meas i j k l hik hil hjk hjl
+
+lemma iIndepFun.indepFun_sub_sub₀ (hf_indep : iIndepFun f μ)
+    (hf_meas : ∀ i, AEMeasurable (f i) μ)
+    (i j k l : ι) (hik : i ≠ k) (hil : i ≠ l) (hjk : j ≠ k) (hjl : j ≠ l) :
+    IndepFun (f i - f j) (f k - f l) μ :=
+  Kernel.iIndepFun.indepFun_sub_sub₀ hf_indep (by simp [hf_meas]) i j k l hik hil hjk hjl
+
+end Sub
+
+section Div
+variable {β : Type*} {m : SigmaAlgebra β} [Group β] [MeasurableDiv₂ β] {f : ι → Ω → β}
+
 lemma iIndepFun.indepFun_div_left (hf_indep : iIndepFun f μ)
     (hf_meas : ∀ i, Measurable (f i)) (i j k : ι) (hik : i ≠ k) (hjk : j ≠ k) :
     IndepFun (f i / f j) (f k) μ :=
   Kernel.iIndepFun.indepFun_div_left hf_indep hf_meas i j k hik hjk
 
-@[to_additive]
 lemma iIndepFun.indepFun_div_left₀ (hf_indep : iIndepFun f μ)
     (hf_meas : ∀ i, AEMeasurable (f i) μ) (i j k : ι) (hik : i ≠ k) (hjk : j ≠ k) :
     IndepFun (f i / f j) (f k) μ :=
   Kernel.iIndepFun.indepFun_div_left₀ hf_indep (by simp [hf_meas]) i j k hik hjk
 
-@[to_additive]
 lemma iIndepFun.indepFun_div_right (hf_indep : iIndepFun f μ)
     (hf_meas : ∀ i, Measurable (f i)) (i j k : ι) (hij : i ≠ j) (hik : i ≠ k) :
     IndepFun (f i) (f j / f k) μ :=
   Kernel.iIndepFun.indepFun_div_right hf_indep hf_meas i j k hij hik
 
-@[to_additive]
 lemma iIndepFun.indepFun_div_right₀ (hf_indep : iIndepFun f μ)
     (hf_meas : ∀ i, AEMeasurable (f i) μ) (i j k : ι) (hij : i ≠ j) (hik : i ≠ k) :
     IndepFun (f i) (f j / f k) μ :=
   Kernel.iIndepFun.indepFun_div_right₀ hf_indep (by simp [hf_meas]) i j k hij hik
 
-@[to_additive]
 lemma iIndepFun.indepFun_div_div (hf_indep : iIndepFun f μ)
     (hf_meas : ∀ i, Measurable (f i))
     (i j k l : ι) (hik : i ≠ k) (hil : i ≠ l) (hjk : j ≠ k) (hjl : j ≠ l) :
     IndepFun (f i / f j) (f k / f l) μ :=
   Kernel.iIndepFun.indepFun_div_div hf_indep hf_meas i j k l hik hil hjk hjl
 
-@[to_additive]
 lemma iIndepFun.indepFun_div_div₀ (hf_indep : iIndepFun f μ)
     (hf_meas : ∀ i, AEMeasurable (f i) μ)
     (i j k l : ι) (hik : i ≠ k) (hil : i ≠ l) (hjk : j ≠ k) (hjl : j ≠ l) :

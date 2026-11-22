@@ -6,6 +6,7 @@ Authors: Bolton Bailey
 module
 
 public meta import Mathlib.Data.String.Defs
+public meta import Mathlib.Lean.Elab.NativeDivision
 public import Mathlib.Init
 
 /-!
@@ -30,7 +31,7 @@ def String.justify (s : String) (a : Alignment) (width : Nat) : String :=
   | Alignment.left => s.rightpad width
   | Alignment.right => s.leftpad width
   | Alignment.center =>
-    let pad := (width - s.length) / 2
+    let pad := Nat.euclideanDiv (width - s.length) 2
     String.replicate pad ' ' ++ s ++ String.replicate (width - s.length - pad) ' '
 
 /--

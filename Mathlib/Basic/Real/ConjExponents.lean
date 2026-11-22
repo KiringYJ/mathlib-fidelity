@@ -656,11 +656,12 @@ protected lemma conjExponent {p : ℝ≥0∞} (hp : 1 ≤ p) : p.HolderConjugate
   obtain rfl | hp := eq_or_ne p ∞
   · simp
   calc
-    1 + (p - 1)⁻¹ = (p - 1 + 1) / (p - 1) := by
-      rw [ENNReal.add_div, ENNReal.div_self ((tsub_pos_of_lt hp₁).ne') (sub_ne_top hp), one_div]
+    1 + (p - 1)⁻¹ = ENNReal.div (p - 1 + 1) (p - 1) := by
+      rw [ENNReal.add_div, ENNReal.div_self ((tsub_pos_of_lt hp₁).ne') (sub_ne_top hp),
+        ENNReal.one_div]
     _ = (1⁻¹ - p⁻¹)⁻¹ := by
-      rw [tsub_add_cancel_of_le, ← inv_eq_iff_eq_inv, div_eq_mul_inv, ENNReal.mul_inv, inv_inv,
-        ENNReal.mul_sub, ENNReal.inv_mul_cancel, mul_one] <;> simp [*]
+      rw [tsub_add_cancel_of_le, ← inv_eq_iff_eq_inv, ENNReal.div_eq_mul_inv,
+        ENNReal.mul_inv, inv_inv, ENNReal.mul_sub, ENNReal.inv_mul_cancel, mul_one] <;> simp [*]
 
 instance {p : ℝ≥0∞} [Fact (1 ≤ p)] : p.HolderConjugate (conjExponent p) := .conjExponent Fact.out
 
@@ -682,12 +683,12 @@ lemma mul_eq_add : p * q = p + q := by
   simpa [add_comm p, mul_add, add_mul, hp, hq, ne_zero p q, ne_zero q p, ENNReal.mul_inv_cancel,
     ENNReal.inv_mul_cancel_right] using congr(p * $((inv_add_inv_eq_one p q).symm) * q)
 
-lemma div_conj_eq_sub_one : p / q = p - 1 := by
+lemma div_conj_eq_sub_one : ENNReal.div p q = p - 1 := by
   obtain rfl | hq := eq_or_ne q ∞
   · obtain rfl := unique ∞ p 1
     simp
   refine ENNReal.eq_sub_of_add_eq one_ne_top ?_
-  rw [← ENNReal.div_self (ne_zero q p) hq, ← ENNReal.add_div, ← h.mul_eq_add, mul_div_assoc,
+  rw [← ENNReal.div_self (ne_zero q p) hq, ← ENNReal.add_div, ← h.mul_eq_add, ENNReal.mul_div_assoc,
     ENNReal.div_self (ne_zero q p) hq, mul_one]
 
 end

@@ -414,7 +414,8 @@ variable [LinearOrderedCommGroupWithZero Γ₀] (v : Valuation R Γ₀) {x y : R
 theorem map_inv (x : R) {hx : IsUnit x} : v x⁻¹ = Checked.inv (v x) (hx.map v) :=
   map_inv₀ v x
 
-theorem map_div (x y : R) {hy : IsUnit y} : v (x / y) = Checked.div (v x) (v y) (hy.map v) :=
+theorem map_div (x y : R) {hy : IsUnit y} :
+    v (Checked.div x y hy) = Checked.div (v x) (v y) (hy.map v) :=
   map_div₀ v x y
 
 theorem one_lt_val_iff (v : Valuation K Γ₀) {x : K} (h : x ≠ 0) : 1 < v x ↔ v x⁻¹ < 1 := by
@@ -1291,7 +1292,7 @@ theorem map_inv {hx : IsUnit x} : v x⁻¹ = -(v x) :=
   eq_neg_of_add_eq_zero_left <| by rw [← v.map_mul, inv_mul_cancel₀, v.map_one]
 
 @[simp]
-theorem map_div {hy : IsUnit y} : v (x / y) = v x - v y := by
+theorem map_div {hy : IsUnit y} : v (Checked.div x y hy) = v x - v y := by
   rw [div_eq_mul_inv₀, v.map_mul, v.map_inv, sub_eq_add_neg]
 
 end Group

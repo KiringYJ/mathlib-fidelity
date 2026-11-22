@@ -75,7 +75,8 @@ deriving Decidable
 
 /-- `abundancyIndex n hn` is the sum of the divisors of a positive natural number `n` divided by
 `n`. -/
-noncomputable def abundancyIndex (n : ℕ) (hn : n ≠ 0) : ℚ := (∑ i ∈ n.divisors, i) / (n : ℚ)
+noncomputable def abundancyIndex (n : ℕ) (hn : n ≠ 0) : ℚ :=
+  ((∑ i ∈ n.divisors, i : ℕ) : ℚ) / (n : ℚ)
 
 theorem not_pseudoperfect_iff_forall :
     ¬ Pseudoperfect n ↔ n = 0 ∨ ∀ s ⊆ properDivisors n, ∑ i ∈ s, i ≠ n := by
@@ -157,8 +158,9 @@ theorem Prime.deficient_pow (h : Prime n) : Deficient (n ^ m) := by
     calc
       ∑ x ∈ Finset.map ⟨(n ^ ·), Nat.pow_right_injective h.two_le⟩ (range m), x
         = ∑ i ∈ range m, n ^ i := by simp
-      _ = (n ^ m - 1) / (n - 1) := (Nat.geomSum_eq (Prime.two_le h) _)
-      _ ≤ (n ^ m - 1) := Nat.div_le_self (n ^ m - 1) (n - 1)
+      _ = Nat.euclideanDiv (n ^ m - 1) (n - 1) (Nat.ne_of_gt (Nat.sub_pos_of_lt h.one_lt)) :=
+        Nat.geomSum_eq h.two_le _
+      _ ≤ n ^ m - 1 := by rw [Nat.euclideanDiv_eq_core]; exact Nat.div_le_self _ _
       _ < n ^ m := sub_lt (pow_pos (Prime.pos h) m) (Nat.one_pos)
 
 theorem _root_.IsPrimePow.deficient (h : IsPrimePow n) : Deficient n := by

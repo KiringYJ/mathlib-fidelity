@@ -255,12 +255,14 @@ theorem floor_lt_self_iff {a : R} : ⌊a⌋ < a ↔ a ∉ range Int.cast :=
 section LinearOrderedRing
 variable {R : Type*} [Ring R] [LinearOrder R] [IsStrictOrderedRing R] [FloorRing R] {a : R}
 
-theorem mul_cast_floor_div_cancel_of_pos {n : ℤ} (hn : 0 < n) (a : R) : ⌊a * n⌋ / n = ⌊a⌋ := by
+theorem mul_cast_floor_div_cancel_of_pos {n : ℤ} (hn : 0 < n) (a : R) :
+    Int.euclideanDiv ⌊a * n⌋ n hn.ne' = ⌊a⌋ := by
   refine eq_of_forall_le_iff fun m ↦ ?_
-  rw [Int.le_ediv_iff_mul_le hn, le_floor, le_floor, cast_mul,
+  rw [Int.euclideanDiv_eq_core, Int.le_ediv_iff_mul_le hn, le_floor, le_floor, cast_mul,
     mul_le_mul_iff_of_pos_right (cast_pos.mpr hn)]
 
-theorem mul_natCast_floor_div_cancel {n : ℕ} (hn : n ≠ 0) (a : R) : ⌊a * n⌋ / n = ⌊a⌋ := by
+theorem mul_natCast_floor_div_cancel {n : ℕ} (hn : n ≠ 0) (a : R) :
+    Int.euclideanDiv ⌊a * n⌋ (n : ℤ) (Int.ofNat_ne_zero.2 hn) = ⌊a⌋ := by
   simpa using mul_cast_floor_div_cancel_of_pos (n := n) (by positivity) a
 
 theorem mul_fract_eq_one_iff_exists_int {x : R} {k : R} (hk : 1 < k) :
@@ -273,10 +275,12 @@ theorem mul_fract_eq_one_iff_exists_int {x : R} {k : R} (hk : 1 < k) :
   rw [floor_eq_iff, ← mul_le_mul_iff_right₀ hk0, ← mul_lt_mul_iff_right₀ hk0, hn]
   simp [mul_add, hk]
 
-theorem cast_mul_floor_div_cancel_of_pos {n : ℤ} (hn : 0 < n) (a : R) : ⌊n * a⌋ / n = ⌊a⌋ := by
+theorem cast_mul_floor_div_cancel_of_pos {n : ℤ} (hn : 0 < n) (a : R) :
+    Int.euclideanDiv ⌊n * a⌋ n hn.ne' = ⌊a⌋ := by
   rw [Commute.intCast_left, mul_cast_floor_div_cancel_of_pos hn]
 
-theorem natCast_mul_floor_div_cancel {n : ℕ} (hn : n ≠ 0) (a : R) : ⌊n * a⌋ / n = ⌊a⌋ := by
+theorem natCast_mul_floor_div_cancel {n : ℕ} (hn : n ≠ 0) (a : R) :
+    Int.euclideanDiv ⌊n * a⌋ (n : ℤ) (Int.ofNat_ne_zero.2 hn) = ⌊a⌋ := by
   rw [Nat.cast_comm, mul_natCast_floor_div_cancel hn]
 
 end LinearOrderedRing
@@ -285,12 +289,14 @@ section LinearOrderedField
 variable {k : Type*} [Field k] [LinearOrder k] [IsOrderedRing k] [FloorRing k] {a : k}
 
 theorem floor_div_cast_of_nonneg {n : ℤ} {hnUnit : IsUnit (n : k)} (hn : 0 ≤ n) (a : k) :
-    ⌊a / n⌋ = ⌊a⌋ / n := by
+    ⌊a / (n : k)⌋ = Int.euclideanDiv ⌊a⌋ n (Int.cast_ne_zero.mp hnUnit.ne_zero) := by
   have hn' : 0 < n := hn.lt_of_ne (Int.cast_ne_zero.mp hnUnit.ne_zero).symm
   nth_rw 2 [← div_mul_cancel₀ a (hb := hnUnit)]
   rw [mul_cast_floor_div_cancel_of_pos hn']
 
-theorem floor_div_natCast (a : k) (n : ℕ) {hn : IsUnit (n : k)} : ⌊a / n⌋ = ⌊a⌋ / n := by
+theorem floor_div_natCast (a : k) (n : ℕ) {hn : IsUnit (n : k)} :
+    ⌊a / (n : k)⌋ =
+      Int.euclideanDiv ⌊a⌋ (n : ℤ) (Int.ofNat_ne_zero.2 (Nat.cast_ne_zero.mp hn.ne_zero)) := by
   simpa using floor_div_cast_of_nonneg (hnUnit := by simpa using hn) (Int.natCast_nonneg n) a
 
 end LinearOrderedField
@@ -548,19 +554,19 @@ theorem sub_floor_div_mul_lt (a : k) (hb : 0 < b) : a - ⌊a / b⌋ * b < b :=
     exact lt_floor_add_one _
 
 theorem fract_div_natCast_eq_div_natCast_mod {m n : ℕ} {hn : IsUnit (n : k)} :
-    fract ((m : k) / n) = ↑(m % n) / n := by
+    fract ((m : k) / (n : k)) = ((m % n : ℕ) : k) / (n : k) := by
   have hn' : 0 < (n : k) := (Nat.cast_nonneg n).lt_of_ne' hn.ne_zero
-  refine fract_eq_iff.mpr ⟨?_, ?_, m / n, ?_⟩
+  refine fract_eq_iff.mpr ⟨?_, ?_, ↑(Nat.euclideanDiv m n (Nat.cast_ne_zero.mp hn.ne_zero)), ?_⟩
   · positivity
   · simpa only [div_lt_one hn', Nat.cast_lt] using m.mod_lt (Nat.cast_pos.mp hn')
   · rw [sub_eq_iff_eq_add', ← mul_right_inj' hn'.ne', mul_div_cancel₀, mul_add, mul_div_cancel₀]
     norm_cast
-    rw [← Nat.cast_add, Nat.mod_add_div m n]
+    rw [Nat.euclideanDiv_eq_core, ← Nat.cast_add, Nat.mod_add_div m n]
 
 theorem fract_div_intCast_eq_div_intCast_mod {m : ℤ} {n : ℕ} {hn : IsUnit (n : k)} :
-    fract ((m : k) / n) = ↑(m % n) / n := by
+    fract ((m : k) / (n : k)) = ((m % n : ℤ) : k) / (n : k) := by
   have hn' : 0 < (n : k) := (Nat.cast_nonneg n).lt_of_ne' hn.ne_zero
-  have : ∀ {l : ℤ}, 0 ≤ l → fract ((l : k) / n) = ↑(l % n) / n := by
+  have : ∀ {l : ℤ}, 0 ≤ l → fract ((l : k) / (n : k)) = ((l % n : ℤ) : k) / (n : k) := by
     intro l hl
     obtain ⟨l₀, rfl | rfl⟩ := l.eq_nat_or_neg
     · rw [cast_natCast, ← natCast_mod, cast_natCast, fract_div_natCast_eq_div_natCast_mod]
@@ -574,8 +580,8 @@ theorem fract_div_intCast_eq_div_intCast_mod {m : ℤ} {n : ℕ} {hn : IsUnit (n
     simpa [m₁, ← @cast_le k, ← div_le_iff₀ hn'] using FloorRing.gc_ceil_coe.le_u_l _
   calc
     fract ((Int.cast (-(m₀ : ℤ)) : k) / (n : k))
-      = fract (-(m₀ : k) / n) := by simp
-    _ = fract ((m₁ : k) / n) := ?_
+      = fract (-(m₀ : k) / (n : k)) := by simp
+    _ = fract ((m₁ : k) / (n : k)) := ?_
     _ = Int.cast (m₁ % (n : ℤ)) / Nat.cast n := this hm₁
     _ = Int.cast (-(↑m₀ : ℤ) % ↑n) / Nat.cast n := ?_
   · rw [← fract_intCast_add q, ← mul_div_cancel_right₀ (q : k) (hb := hn), ← add_div,
@@ -774,7 +780,7 @@ lemma mul_lt_floor (hb₀ : 0 < b) (hb : b < 1) (hba : ⌈b / (1 - b)⌉ ≤ a) 
       rwa [_root_.mul_add_one, ← le_sub_iff_add_le', ← one_sub_mul, ← div_le_iff₀' (by linarith),
         ← ceil_le, le_floor]
 
-lemma ceil_div_ceil_inv_sub_one (ha : 1 < a) : ⌈⌈(a - 1)⁻¹⌉ / a⌉ = ⌈(a - 1)⁻¹⌉ := by
+lemma ceil_div_ceil_inv_sub_one (ha : 1 < a) : ⌈(⌈(a - 1)⁻¹⌉ : k) / a⌉ = ⌈(a - 1)⁻¹⌉ := by
   have : 0 < a - 1 := by linarith
   refine le_antisymm (ceil_le.2 <| div_le_self (by positivity) ha.le) <| ?_
   rw [le_ceil_iff, sub_lt_comm, div_eq_mul_inv₀, ← mul_one_sub,
@@ -782,7 +788,7 @@ lemma ceil_div_ceil_inv_sub_one (ha : 1 < a) : ⌈⌈(a - 1)⁻¹⌉ / a⌉ = �
   convert ceil_lt_add_one (R := k) _
   field
 
-lemma ceil_lt_mul (hb : 1 < b) (hba : ⌈(b - 1)⁻¹⌉ / b < a) : ⌈a⌉ < b * a := by
+lemma ceil_lt_mul (hb : 1 < b) (hba : (⌈(b - 1)⁻¹⌉ : k) / b < a) : ⌈a⌉ < b * a := by
   obtain hab | hba := le_total a (b - 1)⁻¹
   · calc
       ⌈a⌉ ≤ (⌈(b - 1)⁻¹⌉ : k) := by gcongr
@@ -794,7 +800,7 @@ lemma ceil_lt_mul (hb : 1 < b) (hba : ⌈(b - 1)⁻¹⌉ / b < a) : ⌈a⌉ < b 
       _ ≤ a + (b - 1) * a := by gcongr
       _ = b * a := by rw [sub_one_mul, add_sub_cancel]
 
-lemma ceil_le_mul (hb : 1 < b) (hba : ⌈(b - 1)⁻¹⌉ / b ≤ a) : ⌈a⌉ ≤ b * a := by
+lemma ceil_le_mul (hb : 1 < b) (hba : (⌈(b - 1)⁻¹⌉ : k) / b ≤ a) : ⌈a⌉ ≤ b * a := by
   obtain rfl | hba := hba.eq_or_lt
   · rw [ceil_div_ceil_inv_sub_one hb, mul_div_cancel₀]
   · exact (ceil_lt_mul hb hba).le

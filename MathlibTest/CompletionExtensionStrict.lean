@@ -211,8 +211,22 @@ example {M : Type*} [UniformSpace M] [Mul M] [CauchyContinuousMul M] : Continuou
 example {M : Type*} [UniformSpace M] [Neg M] [CauchyContinuousNeg M] : ContinuousNeg M :=
   CauchyContinuousNeg.continuousNeg
 
-example {M : Type*} [UniformSpace M] [Div M] [CauchyContinuousDiv M] : ContinuousDiv M :=
+example {M : Type*} [UniformSpace M] [Group M] [CauchyContinuousDiv M] : ContinuousDiv M :=
   CauchyContinuousDiv.continuousDiv
+
+example {M : Type*} [UniformSpace M] [Group M] [ContinuousDiv M] [CompleteSpace M] :
+    CauchyContinuousDiv M :=
+  CauchyContinuousDiv.of_continuousDiv
+
+example {X A B C : Type*} [UniformSpace X] [UniformSpace A] [UniformSpace B] [UniformSpace C]
+    (op : A → B → C) (hop : CauchyContinuous (Function.uncurry op)) {f : X → A} {g : X → B}
+    (hf : CauchyContinuous f) (hg : CauchyContinuous g) : CauchyContinuous fun x ↦ op (f x) (g x) :=
+  hop.comp₂ hf hg
+
+example {X G : Type*} [UniformSpace X] [UniformSpace G] [Group G] [CauchyContinuousDiv G]
+    {f g : X → G} (hf : CauchyContinuous f) (hg : CauchyContinuous g) :
+    CauchyContinuous fun x ↦ f x / g x :=
+  CauchyContinuous.comp₂ (op := fun a b : G ↦ a / b) cauchyContinuous_div hf hg
 
 example {M : Type*} [UniformSpace M] [Add M] [ContinuousAdd M] [CompleteSpace M] :
     CauchyContinuousAdd M :=

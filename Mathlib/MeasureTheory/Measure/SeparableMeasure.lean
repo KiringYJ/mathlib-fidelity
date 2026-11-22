@@ -207,7 +207,8 @@ theorem Measure.MeasureDense.of_generateFrom_isSetAlgebra_finite [IsFiniteMeasur
         -- So there exists `N` such that `μ (⋃ n, fₙ) - μ (⋃ n ≤ N, fₙ) < ε/2`.
         rcases Metric.tendsto_atTop.1 this (ε / 2) (by linarith [ε_pos]) with ⟨N, hN⟩
         -- For any `n ≤ N` there exists `gₙ ∈ 𝒜` such that `μ (fₙ ∆ gₙ) < ε/(2*(N+1))`.
-        choose g g_mem hg using fun n ↦ (hf n).2 (ε / (2 * (N + 1))) (div_pos ε_pos (by linarith))
+        choose g g_mem hg using fun n ↦
+          (hf n).2 (ε / (2 * ((N : ℝ) + 1))) (div_pos ε_pos (by linarith))
         -- Therefore we have
         -- `μ ((⋃ n, fₙ) ∆ (⋃ n ≤ N, gₙ))`
         --   `≤ μ ((⋃ n, fₙ) ∆ (⋃ n ≤ N, fₙ)) + μ ((⋃ n ≤ N, fₙ) ∆ (⋃ n ≤ N, gₙ))`
@@ -251,7 +252,7 @@ theorem Measure.MeasureDense.of_generateFrom_isSetAlgebra_finite [IsFiniteMeasur
                           simp_rw [measureReal_def, ← toReal_sum (fun _ _ ↦ measure_ne_top _ _)]
                           exact toReal_mono (ne_of_lt <| sum_lt_top.2 fun _ _ ↦ measure_lt_top μ _)
                             (measure_biUnion_finset_le _ _)
-                    _ < ∑ n ∈ Finset.range (N + 1), (ε / (2 * (N + 1))) :=
+                    _ < ∑ n ∈ Finset.range (N + 1), ε / (2 * ((N : ℝ) + 1)) :=
                           Finset.sum_lt_sum (fun i _ ↦ le_of_lt (hg i)) ⟨0, by simp, hg 0⟩
                     _ ≤ ε / 2 := by
                           simp only [Finset.sum_const, Finset.card_range, nsmul_eq_mul,

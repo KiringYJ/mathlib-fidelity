@@ -133,7 +133,7 @@ lemma one_sub_sq_div_two_le_cos : 1 - x ^ 2 / 2 ≤ cos x := by
 
 /-- Half of **Jordan's inequality** for `cos`. -/
 lemma one_sub_mul_le_cos (hx₀ : 0 ≤ x) (hx : x ≤ π / 2) : 1 - 2 / π * x ≤ cos x := by
-  simpa [sin_pi_div_two_sub, mul_sub, div_mul_div_comm, mul_comm π, pi_pos.ne']
+  simpa [sin_pi_div_two_sub, mul_sub, div_mul_div_comm₀, mul_comm π, pi_pos.ne']
     using mul_le_sin (x := π / 2 - x) (by simpa) (by simpa)
 
 /-- Half of **Jordan's inequality** for `cos` and negative values. -/

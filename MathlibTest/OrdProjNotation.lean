@@ -12,7 +12,8 @@ open Nat
 
 example (n p : ℕ) : n.ordProj p = p ^ n.factorization p := ordProj_def n p
 
-example (n p : ℕ) : n.ordCompl p = n / n.ordProj p := ordCompl_def n p
+example (n p : ℕ) : n.ordCompl p = Nat.euclideanDiv n (n.ordProj p) (ordProj_pos n p).ne' :=
+  ordCompl_def n p
 
 example (n p : ℕ) : n.ordProj p * n.ordCompl p = n := ordProj_mul_ordCompl_eq_self n p
 

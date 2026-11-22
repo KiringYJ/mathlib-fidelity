@@ -55,6 +55,32 @@ def divisors : Finset ℕ := {d ∈ Ico 1 (n + 1) | d ∣ n}
 By convention, we set `properDivisors 0 = ∅`. -/
 def properDivisors : Finset ℕ := {d ∈ Ico 1 n | d ∣ n}
 
+/-- Return the factor pair with first coordinate `d` when `d` is a positive divisor of `n`. -/
+def divisorsAntidiagonalEntry? (n d : ℕ) : Option (ℕ × ℕ) :=
+  if hd : d = 0 then none
+  else
+    let q := Nat.euclideanDiv n d hd
+    if d * q = n then some (d, q) else none
+
+private theorem divisorsAntidiagonalEntry?_eq_some {n d : ℕ} {a b : ℕ} :
+    divisorsAntidiagonalEntry? n d = some (a, b) ↔ d = a ∧ a ≠ 0 ∧ a * b = n := by
+  by_cases hd : d = 0
+  · subst d; simp [divisorsAntidiagonalEntry?]; grind
+  simp only [divisorsAntidiagonalEntry?, dite_eq_right hd, Option.ite_none_right_eq_some,
+    Option.some.injEq,
+    Prod.mk.injEq, Nat.euclideanDiv_eq_core]
+  constructor
+  · rintro ⟨h, rfl, rfl⟩
+    exact ⟨rfl, hd, h⟩
+  · rintro ⟨rfl, _, rfl⟩
+    simp [Nat.mul_div_cancel_left _ (Nat.pos_of_ne_zero hd)]
+
+theorem divisorsAntidiagonalEntry?_inj (n : ℕ) : ∀ a b p, divisorsAntidiagonalEntry? n a = some p →
+    divisorsAntidiagonalEntry? n b = some p → a = b := by
+  intro a b ⟨x, y⟩ ha hb
+  exact (divisorsAntidiagonalEntry?_eq_some.mp ha).1.trans
+    (divisorsAntidiagonalEntry?_eq_some.mp hb).1.symm
+
 /-- Pairs of divisors of a natural number as a finset.
 
 `n.divisorsAntidiagonal` is the finset of pairs `(a, b) : ℕ × ℕ` such that `a * b = n`.
@@ -62,8 +88,7 @@ By convention, we set `Nat.divisorsAntidiagonal 0 = ∅`.
 
 O(n). -/
 def divisorsAntidiagonal : Finset (ℕ × ℕ) :=
-  (Icc 1 n).filterMap (fun x ↦ let y := n / x; if x * y = n then some (x, y) else none)
-    fun x₁ x₂ (x, y) hx₁ hx₂ ↦ by aesop
+  (Icc 1 n).filterMap (divisorsAntidiagonalEntry? n) (divisorsAntidiagonalEntry?_inj n)
 
 /-- Pairs of divisors of a natural number, as a list.
 
@@ -71,8 +96,7 @@ def divisorsAntidiagonal : Finset (ℕ × ℕ) :=
 by increasing `a`. By convention, we set `Nat.divisorsAntidiagonalList 0 = []`.
 -/
 def divisorsAntidiagonalList (n : ℕ) : List (ℕ × ℕ) :=
-  (List.range' 1 n).filterMap
-    (fun x ↦ let y := n / x; if x * y = n then some (x, y) else none)
+  (List.range' 1 n).filterMap (divisorsAntidiagonalEntry? n)
 
 variable {n}
 
@@ -124,40 +148,45 @@ theorem mem_divisors_self (n : ℕ) (h : n ≠ 0) : n ∈ n.divisors :=
 theorem mem_divisorsAntidiagonal {x : ℕ × ℕ} :
     x ∈ divisorsAntidiagonal n ↔ x.fst * x.snd = n ∧ n ≠ 0 := by
   obtain ⟨a, b⟩ := x
-  simp only [divisorsAntidiagonal, mul_div_eq_iff_dvd, mem_filterMap, mem_Icc, one_le_iff_ne_zero,
-    Option.ite_none_right_eq_some, Option.some.injEq, Prod.ext_iff, and_left_comm, exists_eq_left]
+  simp only [divisorsAntidiagonal, mem_filterMap, mem_Icc, divisorsAntidiagonalEntry?_eq_some]
   constructor
-  · rintro ⟨han, ⟨ha, han'⟩, rfl⟩
-    simp [Nat.mul_div_eq_iff_dvd, han]
-    lia
-  · rintro ⟨rfl, hab⟩
-    rw [mul_ne_zero_iff] at hab
-    simpa [hab.1, hab.2] using Nat.le_mul_of_pos_right _ hab.2.bot_lt
+  · rintro ⟨_, ⟨_, hle⟩, rfl, ha, hab⟩
+    exact ⟨hab, (Nat.pos_of_ne_zero ha).trans_le hle |>.ne'⟩
+  · rintro ⟨rfl, hn⟩
+    obtain ⟨ha, hb⟩ := mul_ne_zero_iff.mp hn
+    exact ⟨a, ⟨Nat.pos_of_ne_zero ha, Nat.le_mul_of_pos_right _ (Nat.pos_of_ne_zero hb)⟩,
+      rfl, ha, rfl⟩
 
 @[simp] lemma divisorsAntidiagonalList_zero : divisorsAntidiagonalList 0 = [] := rfl
-@[simp] lemma divisorsAntidiagonalList_one : divisorsAntidiagonalList 1 = [(1, 1)] := rfl
+@[simp] lemma divisorsAntidiagonalList_one : divisorsAntidiagonalList 1 = [(1, 1)] := by
+  simp [divisorsAntidiagonalList, List.range', divisorsAntidiagonalEntry?, Nat.euclideanDiv_eq_core]
 
 @[simp]
 lemma toFinset_divisorsAntidiagonalList {n : ℕ} :
     n.divisorsAntidiagonalList.toFinset = n.divisorsAntidiagonal := by
   rw [divisorsAntidiagonalList, divisorsAntidiagonal, List.toFinset_filterMap
-    (f_inj := by simp_all), List.toFinset_range'_1_1]
+    (f_inj := divisorsAntidiagonalEntry?_inj n), List.toFinset_range'_1_1]
 
 lemma pairwise_divisorsAntidiagonalList_fst {n : ℕ} :
     n.divisorsAntidiagonalList.Pairwise (·.fst < ·.fst) := by
-  refine (List.sortedLT_range' _ _ Nat.one_ne_zero).pairwise.filterMap _ fun a b c d h ha h' => ?_
-  rw [Option.ite_none_right_eq_some, Option.some.injEq] at h h'
-  simpa [← h.right, ← h'.right]
+  refine (List.sortedLT_range' _ _ Nat.one_ne_zero).pairwise.filterMap _ ?_
+  rintro x y hxy ⟨a, b⟩ hx ⟨c, d⟩ hy
+  simpa only [← (divisorsAntidiagonalEntry?_eq_some.mp hx).1,
+    ← (divisorsAntidiagonalEntry?_eq_some.mp hy).1] using hxy
 
 lemma pairwise_divisorsAntidiagonalList_snd {n : ℕ} :
     n.divisorsAntidiagonalList.Pairwise (·.snd > ·.snd) := by
   obtain rfl | hn := eq_or_ne n 0
   · simp
   refine (List.sortedLT_range' _ _ Nat.one_ne_zero).pairwise.filterMap _ ?_
-  simp only [Option.ite_none_right_eq_some, Option.some.injEq, gt_iff_lt,
-    and_imp, Prod.forall, Prod.mk.injEq]
-  rintro a b hab _ _ ha rfl rfl _ _ hb rfl rfl
-  rwa [Nat.div_lt_div_left hn ⟨_, hb.symm⟩ ⟨_, ha.symm⟩]
+  rintro x y hxy ⟨a, b⟩ hx ⟨c, d⟩ hy
+  obtain ⟨hxa, _, hab⟩ := divisorsAntidiagonalEntry?_eq_some.mp hx
+  obtain ⟨hyc, _, hcd⟩ := divisorsAntidiagonalEntry?_eq_some.mp hy
+  have hac : a < c := by simpa only [← hxa, ← hyc] using hxy
+  have hd : 0 < d := Nat.pos_of_ne_zero (right_ne_zero_of_mul (hcd ▸ hn))
+  by_contra! h
+  exact (Nat.ne_of_lt ((Nat.mul_le_mul_left a h).trans_lt
+    (Nat.mul_lt_mul_of_pos_right hac hd))) (hab.trans hcd.symm)
 
 lemma sortedLT_map_fst_divisorsAntidiagonalList {n : ℕ} :
     (n.divisorsAntidiagonalList.map Prod.fst).SortedLT :=
@@ -298,15 +327,17 @@ lemma one_lt_of_mem_properDivisors {m n : ℕ} (h : m ∈ n.properDivisors) : 1 
   lt_of_le_of_lt (pos_of_mem_properDivisors h) (mem_properDivisors.1 h).2
 
 lemma one_lt_div_of_mem_properDivisors {m n : ℕ} (h : m ∈ n.properDivisors) :
-    1 < n / m := by
+    1 < Nat.euclideanDiv n m (pos_of_mem_properDivisors h).ne' := by
+  rw [Nat.euclideanDiv_eq_core]
   obtain ⟨h_dvd, h_lt⟩ := mem_properDivisors.mp h
   rwa [Nat.lt_div_iff_mul_lt' h_dvd, mul_one]
 
 /-- See also `Nat.mem_properDivisors`. -/
 lemma mem_properDivisors_iff_exists {m n : ℕ} (hn : n ≠ 0) :
     m ∈ n.properDivisors ↔ ∃ k > 1, n = m * k := by
-  refine ⟨fun h ↦ ⟨n / m, one_lt_div_of_mem_properDivisors h, ?_⟩, ?_⟩
-  · exact (Nat.mul_div_cancel' (mem_properDivisors.mp h).1).symm
+  refine ⟨fun h ↦ ⟨Nat.euclideanDiv n m (pos_of_mem_properDivisors h).ne',
+    one_lt_div_of_mem_properDivisors h, ?_⟩, ?_⟩
+  · rw [Nat.euclideanDiv_eq_core]; exact (Nat.mul_div_cancel' (mem_properDivisors.mp h).1).symm
   · rintro ⟨k, hk, rfl⟩
     rw [mul_ne_zero_iff] at hn
     exact mem_properDivisors.mpr ⟨⟨k, rfl⟩, lt_mul_of_one_lt_right (Nat.pos_of_ne_zero hn.1) hk⟩
@@ -369,22 +400,28 @@ theorem image_snd_divisorsAntidiagonal : (divisorsAntidiagonal n).image Prod.snd
 
 set_option backward.isDefEq.respectTransparency false in
 theorem map_div_right_divisors :
-    n.divisors.map ⟨fun d => (d, n / d), fun _ _ => congr_arg Prod.fst⟩ =
-      n.divisorsAntidiagonal := by
-  ext ⟨d, nd⟩
-  simp only [mem_map, mem_divisorsAntidiagonal, Function.Embedding.coeFn_mk, mem_divisors,
-    Prod.ext_iff, and_left_comm, exists_eq_left]
+    n.divisors.attach.map
+      ⟨fun d ↦ (d.val, Nat.euclideanDiv n d.val (pos_of_mem_divisors d.property).ne'),
+        fun _ _ h ↦ Subtype.ext (congr_arg Prod.fst h)⟩ = n.divisorsAntidiagonal := by
+  ext ⟨d, q⟩
+  rw [mem_map, mem_divisorsAntidiagonal]
   constructor
-  · rintro ⟨⟨⟨k, rfl⟩, hn⟩, rfl⟩
-    rw [Nat.mul_div_cancel_left _ (left_ne_zero_of_mul hn).bot_lt]
-    exact ⟨rfl, hn⟩
+  · rintro ⟨x, _, hx⟩
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj hx
+    exact
+      ⟨by rw [Nat.euclideanDiv_eq_core]; exact Nat.mul_div_cancel' (dvd_of_mem_divisors x.property),
+        ne_zero_of_mem_divisors x.property⟩
   · rintro ⟨rfl, hn⟩
-    exact ⟨⟨dvd_mul_right _ _, hn⟩, Nat.mul_div_cancel_left _ (left_ne_zero_of_mul hn).bot_lt⟩
+    let x : (d * q).divisors := ⟨d, mem_divisors.mpr ⟨dvd_mul_right d q, hn⟩⟩
+    refine ⟨x, Finset.mem_attach _ _, Prod.ext rfl ?_⟩
+    exact (Nat.euclideanDiv_eq_core _ _ _).trans
+      (Nat.mul_div_cancel_left q (pos_of_mem_divisors x.property))
 
 set_option backward.isDefEq.respectTransparency false in
 theorem map_div_left_divisors :
-    n.divisors.map ⟨fun d => (n / d, d), fun _ _ => congr_arg Prod.snd⟩ =
-      n.divisorsAntidiagonal := by
+    n.divisors.attach.map
+      ⟨fun d ↦ (Nat.euclideanDiv n d.val (pos_of_mem_divisors d.property).ne', d.val),
+        fun _ _ h ↦ Subtype.ext (congr_arg Prod.snd h)⟩ = n.divisorsAntidiagonal := by
   apply Finset.map_injective (Equiv.prodComm _ _).toEmbedding
   ext
   rw [map_swap_divisorsAntidiagonal, ← map_div_right_divisors, Finset.map_map]
@@ -526,13 +563,17 @@ theorem prod_divisors_prime_pow {α : Type*} [CommMonoid α] {k p : ℕ} {f : �
 
 @[to_additive]
 theorem prod_divisorsAntidiagonal {M : Type*} [CommMonoid M] (f : ℕ → ℕ → M) {n : ℕ} :
-    ∏ i ∈ n.divisorsAntidiagonal, f i.1 i.2 = ∏ i ∈ n.divisors, f i (n / i) := by
+    ∏ i ∈ n.divisorsAntidiagonal, f i.1 i.2 =
+      ∏ i ∈ n.divisors.attach,
+        f i.val (Nat.euclideanDiv n i.val (pos_of_mem_divisors i.property).ne') := by
   rw [← map_div_right_divisors, Finset.prod_map]
   rfl
 
 @[to_additive]
 theorem prod_divisorsAntidiagonal' {M : Type*} [CommMonoid M] (f : ℕ → ℕ → M) {n : ℕ} :
-    ∏ i ∈ n.divisorsAntidiagonal, f i.1 i.2 = ∏ i ∈ n.divisors, f (n / i) i := by
+    ∏ i ∈ n.divisorsAntidiagonal, f i.1 i.2 =
+      ∏ i ∈ n.divisors.attach,
+        f (Nat.euclideanDiv n i.val (pos_of_mem_divisors i.property).ne') i.val := by
   rw [← map_swap_divisorsAntidiagonal, Finset.prod_map]
   exact prod_divisorsAntidiagonal fun i j => f j i
 
@@ -548,20 +589,23 @@ lemma primeFactors_filter_dvd_of_dvd {m n : ℕ} (hn : n ≠ 0) (hmn : m ∣ n) 
 
 @[simp]
 theorem image_div_divisors_eq_divisors (n : ℕ) :
-    image (fun x : ℕ => n / x) n.divisors = n.divisors := by
+    image (fun x : n.divisors ↦ Nat.euclideanDiv n x.val (pos_of_mem_divisors x.property).ne')
+      n.divisors.attach = n.divisors := by
   conv_rhs =>
     rw [← image_fst_divisorsAntidiagonal, ← map_div_left_divisors, map_eq_image, image_image]
   rfl
 
 @[to_additive (attr := simp) sum_div_divisors]
 theorem prod_div_divisors {α : Type*} [CommMonoid α] (n : ℕ) (f : ℕ → α) :
-    (∏ d ∈ n.divisors, f (n / d)) = n.divisors.prod f := by
-  by_cases hn : n = 0; · simp [hn]
+    (∏ d ∈ n.divisors.attach, f (Nat.euclideanDiv n d.val (pos_of_mem_divisors d.property).ne')) =
+      n.divisors.prod f := by
   rw [← prod_image]
   · exact prod_congr (image_div_divisors_eq_divisors n) (by simp)
-  · intro x hx y hy h
-    rw [mem_coe, mem_divisors] at hx hy
-    exact (div_eq_iff_eq_of_dvd_dvd hn hx.1 hy.1).mp h
+  · intro x _ y _ h
+    apply Subtype.ext
+    simp only [Nat.euclideanDiv_eq_core] at h
+    exact (div_eq_iff_eq_of_dvd_dvd (ne_zero_of_mem_divisors x.property)
+      (dvd_of_mem_divisors x.property) (dvd_of_mem_divisors y.property)).mp h
 
 theorem disjoint_divisors_filter_isPrimePow {a b : ℕ} (hab : a.Coprime b) :
     Disjoint (a.divisors.filter IsPrimePow) (b.divisors.filter IsPrimePow) := by
@@ -691,22 +735,38 @@ theorem image_snd_divisorsAntidiag : z.divisorsAntidiag.image Prod.snd = z.divis
 
 @[simp]
 theorem divisorsAntidiagonal_one :
-    Int.divisorsAntidiag 1 = {(1, 1), (-1, -1)} :=
+    Int.divisorsAntidiag 1 = {(1, 1), (-1, -1)} := by
+  have h : Nat.divisorsAntidiagonalList 1 = [(1, 1)] := by
+    simp [Nat.divisorsAntidiagonalList, List.range', Nat.divisorsAntidiagonalEntry?,
+      Nat.euclideanDiv_eq_core]
+  simp only [divisorsAntidiag, ← Nat.toFinset_divisorsAntidiagonalList, h]
   rfl
 
 @[simp]
 theorem divisorsAntidiagonal_two :
-    Int.divisorsAntidiag 2 = {(1, 2), (2, 1), (-1, -2), (-2, -1)} :=
+    Int.divisorsAntidiag 2 = {(1, 2), (2, 1), (-1, -2), (-2, -1)} := by
+  have h : Nat.divisorsAntidiagonalList 2 = [(1, 2), (2, 1)] := by
+    simp [Nat.divisorsAntidiagonalList, List.range', Nat.divisorsAntidiagonalEntry?,
+      Nat.euclideanDiv_eq_core]
+  simp only [divisorsAntidiag, ← Nat.toFinset_divisorsAntidiagonalList, h]
   rfl
 
 @[simp]
 theorem divisorsAntidiagonal_three :
-    Int.divisorsAntidiag 3 = {(1, 3), (3, 1), (-1, -3), (-3, -1)} :=
+    Int.divisorsAntidiag 3 = {(1, 3), (3, 1), (-1, -3), (-3, -1)} := by
+  have h : Nat.divisorsAntidiagonalList 3 = [(1, 3), (3, 1)] := by
+    simp [Nat.divisorsAntidiagonalList, List.range', Nat.divisorsAntidiagonalEntry?,
+      Nat.euclideanDiv_eq_core]
+  simp only [divisorsAntidiag, ← Nat.toFinset_divisorsAntidiagonalList, h]
   rfl
 
 @[simp]
 theorem divisorsAntidiagonal_four :
-    Int.divisorsAntidiag 4 = {(1, 4), (2, 2), (4, 1), (-1, -4), (-2, -2), (-4, -1)} :=
+    Int.divisorsAntidiag 4 = {(1, 4), (2, 2), (4, 1), (-1, -4), (-2, -2), (-4, -1)} := by
+  have h : Nat.divisorsAntidiagonalList 4 = [(1, 4), (2, 2), (4, 1)] := by
+    simp [Nat.divisorsAntidiagonalList, List.range', Nat.divisorsAntidiagonalEntry?,
+      Nat.euclideanDiv_eq_core]
+  simp only [divisorsAntidiag, ← Nat.toFinset_divisorsAntidiagonalList, h]
   rfl
 
 lemma prodMk_mem_divisorsAntidiag (hz : z ≠ 0) : (x, y) ∈ z.divisorsAntidiag ↔ x * y = z := by

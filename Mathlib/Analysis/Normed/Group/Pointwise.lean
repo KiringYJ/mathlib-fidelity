@@ -48,11 +48,15 @@ theorem Bornology.IsBounded.inv : IsBounded s → IsBounded s⁻¹ := by
   simp_rw [isBounded_iff_forall_norm_le', ← image_inv_eq_inv, forall_mem_image, norm_inv']
   exact id
 
-@[to_additive]
-theorem Bornology.IsBounded.div (hs : IsBounded s) (ht : IsBounded t) : IsBounded (s / t) :=
-  div_eq_mul_inv s t ▸ hs.mul ht.inv
+@[to_additive Bornology.IsBounded.add_neg]
+theorem Bornology.IsBounded.div (hs : IsBounded s) (ht : IsBounded t) : IsBounded (s * t⁻¹) :=
+  hs.mul ht.inv
 
 end SeminormedGroup
+
+theorem Bornology.IsBounded.sub [SeminormedAddGroup E] {s t : Set E}
+    (hs : IsBounded s) (ht : IsBounded t) : IsBounded (s - t) := by
+  simpa only [sub_eq_add_neg] using hs.add_neg ht
 
 section SeminormedCommGroup
 
@@ -122,14 +126,14 @@ theorem ball_div_singleton : ball x δ / {y} = ball (x / y) δ := by
 theorem singleton_mul_ball_one : {x} * ball 1 δ = ball x δ := by simp
 
 @[to_additive]
-theorem singleton_div_ball_one : {x} / ball 1 δ = ball x δ := by
+theorem singleton_div_ball_one : {x} / ball (1 : E) δ = ball x δ := by
   rw [singleton_div_ball, div_one]
 
 @[to_additive]
 theorem ball_one_mul_singleton : ball 1 δ * {x} = ball x δ := by simp
 
 @[to_additive]
-theorem ball_one_div_singleton : ball 1 δ / {x} = ball x⁻¹ δ := by
+theorem ball_one_div_singleton : ball (1 : E) δ / {x} = ball x⁻¹ δ := by
   rw [ball_div_singleton, one_div]
 
 @[to_additive]
@@ -156,14 +160,14 @@ theorem closedBall_div_singleton : closedBall x δ / {y} = closedBall (x / y) δ
 theorem singleton_mul_closedBall_one : {x} * closedBall 1 δ = closedBall x δ := by simp
 
 @[to_additive]
-theorem singleton_div_closedBall_one : {x} / closedBall 1 δ = closedBall x δ := by
+theorem singleton_div_closedBall_one : {x} / closedBall (1 : E) δ = closedBall x δ := by
   rw [singleton_div_closedBall, div_one]
 
 @[to_additive]
 theorem closedBall_one_mul_singleton : closedBall 1 δ * {x} = closedBall x δ := by simp
 
 @[to_additive]
-theorem closedBall_one_div_singleton : closedBall 1 δ / {x} = closedBall x⁻¹ δ := by simp
+theorem closedBall_one_div_singleton : closedBall (1 : E) δ / {x} = closedBall x⁻¹ δ := by simp
 
 @[to_additive (attr := simp 1100)]
 theorem smul_closedBall_one : x • closedBall (1 : E) δ = closedBall x δ := by simp
@@ -188,14 +192,14 @@ theorem sphere_div_singleton : sphere x δ / {y} = sphere (x / y) δ := by
 theorem singleton_mul_sphere_one : {x} * sphere 1 δ = sphere x δ := by simp
 
 @[to_additive]
-theorem singleton_div_sphere_one : {x} / sphere 1 δ = sphere x δ := by
+theorem singleton_div_sphere_one : {x} / sphere (1 : E) δ = sphere x δ := by
   rw [singleton_div_sphere, div_one]
 
 @[to_additive]
 theorem sphere_one_mul_singleton : sphere 1 δ * {x} = sphere x δ := by simp
 
 @[to_additive]
-theorem sphere_one_div_singleton : sphere 1 δ / {x} = sphere x⁻¹ δ := by simp
+theorem sphere_one_div_singleton : sphere (1 : E) δ / {x} = sphere x⁻¹ δ := by simp
 
 @[to_additive (attr := simp 1100)]
 theorem smul_sphere_one : x • sphere (1 : E) δ = sphere x δ := by simp

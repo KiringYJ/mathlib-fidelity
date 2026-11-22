@@ -49,12 +49,13 @@ theorem finrank [NeZero k] [IsCyclotomicExtension {k} ℚ K] : Module.finrank �
 theorem discr_prime_pow_ne_two' [IsCyclotomicExtension {p ^ (k + 1)} ℚ K]
     (hζ : IsPrimitiveRoot ζ (p ^ (k + 1))) (hk : p ^ (k + 1) ≠ 2) :
     discr ℚ (hζ.subOnePowerBasis ℚ).basis =
-      (-1) ^ ((p ^ (k + 1)).totient / 2) * p ^ (p ^ k * ((p - 1) * (k + 1) - 1)) := by
+      (-1) ^ (Nat.euclideanDiv (p ^ (k + 1)).totient 2) *
+        p ^ (p ^ k * ((p - 1) * (k + 1) - 1)) := by
   rw [← discr_prime_pow_ne_two hζ (cyclotomic.irreducible_rat (NeZero.pos _)) hk]
   exact hζ.discr_zeta_eq_discr_zeta_sub_one.symm
 
 theorem discr_odd_prime' [IsCyclotomicExtension {p} ℚ K] (hζ : IsPrimitiveRoot ζ p) (hodd : p ≠ 2) :
-    discr ℚ (hζ.subOnePowerBasis ℚ).basis = (-1) ^ ((p - 1) / 2) * p ^ (p - 2) := by
+    discr ℚ (hζ.subOnePowerBasis ℚ).basis = (-1) ^ (Nat.euclideanDiv (p - 1) 2) * p ^ (p - 2) := by
   rw [← discr_odd_prime hζ (cyclotomic.irreducible_rat hp.out.pos) hodd]
   exact hζ.discr_zeta_eq_discr_zeta_sub_one.symm
 
@@ -63,7 +64,7 @@ theorem discr_odd_prime' [IsCyclotomicExtension {p} ℚ K] (hζ : IsPrimitiveRoo
 result. See also `IsCyclotomicExtension.Rat.discr_prime_pow_eq_unit_mul_pow'`. -/
 theorem discr_prime_pow' [IsCyclotomicExtension {p ^ k} ℚ K] (hζ : IsPrimitiveRoot ζ (p ^ k)) :
     discr ℚ (hζ.subOnePowerBasis ℚ).basis =
-      (-1) ^ ((p ^ k).totient / 2) * p ^ (p ^ (k - 1) * ((p - 1) * k - 1)) := by
+      (-1) ^ (Nat.euclideanDiv (p ^ k).totient 2) * p ^ (p ^ (k - 1) * ((p - 1) * k - 1)) := by
   rw [← discr_prime_pow hζ (cyclotomic.irreducible_rat (NeZero.pos _))]
   exact hζ.discr_zeta_eq_discr_zeta_sub_one.symm
 
@@ -619,7 +620,7 @@ set_option backward.defeqAttrib.useBackward true in
 theorem discr_prime_pow [IsCyclotomicExtension {p ^ k} ℚ K] :
     haveI : NumberField K := IsCyclotomicExtension.numberField {p ^ k} ℚ K
     NumberField.discr K =
-    (-1) ^ ((p ^ k).totient / 2) * p ^ (p ^ (k - 1) * ((p - 1) * k - 1)) := by
+    (-1) ^ (Nat.euclideanDiv (p ^ k).totient 2) * p ^ (p ^ (k - 1) * ((p - 1) * k - 1)) := by
   have hζ := IsCyclotomicExtension.zeta_spec (p ^ k) ℚ K
   have : NumberField K := IsCyclotomicExtension.numberField {p ^ k} ℚ K
   let pB₁ := integralPowerBasisOfPrimePow hζ
@@ -644,18 +645,75 @@ open Nat in
 theorem discr_prime_pow_succ [IsCyclotomicExtension {p ^ (k + 1)} ℚ K] :
     haveI : NumberField K := IsCyclotomicExtension.numberField {p ^ (k + 1)} ℚ K
     NumberField.discr K =
-    (-1) ^ (p ^ k * (p - 1) / 2) * p ^ (p ^ k * ((p - 1) * (k + 1) - 1)) := by
+    (-1) ^ (Nat.euclideanDiv (p ^ k * (p - 1)) 2) * p ^ (p ^ k * ((p - 1) * (k + 1) - 1)) := by
   simpa [totient_prime_pow hp.out (succ_pos k)] using discr_prime_pow p (k + 1) K
 
 /-- We compute the absolute discriminant of a `p`-th cyclotomic field where `p` is prime. -/
 theorem discr_prime [IsCyclotomicExtension {p} ℚ K] :
     haveI : NumberField K := IsCyclotomicExtension.numberField {p} ℚ K
-    NumberField.discr K = (-1) ^ ((p - 1) / 2) * p ^ (p - 2) := by
+    NumberField.discr K = (-1) ^ (Nat.euclideanDiv (p - 1) 2) * p ^ (p - 2) := by
   have : IsCyclotomicExtension {p ^ (0 + 1)} ℚ K := by
     rw [zero_add, pow_one]
     infer_instance
   rw [discr_prime_pow_succ p 0 K]
   simp [Nat.sub_sub]
+
+open Nat in
+private def discrDenominator (n : ℕ) : ℕ :=
+  ∏ p ∈ n.primeFactors.attach, p.val ^ Nat.euclideanDiv (φ n) (p.val - 1)
+    (Nat.ne_of_gt (Nat.sub_pos_of_lt (prime_of_mem_primeFactors p.property).one_lt))
+
+private theorem discrDenominator_one : discrDenominator 1 = 1 := by
+  apply Finset.prod_eq_one
+  intro p _
+  exact False.elim (by simpa using p.property)
+
+private theorem discrDenominator_ne_zero (n : ℕ) : discrDenominator n ≠ 0 :=
+  Finset.prod_ne_zero_iff.mpr fun p _ ↦
+    pow_ne_zero _ (Nat.prime_of_mem_primeFactors p.property).ne_zero
+
+open Nat in
+private abbrev discrMagnitude (n : ℕ) :=
+  Nat.euclideanDiv (n ^ φ n) (discrDenominator n) (discrDenominator_ne_zero n)
+
+open Nat in
+private theorem discrDenominator_mul {a b : ℕ} (ha : a ≠ 0) (hb : b ≠ 0) (h : a.Coprime b) :
+    discrDenominator (a * b) = discrDenominator a ^ φ b * discrDenominator b ^ φ a := by
+  let weight (n p : ℕ) := if hp : p.Prime then
+    p ^ Nat.euclideanDiv (φ n) (p - 1) (Nat.ne_of_gt (Nat.sub_pos_of_lt hp.one_lt)) else 1
+  have hprod (n : ℕ) : discrDenominator n = n.primeFactors.prod (weight n) := by
+    rw [discrDenominator, ← Finset.prod_attach n.primeFactors (weight n)]
+    exact Finset.prod_congr rfl fun p _ ↦ by
+      simp only [weight, dite_eq_left (prime_of_mem_primeFactors p.property)]
+  have hweight {n m p : ℕ} (hcop : n.Coprime m) (hp : p ∈ n.primeFactors) :
+      weight (n * m) p = weight n p ^ φ m := by
+    have hd : p - 1 ∣ φ n := p.totient_prime (prime_of_mem_primeFactors hp) ▸
+      totient_dvd_of_dvd (dvd_of_mem_primeFactors hp)
+    simp only [weight, dite_eq_left (prime_of_mem_primeFactors hp), Nat.euclideanDiv_eq_core,
+      ← pow_mul,
+      Nat.div_mul_right_comm hd, Nat.totient_mul hcop]
+  rw [hprod, hprod, hprod, primeFactors_mul ha hb, Finset.prod_union h.disjoint_primeFactors,
+    ← Finset.prod_pow, ← Finset.prod_pow]
+  exact congrArg₂ (· * ·) (Finset.prod_congr rfl fun p hp ↦ hweight h hp)
+    (Finset.prod_congr rfl fun p hp ↦ by rw [mul_comm a b]; exact hweight h.symm hp)
+
+open Nat in
+private theorem discrMagnitude_mul {a b : ℕ} (ha : 0 < a) (hb : 0 < b) (h : a.Coprime b) :
+    discrMagnitude a ^ φ b * discrMagnitude b ^ φ a = discrMagnitude (a * b) := by
+  have da : discrDenominator a ∣ a ^ φ a := prod_primeFactors_pow_totient_ediv_dvd ha
+  have db : discrDenominator b ∣ b ^ φ b := prod_primeFactors_pow_totient_ediv_dvd hb
+  simp only [discrMagnitude, Nat.euclideanDiv_eq_core, Nat.div_pow da, Nat.div_pow db]
+  rw [← Nat.mul_div_mul_comm (pow_dvd_pow_of_dvd da (φ b)) (pow_dvd_pow_of_dvd db (φ a)),
+    discrDenominator_mul ha.ne' hb.ne' h, Nat.totient_mul h, mul_pow, ← pow_mul, ← pow_mul,
+    mul_comm (φ b) (φ a)]
+
+open Nat in
+private theorem coprime_discrMagnitude {a b : ℕ} (ha : 0 < a) (hb : 0 < b) (h : a.Coprime b) :
+    (discrMagnitude a).Coprime (discrMagnitude b) := by
+  simp only [discrMagnitude, Nat.euclideanDiv_eq_core]
+  apply Coprime.coprime_div_left _ (prod_primeFactors_pow_totient_ediv_dvd ha)
+  apply Coprime.coprime_div_right _ (prod_primeFactors_pow_totient_ediv_dvd hb)
+  exact (h.pow_right _).pow_left _
 
 variable (n) [hn : NeZero n]
 
@@ -665,17 +723,25 @@ Computes the absolute discriminant of the `n`-th cyclotomic field.
 -/
 theorem discr [hK : IsCyclotomicExtension {n} ℚ K] :
     haveI : NumberField K := IsCyclotomicExtension.numberField {n} ℚ K
-    discr K = (-1) ^ (φ n / 2) * (n ^ φ n / ∏ p ∈ n.primeFactors, p ^ (φ n / (p - 1))) := by
+    discr K = (-1) ^ Nat.euclideanDiv (φ n) 2 *
+      (Nat.euclideanDiv (n ^ φ n) (∏ p ∈ n.primeFactors.attach,
+        p.val ^ Nat.euclideanDiv (φ n) (p.val - 1)
+          (Nat.ne_of_gt (Nat.sub_pos_of_lt (prime_of_mem_primeFactors p.property).one_lt)))
+      (Finset.prod_ne_zero_iff.mpr fun p _ ↦
+        pow_ne_zero _ (prime_of_mem_primeFactors p.property).ne_zero) : ℤ) := by
   have : NumberField K := IsCyclotomicExtension.numberField {n} ℚ K
   rw [← Int.sign_mul_natAbs (NumberField.discr K), sign_discr, nrComplexPlaces_eq_totient_div_two n]
-  congr
+  simp only [Nat.euclideanDiv_eq_core (φ n) 2]
+  congr 1
+  apply Int.ofNat_inj.mpr
+  change (NumberField.discr K).natAbs = discrMagnitude n
   induction n using Nat.recOnPrimeCoprime generalizing K hn with
   | zero => exact (neZero_zero_iff_false.mp hn).elim
   | prime_pow p k hp =>
     have : Fact (Nat.Prime p) := ⟨hp⟩
     rw [discr_prime_pow p k K]
     cases k with
-    | zero => simp
+    | zero => simp [discrMagnitude, discrDenominator_one, Nat.euclideanDiv_eq_core]
     | succ k =>
       simpa only [Int.reduceNeg, add_tsub_cancel_right, Int.natAbs_mul, Int.natAbs_pow,
         IsUnit.neg_iff, isUnit_one, Int.natAbs_of_isUnit, one_pow, Int.natAbs_natCast, one_mul]
@@ -703,35 +769,26 @@ theorem discr [hK : IsCyclotomicExtension {n} ℚ K] :
         rw [← Nat.Coprime.lcm_eq_mul h]
         exact isCyclotomicExtension_lcm_sup ℚ K n₁ n₂ ℚ⟮ζ ^ n₂⟯ ℚ⟮ζ ^ n₁⟯
       exact isCyclotomicExtension_eq {n₁ * n₂} ℚ K _ _
-    have h_cpr : IsCoprime (discr ℚ⟮ζ ^ n₂⟯) (discr ℚ⟮ζ ^ n₁⟯) := by
+    have h_cpr : IsCoprime (NumberField.discr ℚ⟮ζ ^ n₂⟯) (NumberField.discr ℚ⟮ζ ^ n₁⟯) := by
       rw [Int.isCoprime_iff_nat_coprime, hK₁, hK₂]
-      refine Coprime.coprime_div_left ?_ (prod_primeFactors_pow_totient_ediv_dvd (NeZero.pos _))
-      refine Coprime.coprime_div_right ?_ (prod_primeFactors_pow_totient_ediv_dvd (NeZero.pos _))
-      exact Coprime.pow_left _ (Coprime.pow_right _ h)
+      exact coprime_discrMagnitude (NeZero.pos _) (NeZero.pos _) h
     have h_dsj : ℚ⟮ζ ^ n₂⟯.LinearDisjoint ℚ⟮ζ ^ n₁⟯ :=
       linearDisjoint_of_isGalois_isCoprime_discr _ _ _ h_cpr
-    have h_div₁ := prod_primeFactors_pow_totient_ediv_dvd n₁.pos_of_neZero
-    have h_div₂ := prod_primeFactors_pow_totient_ediv_dvd n₂.pos_of_neZero
     rw [natAbs_discr_eq_natAbs_discr_pow_mul_natAbs_discr_pow K ℚ⟮ζ ^ n₂⟯ ℚ⟮ζ ^ n₁⟯ h_dsj h_top
       (isCoprime_differentIdeal_of_isCoprime_discr _ h_cpr), hK₁, hK₂,
-      finrank n₁ ℚ⟮ζ ^ n₂⟯, finrank n₂ ℚ⟮ζ ^ n₁⟯, Nat.div_pow h_div₁, Nat.div_pow h_div₂,
-      ← Nat.mul_div_mul_comm (pow_dvd_pow_of_dvd h_div₁ n₂.totient)
-      (pow_dvd_pow_of_dvd h_div₂ n₁.totient), primeFactors_mul (NeZero.ne _) (NeZero.ne _),
-      Finset.prod_union h.disjoint_primeFactors, ← Finset.prod_pow, ← Finset.prod_pow]
-    have {n p : ℕ} (hp : p ∈ n.primeFactors) : p - 1 ∣ n.totient :=
-      p.totient_prime (prime_of_mem_primeFactors hp) ▸ totient_dvd_of_dvd (b := n)
-        <| dvd_of_mem_primeFactors hp
-    simp_rw +contextual [← pow_mul, Nat.div_mul_right_comm (this _), Nat.totient_mul h]
-    rw [mul_pow, mul_comm n₂.totient]
+      finrank n₁ ℚ⟮ζ ^ n₂⟯, finrank n₂ ℚ⟮ζ ^ n₁⟯]
+    exact discrMagnitude_mul (NeZero.pos _) (NeZero.pos _) h
 
 theorem natAbs_discr [hK : IsCyclotomicExtension {n} ℚ K] :
     haveI : NumberField K := IsCyclotomicExtension.numberField {n} ℚ K
-    (NumberField.discr K).natAbs = n ^ φ n / ∏ p ∈ n.primeFactors, p ^ (φ n / (p - 1)) := by
+    (NumberField.discr K).natAbs = Nat.euclideanDiv (n ^ φ n)
+      (∏ p ∈ n.primeFactors.attach, p.val ^ Nat.euclideanDiv (φ n) (p.val - 1)
+        (Nat.ne_of_gt (Nat.sub_pos_of_lt (Nat.prime_of_mem_primeFactors p.property).one_lt)))
+      (Finset.prod_ne_zero_iff.mpr fun p _ ↦
+        pow_ne_zero _ (Nat.prime_of_mem_primeFactors p.property).ne_zero) := by
   have : NumberField K := IsCyclotomicExtension.numberField {n} ℚ K
-  rw [discr n K, Int.natAbs_mul, Int.natAbs_pow, Int.natAbs_neg, Int.natAbs_one, one_pow, one_mul,
-    Int.natAbs_ediv_of_dvd, Int.natAbs_pow, Int.natAbs_natCast, Int.natAbs_natCast]
-  rw [← Nat.cast_pow, Int.natCast_dvd_natCast]
-  exact Nat.prod_primeFactors_pow_totient_ediv_dvd (NeZero.pos _)
+  rw [discr n K, Int.natAbs_mul, Int.natAbs_pow, Int.natAbs_neg, Int.natAbs_one,
+    one_pow, one_mul, Int.natAbs_natCast]
 
 open IntermediateField Algebra Nat in
 private theorem adjoin_singleton_eq_top_aux [NumberField K] (F₁ F₂ : IntermediateField ℚ K)
@@ -743,9 +800,7 @@ private theorem adjoin_singleton_eq_top_aux [NumberField K] (F₁ F₂ : Interme
     ℤ[hζ.toInteger] = ⊤ := by
   have h_cpr : IsCoprime (NumberField.discr F₁) (NumberField.discr F₂) := by
     rw [Int.isCoprime_iff_nat_coprime, natAbs_discr n₁ F₁, natAbs_discr n₂ F₂]
-    refine Coprime.coprime_div_left ?_ (prod_primeFactors_pow_totient_ediv_dvd (NeZero.pos _))
-    refine Coprime.coprime_div_right ?_ (prod_primeFactors_pow_totient_ediv_dvd (NeZero.pos _))
-    exact Coprime.pow_left _ (Coprime.pow_right _ h)
+    exact coprime_discrMagnitude (NeZero.pos _) (NeZero.pos _) h
   have h_disj : F₁.LinearDisjoint F₂ := by
     have : IsGalois ℚ F₁ := IsCyclotomicExtension.isGalois {n₁} ℚ F₁
     apply linearDisjoint_of_isGalois_isCoprime_discr

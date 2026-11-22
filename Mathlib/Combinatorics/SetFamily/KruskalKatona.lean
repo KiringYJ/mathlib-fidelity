@@ -346,8 +346,9 @@ The maximum size of an intersecting family in `α` where all sets have size `r` 
 `(card α - 1).choose (r - 1)`. This bound is sharp. -/
 theorem erdos_ko_rado {𝒜 : Finset (Finset (Fin n))} {r : ℕ}
     (h𝒜 : (𝒜 : Set (Finset (Fin n))).Intersecting) (h₂ : (𝒜 : Set (Finset (Fin n))).Sized r)
-    (h₃ : r ≤ n / 2) :
+    (h₃ : r ≤ n.euclideanDiv 2) :
     #𝒜 ≤ (n - 1).choose (r - 1) := by
+  rw [Nat.euclideanDiv_eq_core] at h₃
   -- Take care of the r=0 case first: it's not very interesting.
   rcases Nat.eq_zero_or_pos r with b | h1r
   · convert! Nat.zero_le _

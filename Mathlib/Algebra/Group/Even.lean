@@ -164,16 +164,24 @@ lemma IsSquare.zpow (n : ℤ) : IsSquare a → IsSquare (a ^ n) := by
 
 end DivisionMonoid
 
-@[to_additive (attr := aesop unsafe 90%)]
-lemma IsSquare.div [DivisionCommMonoid α] {a b : α} (ha : IsSquare a) (hb : IsSquare b) :
-    IsSquare (a / b) := by aesop (add simp div_eq_mul_inv)
+@[aesop unsafe 90%]
+lemma Even.sub [SubtractionCommMonoid α] {a b : α} (ha : Even a) (hb : Even b) :
+    Even (a - b) := by
+  rw [sub_eq_add_neg]
+  exact ha.add hb.neg
+
+@[to_additive Even.sub_of_addCommGroup, aesop unsafe 90%]
+lemma IsSquare.div [CommGroup α] {a b : α} (ha : IsSquare a) (hb : IsSquare b) :
+    IsSquare (a / b) := by
+  rw [div_eq_mul_inv]
+  exact ha.mul hb.inv
 
 @[to_additive (attr := simp, aesop unsafe 90%) Even.zsmul_left]
 lemma Even.isSquare_zpow [Group α] {n : ℤ} : Even n → ∀ a : α, IsSquare (a ^ n) := by
   aesop (add simp zpow_add)
 
 example {G : Type*} [CommGroup G] {a b c d e : G} (ha : IsSquare a) {n : ℕ} {k : ℤ} (hk : Even k) :
-    IsSquare <| a * (b * b) / (c ^ 2) * (d ^ k) * (e ^ (n + n)) := by aesop
+    IsSquare <| (a * (b * b)) / (c ^ 2) * (d ^ k) * (e ^ (n + n)) := by aesop
 
 example {G : Type*} [AddCommGroup G] {a b c d e : G} (ha : Even a) {n : ℕ} {k : ℤ} (hk : Even k) :
     Even <| a + (b + b) - 2 • c + k • d + (n + n) • e := by aesop

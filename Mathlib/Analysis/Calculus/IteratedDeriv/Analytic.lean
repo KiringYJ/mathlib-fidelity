@@ -31,33 +31,33 @@ the `k`-th iterated derivative of `R` is given by
 lemma iteratedDeriv_mul_pow_sub_of_analytic {k t : ℕ} {z₀ : 𝕜} {R R₁ : 𝕜 → 𝕜}
     (hf1 : ∀ z, AnalyticAt 𝕜 R₁ z) (hR₁ : ∀ z, R z = (z - z₀) ^ (k + t) * R₁ z) :
     ∃ R₂, (∀ z, AnalyticAt 𝕜 R₂ z) ∧ ∀ z, iteratedDeriv k R z =
-      (z - z₀) ^ t * ((k + t)! / t ! * R₁ z + (z - z₀) * R₂ z) := by
+      (z - z₀) ^ t * (↑(k + t)! / ↑t ! * R₁ z + (z - z₀) * R₂ z) := by
   induction k generalizing t with
   | zero => exact ⟨0, fun _ ↦ analyticAt_const, by simp [hR₁]⟩
   | succ k IH =>
     obtain ⟨R₂, hR₂, hR₂_eq⟩ := IH (t := t + 1) (by grind)
-    set R₂' : 𝕜 → 𝕜 := fun z ↦ (t + 1) * R₂ z + ((k + (t + 1))! / (t + 1)! * deriv R₁ z +
+    set R₂' : 𝕜 → 𝕜 := fun z ↦ (t + 1) * R₂ z + (↑(k + (t + 1))! / ↑(t + 1)! * deriv R₁ z +
       (R₂ z + (z - z₀) * deriv R₂ z))
     refine ⟨R₂', by fun_prop, fun z ↦ ?_⟩
     calc iteratedDeriv (k + 1) R z
       _ = deriv (fun w ↦ (w - z₀) ^ (t + 1)
           * (↑(k + (t + 1))! / ↑(t + 1)! * R₁ w + (w - z₀) * R₂ w)) z := by
         rw [iteratedDeriv_succ, funext hR₂_eq]
-      _ = (t + 1) * (z - z₀) ^ t * ((k + (t + 1))! / (t + 1)! * R₁ z + (z - z₀) * R₂ z) +
-        (z - z₀) ^ (t + 1) * ((k + (t + 1))! / (t + 1)! * deriv R₁ z +
+      _ = (t + 1) * (z - z₀) ^ t * (↑(k + (t + 1))! / ↑(t + 1)! * R₁ z + (z - z₀) * R₂ z) +
+        (z - z₀) ^ (t + 1) * (↑(k + (t + 1))! / ↑(t + 1)! * deriv R₁ z +
           (R₂ z + (z - z₀) * deriv R₂ z)) := by
         have hsub : HasDerivAt (· - z₀) 1 z := (hasDerivAt_id z).sub_const z₀
         simpa using! ((hsub.fun_pow (t + 1)).mul
-          (((hf1 z).differentiableAt.hasDerivAt.const_mul ((k + (t + 1))! / (t + 1)! : 𝕜)).add
+          (((hf1 z).differentiableAt.hasDerivAt.const_mul (↑(k + (t + 1))! / ↑(t + 1)! : 𝕜)).add
             (hsub.mul (hR₂ z).differentiableAt.hasDerivAt))).deriv
-      _ = (z - z₀) ^ t * ((k + 1 + t)! / t ! * R₁ z + (z - z₀) * R₂' z) := by
+      _ = (z - z₀) ^ t * (↑(k + 1 + t)! / ↑t ! * R₁ z + (z - z₀) * R₂' z) := by
         have hcast : ((t + 1)! : 𝕜) = (t + 1) * t ! := by simp [Nat.factorial_succ]
         have hfactor :
-            ((t : 𝕜) + 1) * ((k + (t + 1))! / (t + 1)!) = (k + 1 + t)! / t ! := by
+            ((t : 𝕜) + 1) * (↑(k + (t + 1))! / ↑(t + 1)!) = ↑(k + 1 + t)! / ↑t ! := by
           rw [show k + 1 + t = k + (t + 1) by omega]
           apply eq_div_iff.mpr
           calc
-            _ = ((k + (t + 1))! / (t + 1)! : 𝕜) * ((t + 1) * t !) := by ring
+            _ = (↑(k + (t + 1))! / ↑(t + 1)! : 𝕜) * ((t + 1) * t !) := by ring
             _ = _ := by rw [← hcast, div_mul_cancel₀]
         dsimp [R₂']
         rw [pow_succ]

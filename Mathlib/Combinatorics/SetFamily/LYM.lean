@@ -95,7 +95,7 @@ The proportion of `α^(r)` is defined when this layer is nonempty, that is, when
 then the layer `α^(r - 1)` is nonempty as well. -/
 theorem local_lubell_yamamoto_meshalkin_inequality_div
     {hb : IsUnit ((Fintype.card α).choose r : 𝕜)} (hr : r ≠ 0)
-    (h𝒜 : (𝒜 : Set (Finset α)).Sized r) : (#𝒜 : 𝕜) / (Fintype.card α).choose r
+    (h𝒜 : (𝒜 : Set (Finset α)).Sized r) : (#𝒜 : 𝕜) / ((Fintype.card α).choose r : 𝕜)
     ≤ Checked.div (#(∂ 𝒜) : 𝕜) ((Fintype.card α).choose (r - 1))
       (Nat.cast_ne_zero.2 <| choose_ne_zero <| (r.sub_le 1).trans <|
         choose_ne_zero_iff.1 <| Nat.cast_ne_zero.1 hb.ne_zero).isUnit := by
@@ -262,10 +262,12 @@ theorem lubell_yamamoto_meshalkin_inequality_sum_inv_choose
 /-- **Sperner's theorem**. The size of an antichain in `Finset α` is bounded by the size of the
 maximal layer in `Finset α`. This precisely means that `Finset α` is a Sperner order. -/
 theorem _root_.IsAntichain.sperner (h𝒜 : IsAntichain (· ⊆ ·) (SetLike.coe 𝒜)) :
-    #𝒜 ≤ (Fintype.card α).choose (Fintype.card α / 2) := by
-  have : 0 < ((Fintype.card α).choose (Fintype.card α / 2) : ℚ≥0) :=
-    Nat.cast_pos.2 <| choose_pos (Nat.div_le_self _ _)
-  have h : ∑ s ∈ 𝒜, ((Fintype.card α).choose (Fintype.card α / 2) : ℚ≥0)⁻¹ ≤ 1 := by
+    #𝒜 ≤ (Fintype.card α).choose (Nat.euclideanDiv (Fintype.card α) 2) := by
+  have hmid := Nat.euclideanDiv_mul_add_mod (Fintype.card α) 2 (by decide)
+  have : 0 < ((Fintype.card α).choose (Nat.euclideanDiv (Fintype.card α) 2) : ℚ≥0) :=
+    Nat.cast_pos.2 <| choose_pos (by omega)
+  have h : ∑ s ∈ 𝒜,
+      ((Fintype.card α).choose (Nat.euclideanDiv (Fintype.card α) 2) : ℚ≥0)⁻¹ ≤ 1 := by
     refine le_trans ?_ (lubell_yamamoto_meshalkin_inequality_sum_inv_choose h𝒜)
     gcongr with s hs
     · exact mod_cast choose_pos s.card_le_univ

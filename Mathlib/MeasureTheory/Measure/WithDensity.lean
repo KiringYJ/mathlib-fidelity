@@ -484,7 +484,7 @@ theorem lintegral_withDensity_eq_lintegral_mul_non_measurable (μ : Measure α) 
   have A : (fun x => (f x)⁻¹ * i x) ≤ g := by
     intro x
     dsimp
-    rw [mul_comm, ← div_eq_mul_inv]
+    rw [mul_comm, ← ENNReal.div_eq_mul_inv]
     exact div_le_of_le_mul' (hi x)
   refine le_iSup_of_le (fun x => (f x)⁻¹ * i x) (le_iSup_of_le (f_meas.fun_inv.mul i_meas) ?_)
   refine le_iSup_of_le A ?_

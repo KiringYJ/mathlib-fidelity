@@ -59,20 +59,20 @@ variable (𝕜 : Type*) [RCLike 𝕜] [NormedSpace 𝕜 E]
 theorem dist_birkhoffAverage_birkhoffAverage (f : α → α) (g : α → E) (n : ℕ+) (x y : α) :
     dist (birkhoffAverage 𝕜 f g n (Nat.cast_ne_zero.mpr n.ne_zero).isUnit x)
       (birkhoffAverage 𝕜 f g n (Nat.cast_ne_zero.mpr n.ne_zero).isUnit y) =
-      dist (birkhoffSum f g n x) (birkhoffSum f g n y) / n := by
+      dist (birkhoffSum f g n x) (birkhoffSum f g n y) / (n : ℝ) := by
   simp [birkhoffAverage, dist_smul₀, div_eq_inv_mul₀]
 
 theorem dist_birkhoffAverage_birkhoffAverage_le (f : α → α) (g : α → E) (n : ℕ+) (x y : α) :
     dist (birkhoffAverage 𝕜 f g n (Nat.cast_ne_zero.mpr n.ne_zero).isUnit x)
       (birkhoffAverage 𝕜 f g n (Nat.cast_ne_zero.mpr n.ne_zero).isUnit y) ≤
-      (∑ k ∈ Finset.range n, dist (g (f^[k] x)) (g (f^[k] y))) / n :=
+      (∑ k ∈ Finset.range n, dist (g (f^[k] x)) (g (f^[k] y))) / (n : ℝ) :=
   (dist_birkhoffAverage_birkhoffAverage _ _ _ _ _ _).trans_le <| by
     gcongr; apply dist_birkhoffSum_birkhoffSum_le
 
 theorem dist_birkhoffAverage_apply_birkhoffAverage (f : α → α) (g : α → E) (n : ℕ+) (x : α) :
     dist (birkhoffAverage 𝕜 f g n (Nat.cast_ne_zero.mpr n.ne_zero).isUnit (f x))
       (birkhoffAverage 𝕜 f g n (Nat.cast_ne_zero.mpr n.ne_zero).isUnit x) =
-      dist (g (f^[n] x)) (g x) / n := by
+      dist (g (f^[n] x)) (g x) / (n : ℝ) := by
   simp [dist_birkhoffAverage_birkhoffAverage, dist_birkhoffSum_apply_birkhoffSum]
 
 /-- If a function `g` is bounded along the positive orbit of `x` under `f`,
@@ -127,13 +127,13 @@ theorem uniformEquicontinuous_birkhoffAverage (hf : LipschitzWith 1 f) (hg : Uni
   calc
     dist (birkhoffAverage 𝕜 f g n (Nat.cast_ne_zero.mpr n.ne_zero).isUnit x)
       (birkhoffAverage 𝕜 f g n (Nat.cast_ne_zero.mpr n.ne_zero).isUnit y)
-      ≤ (∑ k ∈ Finset.range n, dist (g (f^[k] x)) (g (f^[k] y))) / n :=
+      ≤ (∑ k ∈ Finset.range n, dist (g (f^[k] x)) (g (f^[k] y))) / (n : ℝ) :=
       dist_birkhoffAverage_birkhoffAverage_le ..
-    _ ≤ (∑ _k ∈ Finset.range n, ε) / n := by
+    _ ≤ (∑ _k ∈ Finset.range n, ε) / (n : ℝ) := by
       gcongr
       refine hδε _ _ ?_
       simpa using (hf.iterate _).edist_le_mul_of_le h.le
-    _ = n * ε / n := by simp
+    _ = n * ε / (n : ℝ) := by simp
     _ ≤ ε := (mul_div_cancel_left₀ ε
       (ha := (Nat.cast_ne_zero.mpr n.ne_zero).isUnit)).le
 

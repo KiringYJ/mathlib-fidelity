@@ -141,8 +141,8 @@ theorem exists_le_of_sum_le {s : Finset α} (hs : s.Nonempty) {f g : α → ℝ�
 /-- `Finset.sum_div` does not apply since `ℝ≥0∞` is not a `DivisionSemiring`.  Although
   the proof of `Finset.sum_div` only needs `DivInvMonoid` and `NonUnitalNonAssocSemiring`, the best
   typeclass including these is `DivisionSemiring`. -/
-lemma sum_div (a : ℝ≥0∞) : (∑ i ∈ s, f i) / a = ∑ i ∈ s, f i / a := by
-  simp_rw [div_eq_mul_inv, Finset.sum_mul]
+lemma sum_div (a : ℝ≥0∞) : ENNReal.div (∑ i ∈ s, f i) a = ∑ i ∈ s, ENNReal.div (f i) a := by
+  simp_rw [ENNReal.div_eq_mul_inv, Finset.sum_mul]
 
 end Sum
 
@@ -162,15 +162,15 @@ lemma prod_inv_distrib (hf : (s : Set ι).Pairwise fun i j ↦ f i ≠ 0 ∨ f j
   · exact imp_iff_not_or.2 (hf (by simp [hj]) (by simp) <| ne_of_mem_of_not_mem hj hi).symm hi₀
 
 lemma prod_div_distrib (hg : (s : Set ι).Pairwise fun i j ↦ g i ≠ 0 ∨ g j ≠ ∞) :
-    (∏ i ∈ s, f i / g i) = (∏ i ∈ s, f i) / (∏ i ∈ s, g i) := by
-  simp only [div_eq_mul_inv, prod_inv_distrib hg, ← Finset.prod_mul_distrib]
+    (∏ i ∈ s, ENNReal.div (f i) (g i)) = ENNReal.div (∏ i ∈ s, f i) (∏ i ∈ s, g i) := by
+  simp only [ENNReal.div_eq_mul_inv, prod_inv_distrib hg, ← Finset.prod_mul_distrib]
 
 lemma prod_div_distrib_of_ne_top (hg : ∀ i ∈ s, g i ≠ ∞) :
-    (∏ i ∈ s, f i / g i) = (∏ i ∈ s, f i) / (∏ i ∈ s, g i) :=
+    (∏ i ∈ s, ENNReal.div (f i) (g i)) = ENNReal.div (∏ i ∈ s, f i) (∏ i ∈ s, g i) :=
   prod_div_distrib (by grind [Set.Pairwise])
 
 lemma prod_div_distrib_of_ne_zero (hg : ∀ i ∈ s, g i ≠ 0) :
-    (∏ i ∈ s, f i / g i) = (∏ i ∈ s, f i) / (∏ i ∈ s, g i) :=
+    (∏ i ∈ s, ENNReal.div (f i) (g i)) = ENNReal.div (∏ i ∈ s, f i) (∏ i ∈ s, g i) :=
   prod_div_distrib (by grind [Set.Pairwise])
 
 lemma finsetSum_iSup {α : Type*} {s : Finset α} {f : α → ι → ℝ≥0∞}

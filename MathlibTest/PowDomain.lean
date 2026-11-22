@@ -52,12 +52,12 @@ example : (comap (Subtype.val : {n : ℕ // n ≠ 0} → ℕ) atTop).NeBot :=
 
 example (x : ℝ≥0) :
     ∀ᶠ n : {n : ℕ // n ≠ 0} in comap Subtype.val atTop,
-      x ^ (1 / (n : ℕ) : ℝ) ≤ 2 :=
+      x ^ (1 / ((n : ℕ) : ℝ)) ≤ 2 :=
   NNReal.eventually_pow_one_div_le x (by norm_num)
 
 example (x : ℝ≥0∞) (hx : x ≠ ∞) :
     ∀ᶠ n : {n : ℕ // n ≠ 0} in comap Subtype.val atTop,
-      x ^ (1 / (n : ℕ) : ℝ) ≤ 2 :=
+      x ^ (1 / ((n : ℕ) : ℝ)) ≤ 2 :=
   ENNReal.eventually_pow_one_div_le hx (by norm_num)
 
 example : (0 : ℂ) ^ ((-1 : ℤ) * (0 : ℂ)) =

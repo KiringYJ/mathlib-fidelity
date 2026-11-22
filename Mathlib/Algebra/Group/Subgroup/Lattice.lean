@@ -518,7 +518,9 @@ theorem toAddSubgroup_closure (S : Set G) :
 
 theorem _root_.AddSubgroup.toSubgroup_closure {A : Type*} [AddGroup A] (S : Set A) :
     (AddSubgroup.closure S).toSubgroup = Subgroup.closure (Multiplicative.toAdd ⁻¹' S) :=
-  Subgroup.toAddSubgroup.injective (Subgroup.toAddSubgroup_closure _).symm
+  le_antisymm (AddSubgroup.toSubgroup.to_galoisConnection.l_le <|
+      (AddSubgroup.closure_le _).mpr (Subgroup.subset_closure (G := Multiplicative A)))
+    ((Subgroup.closure_le _).mpr (AddSubgroup.subset_closure (G := A)))
 
 theorem toAddSubgroup'_closure {A : Type*} [AddGroup A] (S : Set (Multiplicative A)) :
     (closure S).toAddSubgroup' = AddSubgroup.closure (Multiplicative.ofAdd ⁻¹' S) :=
@@ -528,7 +530,9 @@ theorem toAddSubgroup'_closure {A : Type*} [AddGroup A] (S : Set (Multiplicative
 
 theorem _root_.AddSubgroup.toSubgroup'_closure (S : Set (Additive G)) :
     (AddSubgroup.closure S).toSubgroup' = Subgroup.closure (Additive.ofMul ⁻¹' S) :=
-  congr_arg AddSubgroup.toSubgroup' (toAddSubgroup'_closure _).symm
+  le_antisymm (AddSubgroup.toSubgroup'.to_galoisConnection.l_le <|
+      (AddSubgroup.closure_le _).mpr (Subgroup.subset_closure (G := G)))
+    ((Subgroup.closure_le _).mpr (AddSubgroup.subset_closure (G := Additive G)))
 
 @[to_additive]
 theorem mem_biSup_of_directedOn {ι} {p : ι → Prop} {K : ι → Subgroup G} {i : ι} (hp : p i)

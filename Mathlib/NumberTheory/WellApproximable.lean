@@ -115,7 +115,8 @@ theorem image_pow_subset (n : ℕ) (hm : 0 < m) :
   rintro - ⟨a, ha, rfl⟩
   obtain ⟨b, hb : orderOf b = n * m, hab : a ∈ ball b δ⟩ := mem_approxOrderOf_iff.mp ha
   replace hb : b ^ m ∈ {y : A | orderOf y = n} := by
-    rw [mem_ofPred_eq, orderOf_pow' b hm.ne', hb, Nat.gcd_mul_left_left, n.mul_div_cancel hm]
+    simp only [mem_ofPred_eq, orderOf_pow' b hm.ne', hb, Nat.gcd_mul_left_left,
+      Nat.euclideanDiv_mul_right_cancel]
   apply ball_subset_thickening hb (m * δ)
   convert! pow_mem_ball hm hab using 1
   simp only [nsmul_eq_mul]
@@ -158,12 +159,13 @@ end approxOrderOf
 namespace UnitAddCircle
 
 theorem mem_approxAddOrderOf_iff {δ : ℝ} {x : UnitAddCircle} {n : ℕ} (hn : 0 < n) :
-    x ∈ approxAddOrderOf UnitAddCircle n δ ↔ ∃ m < n, gcd m n = 1 ∧ ‖x - ↑((m : ℝ) / n)‖ < δ := by
+    x ∈ approxAddOrderOf UnitAddCircle n δ ↔
+      ∃ m < n, gcd m n = 1 ∧ ‖x - ↑((m : ℝ) / (n : ℝ))‖ < δ := by
   simp only [mem_approx_add_orderOf_iff, mem_ofPred_eq, ball, dist_eq_norm,
     AddCircle.addOrderOf_eq_pos_iff hn, mul_one]
   constructor
   · rintro ⟨y, ⟨m, hm₁, hm₂, rfl⟩, hx⟩; exact ⟨m, hm₁, hm₂, hx⟩
-  · rintro ⟨m, hm₁, hm₂, hx⟩; exact ⟨↑((m : ℝ) / n), ⟨m, hm₁, hm₂, rfl⟩, hx⟩
+  · rintro ⟨m, hm₁, hm₂, hx⟩; exact ⟨↑((m : ℝ) / (n : ℝ)), ⟨m, hm₁, hm₂, rfl⟩, hx⟩
 
 theorem mem_addWellApproximable_iff (δ : ℕ → ℝ) (x : UnitAddCircle) :
     x ∈ addWellApproximable UnitAddCircle δ ↔
@@ -277,17 +279,19 @@ theorem addWellApproximable_ae_empty_or_univ (δ : ℕ → ℝ) (hδ : Tendsto �
         (Nat.cast_pos.mpr hp.pos) _ hδ
     refine (sSupHom.setImage f).apply_blimsup_le.trans (mono_blimsup ?_)
     rintro n ⟨hn, h_div, h_ndiv⟩
-    have h_cop : (addOrderOf x).Coprime (n / p) := by
+    have h_cop : (addOrderOf x).Coprime (Nat.euclideanDiv n p hp.ne_zero) := by
       obtain ⟨q, rfl⟩ := h_div
-      rw [hu₀, Subtype.coe_mk, hp.coprime_iff_not_dvd, q.mul_div_cancel_left hp.pos]
+      rw [hu₀, Subtype.coe_mk, hp.coprime_iff_not_dvd, Nat.euclideanDiv_mul_left_cancel]
       exact fun contra => h_ndiv (mul_dvd_mul_left p contra)
-    replace h_div : n / p * p = n := Nat.div_mul_cancel h_div
+    replace h_div : Nat.euclideanDiv n p hp.ne_zero * p = n := by
+      rw [Nat.euclideanDiv_eq_core, Nat.div_mul_cancel h_div]
     have hf : f = (fun y => x + y) ∘ fun y => p • y := by
       ext; simp [f, add_comm x]
     simp_rw [Function.comp_apply]
     rw [sSupHom.setImage_toFun, hf, image_comp]
     have := @monotone_image 𝕊 𝕊 fun y => x + y
-    specialize this (approxAddOrderOf.image_nsmul_subset (δ n) (n / p) hp.pos)
+    specialize this
+      (approxAddOrderOf.image_nsmul_subset (δ n) (Nat.euclideanDiv n p hp.ne_zero) hp.pos)
     simp only [h_div] at this ⊢
     refine this.trans ?_
     convert! approxAddOrderOf.vadd_subset_of_coprime (p * δ n) h_cop

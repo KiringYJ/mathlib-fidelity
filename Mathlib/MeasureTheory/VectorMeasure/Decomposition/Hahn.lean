@@ -93,7 +93,7 @@ allowing us to prove `exists_subset_restrict_nonpos`.
 /-- Given the set `i` and the natural number `n`, `ExistsOneDivLT s i j` is the property that
 there exists a measurable set `k ⊆ i` such that `1 / (n + 1) < s k`. -/
 private def ExistsOneDivLT (s : SignedMeasure α) (i : Set α) (n : ℕ) : Prop :=
-  ∃ k : Set α, k ⊆ i ∧ MeasurableSet k ∧ (1 / (n + 1) : ℝ) < s k
+  ∃ k : Set α, k ⊆ i ∧ MeasurableSet k ∧ 1 / ((n : ℝ) + 1) < s k
 
 private theorem existsNatOneDivLTMeasure_of_not_negative (hi : ¬s ≤[i] 0) :
     ∃ n : ℕ, ExistsOneDivLT s i n :=
@@ -128,7 +128,7 @@ private def someExistsOneDivLT (s : SignedMeasure α) (i : Set α) : Set α :=
 private theorem someExistsOneDivLT_spec (hi : ¬s ≤[i] 0) :
     someExistsOneDivLT s i ⊆ i ∧
       MeasurableSet (someExistsOneDivLT s i) ∧
-        (1 / (findExistsOneDivLT s i + 1) : ℝ) < s (someExistsOneDivLT s i) := by
+        1 / ((findExistsOneDivLT s i : ℝ) + 1) < s (someExistsOneDivLT s i) := by
   rw [someExistsOneDivLT, dite_eq_left hi]
   exact Classical.choose_spec (findExistsOneDivLT_spec hi)
 
@@ -152,7 +152,7 @@ private theorem someExistsOneDivLT_measurableSet : MeasurableSet (someExistsOneD
     exact MeasurableSet.empty
 
 private theorem someExistsOneDivLT_lt (hi : ¬s ≤[i] 0) :
-    (1 / (findExistsOneDivLT s i + 1) : ℝ) < s (someExistsOneDivLT s i) :=
+    1 / ((findExistsOneDivLT s i : ℝ) + 1) < s (someExistsOneDivLT s i) :=
   let ⟨_, _, h⟩ := someExistsOneDivLT_spec hi
   h
 
@@ -179,7 +179,7 @@ private theorem restrictNonposSeq_subset (n : ℕ) : restrictNonposSeq s i n ⊆
   cases n <;> · rw [restrictNonposSeq]; exact someExistsOneDivLT_subset'
 
 private theorem restrictNonposSeq_lt (n : ℕ) (hn : ¬s ≤[i \ ⋃ k ≤ n, restrictNonposSeq s i k] 0) :
-    (1 / (findExistsOneDivLT s (i \ ⋃ k ≤ n, restrictNonposSeq s i k) + 1) : ℝ) <
+    1 / ((findExistsOneDivLT s (i \ ⋃ k ≤ n, restrictNonposSeq s i k) : ℝ) + 1) <
       s (restrictNonposSeq s i n.succ) := by
   rw [restrictNonposSeq_succ]
   apply someExistsOneDivLT_lt hn
@@ -291,7 +291,7 @@ theorem exists_subset_restrict_nonpos (hi : s i < 0) :
     rw [h₁]
     apply le_add_of_nonneg_right
     exact tsum_nonneg fun n => le_of_lt (measure_of_restrictNonposSeq h _ (hn n))
-  have h₃' : Summable fun n => (1 / (bdd n + 1) : ℝ) := by
+  have h₃' : Summable fun n => 1 / ((bdd n : ℝ) + 1) := by
     have : Summable fun l => s (restrictNonposSeq s i l) :=
       HasSum.summable
         (s.m_iUnion (fun _ => restrictNonposSeq_measurableSet _) restrictNonposSeq_disjoint)

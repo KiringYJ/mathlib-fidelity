@@ -30,7 +30,7 @@ noncomputable def derivRootWeight (P : ℂ[X]) {hP : P ≠ 0} (z : ℂ) (w : (P.
   else
     have : ‖z - w‖ ^ 2 ≠ 0 := pow_ne_zero 2 <| norm_ne_zero_iff.2 <| sub_ne_zero.2 fun hzw ↦
       h <| by rw [hzw]; exact (mem_roots hP).1 (Multiset.mem_toFinset.1 w.2)
-    P.rootMultiplicity (w : ℂ) hP / ‖z - w‖ ^ 2
+    (P.rootMultiplicity (w : ℂ) hP : ℝ) / ‖z - w‖ ^ 2
 
 theorem derivRootWeight_nonneg (P : ℂ[X]) {hP : P ≠ 0} (z : ℂ) (w : (P.roots hP).toFinset) :
     0 ≤ derivRootWeight P z w := by

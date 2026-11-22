@@ -68,15 +68,15 @@ lemma HasCoveringExponent.subset (h : HasCoveringExponent A c d) (hBA : B ⊆ A)
   coveringNumber_le ε hε_le :=
     calc (coveringNumber ε B : ℝ≥0∞)
     _ ≤ coveringNumber (ε / 2) A := mod_cast coveringNumber_subset_le hBA
-    _ ≤ c * (ε / 2 : ℝ≥0∞)⁻¹ ^ d := by
+    _ ≤ c * ((ε : ℝ≥0∞).div 2)⁻¹ ^ d := by
       replace h := h.coveringNumber_le (ε / 2) ?_
       · simpa using h
       · simp only [ENNReal.coe_div, ENNReal.coe_ofNat]
-        calc (ε / 2 : ℝ≥0∞) ≤ ε := ENNReal.half_le_self
+        calc (ε : ℝ≥0∞).div 2 ≤ ε := ENNReal.half_le_self
         _ ≤ Metric.ediam B := hε_le
         _ ≤ Metric.ediam A := Metric.ediam_mono hBA
     _ = 2 ^ d * c * (ε : ℝ≥0∞)⁻¹ ^ d := by
-      rw [div_eq_mul_inv, ENNReal.mul_inv (by simp) (by simp), inv_inv,
+      rw [ENNReal.div, ENNReal.mul_inv (by simp) (by simp), inv_inv,
         ENNReal.mul_rpow_of_nonneg _ _ hd]
       ring
 

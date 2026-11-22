@@ -658,17 +658,21 @@ example : Con foo4 := by fun_prop
 -/
 section StateReversionBug
 
-@[fun_prop] theorem div_Con' [Zero β] [Div β] (f g : α → β) (hf : Con f) (hg : Con g)
-    (h : ∀ x, g x ≠ 0) : Con (fun x => f x / g x) := silentSorry
+private def euclideanDiv? (a b : Int) : Option Int :=
+  if hb : b = 0 then none else some (Int.euclideanDiv a b hb)
+
+@[fun_prop] theorem quotient_Con' (f g : α → Int) (hf : Con f) (hg : Con g)
+    (h : ∀ x, g x ≠ 0) : Con (fun x => euclideanDiv? (f x) (g x)) := silentSorry
 
 example (f g : α → Int) (hf : Con f) (hg : Con g) (h : ∀ x, 0 < g x) :
-    Con (fun x => f x / g x) := by
+    Con (fun x => euclideanDiv? (f x) (g x)) := by
+  fail_if_success fun_prop (disch := fail)
   fun_prop (disch := grind)
 
 -- In case the behaviour of `grind` changes, here's a more explicit test.
 open Lean Elab Tactic Meta in
 example (f g : α → Int) (hf : Con f) (hg : Con g) (h : ∀ x, 0 < g x) :
-    Con (fun x => f x / g x) := by
+    Con (fun x => euclideanDiv? (f x) (g x)) := by
   have : ∀ x, g x ≠ 0 := by grind
   fun_prop (disch := run_tac
     let goal ← getMainGoal

@@ -102,14 +102,16 @@ theorem choose_succ_self (n : ℕ) : choose n (succ n) = 0 :=
 lemma choose_one_right (n : ℕ) : choose n 1 = n := by induction n <;> simp [*, choose, Nat.add_comm]
 
 -- The `n + 1`-st triangle number is `n` more than the `n`-th triangle number
-theorem triangle_succ (n : ℕ) : (n + 1) * (n + 1 - 1) / 2 = n * (n - 1) / 2 + n := by
+theorem triangle_succ (n : ℕ) :
+    Nat.euclideanDiv ((n + 1) * (n + 1 - 1)) 2 = Nat.euclideanDiv (n * (n - 1)) 2 + n := by
+  simp only [Nat.euclideanDiv_eq_core]
   rw [← add_mul_div_left, Nat.mul_comm 2 n, ← Nat.mul_add, Nat.add_sub_cancel, Nat.mul_comm]
   cases n <;> rfl; apply zero_lt_succ
 
 /-- `choose n 2` is the `n`-th triangle number. -/
-theorem choose_two_right (n : ℕ) : choose n 2 = n * (n - 1) / 2 := by
+theorem choose_two_right (n : ℕ) : choose n 2 = Nat.euclideanDiv (n * (n - 1)) 2 := by
   induction n with
-  | zero => simp
+  | zero => simp [Nat.euclideanDiv_eq_core]
   | succ n ih =>
     rw [triangle_succ n, choose, ih]
     simp [Nat.add_comm]
@@ -169,13 +171,16 @@ theorem choose_mul {n k s : ℕ} (hsk : s ≤ k) :
       grind
 
 theorem choose_eq_factorial_div_factorial {n k : ℕ} (hk : k ≤ n) :
-    choose n k = n ! / (k ! * (n - k)!) := by
-  rw [← choose_mul_factorial_mul_factorial hk, Nat.mul_assoc]
+    choose n k = Nat.euclideanDiv (n !) (k ! * (n - k)!)
+      (Nat.ne_of_gt (Nat.mul_pos k.factorial_pos (n - k).factorial_pos)) := by
+  rw [Nat.euclideanDiv_eq_core, ← choose_mul_factorial_mul_factorial hk, Nat.mul_assoc]
   exact (mul_div_left _ (Nat.mul_pos (factorial_pos _) (factorial_pos _))).symm
 
-theorem add_choose (i j : ℕ) : (i + j).choose j = (i + j)! / (i ! * j !) := by
-  rw [choose_eq_factorial_div_factorial (Nat.le_add_left j i), Nat.add_sub_cancel_right,
-    Nat.mul_comm]
+theorem add_choose (i j : ℕ) :
+    (i + j).choose j = Nat.euclideanDiv ((i + j)!) (i ! * j !)
+      (Nat.ne_of_gt (Nat.mul_pos i.factorial_pos j.factorial_pos)) := by
+  rw [choose_eq_factorial_div_factorial (Nat.le_add_left j i), Nat.add_sub_cancel_right]
+  simp only [Nat.euclideanDiv_eq_core, Nat.mul_comm]
 
 theorem add_choose_mul_factorial_mul_factorial (i j : ℕ) :
     (i + j).choose j * i ! * j ! = (i + j)! := by
@@ -193,7 +198,8 @@ theorem factorial_mul_factorial_dvd_factorial_add (i j : ℕ) : i ! * j ! ∣ (i
 @[simp]
 theorem choose_symm {n k : ℕ} (hk : k ≤ n) : choose n (n - k) = choose n k := by
   rw [choose_eq_factorial_div_factorial hk, choose_eq_factorial_div_factorial (Nat.sub_le _ _),
-    Nat.sub_sub_self hk, Nat.mul_comm]
+    Nat.sub_sub_self hk]
+  simp only [Nat.euclideanDiv_eq_core, Nat.mul_comm]
 
 theorem choose_symm_of_eq_add {n a b : ℕ} (h : n = a + b) : Nat.choose n a = Nat.choose n b := by
   suffices choose n (n - b) = choose n b by
@@ -276,14 +282,17 @@ theorem factorial_dvd_ascFactorial (n k : ℕ) : k ! ∣ n.ascFactorial k :=
   ⟨(n + k - 1).choose k, ascFactorial_eq_factorial_mul_choose' _ _⟩
 
 theorem choose_eq_asc_factorial_div_factorial (n k : ℕ) :
-    (n + k).choose k = (n + 1).ascFactorial k / k ! := by
+    (n + k).choose k = Nat.euclideanDiv ((n + 1).ascFactorial k) (k !) k.factorial_ne_zero := by
+  rw [Nat.euclideanDiv_eq_core]
   apply Nat.mul_left_cancel k.factorial_pos
   rw [← ascFactorial_eq_factorial_mul_choose]
   exact (Nat.mul_div_cancel' <| factorial_dvd_ascFactorial _ _).symm
 
 theorem choose_eq_asc_factorial_div_factorial' (n k : ℕ) :
-    (n + k - 1).choose k = n.ascFactorial k / k ! :=
-  Nat.eq_div_of_mul_eq_right k.factorial_ne_zero (ascFactorial_eq_factorial_mul_choose' _ _).symm
+    (n + k - 1).choose k = Nat.euclideanDiv (n.ascFactorial k) (k !) k.factorial_ne_zero := by
+  rw [Nat.euclideanDiv_eq_core]
+  exact Nat.eq_div_of_mul_eq_right k.factorial_ne_zero
+    (ascFactorial_eq_factorial_mul_choose' _ _).symm
 
 theorem descFactorial_eq_factorial_mul_choose (n k : ℕ) : n.descFactorial k = k ! * n.choose k := by
   obtain h | h := Nat.lt_or_ge n k
@@ -295,12 +304,15 @@ theorem descFactorial_eq_factorial_mul_choose (n k : ℕ) : n.descFactorial k = 
 theorem factorial_dvd_descFactorial (n k : ℕ) : k ! ∣ n.descFactorial k :=
   ⟨n.choose k, descFactorial_eq_factorial_mul_choose _ _⟩
 
-theorem choose_eq_descFactorial_div_factorial (n k : ℕ) : n.choose k = n.descFactorial k / k ! :=
-  Nat.eq_div_of_mul_eq_right k.factorial_ne_zero (descFactorial_eq_factorial_mul_choose _ _).symm
+theorem choose_eq_descFactorial_div_factorial (n k : ℕ) :
+    n.choose k = Nat.euclideanDiv (n.descFactorial k) (k !) k.factorial_ne_zero := by
+  rw [Nat.euclideanDiv_eq_core]
+  exact Nat.eq_div_of_mul_eq_right k.factorial_ne_zero
+    (descFactorial_eq_factorial_mul_choose _ _).symm
 
 /-- A faster implementation of `choose`, to be used during bytecode evaluation
 and in compiled code. -/
-def fast_choose n k := Nat.descFactorial n k / Nat.factorial k
+def fast_choose n k := Nat.euclideanDiv (Nat.descFactorial n k) (k !) k.factorial_ne_zero
 
 @[csimp] lemma choose_eq_fast_choose : Nat.choose = fast_choose :=
   funext (fun _ => funext (Nat.choose_eq_descFactorial_div_factorial _))
@@ -310,8 +322,9 @@ def fast_choose n k := Nat.descFactorial n k / Nat.factorial k
 
 
 /-- Show that `Nat.choose` is increasing for small values of the right argument. -/
-theorem choose_le_succ_of_lt_half_left {r n : ℕ} (h : r < n / 2) :
+theorem choose_le_succ_of_lt_half_left {r n : ℕ} (h : r < Nat.euclideanDiv n 2) :
     choose n r ≤ choose n (r + 1) := by
+  rw [Nat.euclideanDiv_eq_core] at h
   refine Nat.le_of_mul_le_mul_right ?_ (Nat.sub_pos_of_lt (h.trans_le (n.div_le_self 2)))
   rw [← choose_succ_right_eq]
   apply Nat.mul_le_mul_left
@@ -319,19 +332,20 @@ theorem choose_le_succ_of_lt_half_left {r n : ℕ} (h : r < n / 2) :
   exact lt_of_lt_of_le (Nat.mul_lt_mul_of_pos_right h Nat.zero_lt_two) (n.div_mul_le_self 2)
 
 /-- Show that for small values of the right argument, the middle value is largest. -/
-private theorem choose_le_middle_of_le_half_left {n r : ℕ} (hr : r ≤ n / 2) :
-    choose n r ≤ choose n (n / 2) := by
+private theorem choose_le_middle_of_le_half_left {n r : ℕ} (hr : r ≤ Nat.euclideanDiv n 2) :
+    choose n r ≤ choose n (Nat.euclideanDiv n 2) := by
   induction hr using decreasingInduction with
   | self => rfl
   | of_succ k hk ih => exact (choose_le_succ_of_lt_half_left hk).trans ih
 
 /-- `choose n r` is maximised when `r` is `n/2`. -/
-theorem choose_le_middle (r n : ℕ) : choose n r ≤ choose n (n / 2) := by
+theorem choose_le_middle (r n : ℕ) : choose n r ≤ choose n (Nat.euclideanDiv n 2) := by
   rcases le_or_gt r n with b | b
-  · rcases le_or_gt r (n / 2) with a | h
+  · rcases le_or_gt r (Nat.euclideanDiv n 2) with a | h
     · apply choose_le_middle_of_le_half_left a
     · rw [← choose_symm b]
       apply choose_le_middle_of_le_half_left
+      rw [Nat.euclideanDiv_eq_core] at h ⊢
       lia
   · rw [choose_eq_zero_of_lt b]
     apply zero_le

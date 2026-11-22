@@ -119,7 +119,7 @@ lemma auxbound2 (c : ℝ) {d : ℝ} (hd : 1 ≤ d ^ 2) : r z ≤ ‖c * (z : ℂ
     add_im, im_ofReal_mul, coe_im, ofReal_im, add_zero, min_le_iff] using Or.inr H1
 
 lemma div_max_sq_ge_one (x : Fin 2 → ℤ) (hx : x ≠ 0) :
-    1 ≤ (x 0 / ‖x‖) ^ 2 ∨ 1 ≤ (x 1 / ‖x‖) ^ 2 := by
+    1 ≤ ((x 0 : ℝ) / ‖x‖) ^ 2 ∨ 1 ≤ ((x 1 : ℝ) / ‖x‖) ^ 2 := by
   refine (max_choice (x 0).natAbs (x 1).natAbs).imp (fun H0 ↦ ?_) (fun H1 ↦ ?_)
   · have : x 0 ≠ 0 := by
       rwa [← norm_ne_zero_iff, norm_eq_max_natAbs, H0, Nat.cast_ne_zero, Int.natAbs_ne_zero] at hx
@@ -132,15 +132,16 @@ lemma div_max_sq_ge_one (x : Fin 2 → ℤ) (hx : x ≠ 0) :
 
 lemma r_mul_max_le {x : Fin 2 → ℤ} (hx : x ≠ 0) : r z * ‖x‖ ≤ ‖x 0 * (z : ℂ) + x 1‖ := by
   have hn0 : ‖x‖ ≠ 0 := by rwa [norm_ne_zero_iff]
-  have h11 : x 0 * (z : ℂ) + x 1 = (x 0 / ‖x‖ * z + x 1 / ‖x‖) * ‖x‖ := by
+  have h11 : x 0 * (z : ℂ) + x 1 =
+      ((x 0 : ℂ) / (‖x‖ : ℂ) * z + (x 1 : ℂ) / (‖x‖ : ℂ)) * ‖x‖ := by
     rw [div_mul_eq_mul_div₀, ← add_div, div_mul_cancel₀]
   rw [h11, norm_mul, norm_real, norm_norm]
   gcongr
   · rcases div_max_sq_ge_one x hx with H1 | H2
     · simpa only [ofReal_div _ _ (hs := hn0.isUnit), ofReal_intCast] using
-        auxbound1 z (x 1 / ‖x‖) H1
+        auxbound1 z ((x 1 : ℝ) / ‖x‖) H1
     · simpa only [ofReal_div _ _ (hs := hn0.isUnit), ofReal_intCast] using
-        auxbound2 z (x 0 / ‖x‖) H2
+        auxbound2 z ((x 0 : ℝ) / ‖x‖) H2
 
 /-- Upper bound for the summand `|c * z + d| ^ (-k)`, as a product of a function of `z` and a
 function of `c, d`. -/

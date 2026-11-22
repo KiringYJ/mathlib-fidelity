@@ -273,7 +273,7 @@ theorem integral_gaussian_complex {b : ℂ} (hb : 0 < re b) :
     · dsimp only [g]
       rw [Ne, cpow_eq_zero_iff, not_and_or]
       exact Or.inl (hq_ne c)
-    · change (∫ x : ℝ, cexp (-(1 : ℂ) * (x : ℂ) ^ 2)) = (π / (1 : ℂ)) ^ (1 / 2 : ℂ)
+    · change (∫ x : ℝ, cexp (-(1 : ℂ) * (x : ℂ) ^ 2)) = ((π : ℂ) / 1) ^ (1 / 2 : ℂ)
       have hcast (x : ℝ) : cexp (-(1 : ℂ) * (x : ℂ) ^ 2) = exp (-(1 : ℝ) * x ^ 2) := by
         simp only [ofReal_exp, neg_mul, one_mul, ofReal_neg, ofReal_pow]
       have hhalf : (↑(1 / (2 : ℝ)) : ℂ) = (1 / 2 : ℂ) := by

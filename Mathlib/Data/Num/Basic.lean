@@ -504,7 +504,7 @@ def divModAux (d : PosNum) (q r : Num) : Num × Num :=
   | some r' => (Num.bit1 q, r')
   | none => (Num.bit0 q, r)
 
-/-- `divMod x y = (y / x, y % x)`. -/
+/-- Compute the Euclidean quotient and remainder of the positive dividend by `d`. -/
 def divMod (d : PosNum) : PosNum → Num × Num
   | bit0 n =>
     let (q, r₁) := divMod d n
@@ -538,20 +538,23 @@ end PosNum
 
 namespace Num
 
-/-- Division of `Num`s, where `x / 0 = 0`. -/
-def div : Num → Num → Num
-  | 0, _ => 0
-  | _, 0 => 0
-  | pos n, pos d => PosNum.div' n d
+/-- The Euclidean quotient of a binary natural number by a positive binary divisor. -/
+def divPos (n : Num) (d : PosNum) : Num :=
+  match n with
+  | .zero => 0
+  | .pos p => p.div' d
+
+/-- Euclidean division of binary natural numbers by a nonzero divisor. -/
+def quotient (n d : Num) (hd : d ≠ 0) : Num :=
+  match d, hd with
+  | .zero, h => (h rfl).elim
+  | .pos d, _ => divPos n d
 
 /-- Modulus of `Num`s. -/
 def mod : Num → Num → Num
   | 0, _ => 0
   | n, 0 => n
   | pos n, pos d => PosNum.mod' n d
-
-instance : Div Num :=
-  ⟨Num.div⟩
 
 instance : Mod Num :=
   ⟨Num.mod⟩
@@ -570,23 +573,21 @@ end Num
 
 namespace ZNum
 
-/-- Division of `ZNum`, where `x / 0 = 0`. -/
-def div : ZNum → ZNum → ZNum
-  | 0, _ => 0
-  | _, 0 => 0
-  | pos n, pos d => Num.toZNum (PosNum.div' n d)
-  | pos n, neg d => Num.toZNumNeg (PosNum.div' n d)
-  | neg n, pos d => neg (PosNum.pred' n / Num.pos d).succ'
-  | neg n, neg d => pos (PosNum.pred' n / Num.pos d).succ'
+/-- Euclidean division of signed binary integers by a nonzero divisor. -/
+def quotient (n d : ZNum) (hd : d ≠ 0) : ZNum :=
+  match n, d, hd with
+  | _, .zero, h => (h rfl).elim
+  | .zero, .pos _, _ | .zero, .neg _, _ => 0
+  | .pos n, .pos d, _ => Num.toZNum (PosNum.div' n d)
+  | .pos n, .neg d, _ => Num.toZNumNeg (PosNum.div' n d)
+  | .neg n, .pos d, _ => neg (Num.divPos n.pred' d).succ'
+  | .neg n, .neg d, _ => pos (Num.divPos n.pred' d).succ'
 
 /-- Modulus of `ZNum`s. -/
 def mod : ZNum → ZNum → ZNum
   | 0, _ => 0
   | pos n, d => Num.toZNum (Num.pos n % d.abs)
   | neg n, d => d.abs.sub' (PosNum.pred' n % d.abs).succ
-
-instance : Div ZNum :=
-  ⟨ZNum.div⟩
 
 instance : Mod ZNum :=
   ⟨ZNum.mod⟩

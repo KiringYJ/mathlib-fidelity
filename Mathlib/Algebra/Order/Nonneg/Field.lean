@@ -85,7 +85,7 @@ protected theorem coe_inv (a : Nonneg α) {ha : IsUnit a} : ((a⁻¹ : Nonneg α
 
 @[simp, norm_cast]
 protected theorem coe_div (a b : Nonneg α) {hb : IsUnit b} :
-    ((a / b : Nonneg α) : α) = a / b := by
+    ((Checked.div a b hb : Nonneg α) : α) = Checked.div (a : α) (b : α) (isUnit_coe hb) := by
   rw [div_eq_mul_inv₀, Nonneg.coe_mul, Nonneg.coe_inv, div_eq_mul_inv₀]
 
 @[simp, norm_cast]
@@ -110,7 +110,8 @@ theorem inv_mk (hx : 0 ≤ x) {h : IsUnit (⟨x, hx⟩ : Nonneg α)} :
 
 @[simp]
 theorem mk_div_mk (hx : 0 ≤ x) (hy : 0 ≤ y) {h : IsUnit (⟨y, hy⟩ : Nonneg α)} :
-    (⟨x, hx⟩ : Nonneg α) / ⟨y, hy⟩ = ⟨Checked.div x y (isUnit_coe h), div_nonneg hx hy⟩ :=
+    Checked.div (⟨x, hx⟩ : Nonneg α) ⟨y, hy⟩ h =
+      ⟨Checked.div x y (isUnit_coe h), div_nonneg hx hy⟩ :=
   Subtype.ext (Nonneg.coe_div ⟨x, hx⟩ ⟨y, hy⟩)
 
 @[simp]

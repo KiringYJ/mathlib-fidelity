@@ -68,7 +68,7 @@ variable {k : ℕ} {x : ℝ}
 of the Bernoulli polynomial. -/
 theorem cosZeta_two_mul_nat (hk : k ≠ 0) (hx : x ∈ Icc 0 1) :
     cosZeta x (2 * k) (by exact Or.inl (two_mul_nat_ne_one k)) =
-      (-1) ^ (k + 1) * (2 * π) ^ (2 * k) / 2 / (2 * k)! *
+      (-1) ^ (k + 1) * (2 * (π : ℂ)) ^ (2 * k) / 2 / ((2 * k)! : ℂ) *
       ((Polynomial.bernoulli (2 * k)).map (algebraMap ℚ ℂ)).eval (x : ℂ) := by
   rw [← (hasSum_nat_cosZeta x (?_ : 1 < re (2 * k))).tsum_eq]
   · refine Eq.trans ?_ <|
@@ -96,7 +96,7 @@ prove it in this case, owing to the additional difficulty of working with series
 conditionally convergent.
 -/
 theorem sinZeta_two_mul_nat_add_one (hk : k ≠ 0) (hx : x ∈ Icc 0 1) :
-    sinZeta x (2 * k + 1) = (-1) ^ (k + 1) * (2 * π) ^ (2 * k + 1) / 2 / (2 * k + 1)! *
+    sinZeta x (2 * k + 1) = (-1) ^ (k + 1) * (2 * (π : ℂ)) ^ (2 * k + 1) / 2 / ((2 * k + 1)! : ℂ) *
       ((Polynomial.bernoulli (2 * k + 1)).map (algebraMap ℚ ℂ)).eval (x : ℂ) := by
   rw [← (hasSum_nat_sinZeta x (?_ : 1 < re (2 * k + 1))).tsum_eq]
   · refine Eq.trans ?_ <|
@@ -117,7 +117,7 @@ theorem sinZeta_two_mul_nat_add_one (hk : k ≠ 0) (hx : x ∈ Icc 0 1) :
     lia
 
 private theorem factorial_prefactor_eq_reciprocalGammaℂ_div {n : ℕ} (hn : n ≠ 0) :
-    ((2 * π : ℂ) ^ n / 2 / (n ! : ℂ)) = reciprocalGammaℂ n / n := by
+    ((2 * π : ℂ) ^ n / 2 / (n ! : ℂ)) = reciprocalGammaℂ n / (n : ℂ) := by
   have hn' : (n : ℂ) ≠ 0 := Nat.cast_ne_zero.mpr hn
   have hpos : 0 < (n : ℂ).re := by
     rw [natCast_re]
@@ -134,7 +134,7 @@ private theorem factorial_prefactor_eq_reciprocalGammaℂ_div {n : ℕ} (hn : n 
 /-- Reformulation of `cosZeta_two_mul_nat` using the reciprocal complex-place Gamma factor. -/
 theorem cosZeta_two_mul_nat' (hk : k ≠ 0) (hx : x ∈ Icc (0 : ℝ) 1) :
     cosZeta x (2 * k) (by exact Or.inl (two_mul_nat_ne_one k)) =
-      (-1) ^ (k + 1) / (2 * k) * reciprocalGammaℂ (2 * k) *
+      (-1) ^ (k + 1) / (2 * (k : ℂ)) * reciprocalGammaℂ (2 * k) *
         ((Polynomial.bernoulli (2 * k)).map (algebraMap ℚ ℂ)).eval (x : ℂ) := by
   rw [cosZeta_two_mul_nat hk hx]
   congr 1
@@ -163,7 +163,7 @@ private theorem signed_powers_mul (k : ℕ) : (-1 : ℂ) ^ k * (-1) ^ (k + 1) = 
 
 theorem hurwitzZetaEven_one_sub_two_mul_nat (hk : k ≠ 0) (hx : x ∈ Icc (0 : ℝ) 1) :
     hurwitzZetaEven x (1 - 2 * k) (by exact one_sub_two_mul_nat_ne_one hk) =
-      -1 / (2 * k) * ((Polynomial.bernoulli (2 * k)).map (algebraMap ℚ ℂ)).eval (x : ℂ) := by
+      -1 / (2 * (k : ℂ)) * ((Polynomial.bernoulli (2 * k)).map (algebraMap ℚ ℂ)).eval (x : ℂ) := by
   have hpos : 0 < (2 * (k : ℂ)).re := by
     rw [← Nat.cast_two, ← Nat.cast_mul, natCast_re]
     exact Nat.cast_pos.mpr (Nat.mul_pos two_pos (Nat.pos_of_ne_zero hk))
@@ -177,7 +177,7 @@ theorem hurwitzZetaEven_one_sub_two_mul_nat (hk : k ≠ 0) (hx : x ∈ Icc (0 : 
   let B := ((Polynomial.bernoulli (2 * k)).map (algebraMap ℚ ℂ)).eval (x : ℂ)
   calc
     _ = (reciprocalGammaℂ (2 * k) * Gammaℂ (2 * k)) *
-        (((-1 : ℂ) ^ k * (-1) ^ (k + 1)) / (2 * k)) * B := by
+        (((-1 : ℂ) ^ k * (-1) ^ (k + 1)) / (2 * (k : ℂ))) * B := by
       field_simp
       rfl
     _ = _ := by rw [reciprocalGammaℂ_mul_Gammaℂ hregular, signed_powers_mul, one_mul]
@@ -208,7 +208,7 @@ theorem hurwitzZetaOdd_neg_two_mul_nat (hk : k ≠ 0) (hx : x ∈ Icc (0 : ℝ) 
 -- private because it is superseded by `hurwitzZeta_neg_nat` below
 private lemma hurwitzZeta_one_sub_two_mul_nat (hk : k ≠ 0) (hx : x ∈ Icc (0 : ℝ) 1) :
     hurwitzZeta x (1 - 2 * k) (one_sub_two_mul_nat_ne_one hk) =
-      -1 / (2 * k) * ((Polynomial.bernoulli (2 * k)).map (algebraMap ℚ ℂ)).eval (x : ℂ) := by
+      -1 / (2 * (k : ℂ)) * ((Polynomial.bernoulli (2 * k)).map (algebraMap ℚ ℂ)).eval (x : ℂ) := by
   suffices hurwitzZetaOdd x (1 - 2 * k) = 0 by
     rw [hurwitzZeta, this, add_zero, hurwitzZetaEven_one_sub_two_mul_nat hk hx]
   obtain ⟨k, rfl⟩ := Nat.exists_eq_succ_of_ne_zero hk
@@ -231,7 +231,7 @@ TODO: This formula is also correct for `k = 0`; but our current proof does not w
 case. -/
 theorem hurwitzZeta_neg_nat (hk : k ≠ 0) (hx : x ∈ Icc (0 : ℝ) 1) :
     hurwitzZeta x (-k) (by exact neg_nat_ne_one k) =
-    -1 / (k + 1) * ((Polynomial.bernoulli (k + 1)).map (algebraMap ℚ ℂ)).eval (x : ℂ) := by
+    -1 / ((k : ℂ) + 1) * ((Polynomial.bernoulli (k + 1)).map (algebraMap ℚ ℂ)).eval (x : ℂ) := by
   rcases Nat.even_or_odd' k with ⟨n, (rfl | rfl)⟩
   · exact_mod_cast hurwitzZeta_neg_two_mul_nat (by lia : n ≠ 0) hx
   · exact_mod_cast hurwitzZeta_one_sub_two_mul_nat (by lia : n + 1 ≠ 0) hx
@@ -248,7 +248,7 @@ Compare `hasSum_zeta_nat` for a version formulated in terms of a sum over `1 / n
 the functional equation). -/
 theorem riemannZeta_two_mul_nat {k : ℕ} (hk : k ≠ 0) :
     riemannZeta (2 * k) (by exact two_mul_nat_ne_one k) = (-1) ^ (k + 1) * (2 : ℂ) ^ (2 * k - 1)
-      * (π : ℂ) ^ (2 * k) * bernoulli (2 * k) / (2 * k)! := by
+      * (π : ℂ) ^ (2 * k) * bernoulli (2 * k) / ((2 * k)! : ℂ) := by
   have h := zeta_nat_eq_tsum_of_gt_one (k := 2 * k) (by omega)
   simp only [Nat.cast_mul, Nat.cast_two] at h
   rw [h]
@@ -260,7 +260,7 @@ theorem riemannZeta_two_mul_nat {k : ℕ} (hk : k ≠ 0) :
 but requires `k ≠ 0`. -/
 theorem riemannZeta_two_mul_nat' {k : ℕ} :
     riemannZeta (2 * k) (by exact two_mul_nat_ne_one k) = (-1) ^ (k + 1) * (2 : ℂ) ^ (2 * k - 1 : ℤ)
-      * (π : ℂ) ^ (2 * k) * bernoulli (2 * k) / (2 * k)! := by
+      * (π : ℂ) ^ (2 * k) * bernoulli (2 * k) / ((2 * k)! : ℂ) := by
   rcases eq_or_ne k 0 with rfl | hk
   · simp [riemannZeta_zero]
     norm_num
@@ -284,7 +284,7 @@ theorem riemannZeta_four : riemannZeta 4 = π ^ 4 / 90 := by
 
 /-- Value of Riemann zeta at `-ℕ` in terms of `bernoulli'`. -/
 theorem riemannZeta_neg_nat_eq_bernoulli' (k : ℕ) :
-    riemannZeta (-k) (by exact neg_nat_ne_one k) = -bernoulli' (k + 1) / (k + 1) := by
+    riemannZeta (-k) (by exact neg_nat_ne_one k) = -(bernoulli' (k + 1) : ℂ) / ((k : ℂ) + 1) := by
   rcases eq_or_ne k 0 with rfl | hk
   · have h : riemannZeta (-(0 : ℕ)) (by exact neg_nat_ne_one 0) = -1 / 2 := by
       simpa only [Nat.cast_zero, neg_zero] using riemannZeta_zero
@@ -297,7 +297,8 @@ theorem riemannZeta_neg_nat_eq_bernoulli' (k : ℕ) :
 
 /-- Value of Riemann zeta at `-ℕ` in terms of `bernoulli`. -/
 theorem riemannZeta_neg_nat_eq_bernoulli (k : ℕ) :
-    riemannZeta (-k) (by exact neg_nat_ne_one k) = (-1 : ℂ) ^ k * bernoulli (k + 1) / (k + 1) := by
+    riemannZeta (-k) (by exact neg_nat_ne_one k) =
+      (-1 : ℂ) ^ k * bernoulli (k + 1) / ((k : ℂ) + 1) := by
   rw [riemannZeta_neg_nat_eq_bernoulli', bernoulli, Rat.cast_mul, Rat.cast_pow, Rat.cast_neg,
     Rat.cast_one, ← neg_one_mul, ← mul_assoc, pow_succ, ← mul_assoc, ← mul_pow, neg_one_mul (-1),
     neg_neg, one_pow, one_mul]

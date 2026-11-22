@@ -113,7 +113,7 @@ theorem deriv_bernoulliFun_apply (x : ℝ) :
   congrFun (deriv_bernoulliFun k) x
 
 theorem antideriv_bernoulliFun (k : ℕ) (x : ℝ) :
-    HasDerivAt (fun x => bernoulliFun (k + 1) x / (k + 1)) (bernoulliFun k x) x := by
+    HasDerivAt (fun x => bernoulliFun (k + 1) x / ((k : ℝ) + 1)) (bernoulliFun k x) x := by
   convert! (hasDerivAt_bernoulliFun (k + 1) x).div_const _ using 1
   simp
 
@@ -146,10 +146,10 @@ theorem bernoulliFun_eval_one_sub {k : ℕ} {x : ℝ} :
 /-- The multiplication theorem. Proof follows https://math.stackexchange.com/a/1721099/38218. -/
 theorem bernoulliFun_mul (k : ℕ) {m : ℕ} (m0 : m ≠ 0) (x : ℝ) :
     bernoulliFun k (m * x) =
-      m ^ k / m * ∑ i ∈ Finset.range m, bernoulliFun k (x + i / m) := by
+      (m : ℝ) ^ k / (m : ℝ) * ∑ i ∈ Finset.range m, bernoulliFun k (x + (i : ℝ) / (m : ℝ)) := by
   have m0' : (m : ℝ) ≠ 0 := Nat.cast_ne_zero.mpr m0
   let f (k x) := bernoulliFun k (m * x) -
-    m ^ k / m * ∑ i ∈ Finset.range m, bernoulliFun k (x + (i : ℝ) / m)
+    (m : ℝ) ^ k / (m : ℝ) * ∑ i ∈ Finset.range m, bernoulliFun k (x + (i : ℝ) / (m : ℝ))
   suffices h : ∀ x, f k x = 0 by
     rw [← sub_eq_zero]
     exact h x
@@ -168,8 +168,8 @@ theorem bernoulliFun_mul (k : ℕ) {m : ℕ} (m0 : m ≠ 0) (x : ℝ) :
         exact (hasDerivAt_bernoulliFun _ _).comp _ (hasDerivAt_const_mul ..)
       · refine HasDerivAt.fun_sum fun i _ ↦ ?_
         simp only [mul_assoc, ← Nat.cast_add_one]
-        have hd := (hasDerivAt_bernoulliFun (k + 1) (x + (i : ℝ) / m)).comp
-          (coord' := id) x ((hasDerivAt_id' x).add_const ((i : ℝ) / m))
+        have hd := (hasDerivAt_bernoulliFun (k + 1) (x + (i : ℝ) / (m : ℝ))).comp
+          (coord' := id) x ((hasDerivAt_id' x).add_const ((i : ℝ) / (m : ℝ)))
         apply (hd.const_mul ((m : ℝ) ^ k)).congr_deriv
         push_cast
         field
@@ -318,7 +318,7 @@ theorem summable_bernoulli_fourier {k : ℕ} (hk : 2 ≤ k) :
   have :
       ∀ n : {n : ℤ // n ≠ 0}, Checked.div (-(k ! : ℂ)) ((2 * π * I * (n : ℤ)) ^ k)
         ((isUnit_fourierFrequency n.2).pow k) =
-        -k ! / (2 * π * I) ^ k * (1 / ((n : ℤ) : ℂ) ^ k) := by
+        -(k ! : ℂ) / (2 * π * I) ^ k * (1 / ((n : ℤ) : ℂ) ^ k) := by
     intro n
     rw [mul_one_div₀, div_div₀]
     simp only [mul_pow]
@@ -334,11 +334,11 @@ theorem summable_bernoulli_fourier {k : ℕ} (hk : 2 ≤ k) :
 theorem hasSum_one_div_pow_mul_fourier_mul_bernoulliFun {k : ℕ} (hk : 2 ≤ k) {x : ℝ}
     (hx : x ∈ Icc (0 : ℝ) 1) :
     HasSum (fun n : {n : ℤ // n ≠ 0} ↦ 1 / ((n : ℤ) : ℂ) ^ k * fourier n (x : 𝕌))
-      (-(2 * π * I) ^ k / k ! * bernoulliFun k x) := by
+      (-(2 * π * I) ^ k / (k ! : ℂ) * bernoulliFun k x) := by
   -- first show it suffices to prove result for `Ico 0 1`
   suffices ∀ {y : ℝ}, y ∈ Ico (0 : ℝ) 1 →
       HasSum (fun n : {n : ℤ // n ≠ 0} ↦ 1 / ((n : ℤ) : ℂ) ^ k * fourier n y)
-        (-(2 * (π : ℂ) * I) ^ k / k ! * bernoulliFun k y) by
+        (-(2 * (π : ℂ) * I) ^ k / (k ! : ℂ) * bernoulliFun k y) by
     rw [← Ico_insert_right (zero_le_one' ℝ), mem_insert_iff, or_comm] at hx
     rcases hx with (hx | rfl)
     · exact this hx
@@ -392,7 +392,7 @@ theorem hasSum_one_div_nat_pow_mul_fourier {k : ℕ} (hk : 2 ≤ k) {x : ℝ} (h
     HasSum
       (fun n : ℕ+ =>
         (1 : ℂ) / (n : ℂ) ^ k * (fourier n (x : 𝕌) + (-1 : ℂ) ^ k * fourier (-n) (x : 𝕌)))
-      (-(2 * π * I) ^ k / k ! * bernoulliFun k x) := by
+      (-(2 * π * I) ^ k / (k ! : ℂ) * bernoulliFun k x) := by
   apply (hasSum_one_div_pow_mul_fourier_mul_bernoulliFun hk hx).int_pos_add_neg.congr_fun
   intro n
   have hpow : (-(n : ℂ)) ^ k = (-1 : ℂ) ^ k * (n : ℂ) ^ k := by
@@ -404,11 +404,11 @@ theorem hasSum_one_div_nat_pow_mul_fourier {k : ℕ} (hk : 2 ≤ k) {x : ℝ} (h
 
 theorem hasSum_one_div_nat_pow_mul_cos {k : ℕ} (hk : k ≠ 0) {x : ℝ} (hx : x ∈ Icc (0 : ℝ) 1) :
     HasSum (fun n : ℕ+ ↦ 1 / (n : ℝ) ^ (2 * k) * Real.cos (2 * π * n * x))
-      ((-1 : ℝ) ^ (k + 1) * (2 * π) ^ (2 * k) / 2 / (2 * k)! *
+      ((-1 : ℝ) ^ (k + 1) * (2 * π) ^ (2 * k) / 2 / ((2 * k)! : ℝ) *
         (Polynomial.map (algebraMap ℚ ℝ) (Polynomial.bernoulli (2 * k))).eval x) := by
   have :
     HasSum (fun n : ℕ+ ↦ 1 / (n : ℂ) ^ (2 * k) * (fourier n (x : 𝕌) + fourier (-n) (x : 𝕌)))
-      ((-1 : ℂ) ^ (k + 1) * (2 * (π : ℂ)) ^ (2 * k) / (2 * k)! * bernoulliFun (2 * k) x) := by
+      ((-1 : ℂ) ^ (k + 1) * (2 * (π : ℂ)) ^ (2 * k) / ((2 * k)! : ℂ) * bernoulliFun (2 * k) x) := by
     convert! hasSum_one_div_nat_pow_mul_fourier (by lia : 2 ≤ 2 * k) hx using 3
     · rw [pow_mul (-1 : ℂ), neg_one_sq, one_pow, one_mul]
     · rw [pow_add, pow_one]
@@ -439,11 +439,11 @@ theorem hasSum_one_div_nat_pow_mul_cos {k : ℕ} (hk : k ≠ 0) {x : ℝ} (hx : 
 
 theorem hasSum_one_div_nat_pow_mul_sin {k : ℕ} (hk : k ≠ 0) {x : ℝ} (hx : x ∈ Icc (0 : ℝ) 1) :
     HasSum (fun n : ℕ+ ↦ 1 / (n : ℝ) ^ (2 * k + 1) * Real.sin (2 * π * n * x))
-      ((-1 : ℝ) ^ (k + 1) * (2 * π) ^ (2 * k + 1) / 2 / (2 * k + 1)! *
+      ((-1 : ℝ) ^ (k + 1) * (2 * π) ^ (2 * k + 1) / 2 / ((2 * k + 1)! : ℝ) *
         (Polynomial.map (algebraMap ℚ ℝ) (Polynomial.bernoulli (2 * k + 1))).eval x) := by
   have :
     HasSum (fun n : ℕ+ ↦ 1 / (n : ℂ) ^ (2 * k + 1) * (fourier n (x : 𝕌) - fourier (-n) (x : 𝕌)))
-      ((-1 : ℂ) ^ (k + 1) * I * (2 * π : ℂ) ^ (2 * k + 1) / (2 * k + 1)! *
+      ((-1 : ℂ) ^ (k + 1) * I * (2 * π : ℂ) ^ (2 * k + 1) / ((2 * k + 1)! : ℂ) *
         bernoulliFun (2 * k + 1) x) := by
     convert! hasSum_one_div_nat_pow_mul_fourier (by lia : 2 ≤ 2 * k + 1) hx using 1
     · ext1 n
@@ -477,7 +477,7 @@ theorem hasSum_one_div_nat_pow_mul_sin {k : ℕ} (hk : k ≠ 0) {x : ℝ} (hx : 
 theorem hasSum_zeta_nat {k : ℕ} (hk : k ≠ 0) :
     HasSum (fun n : ℕ+ ↦ 1 / (n : ℝ) ^ (2 * k))
       ((-1 : ℝ) ^ (k + 1) * (2 : ℝ) ^ (2 * k - 1) * π ^ (2 * k) *
-        bernoulli (2 * k) / (2 * k)!) := by
+        bernoulli (2 * k) / ((2 * k)! : ℝ)) := by
   convert! hasSum_one_div_nat_pow_mul_cos hk (left_mem_Icc.mpr zero_le_one) using 1
   · ext1 n; rw [mul_zero, Real.cos_zero, mul_one]
   rw [Polynomial.eval_zero_map, Polynomial.bernoulli_eval_zero, eq_ratCast]

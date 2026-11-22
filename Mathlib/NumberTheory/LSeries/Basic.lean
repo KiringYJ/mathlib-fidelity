@@ -74,7 +74,7 @@ def term (f : ℕ → ℂ) (s : ℂ) (n : ℕ) : ℂ :=
     (cpow_ne_zero_iff.mpr (Or.inl (Nat.cast_ne_zero.mpr hn))).isUnit
 
 lemma term_def (f : ℕ → ℂ) (s : ℂ) (n : ℕ) :
-    term f s n = if hn : n = 0 then 0 else f n / n ^ s :=
+    term f s n = if hn : n = 0 then 0 else f n / (n : ℂ) ^ s :=
   rfl
 
 /-- A positive-index term written using a complex power of negative exponent. -/
@@ -88,7 +88,7 @@ lemma term_zero (f : ℕ → ℂ) (s : ℂ) : term f s 0 = 0 := rfl
 -- We put `hn` first for convenience, so that we can write `rw [LSeries.term_of_ne_zero hn]` etc.
 @[simp]
 lemma term_of_ne_zero {n : ℕ} (hn : n ≠ 0) (f : ℕ → ℂ) (s : ℂ) :
-    term f s n = f n / n ^ s :=
+    term f s n = f n / (n : ℂ) ^ s :=
   dite_eq_right hn
 
 lemma term_congr {f g : ℕ → ℂ} (h : ∀ {n}, n ≠ 0 → f n = g n) (s : ℂ) (n : ℕ) :
@@ -100,7 +100,7 @@ lemma pow_mul_term_eq (f : ℕ → ℂ) (s : ℂ) (n : ℕ) :
   simp [term, mul_div_cancel₀]
 
 lemma norm_term_eq (f : ℕ → ℂ) (s : ℂ) (n : ℕ) :
-    ‖term f s n‖ = if hn : n = 0 then 0 else ‖f n‖ / n ^ s.re := by
+    ‖term f s n‖ = if hn : n = 0 then 0 else ‖f n‖ / (n : ℝ) ^ s.re := by
   rcases eq_or_ne n 0 with rfl | hn
   · simp
   · simp [hn, norm_natCast_cpow_of_pos <| Nat.pos_of_ne_zero hn]

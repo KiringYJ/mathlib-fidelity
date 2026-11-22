@@ -57,7 +57,7 @@ noncomputable def edgeDensity (s : Finset α) (t : Finset β)
     (hs : s.Nonempty := by first | assumption | fail "edge density needs a nonempty left set")
     (ht : t.Nonempty := by first | assumption | fail "edge density needs a nonempty right set") :
     ℚ :=
-  #(interedges r s t) / (#s * #t)
+  (#(interedges r s t) : ℚ) / ((#s : ℚ) * (#t : ℚ))
 
 variable {r}
 
@@ -294,10 +294,10 @@ noncomputable def edgeDensity (s t : Finset α)
 lemma interedges_def (s t : Finset α) : G.interedges s t = {e ∈ s ×ˢ t | G.Adj e.1 e.2} := rfl
 
 lemma edgeDensity_def (s t : Finset α) (hs : s.Nonempty) (ht : t.Nonempty) :
-    G.edgeDensity s t = #(G.interedges s t) / (#s * #t) := rfl
+    G.edgeDensity s t = (#(G.interedges s t) : ℚ) / ((#s : ℚ) * (#t : ℚ)) := rfl
 
 theorem card_interedges_div_card (s t : Finset α) (hs : s.Nonempty) (ht : t.Nonempty) :
-    (#(G.interedges s t) : ℚ) / (#s * #t) = G.edgeDensity s t :=
+    (#(G.interedges s t) : ℚ) / ((#s : ℚ) * (#t : ℚ)) = G.edgeDensity s t :=
   rfl
 
 theorem mem_interedges_iff {x : α × α} : x ∈ G.interedges s t ↔ x.1 ∈ s ∧ x.2 ∈ t ∧ G.Adj x.1 x.2 :=

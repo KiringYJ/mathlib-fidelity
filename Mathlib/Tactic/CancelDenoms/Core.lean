@@ -9,6 +9,7 @@ public meta import Mathlib.Algebra.Group.Nat.Defs
 public meta import Mathlib.Basic.Logic.Basic
 public meta import Mathlib.Data.Tree.Basic
 public meta import Mathlib.Data.Rat.Init
+public meta import Mathlib.Lean.Elab.NativeDivision
 
 public import Mathlib.Algebra.Field.Basic
 public import Mathlib.Algebra.Order.Ring.Defs
@@ -231,6 +232,10 @@ structure CancelResult {u : Level} {α : Q(Type u)} (mα : Q(Mul $α)) (e : Q($�
   /-- The proof that `cancelled` is valid. -/
   pf : Q($v * $e = $cancelled)
 
+private def quotientByCancelFactor (n factor : ℕ) : MetaM ℕ :=
+  if h : factor ≠ 0 then pure (Nat.euclideanDiv n factor h)
+  else throwError "cannot divide by a zero cancellation factor"
+
 /--
 `mkProdPrf α sα v v' tr e` produces a proof of `v'*e = e'`, where numeric denominators have been
 canceled in `e'`, distributing `v` proportionally according to the tree `tr` computed
@@ -254,17 +259,19 @@ partial def mkProdPrf {u : Level} (α : Q(Type u)) (sα : Q(Field $α)) (v : ℕ
     return ⟨q($v1 - $v2), q(CancelDenoms.sub_subst $hv1 $hv2)⟩
   | .node _ lhs@(.node ln _ _) rhs, ~q($e1 * $e2) => do
     trace[CancelDenoms] "recursing into mul"
+    let vln ← quotientByCancelFactor v ln
     have ln' := (← mkOfNat α amwo <| mkRawNatLit ln).1
-    have vln' := (← mkOfNat α amwo <| mkRawNatLit (v/ln)).1
+    have vln' := (← mkOfNat α amwo <| mkRawNatLit vln).1
     let ⟨v1, hv1⟩ ← mkProdPrf α sα ln ln' lhs e1
-    let ⟨v2, hv2⟩ ← mkProdPrf α sα (v / ln) vln' rhs e2
+    let ⟨v2, hv2⟩ ← mkProdPrf α sα vln vln' rhs e2
     let npf ← synthesizeUsingNormNum q($ln' * $vln' = $v')
     return ⟨q($v1 * $v2), q(CancelDenoms.mul_subst $hv1 $hv2 $npf)⟩
   | .node _ lhs (.node rn _ _), ~q(Checked.div $e1 $e2 $he2) => do
     -- `rn` is the absolute numerator of the normalized nonzero rational denominator.
+    let vrn ← quotientByCancelFactor v rn
     have rn' := (← mkOfNat α amwo <| mkRawNatLit rn).1
-    have vrn' := (← mkOfNat α amwo <| mkRawNatLit <| v / rn).1
-    let ⟨v1, hv1⟩ ← mkProdPrf α sα (v / rn) vrn' lhs e1
+    have vrn' := (← mkOfNat α amwo <| mkRawNatLit vrn).1
+    let ⟨v1, hv1⟩ ← mkProdPrf α sα vrn vrn' lhs e1
     let ratio ← normalizeArithmetic q(Checked.div $rn' $e2 $he2)
     have ratioValue : Q($α) := ratio.expr
     have npf : Q(Checked.div $rn' $e2 $he2 = $ratioValue) :=
@@ -277,7 +284,7 @@ partial def mkProdPrf {u : Level} (α : Q(Type u)) (sα : Q(Field $α)) (v : ℕ
   | .node _ lhs@(.node k1 _ _) (.node k2 .nil .nil), ~q(HPow.hPow $e1 ($e2 : ℕ)) => do
     have k1' := (← mkOfNat α amwo <| mkRawNatLit k1).1
     let ⟨v1, hv1⟩ ← mkProdPrf α sα k1 k1' lhs e1
-    have l : ℕ := v / (k1 ^ k2)
+    let l ← quotientByCancelFactor v (k1 ^ k2)
     have l' := (← mkOfNat α amwo <| mkRawNatLit l).1
     let npf ← synthesizeUsingNormNum q($l' * $k1' ^ $e2 = $v')
     return ⟨q($l' * $v1 ^ $e2), q(CancelDenoms.pow_subst $hv1 $npf)⟩

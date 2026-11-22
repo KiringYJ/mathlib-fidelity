@@ -353,15 +353,14 @@ theorem inv₀ [GroupWithZero β] [ContinuousInv₀ β] [MetrizableSpace β]
 
 @[to_fun (attr := to_additive (attr := fun_prop))]
 protected theorem div [Group β] [IsTopologicalGroup β] (hf : AEStronglyMeasurable[m] f μ)
-    (hg : AEStronglyMeasurable[m] g μ) : AEStronglyMeasurable[m] (f / g) μ :=
-  ⟨hf.mk f / hg.mk g, hf.stronglyMeasurable_mk.div' hg.stronglyMeasurable_mk,
-    hf.ae_eq_mk.div hg.ae_eq_mk⟩
+    (hg : AEStronglyMeasurable[m] g μ) : AEStronglyMeasurable[m] (f / g) μ := by
+  simpa only [div_eq_mul_inv] using hf.mul hg.inv
 
 @[fun_prop]
 theorem div₀ [GroupWithZero β] [ContinuousMul β] [ContinuousInv₀ β] [MetrizableSpace β]
     {h0 : IsUnit g} (hf : AEStronglyMeasurable[m] f μ) (hg : AEStronglyMeasurable[m] g μ) :
-    AEStronglyMeasurable[m] (f / g) μ := by
-  simpa only [div_eq_mul_inv₀] using hf.mul hg.inv₀
+    AEStronglyMeasurable[m] (Checked.div f g h0) μ :=
+  hf.mul hg.inv₀
 
 @[to_additive]
 theorem mul_iff_right [CommGroup β] [IsTopologicalGroup β] (hf : AEStronglyMeasurable[m] f μ) :

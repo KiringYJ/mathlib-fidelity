@@ -75,18 +75,21 @@ theorem Nat.exists_add_mul_eq_of_gcd_dvd_of_mul_pred_le (p q n : ℕ) (dvd : p.g
     exact ⟨a, 0, by simpa [mul_comm, eq_comm] using eq⟩
   rw [← Int.gcd_natCast_natCast, Int.gcd_dvd_iff] at dvd
   have ⟨a_n, b_n, eq⟩ := dvd
+  have hq : (q.succ : ℤ) ≠ 0 := by lia
   let a := a_n % q.succ
-  let b := b_n + a_n / q.succ * p.succ
+  let b := b_n + Int.euclideanDiv a_n (q.succ : ℤ) hq * p.succ
   refine ⟨a.toNat, b.toNat, Nat.cast_injective (R := ℤ) ?_⟩
+  have decomp : a_n % q.succ + Int.euclideanDiv a_n (q.succ : ℤ) hq * q.succ = a_n := by
+    simpa only [mul_comm, add_comm] using Int.euclideanDiv_mul_add_mod a_n (q.succ : ℤ) hq
   have : a * p.succ + b * q.succ = n := by rw [add_mul, ← add_assoc,
-    add_right_comm, mul_right_comm, ← add_mul, Int.emod_add_ediv_mul, eq, mul_comm, mul_comm b_n]
+    add_right_comm, mul_right_comm, ← add_mul, decomp, eq, mul_comm, mul_comm b_n]
   rw [Nat.cast_add, Nat.cast_mul, Nat.cast_mul, Int.natCast_toNat_eq_self.mpr
     (Int.emod_nonneg _ <| by lia), Int.natCast_toNat_eq_self.mpr, this]
   -- show b ≥ 0 by contradiction
   by_contra hb
   replace hb : b ≤ -1 := by lia
   apply lt_irrefl (n : ℤ)
-  have ha := Int.emod_lt a_n (by lia : (q.succ : ℤ) ≠ 0)
+  have ha := Int.emod_lt a_n hq
   rw [p.pred_succ, q.pred_succ] at le
   calc n = a * p.succ + b * q.succ := this.symm
        _ ≤ q * p.succ + -1 * q.succ := by gcongr <;> lia

@@ -285,18 +285,20 @@ private theorem f_surj {n : ℕ} (hn : n ≠ 0) (b : ℕ × ℕ)
     (hb : b ∈ Finset.filter (fun ⟨x, y⟩ => x.lcm y = n) (n.divisors ×ˢ n.divisors)) :
     ∃ (a : Fin 3 → ℕ) (ha : a ∈ finMulAntidiag 3 n), f a ha = b := by
   dsimp only at hb
+  rw [mem_filter, Finset.mem_product] at hb
   let g := b.fst.gcd b.snd
-  let a := ![g, b.fst / g, b.snd / g]
+  have hg : g ≠ 0 := (Nat.gcd_pos_of_pos_left _ (Nat.pos_of_mem_divisors hb.1.1)).ne'
+  let a := ![g, Nat.euclideanDiv b.fst g hg, Nat.euclideanDiv b.snd g hg]
   have ha : a ∈ finMulAntidiag 3 n := by
     rw [mem_finMulAntidiag]
-    rw [mem_filter, Finset.mem_product] at hb
     refine ⟨?_, hn⟩
     · rw [Fin.prod_univ_three a]
       dsimp only [a, Matrix.cons_val]
+      simp only [Nat.euclideanDiv_eq_core]
       rw [Nat.mul_div_cancel_left' (Nat.gcd_dvd_left _ _), ← hb.2, lcm,
         Nat.mul_div_assoc b.fst (Nat.gcd_dvd_right b.fst b.snd)]
   use a; use ha
-  apply Prod.ext <;> dsimp only [a, Matrix.cons_val]
+  apply Prod.ext <;> dsimp only [a, Matrix.cons_val] <;> simp only [Nat.euclideanDiv_eq_core]
     <;> apply Nat.mul_div_cancel'
   · apply Nat.gcd_dvd_left
   · apply Nat.gcd_dvd_right

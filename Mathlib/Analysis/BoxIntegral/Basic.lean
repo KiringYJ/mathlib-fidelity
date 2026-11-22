@@ -533,8 +533,8 @@ theorem dist_integralSum_sum_integral_le_of_memBaseSet_of_iUnion_eq (h : Integra
   -- Let us prove that the distance is less than or equal to `ε + δ` for all positive `δ`.
   refine le_of_forall_pos_le_add fun δ δ0 => ?_
   -- First we choose some constants.
-  set δ' : ℝ := δ / (#π₀.boxes + 1)
   have H0 : 0 < (#π₀.boxes + 1 : ℝ) := Nat.cast_add_one_pos _
+  set δ' : ℝ := δ / ((#π₀.boxes : ℝ) + 1)
   have δ'0 : 0 < δ' := div_pos δ0 H0
   set C := max π₀.distortion π₀.compl.distortion
   /- Next we choose a tagged partition of each `J ∈ π₀` such that the integral sum of `f` over this

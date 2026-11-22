@@ -6,6 +6,7 @@ Authors: Jovan Gerbscheid
 module
 
 public import Mathlib.Lean.Meta.RefinedDiscrTree.Encode
+public import Mathlib.Lean.Elab.NativeDivision
 
 /-!
 # Matching with a RefinedDiscrTree
@@ -86,7 +87,7 @@ private def evalNode (trie : TrieIndex) : TreeM α (Trie α) := do
   let node := (← get)[trie]!
   if node.pending.isEmpty then
     return node
-  let numTasks := node.pending.size / 5000 + 1
+  let numTasks := Nat.euclideanDiv node.pending.size 5000 + 1
   Core.checkInterrupted
   let tasks ← numTasks.foldM (init := #[]) fun i _ tasks ↦ do
     return tasks.push <| ← EIO.asTask <|

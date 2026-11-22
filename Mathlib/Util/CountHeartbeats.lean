@@ -8,6 +8,7 @@ module
 public import Mathlib.Init
 public meta import Lean.Util.Heartbeats
 public meta import Lean.Meta.Tactic.TryThis
+public meta import Mathlib.Lean.Elab.NativeDivision
 
 /-!
 # Counting heartbeats
@@ -49,17 +50,24 @@ def runTacForHeartbeats (tac : TSyntax `Lean.Parser.Tactic.tacticSeq) (revert : 
 
 /--
 Given a `List Nat`, return the minimum, maximum, and standard deviation.
+An empty list is reported as three zeros.
 -/
 def variation (counts : List Nat) : List Nat :=
-  let min := counts.min?.getD 0
-  let max := counts.max?.getD 0
-  let toFloat (n : Nat) := n.toUInt64.toFloat
-  let toNat (f : Float) := f.toUInt64.toNat
-  let counts' := counts.map toFloat
-  let μ : Float := counts'.foldl (· + ·) 0 / toFloat counts.length
-  let stddev : Float := Float.sqrt <|
-    ((counts'.map fun i => (i - μ)^2).foldl (· + ·) 0) / toFloat counts.length
-  [min, max, toNat stddev]
+  match counts with
+  | [] => [0, 0, 0]
+  | _ :: _ =>
+    let min := counts.min?.getD 0
+    let max := counts.max?.getD 0
+    let toFloat (n : Nat) := n.toUInt64.toFloat
+    let counts' := counts.map toFloat
+    let count := toFloat counts.length
+    let μ := Float.div (counts'.foldl (· + ·) 0) count
+    let sumSquared := (counts'.map fun i => (i - μ)^2).foldl (· + ·) 0
+    let stddev := Float.sqrt (Float.div sumSquared count)
+    [min, max, stddev.toUInt64.toNat]
+
+/-- Convert the internal count to the units used by `maxHeartbeats`. -/
+private def toUserHeartbeats (count : Nat) : Nat := Nat.euclideanDiv count 1000 (by decide)
 
 /--
 Given a `List Nat`, log an info message with the minimum, maximum, and standard deviation.
@@ -67,8 +75,8 @@ Given a `List Nat`, log an info message with the minimum, maximum, and standard 
 def logVariation {m} [Monad m] [MonadLog m] [AddMessageContext m] [MonadOptions m]
     (counts : List Nat) : m Unit := do
   if let [min, max, stddev] := variation counts then
-  -- convert `[min, max, stddev]` to user-facing heartbeats
-  logInfo s!"Min: {min / 1000} Max: {max / 1000} StdDev: {stddev / 10}%"
+    let stddev := Nat.euclideanDiv stddev 10 (by decide)
+    logInfo s!"Min: {toUserHeartbeats min} Max: {toUserHeartbeats max} StdDev: {stddev}%"
 
 /-- `#count_heartbeats tac` counts the heartbeats used by the tactic sequence `tac`
 and prints an info line with the number of heartbeats.
@@ -109,7 +117,7 @@ elab "#count_heartbeats! " n:(num)? "in" ppLine tac:tacticSeq : tactic => do
 Round down the number `n` to the nearest thousand, if `approx` is `true`.
 -/
 def roundDownIf (n : Nat) (approx : Bool) : String :=
-  if approx then s!"approximately {(n / 1000) * 1000}" else s!"{n}"
+  if approx then s!"approximately {toUserHeartbeats n * 1000}" else s!"{n}"
 
 set_option linter.style.maxHeartbeats false in
 /--
@@ -143,9 +151,9 @@ elab "#count_heartbeats " approx:(&"approximately ")? "in" ppLine cmd:command : 
     elabCommand (← `(command| set_option Elab.async false in set_option maxHeartbeats 0 in $cmd))
   finally
     let finish ← IO.getNumHeartbeats
-    let elapsed := (finish - start) / 1000
+    let elapsed := toUserHeartbeats (finish - start)
     let roundElapsed := roundDownIf elapsed approx.isSome
-    let max := (← Command.liftCoreM getMaxHeartbeats) / 1000
+    let max := toUserHeartbeats (← Command.liftCoreM getMaxHeartbeats)
     if elapsed < max then
       logInfo
         m!"Used {roundElapsed} heartbeats, which is less than the current maximum of {max}."
@@ -178,7 +186,7 @@ To use this functionality, use `guard_min_heartbeats approximately (n)? in cmd`.
 -/
 elab "guard_min_heartbeats " approx:(&"approximately ")? n:(num)? "in" ppLine cmd:command :
     command => do
-  let max := (← Command.liftCoreM getMaxHeartbeats) / 1000
+  let max := toUserHeartbeats (← Command.liftCoreM getMaxHeartbeats)
   let n := match n with
            | some j => j.getNat
            | none => max
@@ -187,7 +195,7 @@ elab "guard_min_heartbeats " approx:(&"approximately ")? n:(num)? "in" ppLine cm
     elabCommand (← `(command| set_option Elab.async false in set_option maxHeartbeats 0 in $cmd))
   finally
     let finish ← IO.getNumHeartbeats
-    let elapsed := (finish - start) / 1000
+    let elapsed := toUserHeartbeats (finish - start)
     if elapsed < n then
       logInfo m!"Used {roundDownIf elapsed approx.isSome} heartbeats, \
                 which is less than the minimum of {n}."

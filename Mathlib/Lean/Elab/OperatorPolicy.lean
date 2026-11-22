@@ -10,13 +10,16 @@ public import Lean.Elab.Term
 public meta import Lean.Elab.BuiltinCommand
 public meta import Lean.Elab.BuiltinEvalCommand
 public meta import Lean.Elab.Tactic.Guard
+public meta import Lean.Elab.Tactic.Omega
+public import Mathlib.Lean.Elab.OperatorTree
 import Mathlib.Tactic.Linter.Header
 
 /-!
-# Instance inference boundary for retired rational operations
+# Instance inference boundary for retired arithmetic operations
 
-Core rational numbers remain available, but their total inverse, division, integer powers,
-and totalized Grind field instance are not implicit mathematical operations in this library.
+Ordinary division uses a unit denominator in a commutative monoid by default. The operator
+elaborator implements the documented mathematical alternatives. The core natural and integer
+quotient instances and the total rational operators are excluded from ordinary inference.
 
 Instance-attribute erasures do not survive imports. These exported command elaborators apply
 the same selective erasure in each importing module before delegating directly to Lean's
@@ -33,13 +36,14 @@ namespace Mathlib.OperatorPolicy
 
 open Lean Elab Command
 
-/-- Remove only the core rational instances implementing the retired operations. -/
+/-- Remove the core instances implementing the retired operations. -/
 def suppressRetiredInstances : CommandElabM Unit := do
   modifyEnv fun env => Meta.instanceExtension.modifyState env fun state =>
-    #[`Rat.instInv, `Rat.instDiv, `Rat.instPowInt, `Lean.Grind.instFieldRat].foldl
+    #[`Nat.instDiv, `Int.instDiv, `Rat.instInv, `Rat.instDiv, `Rat.instPowInt,
+      `Lean.Grind.instFieldRat].foldl
       (fun state name => state.eraseCore name) state
 
-/-- Elaborate a declaration with the retired rational instances removed. -/
+/-- Elaborate a declaration with the retired instances removed. -/
 @[command_elab Lean.Parser.Command.declaration, builtin_incremental]
 def elabDeclaration : CommandElab := fun stx => do
   suppressRetiredInstances
@@ -51,7 +55,7 @@ def elabMutual : CommandElab := fun stx => do
   suppressRetiredInstances
   Lean.Elab.Command.elabMutual stx
 
-/-- Run `#synth` in the instance environment with retired rational instances removed. -/
+/-- Run `#synth` in the instance environment with retired instances removed. -/
 @[command_elab Lean.Parser.Command.synth]
 def elabSynth : CommandElab := fun stx => do
   suppressRetiredInstances
@@ -69,7 +73,7 @@ def elabCheckFailure : CommandElab := fun stx => do
   suppressRetiredInstances
   Lean.Elab.Command.elabCheckFailure stx
 
-/-- Elaborate the term in `#eval` after removing retired rational instances. -/
+/-- Elaborate the term in `#eval` after removing retired instances. -/
 @[command_elab Lean.Parser.Command.eval]
 def elabEval : CommandElab := fun stx => do
   suppressRetiredInstances
@@ -99,7 +103,7 @@ def elabRunMeta : CommandElab := fun stx => do
   suppressRetiredInstances
   Lean.Elab.Command.elabRunMeta stx
 
-/-- Elaborate the binders of a `variable` command with the retired rational instances removed. -/
+/-- Elaborate the binders of a `variable` command with the retired instances removed. -/
 @[command_elab Lean.Parser.Command.variable]
 def elabVariable : CommandElab := fun stx => do
   suppressRetiredInstances
@@ -128,5 +132,19 @@ def elabGuard : CommandElab := fun stx => do
 def elabGuardExpr : CommandElab := fun stx => do
   suppressRetiredInstances
   Lean.Elab.Tactic.GuardExpr.evalGuardExprCmd stx
+
+open Meta Tactic in
+/-- The official `omega` solver uses core integer division to prove facts about remainder.
+Give the solver a goal-local instance, with configuration elaborated under the
+ordinary instance policy. -/
+@[tactic Lean.Parser.Tactic.omega]
+def elabOmega : Tactic
+  | `(tactic| omega%$tk $cfg:optConfig) => do
+    withReducibleAndInstances (evalAssumption tk) <|> do
+      let cfg ← Lean.Elab.Tactic.Omega.elabOmegaConfig cfg
+      if (← getErasedInstances).contains `Int.instDiv then
+        evalTactic (← `(tactic| letI : Div Int := Int.instDiv))
+      Lean.Elab.Tactic.Omega.omegaTactic cfg
+  | _ => throwUnsupportedSyntax
 
 end Mathlib.OperatorPolicy

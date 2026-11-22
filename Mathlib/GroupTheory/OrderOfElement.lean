@@ -302,11 +302,11 @@ theorem orderOf_one : orderOf (1 : G) = 1 :=
   orderOf_eq_one_iff.2 rfl
 
 @[to_additive (attr := simp) mod_addOrderOf_nsmul]
-lemma pow_mod_orderOf (x : G) (n : ℕ) : x ^ (n % orderOf x) = x ^ n :=
-  calc
-    x ^ (n % orderOf x) = x ^ (n % orderOf x + orderOf x * (n / orderOf x)) := by
-        simp [pow_add, pow_mul, pow_orderOf_eq_one]
-    _ = x ^ n := by rw [Nat.mod_add_div]
+lemma pow_mod_orderOf (x : G) (n : ℕ) : x ^ (n % orderOf x) = x ^ n := by
+  by_cases hx : orderOf x = 0
+  · simp [hx]
+  conv_rhs => rw [← Nat.euclideanDiv_mul_add_mod n (orderOf x) hx]
+  simp [pow_add, pow_mul, pow_orderOf_eq_one]
 
 @[to_additive]
 theorem orderOf_dvd_of_pow_eq_one (h : x ^ n = 1) : orderOf x ∣ n := by
@@ -390,7 +390,8 @@ then `x` has order `n` in `G`. -/
 @[to_additive addOrderOf_eq_of_nsmul_and_div_prime_nsmul /-- If `n * x = 0`, but `n/p * x ≠ 0` for
 all prime factors `p` of `n`, then `x` has order `n` in `G`. -/]
 theorem orderOf_eq_of_pow_and_pow_div_prime (hn : 0 < n) (hx : x ^ n = 1)
-    (hd : ∀ p : ℕ, p.Prime → p ∣ n → x ^ (n / p) ≠ 1) : orderOf x = n := by
+    (hd : ∀ (p : ℕ) (hp : p.Prime), p ∣ n → x ^ Nat.euclideanDiv n p hp.ne_zero ≠ 1) :
+    orderOf x = n := by
   -- Let `a` be `n/(orderOf x)`, and show `a = 1`
   obtain ⟨a, ha⟩ := exists_eq_mul_right_of_dvd (orderOf_dvd_of_pow_eq_one hx)
   suffices a = 1 by simp [this, ha]
@@ -402,6 +403,7 @@ theorem orderOf_eq_of_pow_and_pow_div_prime (hn : 0 < n) (hx : x ^ n = 1)
     exact Dvd.intro_left (orderOf x * b) ha.symm
   -- Use the minimum prime factor of `a` as `p`.
   refine hd a.minFac (Nat.minFac_prime h) a_min_fac_dvd_p_sub_one ?_
+  simp only [Nat.euclideanDiv_eq_core]
   rw [← orderOf_dvd_iff_pow_eq_one, Nat.dvd_div_iff_mul_dvd a_min_fac_dvd_p_sub_one, ha, mul_comm,
     Nat.mul_dvd_mul_iff_left (IsOfFinOrder.orderOf_pos _)]
   · exact Nat.minFac_dvd a h
@@ -463,33 +465,43 @@ variable (x)
 
 @[to_additive]
 protected lemma IsOfFinOrder.orderOf_pow (n : ℕ) (h : IsOfFinOrder x) :
-    orderOf (x ^ n) = orderOf x / Nat.gcd (orderOf x) n := by
-  rw [h.orderOf_eq_minimalPeriod, (h.pow (n := n)).orderOf_eq_minimalPeriod,
-    ← minimalPeriod_iterate_eq_div_gcd h n]
-  simp only [mul_left_iterate]
+    orderOf (x ^ n) =
+      Nat.euclideanDiv (orderOf x) ((orderOf x).gcd n)
+        (Nat.gcd_ne_zero_left h.orderOf_pos.ne') := by
+  simpa only [Nat.euclideanDiv_eq_core, h.orderOf_eq_minimalPeriod,
+    (h.pow (n := n)).orderOf_eq_minimalPeriod, mul_left_iterate] using
+    minimalPeriod_iterate_eq_div_gcd h n
 
 @[to_additive]
-theorem orderOf_pow' (h : n ≠ 0) : orderOf (x ^ n) = orderOf x / Nat.gcd (orderOf x) n := by
+theorem orderOf_pow' (h : n ≠ 0) :
+    orderOf (x ^ n) =
+      Nat.euclideanDiv (orderOf x) ((orderOf x).gcd n) (Nat.gcd_ne_zero_right h) := by
   by_cases hx : IsOfFinOrder x
   · exact hx.orderOf_pow x n
-  · rw [orderOf_eq_zero hx, orderOf_eq_zero fun hxn => hx (hxn.of_pow h), Nat.zero_div]
+  · have hxn : ¬IsOfFinOrder (x ^ n) := fun hxn => hx (hxn.of_pow h)
+    refine (orderOf_eq_zero hxn).trans (Nat.euclideanDiv_eq_of_remainder (r := 0)
+      (Nat.gcd_ne_zero_right h) ?_ (Nat.pos_of_ne_zero (Nat.gcd_ne_zero_right h))).symm
+    simp [orderOf_eq_zero hx]
 
 @[to_additive]
 lemma orderOf_pow_of_dvd {x : G} {n : ℕ} (hn : n ≠ 0) (dvd : n ∣ orderOf x) :
-    orderOf (x ^ n) = orderOf x / n := by rw [orderOf_pow' _ hn, Nat.gcd_eq_right dvd]
+    orderOf (x ^ n) = Nat.euclideanDiv (orderOf x) n hn := by
+  simpa only [Nat.gcd_eq_right dvd] using orderOf_pow' x hn
 
 @[to_additive]
 lemma orderOf_pow_orderOf_div {x : G} {n : ℕ} (hx : orderOf x ≠ 0) (hn : n ∣ orderOf x) :
-    orderOf (x ^ (orderOf x / n)) = n := by
-  rw [orderOf_pow_of_dvd _ (Nat.div_dvd_of_dvd hn), Nat.div_div_self hn hx]
-  rw [← Nat.div_mul_cancel hn] at hx; exact left_ne_zero_of_mul hx
+    orderOf (x ^ Nat.euclideanDiv (orderOf x) n (ne_zero_of_dvd_ne_zero hx hn)) = n := by
+  have hd : Nat.euclideanDiv (orderOf x) n (ne_zero_of_dvd_ne_zero hx hn) ∣ orderOf x := by
+    simpa only [Nat.euclideanDiv_eq_core] using Nat.div_dvd_of_dvd hn
+  rw [orderOf_pow_of_dvd (ne_zero_of_dvd_ne_zero hx hd) hd]
+  simpa only [Nat.euclideanDiv_eq_core] using Nat.div_div_self hn hx
 
 variable (n)
 
 @[to_additive]
 lemma Nat.Coprime.orderOf_pow (h : (orderOf y).Coprime m) : orderOf (y ^ m) = orderOf y := by
   by_cases hg : IsOfFinOrder y
-  · rw [hg.orderOf_pow y m, h.gcd_eq_one, Nat.div_one]
+  · simp only [hg.orderOf_pow y m, Nat.euclideanDiv_eq_core, h.gcd_eq_one, Nat.div_one]
   · rw [m.coprime_zero_left.1 (orderOf_eq_zero hg ▸ h), pow_one]
 
 @[to_additive]
@@ -572,7 +584,8 @@ theorem orderOf_mul_eq_right_of_forall_prime_mul_dvd (h : Commute x y) (hy : IsO
   · exact h.orderOf_mul_dvd_lcm.trans (Nat.lcm_dvd hxy dvd_rfl)
   refine fun p hp hpy hd => hp.ne_one ?_
   rw [← Nat.dvd_one, ← mul_dvd_mul_iff_right hoy.ne', one_mul, ← dvd_div_iff_mul_dvd hpy]
-  refine (orderOf_dvd_lcm_mul h).trans (Nat.lcm_dvd ((dvd_div_iff_mul_dvd hpy).2 ?_) hd)
+  refine (orderOf_dvd_lcm_mul h).trans (Nat.lcm_dvd ((dvd_div_iff_mul_dvd hpy).2 ?_)
+    (by simpa only [Nat.euclideanDiv_eq_core] using hd))
   by_cases h : p ∣ orderOf x
   exacts [hdvd p hp h, (hp.coprime_iff_not_dvd.2 h).mul_dvd_of_dvd_of_dvd hpy hxy]
 
@@ -878,11 +891,14 @@ lemma orderOf_mk (a : G) (ha) : orderOf (⟨a, ha⟩ : H) = orderOf a := (orderO
 end Subgroup
 
 @[to_additive mod_addOrderOf_zsmul]
-lemma zpow_mod_orderOf (x : G) (z : ℤ) : x ^ (z % (orderOf x : ℤ)) = x ^ z :=
+lemma zpow_mod_orderOf (x : G) (z : ℤ) : x ^ (z % (orderOf x : ℤ)) = x ^ z := by
+  by_cases hx : (orderOf x : ℤ) = 0
+  · simp [hx]
   calc
-    x ^ (z % (orderOf x : ℤ)) = x ^ (z % orderOf x + orderOf x * (z / orderOf x) : ℤ) := by
+    x ^ (z % (orderOf x : ℤ)) =
+        x ^ (orderOf x * Int.euclideanDiv z (orderOf x) hx + z % orderOf x : ℤ) := by
         simp [zpow_add, zpow_mul, pow_orderOf_eq_one]
-    _ = x ^ z := by rw [Int.emod_add_mul_ediv]
+    _ = x ^ z := by rw [Int.euclideanDiv_mul_add_mod]
 
 @[to_additive (attr := simp) zsmul_smul_addOrderOf]
 theorem zpow_pow_orderOf : (x ^ i) ^ orderOf x = 1 := by
@@ -1080,7 +1096,8 @@ automatic in the case of a finite cancellative monoid. -/
 @[to_additive /-- This is the same as `addOrderOf_nsmul'` and
 `addOrderOf_nsmul` but with one assumption less which is automatic in the case of a
 finite cancellative additive monoid. -/]
-theorem orderOf_pow (x : G) : orderOf (x ^ n) = orderOf x / Nat.gcd (orderOf x) n :=
+theorem orderOf_pow (x : G) : orderOf (x ^ n) =
+    Nat.euclideanDiv (orderOf x) ((orderOf x).gcd n) (Nat.gcd_ne_zero_left (orderOf_pos x).ne') :=
   (isOfFinOrder_of_finite _).orderOf_pow ..
 
 @[to_additive]
@@ -1139,7 +1156,8 @@ theorem orderOf_pow_natAbs (x : G) (n : ℤ) : orderOf (x ^ n.natAbs) = orderOf 
 
 @[to_additive]
 theorem orderOf_zpow' (x : G) {n : ℤ} (h : n ≠ 0) :
-    orderOf (x ^ n) = orderOf x / (orderOf x).gcd n.natAbs := by
+    orderOf (x ^ n) = Nat.euclideanDiv (orderOf x) ((orderOf x).gcd n.natAbs)
+      (Nat.gcd_ne_zero_right (Int.natAbs_ne_zero.mpr h)) := by
   rw [← orderOf_pow' _ (Int.natAbs_ne_zero.mpr h), orderOf_pow_natAbs]
 
 @[to_additive]
@@ -1189,7 +1207,8 @@ variable [Finite G]
 
 @[to_additive]
 theorem orderOf_zpow (x : G) (n : ℤ) :
-    orderOf (x ^ n) = orderOf x / (orderOf x).gcd n.natAbs := by
+    orderOf (x ^ n) = Nat.euclideanDiv (orderOf x) ((orderOf x).gcd n.natAbs)
+      (Nat.gcd_ne_zero_left (orderOf_pos x).ne') := by
   rw [← orderOf_pow, orderOf_pow_natAbs]
 
 @[to_additive]

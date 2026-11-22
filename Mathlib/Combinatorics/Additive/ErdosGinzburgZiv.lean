@@ -134,11 +134,12 @@ theorem Int.erdos_ginzburg_ziv (a : ι → ℤ) (hs : 2 * n - 1 ≤ #s) :
       obtain ⟨𝒜, h𝒜card, h𝒜disj, h𝒜⟩ := this _ le_rfl
       -- By induction hypothesis on `m`, find a subfamily `ℬ` of size `m` such that the sum over
       -- `t ∈ ℬ` of `(∑ i ∈ t, a i) / n` is divisible by `m`.
-      obtain ⟨ℬ, hℬ𝒜, hℬcard, hℬ⟩ := ihm (fun t ↦ (∑ i ∈ t, a i) / n) h𝒜card.ge
+      have hn₀ : (n : ℤ) ≠ 0 := Int.ofNat_ne_zero.2 (by omega)
+      obtain ⟨ℬ, hℬ𝒜, hℬcard, hℬ⟩ := ihm (fun t ↦ Int.euclideanDiv (∑ i ∈ t, a i) n hn₀) h𝒜card.ge
       -- We are done.
       refine ⟨ℬ.biUnion fun x ↦ x, biUnion_subset.2 fun t ht ↦ (h𝒜 <| hℬ𝒜 ht).1, ?_, ?_⟩
       · rw [card_biUnion (h𝒜disj.mono hℬ𝒜), sum_const_nat fun t ht ↦ (h𝒜 <| hℬ𝒜 ht).2.1, hℬcard]
-      rwa [sum_biUnion, Int.natCast_mul, mul_comm, ← Int.dvd_div_iff_mul_dvd, Int.sum_div]
+      rwa [sum_biUnion, Int.natCast_mul, mul_comm, ← Int.dvd_div_iff_mul_dvd hn₀, Int.sum_div hn₀]
       · exact fun t ht ↦ (h𝒜 <| hℬ𝒜 ht).2.2
       · exact dvd_sum fun t ht ↦ (h𝒜 <| hℬ𝒜 ht).2.2
       · exact h𝒜disj.mono hℬ𝒜

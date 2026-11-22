@@ -11,5 +11,7 @@ example {M : Type*} [Monoid M] : Pow Mˣ Int := inferInstance
 example {G : Type*} [Group G] : Inv G := inferInstance
 example {G : Type*} [Group G] : Div G := inferInstance
 example {G : Type*} [Group G] : Pow G Int := inferInstance
-example : Div Int := inferInstance
-example : Div Nat := inferInstance
+example : True := by
+  fail_if_success have : Div Int := inferInstance
+  fail_if_success have : Div Nat := inferInstance
+  trivial

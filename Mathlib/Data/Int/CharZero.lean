@@ -27,14 +27,14 @@ namespace Int
 @[norm_cast]
 theorem cast_div_charZero {k : Type*} [DivisionRing k] [CharZero k] {m n : ℤ}
     (n_dvd : n ∣ m) (hn : n ≠ 0) :
-    ((m / n : ℤ) : k) = m / n :=
+    (Int.exactQuotient m n n_dvd hn : k) = (m : k) / (n : k) :=
   cast_div n_dvd (cast_ne_zero.mpr hn)
 
--- Necessary for confluence with `ofNat_ediv` and `cast_div_charZero`.
-@[simp, norm_cast]
+@[norm_cast]
 theorem cast_div_ofNat_charZero {k : Type*} [DivisionRing k] [CharZero k] {m n : ℕ}
     (n_dvd : n ∣ m) (hn : n ≠ 0) :
-    (((m : ℤ) / (n : ℤ) : ℤ) : k) = m / n := by
+    (Int.exactQuotient (m : ℤ) (n : ℤ) (Int.ofNat_dvd.mpr n_dvd) (Int.ofNat_ne_zero.mpr hn) : k) =
+      (m : k) / (n : k) := by
   simpa only [cast_natCast] using
     (cast_div_charZero (k := k) (Int.ofNat_dvd.mpr n_dvd) (Int.ofNat_ne_zero.mpr hn))
 

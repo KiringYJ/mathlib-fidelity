@@ -449,23 +449,30 @@ theorem log_opow {b : Ordinal} (hb : 1 < b) (x : Ordinal) : log b (b ^ x) = x :=
   · rw [mul_one]
   · rw [log_one_right, add_zero]
 
-theorem div_opow_log_pos (b : Ordinal) {o : Ordinal} (ho : o ≠ 0) : 0 < o / b ^ log b o := by
-  rcases eq_zero_or_pos b with (rfl | hb)
-  · simpa using pos_iff_ne_zero.2 ho
-  · rw [div_pos (opow_ne_zero _ hb.ne')]
-    exact opow_log_le_self b ho
+/-- The leading power used in Cantor normal form is nonzero, even for base zero:
+then the logarithm is zero and the leading power is one. -/
+theorem opow_log_ne_zero (b o : Ordinal) : b ^ log b o ≠ 0 := by
+  obtain rfl | hb := eq_or_ne b 0
+  · simp
+  · exact opow_ne_zero _ hb
 
-theorem div_opow_log_lt {b : Ordinal} (o : Ordinal) (hb : 1 < b) : o / b ^ log b o < b := by
+theorem div_opow_log_pos (b : Ordinal) {o : Ordinal} (ho : o ≠ 0) :
+    0 < quotient o (b ^ log b o) (opow_log_ne_zero b o) :=
+  (div_pos _).2 (opow_log_le_self b ho)
+
+theorem div_opow_log_lt {b : Ordinal} (o : Ordinal) (hb : 1 < b) :
+    quotient o (b ^ log b o) (opow_log_ne_zero b o) < b := by
   rw [← lt_mul_iff_div_lt (opow_pos _ (zero_lt_one.trans hb)).ne', ← opow_add_one]
   exact lt_opow_succ_log_self hb o
 
-theorem div_two_opow_log {o : Ordinal} (ho : o ≠ 0) : o / 2 ^ log 2 o = 1 := by
+theorem div_two_opow_log {o : Ordinal} (ho : o ≠ 0) :
+    quotient o (2 ^ log 2 o) (opow_log_ne_zero 2 o) = 1 := by
   apply le_antisymm
   · simpa [← one_add_one_eq_two] using div_opow_log_lt o one_lt_two
   · simpa [one_le_iff_ne_zero, pos_iff_ne_zero] using div_opow_log_pos 2 ho
 
 theorem two_opow_log_add {o : Ordinal} (ho : o ≠ 0) : 2 ^ log 2 o + o % 2 ^ log 2 o = o := by
-  convert! div_add_mod .. using 2
+  convert! div_add_mod o (2 ^ log 2 o) (opow_log_ne_zero 2 o) using 2
   rw [div_two_opow_log ho, mul_one]
 
 theorem add_log_le_log_mul {x y : Ordinal} (b : Ordinal) (hx : x ≠ 0) (hy : y ≠ 0) :
@@ -481,7 +488,7 @@ theorem omega0_opow_mul_nat_lt {a b : Ordinal} (h : a < b) (n : ℕ) : ω ^ a * 
 
 theorem sub_omega0_opow_log_lt {a : Ordinal} (ha : a ≠ 0) : a - ω ^ log ω a < a := by
   obtain ⟨n, hn⟩ := lt_omega0.1 <| div_opow_log_lt a one_lt_omega0
-  conv_lhs => left; rw [← div_add_mod a (ω ^ log ω a), hn]
+  conv_lhs => left; rw [← div_add_mod a (ω ^ log ω a) (opow_log_ne_zero ω a), hn]
   cases n with
   | zero =>
     simpa using ((div_pos (opow_ne_zero _ omega0_ne_zero)).2 (opow_log_le_self _ ha)).trans_eq hn

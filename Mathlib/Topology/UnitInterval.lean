@@ -418,13 +418,13 @@ theorem convexComb_assoc' {a b : ℝ} (x y z : Icc a b) (s t : unitInterval)
 
 set_option backward.privateInPublic true in
 private theorem eq_convexComb.zero_le {a b : ℝ} {x y z : Icc a b} (hxy : x ≤ y) (hxz : x < z) :
-    0 ≤ ((y - x) / (z - x) : ℝ) :=
+    0 ≤ ((y : ℝ) - x) / ((z : ℝ) - x) :=
   div_nonneg (sub_nonneg.2 (Subtype.coe_le_coe.2 hxy))
     (sub_nonneg.2 (Subtype.coe_le_coe.2 hxz.le))
 
 set_option backward.privateInPublic true in
 private theorem eq_convexComb.le_one {a b : ℝ} {x y z : Icc a b} (hyz : y ≤ z) (hxz : x < z) :
-    ((y - x) / (z - x) : ℝ) ≤ 1 :=
+    ((y : ℝ) - x) / ((z : ℝ) - x) ≤ 1 :=
   div_le_one_of_le₀ (sub_le_sub_right (Subtype.coe_le_coe.2 hyz) _)
     (sub_nonneg.2 (Subtype.coe_le_coe.2 hxz.le))
 
@@ -435,7 +435,7 @@ A point between two distinct points in a closed interval
 can be expressed as a convex combination of them.
 -/
 theorem eq_convexComb {a b : ℝ} {x y z : Icc a b} (hxy : x ≤ y) (hyz : y ≤ z) (hxz : x < z) :
-    y = convexComb x z ⟨((y - x) / (z - x)),
+    y = convexComb x z ⟨((y : ℝ) - x) / ((z : ℝ) - x),
           eq_convexComb.zero_le hxy hxz, eq_convexComb.le_one hyz hxz⟩ := by
   ext
   simp only [coe_convexComb]

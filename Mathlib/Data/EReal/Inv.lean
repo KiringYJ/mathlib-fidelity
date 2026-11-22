@@ -16,9 +16,8 @@ public import Mathlib.Data.Nat.Cast.Order.Field
 This file defines an absolute value and sign function on `EReal` and uses them to provide a
 `CommMonoidWithZero` instance, based on the absolute value and sign characterising all `EReal`s.
 
-`EReal` has no ambient inverse or division. As in any monoid without them, `a⁻¹` and `a / b` are
-the checked operations of the monoid `EReal`: they take evidence that the inverted element is a
-unit, and the units of `EReal` are its nonzero real elements (`EReal.isUnit_iff`). The evidence
+The operations `a⁻¹` and `a / b` require the inverted element to be a unit of `EReal`.
+The units of `EReal` are its nonzero real elements (`EReal.isUnit_iff`). The evidence
 search `checked_unit` finds this evidence from hypotheses such as `0 < b` and `b ≠ ⊤`, and for real
 and natural casts.
 
@@ -353,13 +352,14 @@ lemma coe_div (a b : ℝ) {hb : IsUnit b} : ((a / b : ℝ) : EReal) = (a : EReal
   rw [div_eq_mul_inv₀, div_eq_mul_inv₀, coe_mul, coe_inv]
 
 theorem natCast_div_le (m n : ℕ) {hn : IsUnit (n : EReal)} :
-    (m / n : ℕ) ≤ (m : EReal) / (n : EReal) := by
+    (Nat.euclideanDiv m n (fun he => (isUnit_iff.1 hn).2.2 (he ▸ Nat.cast_zero)) : EReal) ≤
+      (m : EReal) / (n : EReal) := by
   have hn' : n ≠ 0 := by
     rintro rfl
     exact (isUnit_iff.1 hn).2.2 Nat.cast_zero
   simp only [← coe_coe_eq_natCast]
   rw [← coe_div (hb := (Nat.cast_ne_zero.2 hn').isUnit), EReal.coe_le_coe_iff]
-  exact Nat.cast_div_le
+  exact Nat.cast_div_le (hn := (Nat.cast_ne_zero.2 hn').isUnit)
 
 lemma top_div_of_pos_ne_top {a : EReal} (h : 0 < a) (h' : a ≠ ⊤) : ⊤ / a = ⊤ :=
   top_mul_of_pos (inv_pos_of_pos_ne_top h h')

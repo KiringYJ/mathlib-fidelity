@@ -44,13 +44,11 @@ instance mul [Mul α] : Mul (ULift α) :=
 theorem mul_down [Mul α] : (x * y).down = x.down * y.down :=
   rfl
 
-@[to_additive]
-instance div [Div α] : Div (ULift α) :=
-  ⟨fun f g => ⟨f.down / g.down⟩⟩
+instance sub [Sub α] : Sub (ULift α) :=
+  ⟨fun x y => ⟨x.down - y.down⟩⟩
 
-@[to_additive (attr := simp)]
-theorem div_down [Div α] : (x / y).down = x.down / y.down :=
-  rfl
+@[simp]
+theorem sub_down [Sub α] : (x - y).down = x.down - y.down := rfl
 
 @[to_additive]
 instance inv [Inv α] : Inv (ULift α) :=
@@ -94,20 +92,29 @@ instance monoid [Monoid α] : Monoid (ULift α) :=
 instance commMonoid [CommMonoid α] : CommMonoid (ULift α) :=
   Equiv.ulift.injective.commMonoid _ rfl (fun _ _ => rfl) fun _ _ => rfl
 
-@[to_additive]
-instance divInvMonoid [DivInvMonoid α] : DivInvMonoid (ULift α) :=
-  Equiv.ulift.injective.divInvMonoid _ rfl (fun _ _ => rfl) (fun _ => rfl) (fun _ _ => rfl)
+instance subNegMonoid [SubNegMonoid α] : SubNegMonoid (ULift α) :=
+  Equiv.ulift.injective.subNegMonoid _ rfl (fun _ _ => rfl) (fun _ => rfl) (fun _ _ => rfl)
     (fun _ _ => rfl) fun _ _ => rfl
 
-@[to_additive]
-instance group [Group α] : Group (ULift α) :=
-  Equiv.ulift.injective.group _ rfl (fun _ _ => rfl) (fun _ => rfl) (fun _ _ => rfl)
-    (fun _ _ => rfl) fun _ _ => rfl
+@[to_additive existing subNegMonoid]
+instance divInvMonoid [DivInvMonoid α] : DivInvMonoid (ULift α) where
+  div x y := x * y⁻¹
+  div_eq_mul_inv _ _ := rfl
+  zpow n x := x ^ n
+  zpow_zero' x := congrArg up (DivInvMonoid.zpow_zero' x.down)
+  zpow_succ' n x := congrArg up (DivInvMonoid.zpow_succ' n x.down)
+  zpow_neg' n x := congrArg up (DivInvMonoid.zpow_neg' n x.down)
 
 @[to_additive]
-instance commGroup [CommGroup α] : CommGroup (ULift α) :=
-  Equiv.ulift.injective.commGroup _ rfl (fun _ _ => rfl) (fun _ => rfl) (fun _ _ => rfl)
-    (fun _ _ => rfl) fun _ _ => rfl
+instance group [Group α] : Group (ULift α) where
+  inv_mul_cancel x := congrArg up (inv_mul_cancel x.down)
+
+@[simp]
+theorem div_down [Group α] : (x / y).down = x.down / y.down :=
+  (div_eq_mul_inv x.down y.down).symm
+
+@[to_additive]
+instance commGroup [CommGroup α] : CommGroup (ULift α) where
 
 @[to_additive]
 instance leftCancelSemigroup [LeftCancelSemigroup α] : LeftCancelSemigroup (ULift α) :=

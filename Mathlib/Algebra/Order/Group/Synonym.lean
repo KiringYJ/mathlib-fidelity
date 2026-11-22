@@ -37,7 +37,7 @@ set_option backward.inferInstanceAs.wrap.instances false in
 @[to_additive] instance [Inv α] : Inv αᵒᵈ := inferInstanceAs <| Inv α
 
 set_option backward.inferInstanceAs.wrap.instances false in
-@[to_additive] instance [Div α] : Div αᵒᵈ := inferInstanceAs <| Div α
+instance [Sub α] : Sub αᵒᵈ := inferInstanceAs <| Sub α
 
 set_option backward.inferInstanceAs.wrap.instances false in
 @[to_additive (attr := to_additive) (reorder := 1 2) OrderDual.instSMul]
@@ -131,11 +131,17 @@ theorem toDual_inv [Inv α] (a : α) : toDual a⁻¹ = (toDual a)⁻¹ := rfl
 @[to_additive (attr := simp)]
 theorem ofDual_inv [Inv α] (a : αᵒᵈ) : ofDual a⁻¹ = (ofDual a)⁻¹ := rfl
 
-@[to_additive (attr := simp)]
-theorem toDual_div [Div α] (a b : α) : toDual (a / b) = toDual a / toDual b := rfl
+@[simp]
+theorem toDual_sub [Sub α] (a b : α) : toDual (a - b) = toDual a - toDual b := rfl
 
-@[to_additive (attr := simp)]
-theorem ofDual_div [Div α] (a b : αᵒᵈ) : ofDual (a / b) = ofDual a / ofDual b := rfl
+@[simp]
+theorem toDual_div [Group α] (a b : α) : toDual (a / b) = toDual a / toDual b := rfl
+
+@[simp]
+theorem ofDual_sub [Sub α] (a b : αᵒᵈ) : ofDual (a - b) = ofDual a - ofDual b := rfl
+
+@[simp]
+theorem ofDual_div [Group α] (a b : αᵒᵈ) : ofDual (a / b) = ofDual a / ofDual b := rfl
 
 @[to_additive (attr := simp, to_additive) (reorder := 1 2, 4 5) toDual_smul]
 theorem toDual_pow [Pow α β] (a : α) (b : β) : toDual (a ^ b) = toDual a ^ b := rfl
@@ -187,7 +193,7 @@ set_option backward.inferInstanceAs.wrap.instances false in
 @[to_additive] instance [Inv α] : Inv (Lex α) := inferInstanceAs <| Inv α
 
 set_option backward.inferInstanceAs.wrap.instances false in
-@[to_additive] instance [Div α] : Div (Lex α) := inferInstanceAs <| Div α
+instance [Sub α] : Sub (Lex α) := inferInstanceAs <| Sub α
 
 set_option backward.inferInstanceAs.wrap.instances false in
 @[to_additive (attr := to_additive) (reorder := 1 2) instSMul]
@@ -289,11 +295,17 @@ theorem toLex_inv [Inv α] (a : α) : toLex a⁻¹ = (toLex a)⁻¹ := rfl
 @[to_additive (attr := simp)]
 theorem ofLex_inv [Inv α] (a : Lex α) : ofLex a⁻¹ = (ofLex a)⁻¹ := rfl
 
-@[to_additive (attr := simp)]
-theorem toLex_div [Div α] (a b : α) : toLex (a / b) = toLex a / toLex b := rfl
+@[simp]
+theorem toLex_sub [Sub α] (a b : α) : toLex (a - b) = toLex a - toLex b := rfl
 
-@[to_additive (attr := simp)]
-theorem ofLex_div [Div α] (a b : Lex α) : ofLex (a / b) = ofLex a / ofLex b := rfl
+@[simp]
+theorem toLex_div [Group α] (a b : α) : toLex (a / b) = toLex a / toLex b := rfl
+
+@[simp]
+theorem ofLex_sub [Sub α] (a b : Lex α) : ofLex (a - b) = ofLex a - ofLex b := rfl
+
+@[simp]
+theorem ofLex_div [Group α] (a b : Lex α) : ofLex (a / b) = ofLex a / ofLex b := rfl
 
 @[to_additive (attr := simp, to_additive) (reorder := 1 2, 4 5) toLex_smul]
 theorem toLex_pow [Pow α β] (a : α) (b : β) : toLex (a ^ b) = toLex a ^ b := rfl
@@ -345,7 +357,7 @@ set_option backward.inferInstanceAs.wrap.instances false in
 @[to_additive] instance [Inv α] : Inv (Colex α) := inferInstanceAs <| Inv α
 
 set_option backward.inferInstanceAs.wrap.instances false in
-@[to_additive] instance [Div α] : Div (Colex α) := inferInstanceAs <| Div α
+instance [Sub α] : Sub (Colex α) := inferInstanceAs <| Sub α
 
 set_option backward.inferInstanceAs.wrap.instances false in
 @[to_additive (attr := to_additive) (reorder := 1 2) instSMul]
@@ -448,11 +460,17 @@ theorem toColex_inv [Inv α] (a : α) : toColex a⁻¹ = (toColex a)⁻¹ := rfl
 @[to_additive (attr := simp)]
 theorem ofColex_inv [Inv α] (a : Colex α) : ofColex a⁻¹ = (ofColex a)⁻¹ := rfl
 
-@[to_additive (attr := simp)]
-theorem toColex_div [Div α] (a b : α) : toColex (a / b) = toColex a / toColex b := rfl
+@[simp]
+theorem toColex_sub [Sub α] (a b : α) : toColex (a - b) = toColex a - toColex b := rfl
 
-@[to_additive (attr := simp)]
-theorem ofColex_div [Div α] (a b : Colex α) : ofColex (a / b) = ofColex a / ofColex b := rfl
+@[simp]
+theorem toColex_div [Group α] (a b : α) : toColex (a / b) = toColex a / toColex b := rfl
+
+@[simp]
+theorem ofColex_sub [Sub α] (a b : Colex α) : ofColex (a - b) = ofColex a - ofColex b := rfl
+
+@[simp]
+theorem ofColex_div [Group α] (a b : Colex α) : ofColex (a / b) = ofColex a / ofColex b := rfl
 
 @[to_additive (attr := simp, to_additive) (reorder := 1 2, 4 5) toColex_smul]
 theorem toColex_pow [Pow α β] (a : α) (b : β) : toColex (a ^ b) = toColex a ^ b := rfl

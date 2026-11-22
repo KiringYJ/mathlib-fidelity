@@ -335,8 +335,9 @@ theorem inv_selbergTerms_eq_sum_divisors_moebius_nu {l : ℕ} {hl : l ∣ s.prod
         simp only [selbergTerms_apply, inv_div₀,
           s.nu_mult.prodPrimeFactors_one_sub_of_squarefree _ hl_sq]
         rw [div_eq_mul_inv₀, sum_mul]
-    _ = ∑ x ∈ l.divisorsAntidiagonal, (μ x.1 : ℝ) * s.nu x.1 * (s.nu l)⁻¹ :=
-        (Nat.sum_divisorsAntidiagonal fun d _ ↦ (μ d : ℝ) * s.nu d * (s.nu l)⁻¹).symm
+    _ = ∑ x ∈ l.divisorsAntidiagonal, (μ x.1 : ℝ) * s.nu x.1 * (s.nu l)⁻¹ := by
+        rw [← sum_attach l.divisors (fun d ↦ (μ d : ℝ) * s.nu d * (s.nu l)⁻¹)]
+        exact (Nat.sum_divisorsAntidiagonal fun d _ ↦ (μ d : ℝ) * s.nu d * (s.nu l)⁻¹).symm
     _ = _ := by
         rw [← sum_coe_sort l.divisorsAntidiagonal]
         refine Fintype.sum_congr _ _ fun x ↦ ?_
@@ -395,13 +396,18 @@ theorem sum_divisors_selbergTerms_eq_selbergTerms_mul_nu_inv {d : ℕ} (hd : d �
     split_ifs with hl
     · simp only [gInv, dite_eq_left (hl.trans hd)]
     · rfl
-  rw [hg, ← sum_div_divisors d g, nu_inv_eq_sum_divisors_inv_selbergTerms hd, hgInv, mul_sum]
-  refine sum_congr rfl fun l hl ↦ ?_
-  have hld : l ∣ d := dvd_of_mem_divisors hl
-  have hdl : d / l ∣ d := Nat.div_dvd_of_dvd hld
-  have hmul := selbergTerms_mul (s := s) (m := l) (n := d / l)
-    (hmn := by rw [Nat.mul_div_cancel' hld]; exact hd)
-  simp only [Nat.mul_div_cancel' hld] at hmul
+  rw [hg, ← sum_div_divisors d g, nu_inv_eq_sum_divisors_inv_selbergTerms hd, hgInv,
+    ← sum_attach d.divisors gInv, mul_sum]
+  refine sum_congr rfl fun l _ ↦ ?_
+  have hld := dvd_of_mem_divisors l.property
+  have hl := (pos_of_mem_divisors l.property).ne'
+  have hfac : l.val * Nat.euclideanDiv d l.val hl = d := by
+    simpa only [Nat.mod_eq_zero_of_dvd hld, Nat.add_zero, Nat.mul_comm] using
+      Nat.euclideanDiv_mul_add_mod d l.val hl
+  have hdl : Nat.euclideanDiv d l.val hl ∣ d := ⟨l.val, by simpa [Nat.mul_comm] using hfac.symm⟩
+  have hmul := selbergTerms_mul (s := s) (m := l.val) (n := Nat.euclideanDiv d l.val hl)
+    (hmn := by rwa [hfac])
+  simp only [hfac] at hmul
   simp only [g, gInv, dite_eq_left (hld.trans hd), dite_eq_left (hdl.trans hd), hmul]
   rw [mul_comm (s.selbergTerms l _), mul_assoc, mul_inv_cancel₀, mul_one]
 

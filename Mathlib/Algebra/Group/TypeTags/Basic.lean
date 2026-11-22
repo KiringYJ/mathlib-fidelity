@@ -389,28 +389,6 @@ theorem ofAdd_neg [Neg α] (x : α) : ofAdd (-x) = (ofAdd x)⁻¹ :=
 theorem toAdd_inv [Neg α] (x : Multiplicative α) : x⁻¹.toAdd = -x.toAdd :=
   rfl
 
-instance Additive.sub [Div α] : Sub (Additive α) where
-  sub x y := ofMul (x.toMul / y.toMul)
-
-instance Multiplicative.div [Sub α] : Div (Multiplicative α) where
-  div x y := ofAdd (x.toAdd - y.toAdd)
-
-@[simp]
-theorem ofAdd_sub [Sub α] (x y : α) : ofAdd (x - y) = ofAdd x / ofAdd y :=
-  rfl
-
-@[simp]
-theorem toAdd_div [Sub α] (x y : Multiplicative α) : (x / y).toAdd = x.toAdd - y.toAdd :=
-  rfl
-
-@[simp]
-theorem ofMul_div [Div α] (x y : α) : ofMul (x / y) = ofMul x - ofMul y :=
-  rfl
-
-@[simp]
-theorem toMul_sub [Div α] (x y : Additive α) : (x - y).toMul = x.toMul / y.toMul :=
-  rfl
-
 instance Additive.involutiveNeg [InvolutiveInv α] : InvolutiveNeg (Additive α) :=
   { Additive.neg with neg_neg := @inv_inv α _ }
 
@@ -418,13 +396,13 @@ instance Multiplicative.involutiveInv [InvolutiveNeg α] : InvolutiveInv (Multip
   { Multiplicative.inv with inv_inv := @neg_neg α _ }
 
 instance Additive.subNegMonoid [h : DivInvMonoid α] : SubNegMonoid (Additive α) where
-  sub_eq_add_neg := h.div_eq_mul_inv
   zsmul n a := ofMul (a.toMul ^ n)
   zsmul_zero' := h.zpow_zero'
   zsmul_succ' := h.zpow_succ'
   zsmul_neg' := h.zpow_neg'
 
 instance Multiplicative.divInvMonoid [h : SubNegMonoid α] : DivInvMonoid (Multiplicative α) where
+  div x y := ofAdd (x.toAdd - y.toAdd)
   div_eq_mul_inv := h.sub_eq_add_neg
   zpow n a := ofAdd (n • a.toAdd)
   zpow_zero' := h.zsmul_zero'
@@ -470,6 +448,20 @@ instance Additive.addGroup [Group α] : AddGroup (Additive α) :=
 
 instance Multiplicative.group [AddGroup α] : Group (Multiplicative α) :=
   { Multiplicative.divInvMonoid with inv_mul_cancel := @neg_add_cancel α _ }
+
+@[simp]
+theorem ofAdd_sub [AddGroup α] (x y : α) : ofAdd (x - y) = ofAdd x / ofAdd y := rfl
+
+@[simp]
+theorem toAdd_div [AddGroup α] (x y : Multiplicative α) : (x / y).toAdd = x.toAdd - y.toAdd := rfl
+
+@[simp]
+theorem ofMul_div [Group α] (x y : α) : ofMul (x / y) = ofMul x - ofMul y :=
+  congrArg ofMul (div_eq_mul_inv x y)
+
+@[simp]
+theorem toMul_sub [Group α] (x y : Additive α) : (x - y).toMul = x.toMul / y.toMul :=
+  (div_eq_mul_inv x.toMul y.toMul).symm
 
 instance Additive.addCommGroup [CommGroup α] : AddCommGroup (Additive α) :=
   { Additive.addGroup, Additive.addCommMonoid with }

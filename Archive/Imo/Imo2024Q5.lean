@@ -662,15 +662,16 @@ is at the left edge: zigzag across the board so that, if we encounter a monster,
 path we know will not encounter a monster. -/
 def fn1OfEdge0 (N : ℕ) : Fin (2 * N + 1) → Cell N :=
   fun i ↦ if h : (i : ℕ) = 2 * N then (⟨N + 1, by lia⟩, ⟨N, by lia⟩) else
-    (⟨((i : ℕ) + 1) / 2, by lia⟩, ⟨(i : ℕ) / 2 + 1, by lia⟩)
+    (⟨Nat.euclideanDiv (i.val + 1) 2, by rw [Nat.euclideanDiv_eq_core]; lia⟩,
+      ⟨i.val.euclideanDiv 2 + 1, by rw [Nat.euclideanDiv_eq_core]; lia⟩)
 
 /-- The second attempt in a winning strategy, as a `Path`, if the monster in the second row
 is at the left edge. -/
 def path1OfEdge0 (hN : 2 ≤ N) : Path N := Path.ofFn (fn1OfEdge0 N) (by lia)
-    (by simp only [fn1OfEdge0]; split_ifs <;> simp; lia)
+    (by simp only [fn1OfEdge0, Nat.euclideanDiv_eq_core]; split_ifs <;> simp; lia)
     (by simp [fn1OfEdge0])
     (by
-      simp only [fn1OfEdge0]
+      simp only [fn1OfEdge0, Nat.euclideanDiv_eq_core]
       intro i hi
       split_ifs <;> simp [Adjacent, Nat.dist] at * <;> lia)
 
@@ -684,7 +685,8 @@ the monster was encountered, move to the following row one place earlier, procee
 edge and then along that column. -/
 def fn2OfEdge0 {r : Fin (N + 2)} (hr : (r : ℕ) ≤ N) : Fin (N + 2 * r - 1) → Cell N :=
   fun i ↦ if h₁ : (i : ℕ) + 2 < 2 * (r : ℕ) then
-    (⟨((i : ℕ) + 1) / 2, by lia⟩, ⟨(i : ℕ) / 2 + 1, by lia⟩) else
+    (⟨Nat.euclideanDiv (i.val + 1) 2, by rw [Nat.euclideanDiv_eq_core]; lia⟩,
+      ⟨i.val.euclideanDiv 2 + 1, by rw [Nat.euclideanDiv_eq_core]; lia⟩) else
     if h₂ : (i : ℕ) + 2 < 3 * (r : ℕ) then (r, ⟨3 * (r : ℕ) - 3 - (i : ℕ), by lia⟩) else
     (⟨i + 3 - 2 * r, by lia⟩, 0)
 
@@ -697,10 +699,10 @@ lemma fn2OfEdge0_apply_eq_fn1OfEdge0_apply_of_lt {r : Fin (N + 2)} (hr : (r : �
 is at the left edge and the second (zigzag) attempt encountered a monster. -/
 def path2OfEdge0 (hN : 2 ≤ N) {r : Fin (N + 2)} (hr2 : 2 ≤ (r : ℕ)) (hrN : (r : ℕ) ≤ N) : Path N :=
   Path.ofFn (fn2OfEdge0 hrN) (by lia)
-    (by simp only [fn2OfEdge0]; split_ifs <;> simp <;> lia)
-    (by simp only [fn2OfEdge0]; split_ifs <;> simp <;> lia)
+    (by simp only [fn2OfEdge0, Nat.euclideanDiv_eq_core]; split_ifs <;> simp <;> lia)
+    (by simp only [fn2OfEdge0, Nat.euclideanDiv_eq_core]; split_ifs <;> simp <;> lia)
     (by
-      simp only [fn2OfEdge0]
+      simp only [fn2OfEdge0, Nat.euclideanDiv_eq_core]
       intro i hi
       split_ifs <;> simp [Adjacent, Nat.dist] at * <;> lia)
 
@@ -889,9 +891,10 @@ lemma path2OfEdge0_firstMonster_eq_none_of_path1OfEdge0_firstMonster_eq_some (hN
   rw [path1OfEdge0, Path.firstMonster, Path.ofFn_cells, List.find?_ofFn_eq_some] at hx
   simp only [decide_eq_true_eq] at hx
   rcases hx with ⟨hx, i, hix, hnm⟩
-  have hi : (x.1 : ℕ) = ((i : ℕ) + 1) / 2 := by
+  have hi : (x.1 : ℕ) = Nat.euclideanDiv (i.val + 1) 2 := by
     rw [fn1OfEdge0] at hix
     split_ifs at hix <;> simp [Prod.ext_iff, Fin.ext_iff] at hix <;> lia
+  rw [Nat.euclideanDiv_eq_core] at hi
   have hi' : (i : ℕ) ≠ 2 * N := by
     intro h
     rw [← hix, fn1OfEdge0, dite_eq_left h] at hx
@@ -911,7 +914,7 @@ lemma path2OfEdge0_firstMonster_eq_none_of_path1OfEdge0_firstMonster_eq_some (hN
         lia
       rw [MonsterData.mk_mem_monsterCells_iff_of_le hx1 hxN]
       rw [MonsterData.mem_monsterCells_iff_of_le hx1 hxN] at hx
-      simp_rw [hx, ← hix, fn1OfEdge0]
+      simp_rw [hx, ← hix, fn1OfEdge0, Nat.euclideanDiv_eq_core]
       split_ifs <;> simp <;> lia
     · rw [MonsterData.mk_mem_monsterCells_iff]
       simp only [not_exists]
@@ -941,7 +944,8 @@ lemma winningStrategy_play_one_eq_none_or_play_two_eq_none_of_edge_zero (hN : 2 
     rcases i with ⟨i, hi⟩
     have hi : 3 ≤ i := by
       by_contra hi
-      interval_cases i <;> rw [fn1OfEdge0] at hm <;> split_ifs at hm with h
+      interval_cases i <;> simp only [fn1OfEdge0, Nat.euclideanDiv_eq_core] at hm <;>
+        split_ifs at hm with h
       · simp at h
         lia
       · simp_rw [zero_add] at hm
@@ -954,13 +958,12 @@ lemma winningStrategy_play_one_eq_none_or_play_two_eq_none_of_edge_zero (hN : 2 
         simp at hc₁0
       · simp at h
         lia
-      · simp only at hm
-        norm_num at hm
+      · norm_num at hm
         have h1N : 1 ≤ N := by lia
         rw [m.mk_mem_monsterCells_iff_of_le (le_refl _) h1N] at hm
         rw [row1, hm] at hc₁0
         simp at hc₁0
-    rw [fn1OfEdge0]
+    simp only [fn1OfEdge0, Nat.euclideanDiv_eq_core]
     split_ifs <;> simp <;> lia
   rw [path2, ite_eq_left hc₁0, path2OfEdge0Def, dite_eq_left hx2N]
   exact path2OfEdge0_firstMonster_eq_none_of_path1OfEdge0_firstMonster_eq_some hN hx2N.1

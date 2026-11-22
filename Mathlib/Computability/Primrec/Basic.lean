@@ -164,8 +164,8 @@ instance option {α : Type*} [h : Primcodable α] : Primcodable (Option α) :=
 
 instance bool : Primcodable Bool :=
   ⟨(casesOn1 1 (casesOn1 2 zero)).of_eq fun n => match n with
-    | 0 => rfl
-    | 1 => rfl
+    | 0 => by simp [decode_zero]
+    | 1 => by simp [decode_one]
     | (n + 2) => by rw [decode_ge_two] <;> simp⟩
 
 end Primcodable
@@ -597,7 +597,8 @@ theorem nat_mul : Primrec₂ ((· * ·) : ℕ → ℕ → ℕ) :=
 
 theorem cond {c : α → Bool} {f : α → σ} {g : α → σ} (hc : Primrec c) (hf : Primrec f)
     (hg : Primrec g) : Primrec fun a => bif (c a) then (f a) else (g a) :=
-  (nat_casesOn (encode_iff.2 hc) hg (hf.comp fst).to₂).of_eq fun a => by cases c a <;> rfl
+  (nat_casesOn (encode_iff.2 hc) hg (hf.comp fst).to₂).of_eq fun a => by
+    cases c a <;> simp
 
 theorem ite {c : α → Prop} [DecidablePred c] {f : α → σ} {g : α → σ} (hc : PrimrecPred c)
     (hf : Primrec f) (hg : Primrec g) : Primrec fun a => if c a then f a else g a := by
@@ -702,36 +703,42 @@ theorem of_graph {f : α → ℕ} (h₁ : PrimrecBounded f)
   refine (nat_findGreatest pg h₂).of_eq fun n => ?_
   exact (Nat.findGreatest_spec (P := fun b => f n = b) (hg n) rfl).symm
 
--- We show that division is primitive recursive by showing that the graph is
-theorem nat_div : Primrec₂ ((· / ·) : ℕ → ℕ → ℕ) := by
-  refine of_graph ⟨_, fst, fun p => Nat.div_le_self _ _⟩ ?_
-  have : PrimrecRel fun (a : ℕ × ℕ) (b : ℕ) => (a.2 = 0 ∧ b = 0) ∨
-      (0 < a.2 ∧ b * a.2 ≤ a.1 ∧ a.1 < (b + 1) * a.2) :=
-    PrimrecPred.or
-      (.and (const 0 |> Primrec.eq.comp (fst |> snd.comp)) (const 0 |> Primrec.eq.comp snd))
-      (.and (nat_lt.comp (const 0) (fst |> snd.comp)) <|
-          .and (nat_le.comp (nat_mul.comp snd (fst |> snd.comp)) (fst |> fst.comp))
-          (nat_lt.comp (fst.comp fst) (nat_mul.comp (Primrec.succ.comp snd) (snd.comp fst))))
-  refine this.of_eq ?_
-  rintro ⟨a, k⟩ q
-  if H : k = 0 then simp [H, eq_comm]
-  else
-    have : q * k ≤ a ∧ a < (q + 1) * k ↔ q = a / k := by
-      rw [le_antisymm_iff, ← (@Nat.lt_succ_iff _ q), Nat.le_div_iff_mul_le (Nat.pos_of_ne_zero H),
-          Nat.div_lt_iff_lt_mul (Nat.pos_of_ne_zero H)]
-    simpa [H, zero_lt_iff, eq_comm (b := q)]
+/-- The Euclidean quotient of two primitive recursive functions is primitive recursive when the
+divisor is everywhere nonzero. -/
+theorem nat_quotient {f g : α → ℕ} (hf : Primrec f) (hg : Primrec g) (h : ∀ a, g a ≠ 0) :
+    Primrec fun a => Nat.euclideanDiv (f a) (g a) (h a) := by
+  refine of_graph ⟨f, hf, fun a => ?_⟩ ?_
+  · change Nat.euclideanDiv (f a) (g a) (h a) ≤ f a
+    rw [Nat.euclideanDiv_eq_core]
+    exact Nat.div_le_self _ _
+  · have graph : PrimrecRel fun a q => q * g a ≤ f a ∧ f a < (q + 1) * g a :=
+      .and (nat_le.comp (nat_mul.comp snd (hg.comp fst)) (hf.comp fst))
+        (nat_lt.comp (hf.comp fst) (nat_mul.comp (succ.comp snd) (hg.comp fst)))
+    refine graph.of_eq ?_
+    intro a q
+    rw [Nat.euclideanDiv_eq_core, eq_comm, le_antisymm_iff, ← (@Nat.lt_succ_iff _ q),
+      Nat.le_div_iff_mul_le (Nat.pos_of_ne_zero (h a)),
+      Nat.div_lt_iff_lt_mul (Nat.pos_of_ne_zero (h a))]
 
-theorem nat_mod : Primrec₂ ((· % ·) : ℕ → ℕ → ℕ) :=
-  (nat_sub.comp fst (nat_mul.comp snd nat_div)).to₂.of_eq fun m n => by
-    apply Nat.sub_eq_of_eq_add
-    simp [add_comm (m % n), Nat.div_add_mod]
+theorem nat_mod : Primrec₂ ((· % ·) : ℕ → ℕ → ℕ) := by
+  have hstep : Primrec₂ fun n k : ℕ => n - (k + 1) * Nat.euclideanDiv n (k + 1) :=
+    (nat_sub.comp fst (nat_mul.comp (succ.comp snd)
+      (nat_quotient fst (succ.comp snd) fun _ => Nat.succ_ne_zero _))).to₂
+  apply (nat_casesOn' .id hstep).of_eq
+  intro n k
+  cases k with
+  | zero => exact (Nat.mod_zero n).symm
+  | succ k =>
+    exact Nat.sub_eq_of_eq_add
+      ((Nat.euclideanDiv_mul_add_mod n (k + 1) (Nat.succ_ne_zero _)).symm.trans
+        (Nat.add_comm _ _))
 
 theorem nat_bodd : Primrec Nat.bodd :=
   (Primrec.beq.comp (nat_mod.comp .id (const 2)) (const 1)).of_eq fun n => by
     cases H : n.bodd <;> simp [Nat.mod_two_of_bodd, H]
 
 theorem nat_div2 : Primrec Nat.div2 :=
-  (nat_div.comp .id (const 2)).of_eq fun n => n.div2_val.symm
+  (nat_quotient .id (const 2) (fun _ => by decide)).of_eq fun n => n.div2_val.symm
 
 theorem nat_double : Primrec (fun n : ℕ => 2 * n) :=
   nat_mul.comp (const _) Primrec.id

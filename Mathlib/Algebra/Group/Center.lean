@@ -328,15 +328,23 @@ theorem inv_mem_center (ha : a ∈ Set.center M) : a⁻¹ ∈ Set.center M := by
   intro _
   rw [← inv_inj, mul_inv_rev, inv_inv, ha.comm, mul_inv_rev, inv_inv]
 
-@[to_additive (attr := simp) sub_mem_addCenter]
-theorem div_mem_center (ha : a ∈ Set.center M) (hb : b ∈ Set.center M) : a / b ∈ Set.center M := by
-  rw [div_eq_mul_inv]
-  exact mul_mem_center ha (inv_mem_center hb)
+@[to_additive add_neg_mem_addCenter]
+theorem mul_inv_mem_center (ha : a ∈ Set.center M) (hb : b ∈ Set.center M) :
+    a * b⁻¹ ∈ Set.center M :=
+  mul_mem_center ha (inv_mem_center hb)
 
 end DivisionMonoid
 
+@[simp] theorem sub_mem_addCenter {A : Type*} [SubtractionMonoid A] {a b : A}
+    (ha : a ∈ Set.addCenter A) (hb : b ∈ Set.addCenter A) : a - b ∈ Set.addCenter A := by
+  simpa only [sub_eq_add_neg] using add_neg_mem_addCenter ha hb
+
 section Group
 variable [Group M] {a b : M}
+
+@[simp] theorem div_mem_center {G : Type*} [Group G] {a b : G}
+    (ha : a ∈ Set.center G) (hb : b ∈ Set.center G) : a / b ∈ Set.center G := by
+  simpa only [div_eq_mul_inv] using mul_inv_mem_center ha hb
 
 @[to_additive (attr := simp) neg_mem_addCentralizer]
 lemma inv_mem_centralizer (ha : a ∈ centralizer S) : a⁻¹ ∈ centralizer S :=

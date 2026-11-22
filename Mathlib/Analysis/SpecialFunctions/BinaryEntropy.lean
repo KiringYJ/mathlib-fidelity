@@ -363,7 +363,7 @@ lemma deriv2_binEntropy (hp₀ : p ≠ 0) (hp₁ : p ≠ 1) :
 
 /-- Qary entropy is strictly increasing in the interval [0, 1 - q⁻¹]. -/
 lemma qaryEntropy_strictMonoOn (qLe2 : 2 ≤ q) :
-    StrictMonoOn (qaryEntropy q) (Icc 0 (1 - 1 / q)) := by
+    StrictMonoOn (qaryEntropy q) (Icc 0 (1 - 1 / (q : ℝ))) := by
   intro p1 hp1 p2 hp2 p1le2
   apply strictMonoOn_of_deriv_pos (convex_Icc 0 (1 - 1 / (q : ℝ))) _ _ hp1 hp2 p1le2
   · exact qaryEntropy_continuous.continuousOn
@@ -373,14 +373,14 @@ lemma qaryEntropy_strictMonoOn (qLe2 : 2 ≤ q) :
     have hq₁ : 0 < (q : ℝ) - 1 := by linarith
     simp only [interior_Icc, mem_Ioo] at hp
     have hp₁ : p < 1 := hp.2.trans (sub_lt_self _ (div_pos one_pos hq))
-    have hmid : 1 - 1 / (q : ℝ) = ((q : ℝ) - 1) / q := by rw [sub_div', one_mul]
+    have hmid : 1 - 1 / (q : ℝ) = ((q : ℝ) - 1) / (q : ℝ) := by rw [sub_div', one_mul]
     have hcross := (lt_div_iff₀ hq).1 (hmid ▸ hp.2)
     rw [deriv_qaryEntropy hp.1.ne' hp₁.ne, ← log_mul (by linarith) (by linarith)]
     exact sub_pos.mpr (log_lt_log hp.1 (by nlinarith))
 
 /-- Qary entropy is strictly decreasing in the interval [1 - q⁻¹, 1]. -/
 lemma qaryEntropy_strictAntiOn (qLe2 : 2 ≤ q) :
-    StrictAntiOn (qaryEntropy q) (Icc (1 - 1 / q) 1) := by
+    StrictAntiOn (qaryEntropy q) (Icc (1 - 1 / (q : ℝ)) 1) := by
   intro p1 hp1 p2 hp2 p1le2
   apply strictAntiOn_of_deriv_neg (convex_Icc (1 - 1 / (q : ℝ)) 1) _ _ hp1 hp2 p1le2
   · exact qaryEntropy_continuous.continuousOn
@@ -389,7 +389,7 @@ lemma qaryEntropy_strictAntiOn (qLe2 : 2 ≤ q) :
     have hq : 0 < (q : ℝ) := by linarith
     have hq₁ : 0 < (q : ℝ) - 1 := by linarith
     simp only [interior_Icc, mem_Ioo] at hp
-    have hmid : 1 - 1 / (q : ℝ) = ((q : ℝ) - 1) / q := by rw [sub_div', one_mul]
+    have hmid : 1 - 1 / (q : ℝ) = ((q : ℝ) - 1) / (q : ℝ) := by rw [sub_div', one_mul]
     have hp₀ : 0 < p := (div_pos hq₁ hq).trans (hmid ▸ hp.1)
     have hcross := (div_lt_iff₀ hq).1 (hmid ▸ hp.1)
     rw [deriv_qaryEntropy hp₀.ne' hp.2.ne, ← log_mul (by linarith) (by linarith)]

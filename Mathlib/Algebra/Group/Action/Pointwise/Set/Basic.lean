@@ -378,10 +378,17 @@ end Group
 section CommGroup
 variable [CommGroup α]
 
-@[to_additive] lemma smul_div_smul_comm (a : α) (s : Set α) (b : α) (t : Set α) :
-    a • s / b • t = (a / b) • (s / t) := by
-  simp_rw [← image_smul, smul_eq_mul, ← singleton_mul, mul_div_mul_comm _ s,
-    singleton_div_singleton]
+lemma smul_div_smul_comm (a : α) (s : Set α) (b : α) (t : Set α) :
+    (a • s) / (b • t) = (a / b) • (s / t) := by
+  simp_rw [← image_smul, smul_eq_mul, ← singleton_mul, div_eq_mul_inv, mul_inv, inv_singleton,
+    ← singleton_mul_singleton]
+  ac_rfl
 
 end CommGroup
+
+lemma vadd_sub_vadd_comm [AddCommGroup α] (a : α) (s : Set α) (b : α) (t : Set α) :
+    (a +ᵥ s) - (b +ᵥ t) = (a - b) +ᵥ (s - t) := by
+  simp_rw [← image_vadd, vadd_eq_add, ← singleton_add, add_sub_add_comm _ s,
+    singleton_sub_singleton]
+
 end Set

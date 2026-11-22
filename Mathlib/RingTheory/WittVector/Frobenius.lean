@@ -85,16 +85,16 @@ noncomputable def frobeniusPolyAux : ℕ → MvPolynomial ℕ ℤ
       ∑ j ∈ range (p ^ (n - i)),
         (((X (i : ℕ) ^ p) ^ (p ^ (n - (i : ℕ)) - (j + 1)) : MvPolynomial ℕ ℤ) *
         (frobeniusPolyAux i) ^ (j + 1)) *
-        C (((p ^ (n - i)).choose (j + 1) / (p ^ (n - i - v p (j + 1)))
-          * ↑p ^ (j - v p (j + 1)) : ℕ) : ℤ)
+        C ((Nat.euclideanDiv ((p ^ (n - i)).choose (j + 1)) (p ^ (n - i - v p (j + 1)))
+          (pow_ne_zero _ hp.1.ne_zero) * p ^ (j - v p (j + 1)) : ℕ) : ℤ)
 
 theorem frobeniusPolyAux_eq (n : ℕ) :
     frobeniusPolyAux p n =
       X (n + 1) - ∑ i ∈ range n,
           ∑ j ∈ range (p ^ (n - i)),
             (X i ^ p) ^ (p ^ (n - i) - (j + 1)) * frobeniusPolyAux p i ^ (j + 1) *
-              C ↑((p ^ (n - i)).choose (j + 1) / p ^ (n - i - v p (j + 1)) *
-                ↑p ^ (j - v p (j + 1)) : ℕ) := by
+              C ((Nat.euclideanDiv ((p ^ (n - i)).choose (j + 1)) (p ^ (n - i - v p (j + 1)))
+                (pow_ne_zero _ hp.1.ne_zero) * p ^ (j - v p (j + 1)) : ℕ) : ℤ) := by
   rw [frobeniusPolyAux, ← Fin.sum_univ_eq_sum_range]
 
 /-- The polynomials that give the coefficients of `frobenius x`,
@@ -170,7 +170,7 @@ theorem map_frobeniusPoly (n : ℕ) :
   rw [Rat.natCast_div _ _ (hb := (Nat.cast_ne_zero.2 (pow_ne_zero _ hp.1.ne_zero)).isUnit)
     (map_frobeniusPoly.key₁ p (n - i) j hj)]
   push_cast
-  linear_combination (norm := skip) -p / p ^ n / p ^ (n - i - v p (j + 1))
+  linear_combination (norm := skip) -(p : ℚ) / (p : ℚ) ^ n / (p : ℚ) ^ (n - i - v p (j + 1))
     * (p ^ (n - i)).choose (j + 1) * congr((p : ℚ) ^ $(map_frobeniusPoly.key₂ p hi.le hj))
   field [hp.1.ne_zero]
 

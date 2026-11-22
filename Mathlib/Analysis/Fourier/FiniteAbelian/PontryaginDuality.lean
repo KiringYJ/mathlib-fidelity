@@ -50,7 +50,8 @@ def zmod (x : ZMod n) : AddChar (ZMod n) Circle :=
       fun a b ↦ AddCircle.toCircle_add a b⟩ : AddChar (AddCircle (1 : ℝ)) Circle) <|
     ZMod.toAddCircle.comp <| .mulLeft x
 
-@[simp] lemma zmod_intCast (x y : ℤ) : zmod n x y = exp (2 * π * (x * y / n)) := by
+@[simp] lemma zmod_intCast (x y : ℤ) :
+    zmod n x y = exp (2 * π * (((x * y : ℤ) : ℝ) / (n : ℝ))) := by
   simp [zmod, ← Int.cast_mul x y, -Int.cast_mul, ZMod.toAddCircle_intCast,
     AddCircle.toCircle_apply_mk]
 

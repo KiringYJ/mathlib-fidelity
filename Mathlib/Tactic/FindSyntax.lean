@@ -6,6 +6,7 @@ Authors: Damiano Testa
 module
 
 public meta import Lean.Elab.Command
+public meta import Mathlib.Lean.Elab.NativeDivision
 public import Mathlib.Init
 
 /-!
@@ -87,7 +88,8 @@ elab "#find_syntax " id:str d:(&" approx")? : command => do
       m!"".joinSep <| msgs.toList.map fun (decl, patt) =>
         m!"\n{MessageData.ofConstName decl}: '{patt}'")
   let uses := (sorted_results.toList.map fun (_, msgs) => msgs.size).sum
-  let numSymbs := if d.isSome then s!"over {(symbs.size / 100) * 100}" else s!"{symbs.size}"
+  let numSymbs :=
+    if d.isSome then s!"over {Nat.euclideanDiv symbs.size 100 * 100}" else s!"{symbs.size}"
   let head := m!"Found {uses} use{if uses == 1 then "" else "s"} \
                 among {numSymbs} syntax declarations"
   logInfo <| head ++ m!"\n" ++ m!"\n\n".joinSep mods

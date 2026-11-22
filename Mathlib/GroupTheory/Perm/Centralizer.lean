@@ -657,15 +657,12 @@ theorem card_isConj_mul_eq :
 /-- Cardinality of a conjugacy class in `Equiv.Perm α` of a given `cycleType` -/
 theorem card_isConj_eq :
     Nat.card {h : Perm α | IsConj g h} =
-      (Fintype.card α)! /
-        ((Fintype.card α - g.cycleType.sum)! *
-          g.cycleType.prod *
-          (∏ n ∈ g.cycleType.toFinset, (g.cycleType.count n)!)) := by
-  rw [← card_isConj_mul_eq g, Nat.div_eq_of_eq_mul_left _]
-  · rfl
-  -- This is the cardinal of the centralizer
-  · rw [← nat_card_centralizer g]
-    apply Nat.card_pos
+      Nat.euclideanDiv (Fintype.card α)!
+        ((Fintype.card α - g.cycleType.sum)! * g.cycleType.prod *
+          (∏ n ∈ g.cycleType.toFinset, (g.cycleType.count n)!)) (by
+          rw [← nat_card_centralizer g]
+          exact Nat.card_pos.ne') := by
+  rw [← card_isConj_mul_eq g, Nat.euclideanDiv_mul_right_cancel]
 
 variable (α)
 
@@ -693,17 +690,16 @@ theorem card_of_cycleType_mul_eq (m : Multiset ℕ) :
 /-- Cardinality of the `Finset` of `Equiv.Perm α` of given `cycleType` -/
 theorem card_of_cycleType (m : Multiset ℕ) :
     #({g | g.cycleType = m} : Finset (Perm α)) =
-      if m.sum ≤ Fintype.card α ∧ ∀ a ∈ m, 2 ≤ a then
-        (Fintype.card α)! /
-          ((Fintype.card α - m.sum)! * m.prod * (∏ n ∈ m.toFinset, (m.count n)!))
+      if hm : m.sum ≤ Fintype.card α ∧ ∀ a ∈ m, 2 ≤ a then
+        Nat.euclideanDiv (Fintype.card α)!
+          ((Fintype.card α - m.sum)! * m.prod * (∏ n ∈ m.toFinset, (m.count n)!)) (by
+          have : 0 < m.prod := Multiset.prod_pos fun a ha => zero_lt_two.trans_le (hm.2 a ha)
+          positivity)
       else 0 := by
   split_ifs with hm
-  · -- nonempty case
-    apply symm
-    apply Nat.div_eq_of_eq_mul_left
-    · have : 0 < m.prod := Multiset.prod_pos <| fun a ha => zero_lt_two.trans_le (hm.2 a ha)
-      positivity
-    rw [card_of_cycleType_mul_eq, ite_eq_left hm]
+  · have h := card_of_cycleType_mul_eq α m
+    rw [ite_eq_left hm] at h
+    rw [← h, Nat.euclideanDiv_mul_right_cancel]
   · -- empty case
     exact (card_of_cycleType_eq_zero_iff α).mpr hm
 

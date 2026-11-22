@@ -171,25 +171,11 @@ well. See `Int.image_Ico_emod` for the ℤ version. -/
 theorem image_Ico_mod (n a : ℕ) : (Ico n (n + a)).image (· % a) = range a := by
   obtain rfl | ha := eq_or_ne a 0
   · rw [range_zero, add_zero, Ico_self, image_empty]
-  ext i
-  simp only [mem_image, mem_range, mem_Ico]
-  constructor
-  · rintro ⟨i, _, rfl⟩
-    exact mod_lt i ha.bot_lt
-  intro hia
-  have hn := Nat.mod_add_div n a
-  obtain hi | hi := lt_or_ge i (n % a)
-  · refine ⟨i + a * (n / a + 1), ⟨?_, ?_⟩, ?_⟩
-    · rw [add_comm (n / a), Nat.mul_add, mul_one, ← add_assoc]
-      refine hn.symm.le.trans (Nat.add_le_add_right ?_ _)
-      simpa only [zero_add] using add_le_add (zero_le i) (Nat.mod_lt n ha.bot_lt).le
-    · refine lt_of_lt_of_le (Nat.add_lt_add_right hi (a * (n / a + 1))) ?_
-      rw [Nat.mul_add, mul_one, ← add_assoc, hn]
-    · rw [Nat.add_mul_mod_self_left, Nat.mod_eq_of_lt hia]
-  · refine ⟨i + a * (n / a), ⟨?_, ?_⟩, ?_⟩
-    · lia
-    · lia
-    · rw [Nat.add_mul_mod_self_left, Nat.mod_eq_of_lt hia]
+  apply eq_of_subset_of_card_le
+  · intro i hi
+    obtain ⟨k, _, rfl⟩ := mem_image.mp hi
+    exact mem_range.mpr (Nat.mod_lt k (Nat.pos_of_ne_zero ha))
+  · simp [card_image_of_injOn (mod_injOn_Ico n a)]
 
 section Multiset
 

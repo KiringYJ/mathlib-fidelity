@@ -128,20 +128,20 @@ lemma LFunction_eq_LSeries (Φ : ZMod N → ℂ) {s : ℂ} (hs : 1 < re s) :
   rw [LFunction_eq_hurwitzZeta_sum _ (ne_one_of_one_lt_re hs), LSeries, mul_sum,
     Nat.sumByResidueClasses (LSeriesSummable_of_one_lt_re Φ hs) N]
   congr 1 with j
-  have : (j.val / N : ℝ) ∈ Set.Icc 0 1 := mem_Icc.mpr ⟨by positivity,
+  have : ((j.val : ℝ) / (N : ℝ)) ∈ Set.Icc 0 1 := mem_Icc.mpr ⟨by positivity,
     (div_le_one (Nat.cast_pos.mpr <| NeZero.pos _)).mpr <| Nat.cast_le.mpr (val_lt j).le⟩
   rw [toAddCircle_apply, ← (hasSum_hurwitzZeta_of_one_lt_re this hs).tsum_eq, ← mul_assoc,
     ← tsum_mul_left]
   have hN : (N : ℂ) ≠ 0 := Nat.cast_ne_zero.mpr (NeZero.ne N)
   have harg (m : ℕ) : ↑(j.val + N * m : ℕ) =
-      (N : ℂ) * ((m : ℂ) + (j.val / N : ℝ)) := by
+      (N : ℂ) * ((m : ℂ) + ((j.val : ℝ) / (N : ℝ))) := by
     push_cast [ofReal_div]
     rw [mul_add, ← mul_div_assoc₀, mul_comm (N : ℂ) (j.val : ℂ),
       mul_div_cancel_right₀, add_comm]
   have hsupp : Function.support (fun m ↦ LSeries.term (Φ ·) s (j.val + N * m)) ⊆
-      {m : ℕ | (m : ℝ) + j.val / N ≠ 0} := by
+      {m : ℕ | (m : ℝ) + (j.val : ℝ) / (N : ℝ) ≠ 0} := by
     intro m hm
-    change (m : ℝ) + j.val / N ≠ 0
+    change (m : ℝ) + (j.val : ℝ) / (N : ℝ) ≠ 0
     intro hz
     have hz' := congrArg ofReal hz
     rw [ofReal_add, ofReal_natCast, ofReal_zero] at hz'
@@ -149,19 +149,19 @@ lemma LFunction_eq_LSeries (Φ : ZMod N → ℂ) {s : ℂ} (hs : 1 < re s) :
     exact hm (by simp [Nat.cast_eq_zero.mp he])
   rw [← tsum_subtype_eq_of_support_subset hsupp]
   refine tsum_congr fun m ↦ ?_
-  have hm : ((m : ℕ) : ℂ) + (j.val / N : ℝ) ≠ 0 := by
+  have hm : ((m : ℕ) : ℂ) + ((j.val : ℝ) / (N : ℝ)) ≠ 0 := by
     simpa only [ofReal_add, ofReal_natCast] using ofReal_ne_zero.mpr m.2
   have hm' : j.val + N * (m : ℕ) ≠ 0 :=
     Nat.cast_ne_zero.mp (harg m ▸ mul_ne_zero hN hm)
   have hp : (↑(j.val + N * (m : ℕ) : ℕ) : ℂ) ^ s =
-      (N : ℂ) ^ s * (((m : ℕ) : ℂ) + (j.val / N : ℝ)) ^ s := by
+      (N : ℂ) ^ s * (((m : ℕ) : ℂ) + ((j.val : ℝ) / (N : ℝ))) ^ s := by
     rw [harg]
     simpa only [ofReal_mul, ofReal_add, ofReal_natCast] using
-      (mul_cpow_ofReal_nonneg (a := (N : ℝ)) (b := (m : ℕ) + j.val / N)
+      (mul_cpow_ofReal_nonneg (a := (N : ℝ)) (b := (m : ℕ) + (j.val : ℝ) / (N : ℝ))
         (by positivity) (by positivity) s)
   rw [LSeries.term_of_ne_zero hm', eq_div_iff, hp]
   have hNpow : IsUnit ((N : ℂ) ^ s) := (cpow_ne_zero_iff.mpr (Or.inl hN)).isUnit
-  let b := (((m : ℕ) : ℂ) + (j.val / N : ℝ)) ^ s
+  let b := (((m : ℕ) : ℂ) + ((j.val : ℝ) / (N : ℝ))) ^ s
   have hb : IsUnit b := (cpow_ne_zero_iff.mpr (Or.inl hm)).isUnit
   simp only [Nat.cast_add, Nat.cast_mul, natCast_zmod_val, natCast_self, zero_mul, add_zero]
   calc
@@ -212,7 +212,7 @@ lemma differentiable_LFunction_of_sum_zero {Φ : ZMod N → ℂ} (hΦ : ∑ j, �
 /-- The L-function of `Φ` has a residue at `s = 1` equal to the average value of `Φ`. -/
 lemma LFunction_residue_one (Φ : ZMod N → ℂ) :
     Tendsto (fun s : {z : ℂ // z ≠ 1} ↦ (s - 1) * LFunction Φ s (Or.inl s.2))
-      (Filter.comap Subtype.val (𝓝 1)) (𝓝 (∑ j, Φ j / N)) := by
+      (Filter.comap Subtype.val (𝓝 1)) (𝓝 (∑ j, Φ j / (N : ℂ))) := by
   have hN : (N : ℂ) ≠ 0 := Nat.cast_ne_zero.mpr (NeZero.ne N)
   have ht : Tendsto (fun s : {z : ℂ // z ≠ 1} ↦ (N : ℂ) ^ (-(s : ℂ)))
       (Filter.comap Subtype.val (𝓝 1)) (𝓝 ((N : ℂ) ^ (-(1 : ℂ)))) :=
@@ -220,7 +220,7 @@ lemma LFunction_residue_one (Φ : ZMod N → ℂ) :
   have hp (j : ZMod N) : Tendsto
       (fun s : {z : ℂ // z ≠ 1} ↦ (N : ℂ) ^ (-(s : ℂ)) *
         (Φ j * ((s - 1) * hurwitzZeta (toAddCircle j) s s.2)))
-      (Filter.comap Subtype.val (𝓝 1)) (𝓝 (Φ j / N)) := by
+      (Filter.comap Subtype.val (𝓝 1)) (𝓝 (Φ j / (N : ℂ))) := by
     rw [div_eq_mul_inv₀, mul_comm, ← cpow_neg_one]
     simpa only [mul_one] using
       ht.mul (tendsto_const_nhds.mul (hurwitzZeta_residue_one (toAddCircle j)))
@@ -240,7 +240,7 @@ private lemma LFunction_stdAddChar_eq_expZeta_of_one_lt_re (j : ZMod N) {s : ℂ
       expZeta (ZMod.toAddCircle j) s (Or.inl (ne_one_of_one_lt_re hs)) := by
   rw [toAddCircle_apply, LFunction_eq_LSeries _ hs]
   refine (LSeriesHasSum_iff_hasSum_pnat.mpr
-    ((hasSum_expZeta_of_one_lt_re (j.val / N) hs).congr_fun fun n ↦ ?_)).tsum_eq
+    ((hasSum_expZeta_of_one_lt_re ((j.val : ℝ) / (N : ℝ)) hs).congr_fun fun n ↦ ?_)).tsum_eq
   congr 1
   have hc := stdAddChar_coe (N := N) ((j.val : ℤ) * (n : ℕ))
   rw [Int.cast_mul, Int.cast_natCast, Int.cast_natCast, natCast_zmod_val] at hc

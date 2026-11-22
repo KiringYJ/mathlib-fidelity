@@ -18,7 +18,7 @@ These classes say that the corresponding operations are continuous:
 - `ContinuousInv G` says that `(·⁻¹)` is continuous on `G`;
 - `IsTopologicalGroup G` says that `(· * ·)` is continuous on `G × G`
   and `(·⁻¹)` is continuous on `G`;
-- `ContinuousDiv G` says that `(· / ·)` is continuous on `G`.
+- `ContinuousDiv G` says that group division is continuous on `G × G`.
 
 For groups, `ContinuousDiv G` is equivalent to `IsTopologicalGroup G`,
 but we use the additive version `ContinuousSub` for types like `NNReal`,
@@ -115,15 +115,19 @@ automatically holds for topological additive groups but it also holds, e.g., for
 class ContinuousSub (G : Type*) [TopologicalSpace G] [Sub G] : Prop where
   continuous_sub : Continuous fun p : G × G => p.1 - p.2
 
-/-- A typeclass saying that `p : G × G ↦ p.1 / p.2` is a continuous function. This property
+/-- A typeclass saying that group division is continuous. This property
 automatically holds for topological groups. Lemmas using this class have primes.
 The unprimed version is for `GroupWithZero`. -/
-@[to_additive existing]
-class ContinuousDiv (G : Type*) [TopologicalSpace G] [Div G] : Prop where
+class ContinuousDiv (G : Type*) [TopologicalSpace G] [Group G] : Prop where
   continuous_div' : Continuous fun p : G × G => p.1 / p.2
 
 -- see Note [lower instance priority]
-@[to_additive]
+instance (priority := 100) IsTopologicalAddGroup.to_continuousSub
+    {G : Type u} [TopologicalSpace G] [AddGroup G] [IsTopologicalAddGroup G] : ContinuousSub G where
+  continuous_sub := by
+    simp only [sub_eq_add_neg]
+    exact continuous_add.comp₂ continuous_fst <| continuous_neg.comp continuous_snd
+
 instance (priority := 100) IsTopologicalGroup.to_continuousDiv
     {G : Type u} [TopologicalSpace G] [Group G] [IsTopologicalGroup G] : ContinuousDiv G where
   continuous_div' := by
@@ -133,33 +137,73 @@ instance (priority := 100) IsTopologicalGroup.to_continuousDiv
 export ContinuousSub (continuous_sub)
 export ContinuousDiv (continuous_div')
 
+section ContinuousSub
+
+variable [TopologicalSpace G] [Sub G] [ContinuousSub G]
+
+theorem Filter.Tendsto.sub {f g : α → G} {l : Filter α} {a b : G} (hf : Tendsto f l (𝓝 a))
+    (hg : Tendsto g l (𝓝 b)) : Tendsto (fun x => f x - g x) l (𝓝 (a - b)) :=
+  (continuous_sub.tendsto (a, b)).comp (hf.prodMk_nhds hg)
+
+variable {f g : X → G} {s : Set X} {x : X}
+
+@[to_fun (attr := fun_prop)]
+nonrec theorem ContinuousAt.sub (hf : ContinuousAt f x) (hg : ContinuousAt g x) :
+    ContinuousAt (f - g) x :=
+  hf.sub hg
+
+@[to_fun (attr := fun_prop)]
+theorem ContinuousWithinAt.sub (hf : ContinuousWithinAt f s x) (hg : ContinuousWithinAt g s x) :
+    ContinuousWithinAt (f - g) s x :=
+  Filter.Tendsto.sub hf hg
+
+@[to_fun (attr := fun_prop)]
+theorem ContinuousOn.sub (hf : ContinuousOn f s) (hg : ContinuousOn g s) :
+    ContinuousOn (f - g) s := fun x hx => (hf x hx).sub (hg x hx)
+
+@[to_fun (attr := continuity, fun_prop)]
+theorem Continuous.sub (hf : Continuous f) (hg : Continuous g) : Continuous (f - g) :=
+  continuous_sub.comp₂ hf hg
+
+end ContinuousSub
+
 section ContinuousDiv
 
-variable [TopologicalSpace G] [Div G] [ContinuousDiv G]
+variable [TopologicalSpace G] [Group G] [ContinuousDiv G]
 
-@[to_additive sub]
 theorem Filter.Tendsto.div' {f g : α → G} {l : Filter α} {a b : G} (hf : Tendsto f l (𝓝 a))
     (hg : Tendsto g l (𝓝 b)) : Tendsto (fun x => f x / g x) l (𝓝 (a / b)) :=
   (continuous_div'.tendsto (a, b)).comp (hf.prodMk_nhds hg)
 
 variable {f g : X → G} {s : Set X} {x : X}
 
-@[to_additive (attr := to_fun (attr := fun_prop)) sub]
+@[to_fun (attr := fun_prop)]
 nonrec theorem ContinuousAt.div' (hf : ContinuousAt f x) (hg : ContinuousAt g x) :
-    ContinuousAt (f / g) x :=
-  hf.div' hg
+    ContinuousAt (f / g) x := by
+  simpa only [ContinuousAt, Pi.div_def] using hf.div' hg
 
-@[to_additive (attr := to_fun (attr := fun_prop)) sub]
+@[to_fun (attr := fun_prop)]
 theorem ContinuousWithinAt.div' (hf : ContinuousWithinAt f s x) (hg : ContinuousWithinAt g s x) :
-    ContinuousWithinAt (f / g) s x :=
-  Filter.Tendsto.div' hf hg
+    ContinuousWithinAt (f / g) s x := by
+  simpa only [ContinuousWithinAt, Pi.div_def] using Filter.Tendsto.div' hf hg
 
-@[to_additive (attr := to_fun (attr := fun_prop)) sub]
+@[to_fun (attr := fun_prop)]
 theorem ContinuousOn.div' (hf : ContinuousOn f s) (hg : ContinuousOn g s) :
     ContinuousOn (f / g) s := fun x hx => (hf x hx).div' (hg x hx)
 
-@[to_additive (attr := to_fun (attr := continuity, fun_prop)) sub]
-theorem Continuous.div' (hf : Continuous f) (hg : Continuous g) : Continuous (f / g) :=
-  continuous_div'.comp₂ hf hg
+@[to_fun (attr := continuity, fun_prop)]
+theorem Continuous.div' (hf : Continuous f) (hg : Continuous g) : Continuous (f / g) := by
+  simpa only [Pi.div_def] using continuous_div'.comp₂ hf hg
+
+/-- On a group, continuity of division implies continuity of inversion and multiplication. -/
+theorem IsTopologicalGroup.of_continuousDiv : IsTopologicalGroup G := by
+  have hinv : Continuous (fun x : G => x⁻¹) := by
+    simpa only [id_eq, div_eq_mul_inv, one_mul] using
+      (continuous_div'.comp₂ (continuous_const (y := (1 : G))) (continuous_id (X := G)))
+  exact {
+    continuous_inv := hinv
+    continuous_mul := by
+      simpa only [Function.comp_apply, div_eq_mul_inv, inv_inv] using
+        (continuous_div'.comp₂ (continuous_fst (X := G) (Y := G)) (hinv.comp continuous_snd)) }
 
 end ContinuousDiv

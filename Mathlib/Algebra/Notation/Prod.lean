@@ -105,29 +105,28 @@ theorem swap_inv (p : G × H) : p⁻¹.swap = p.swap⁻¹ := rfl
 
 end Inv
 
-section Div
+section Sub
 
-variable {G H : Type*} [Div G] [Div H]
+variable {G H : Type*} [Sub G] [Sub H]
 
-@[to_additive]
-instance instDiv : Div (G × H) :=
-  ⟨fun p q => ⟨p.1 / q.1, p.2 / q.2⟩⟩
+instance instSub : Sub (G × H) :=
+  ⟨fun p q => ⟨p.1 - q.1, p.2 - q.2⟩⟩
 
-@[to_additive (attr := simp)]
-theorem fst_div (a b : G × H) : (a / b).1 = a.1 / b.1 := rfl
+@[simp]
+theorem fst_sub (a b : G × H) : (a - b).1 = a.1 - b.1 := rfl
 
-@[to_additive (attr := simp)]
-theorem snd_div (a b : G × H) : (a / b).2 = a.2 / b.2 := rfl
+@[simp]
+theorem snd_sub (a b : G × H) : (a - b).2 = a.2 - b.2 := rfl
 
-@[to_additive (attr := simp)]
-theorem mk_div_mk (x₁ x₂ : G) (y₁ y₂ : H) : (x₁, y₁) / (x₂, y₂) = (x₁ / x₂, y₁ / y₂) := rfl
+@[simp]
+theorem mk_sub_mk (x₁ x₂ : G) (y₁ y₂ : H) : (x₁, y₁) - (x₂, y₂) = (x₁ - x₂, y₁ - y₂) := rfl
 
-@[to_additive (attr := simp)]
-theorem swap_div (a b : G × H) : (a / b).swap = a.swap / b.swap := rfl
+@[simp]
+theorem swap_sub (a b : G × H) : (a - b).swap = a.swap - b.swap := rfl
 
-@[to_additive] lemma div_def (a b : G × H) : a / b = (a.1 / b.1, a.2 / b.2) := rfl
+lemma sub_def (a b : G × H) : a - b = (a.1 - b.1, a.2 - b.2) := rfl
 
-end Div
+end Sub
 
 section Pow
 

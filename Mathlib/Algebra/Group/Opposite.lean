@@ -186,12 +186,29 @@ variable [DivInvMonoid α]
 
 end DivInvMonoid
 
-@[to_additive (attr := simp)]
-theorem unop_div [DivInvMonoid α] (x y : αᵐᵒᵖ) : unop (x / y) = (unop y)⁻¹ * unop x :=
-  rfl
+/-- Unwrapping a product with a right inverse moves the inverse to the left. -/
+@[to_additive /-- Unwrapping a sum with a negated right summand moves that summand to the left. -/]
+theorem unop_mul_inv [Mul α] [Inv α] (x y : αᵐᵒᵖ) :
+    unop (x * y⁻¹) = (unop y)⁻¹ * unop x := rfl
 
-@[to_additive (attr := simp)]
-theorem op_div [DivInvMonoid α] (x y : α) : op (x / y) = (op y)⁻¹ * op x := by simp [div_eq_mul_inv]
+@[to_additive]
+theorem op_mul_inv [Mul α] [Inv α] (x y : α) : op (x * y⁻¹) = (op y)⁻¹ * op x := rfl
+
+@[simp]
+theorem _root_.AddOpposite.unop_sub [SubNegMonoid α] (x y : αᵃᵒᵖ) :
+    AddOpposite.unop (x - y) = -AddOpposite.unop y + AddOpposite.unop x := rfl
+
+@[simp]
+theorem _root_.AddOpposite.op_sub [SubNegMonoid α] (x y : α) :
+    AddOpposite.op (x - y) = -AddOpposite.op y + AddOpposite.op x := by
+  simp [sub_eq_add_neg]
+
+@[simp]
+theorem unop_div [Group α] (x y : αᵐᵒᵖ) : unop (x / y) = (unop y)⁻¹ * unop x := rfl
+
+@[simp]
+theorem op_div [Group α] (x y : α) : op (x / y) = (op y)⁻¹ * op x := by
+  rw [div_eq_mul_inv, op_mul_inv]
 
 @[to_additive (attr := simp)]
 theorem semiconjBy_op [Mul α] {a x y : α} : SemiconjBy (op a) (op y) (op x) ↔ SemiconjBy a x y := by
@@ -288,17 +305,26 @@ instance instMonoid [Monoid α] : Monoid αᵃᵒᵖ :=
 instance instCommMonoid [CommMonoid α] : CommMonoid αᵃᵒᵖ :=
   unop_injective.commMonoid _ (by exact rfl) (fun _ _ => rfl) fun _ _ => rfl
 
-instance instDivInvMonoid [DivInvMonoid α] : DivInvMonoid αᵃᵒᵖ :=
-  unop_injective.divInvMonoid _ (by exact rfl) (fun _ _ => rfl) (fun _ => rfl) (fun _ _ => rfl)
-    (fun _ _ => rfl) fun _ _ => rfl
+instance instDivInvMonoid [DivInvMonoid α] : DivInvMonoid αᵃᵒᵖ where
+  toMonoid := instMonoid
+  toInv := instInv
+  zpow n x := op (unop x ^ n)
+  zpow_zero' _ := unop_injective <| zpow_zero _
+  zpow_succ' n x := unop_injective <| DivInvMonoid.zpow_succ' n (unop x)
+  zpow_neg' _ _ := unop_injective <| DivInvMonoid.zpow_neg' _ _
 
-instance instGroup [Group α] : Group αᵃᵒᵖ :=
-  unop_injective.group _ (by exact rfl) (fun _ _ => rfl) (fun _ => rfl) (fun _ _ => rfl)
-    (fun _ _ => rfl) fun _ _ => rfl
+instance instGroup [Group α] : Group αᵃᵒᵖ where
+  toDivInvMonoid := instDivInvMonoid
+  inv_mul_cancel x := unop_injective <| inv_mul_cancel (unop x)
 
-instance instCommGroup [CommGroup α] : CommGroup αᵃᵒᵖ :=
-  unop_injective.commGroup _ (by exact rfl) (fun _ _ => rfl) (fun _ => rfl) (fun _ _ => rfl)
-    (fun _ _ => rfl) fun _ _ => rfl
+instance instCommGroup [CommGroup α] : CommGroup αᵃᵒᵖ where
+  toGroup := instGroup
+  __ := instCommMonoid
+
+@[simp] lemma op_div [Group α] (a b : α) : op (a / b) = op a / op b := by simp [div_eq_mul_inv]
+
+@[simp] lemma unop_div [Group α] (a b : αᵃᵒᵖ) : unop (a / b) = unop a / unop b := by
+  simp [div_eq_mul_inv]
 
 @[to_additive]
 instance instMulTorsionFree [Monoid α] [IsMulTorsionFree α] : IsMulTorsionFree αᵐᵒᵖ :=

@@ -282,12 +282,13 @@ theorem modDivAux_spec :
   | _, _ + 1, _, _ => rfl
 
 theorem mod_add_div (m k : ℕ+) : (mod m k + k * div m k : ℕ) = m := by
-  let h₀ := Nat.mod_add_div (m : ℕ) (k : ℕ)
-  have : ¬((m : ℕ) % (k : ℕ) = 0 ∧ (m : ℕ) / (k : ℕ) = 0) := by
+  have h₀ := Nat.euclideanDiv_mul_add_mod m k k.ne_zero
+  rw [Nat.add_comm] at h₀
+  have : ¬((m : ℕ) % (k : ℕ) = 0 ∧ Nat.euclideanDiv m k k.ne_zero = 0) := by
     rintro ⟨hr, hq⟩
     rw [hr, hq, mul_zero, zero_add] at h₀
     exact (m.ne_zero h₀.symm).elim
-  have := modDivAux_spec k ((m : ℕ) % (k : ℕ)) ((m : ℕ) / (k : ℕ)) this
+  have := modDivAux_spec k ((m : ℕ) % (k : ℕ)) (Nat.euclideanDiv m k k.ne_zero) this
   exact this.trans h₀
 
 theorem div_add_mod (m k : ℕ+) : (k * div m k + mod m k : ℕ) = m :=

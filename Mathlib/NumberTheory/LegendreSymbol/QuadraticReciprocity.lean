@@ -105,7 +105,7 @@ open ZMod
 /-- **The Law of Quadratic Reciprocity**: if `p` and `q` are distinct odd primes, then
 `(q / p) * (p / q) = (-1)^((p-1)(q-1)/4)`. -/
 theorem quadratic_reciprocity (hp : p ≠ 2) (hq : q ≠ 2) (hpq : p ≠ q) :
-    legendreSym q p * legendreSym p q = (-1) ^ (p / 2 * (q / 2)) := by
+    legendreSym q p * legendreSym p q = (-1) ^ (p.euclideanDiv 2 * q.euclideanDiv 2) := by
   have hp₁ := (Prime.eq_two_or_odd <| @Fact.out p.Prime _).resolve_left hp
   have hq₁ := (Prime.eq_two_or_odd <| @Fact.out q.Prime _).resolve_left hq
   have hq₂ : ringChar (ZMod q) ≠ 2 := (ringChar_zmod_n q).substr hq
@@ -113,15 +113,16 @@ theorem quadratic_reciprocity (hp : p ≠ 2) (hq : q ≠ 2) (hpq : p ≠ q) :
     quadraticChar_odd_prime ((ringChar_zmod_n p).substr hp) hq ((ringChar_zmod_n p).substr hpq)
   rw [card p] at h
   have nc : ∀ n r : ℕ, ((n : ℤ) : ZMod r) = n := fun n r => by norm_cast
-  have nc' : (((-1) ^ (p / 2) : ℤ) : ZMod q) = (-1) ^ (p / 2) := by norm_cast
-  rw [legendreSym, legendreSym, nc, nc, h, map_mul, mul_rotate', mul_comm (p / 2), ← pow_two,
+  have nc' : (((-1) ^ p.euclideanDiv 2 : ℤ) : ZMod q) = (-1) ^ p.euclideanDiv 2 := by norm_cast
+  rw [legendreSym, legendreSym, nc, nc, h, map_mul, mul_rotate',
+    mul_comm (p.euclideanDiv 2), ← pow_two,
     quadraticChar_sq_one (prime_ne_zero q p hpq.symm), mul_one, pow_mul, χ₄_eq_neg_one_pow hp₁, nc',
     map_pow, quadraticChar_neg_one hq₂, card q, χ₄_eq_neg_one_pow hq₁]
 
 /-- The Law of Quadratic Reciprocity: if `p` and `q` are odd primes, then
 `(q / p) = (-1)^((p-1)(q-1)/4) * (p / q)`. -/
 theorem quadratic_reciprocity' (hp : p ≠ 2) (hq : q ≠ 2) :
-    legendreSym q p = (-1) ^ (p / 2 * (q / 2)) * legendreSym p q := by
+    legendreSym q p = (-1) ^ (p.euclideanDiv 2 * q.euclideanDiv 2) * legendreSym p q := by
   rcases eq_or_ne p q with rfl | h
   · rw [(eq_zero_iff p p).mpr (mod_cast natCast_self p), mul_zero]
   · have qr := congr_arg (· * legendreSym p q) (quadratic_reciprocity hp hq h)

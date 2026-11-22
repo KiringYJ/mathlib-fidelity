@@ -280,10 +280,10 @@ theorem lintegral_prod_lintegral_pow_le [Fintype ι] [∀ i, SigmaFinite (μ i)]
   have h1 : (0 : ℝ) < #ι - 1 := by linarith
   have h2 : 0 ≤ ((1 : ℝ) / (#ι - 1 : ℝ)) := by positivity
   have h3 : (#ι - 1 : ℝ) * ((1 : ℝ) / (#ι - 1 : ℝ)) = 1 := mul_div_cancel₀ _
-  have h4 : p = 1 + 1 / (↑#ι - 1) := by
+  have h4 : p = 1 + 1 / ((#ι : ℝ) - 1) := by
     calc
-      p = ((#ι - 1 : ℝ) + 1) / (#ι - 1) := by rw [sub_add_cancel]; exact hp.conjugate_eq
-      _ = 1 + 1 / (↑#ι - 1) := by rw [add_div, div_self]
+      p = ((#ι - 1 : ℝ) + 1) / ((#ι : ℝ) - 1) := by rw [sub_add_cancel]; exact hp.conjugate_eq
+      _ = 1 + 1 / ((#ι : ℝ) - 1) := by rw [add_div, div_self]
   simpa only [h3, sub_self, ENNReal.rpow_zero, one_mul, ← h4] using
     lintegral_mul_prod_lintegral_pow_le μ h2 h3.le hf
 
@@ -511,7 +511,7 @@ theorem eLpNorm_le_eLpNorm_fderiv_of_eq_inner {u : E → F'}
   have h0n : 0 < (n : ℝ) := hn.coe.pos
   have h2n : (0 : ℝ) < n - 1 := hn.coe.sub_one_pos
   have hnp : (0 : ℝ) < n - p := sub_pos.mpr (NNReal.coe_lt_coe.mpr h2p)
-  have hp'R : (p' : ℝ) = (p : ℝ) * n / (n - p) := by
+  have hp'R : (p' : ℝ) = (p : ℝ) * n / ((n : ℝ) - p) := by
     apply eq_div_iff.mpr
     have h := hp'
     field_simp at h
@@ -529,11 +529,11 @@ theorem eLpNorm_le_eLpNorm_fderiv_of_eq_inner {u : E → F'}
   have hpR : (1 : ℝ) < p := NNReal.coe_lt_coe.mpr hp
   let q := Real.conjExponent p hpR.ne'
   have hq : Real.HolderConjugate p q := .conjExponent hpR
-  have h2q : 1 / n' - 1 / q = 1 / p' := by
+  have h2q : 1 / (n' : ℝ) - 1 / q = 1 / (p' : ℝ) := by
     simp only [one_div₀, hp', ← hq.one_sub_inv, ← hn.coe.one_sub_inv, sub_sub_sub_cancel_left,
       NNReal.coe_natCast, n]
-  let γ : ℝ≥0 := .mk (p * (n - 1) / (n - p)) (by positivity)
-  have h0γ : (γ : ℝ) = p * (n - 1) / (n - p) := rfl
+  let γ : ℝ≥0 := .mk ((p : ℝ) * ((n : ℝ) - 1) / ((n : ℝ) - p)) (by positivity)
+  have h0γ : (γ : ℝ) = (p : ℝ) * ((n : ℝ) - 1) / ((n : ℝ) - p) := rfl
   have h1γ : 1 < (γ : ℝ) := by
     rwa [h0γ, one_lt_div hnp, mul_sub, mul_one, sub_lt_sub_iff_right, lt_mul_iff_one_lt_left]
     exact hn.coe.pos
@@ -542,7 +542,7 @@ theorem eLpNorm_le_eLpNorm_fderiv_of_eq_inner {u : E → F'}
     rw [NNReal.coe_mul, h0γ, hn.coe.conjugate_eq, hp'R]
     simp only [NNReal.coe_natCast]
     field
-  have h3γ : (γ - 1) * q = p' := by
+  have h3γ : ((γ : ℝ) - 1) * q = p' := by
     rw [h0γ, hq.conjugate_eq, hp'R]
     field
   have h4γ : (γ : ℝ) ≠ 0 := (zero_lt_one.trans h1γ).ne'
@@ -715,7 +715,7 @@ theorem eLpNorm_le_eLpNorm_fderiv_of_le [FiniteDimensional ℝ F]
       (NNReal.coe_pos.mpr (pos_iff_ne_zero.mpr hq0))).mp H
   have hqR : IsUnit (q : ℝ) := (NNReal.coe_ne_zero.mpr hq0).isUnit
   have hp'R : IsUnit (p' : ℝ) := (NNReal.coe_ne_zero.mpr hp'₀.ne').isUnit
-  set t := (μ s).toNNReal ^ (1 / q - 1 / p' : ℝ)
+  set t := (μ s).toNNReal ^ (1 / (q : ℝ) - 1 / (p' : ℝ))
   let C := SNormLESNormFDerivOfEqConst F μ p hn ((NNReal.coe_lt_coe.mpr h2p).ne)
   calc eLpNorm u q μ
       = eLpNorm u q (μ.restrict s) := by rw [eLpNorm_restrict_eq_of_support_subset h2u]
@@ -723,7 +723,7 @@ theorem eLpNorm_le_eLpNorm_fderiv_of_le [FiniteDimensional ℝ F]
         convert! eLpNorm_le_eLpNorm_mul_rpow_measure_univ hqp' hu.continuous.aestronglyMeasurable
         rw [ENNReal.coe_rpow_of_nonneg]
         · simp only [ENNReal.coe_toNNReal hs.measure_lt_top.ne, Measure.restrict_apply_univ,
-            one_div, one_div₀, ENNReal.toReal_inv (q : ℝ≥0∞) (ha := hqR),
+            ENNReal.one_div, one_div₀, ENNReal.toReal_inv (q : ℝ≥0∞) (ha := hqR),
             ENNReal.toReal_inv (p' : ℝ≥0∞) (ha := hp'R), ENNReal.coe_toReal]
         · simpa only [one_div₀, hp', sub_nonneg] using hpq
     _ = eLpNorm u p' μ * t := by rw [eLpNorm_restrict_eq_of_support_subset h2u]

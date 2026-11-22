@@ -784,7 +784,7 @@ lemma AddMonoidHom.continuous_of_isBounded_nhds_zero (f : G →+ H) (hs : s ∈ 
   obtain ⟨n, hn⟩ := exists_nat_gt (C / ε)
   have hnpos : 0 < (n : ℝ) := (div_pos hC₀ hε).trans hn
   have hn₀ : n ≠ 0 := by rintro rfl; simp at hnpos
-  refine ⟨δ / n, div_pos hδ hnpos, fun {x} hxδ => ?_⟩
+  refine ⟨δ / (n : ℝ), div_pos hδ hnpos, fun {x} hxδ => ?_⟩
   calc
     ‖f x‖
     _ = ‖(n : ℝ)⁻¹ • f (n • x)‖ := by simp [← Nat.cast_smul_eq_nsmul ℝ]

@@ -198,11 +198,13 @@ example {a b : ℚ} (ha : 0 < a) (hb : b ≠ 0) : a / b ≠ 0 := by positivity
 example {a b : ℚ} (ha : a ≠ 0) (hb : 0 < b) : a / b ≠ 0 := by positivity
 example {a b : ℚ} (ha : a ≠ 0) (hb : b ≠ 0) : a / b ≠ 0 := by positivity
 
-example {a b : ℤ} (ha : 0 < a) (hb : 0 < b) : 0 ≤ a / b := by positivity
-example {a : ℤ} (ha : 0 < a) : 0 < a / a := by positivity
-example {a b : ℤ} (ha : 0 < a) (hb : 0 ≤ b) : 0 ≤ a / b := by positivity
-example {a b : ℤ} (ha : 0 ≤ a) (hb : 0 < b) : 0 ≤ a / b := by positivity
-example {a b : ℤ} (ha : 0 ≤ a) (hb : 0 ≤ b) : 0 ≤ a / b := by positivity
+example {a b : ℤ} (ha : 0 < a) (hb : 0 < b) : 0 ≤ Int.euclideanDiv a b hb.ne' := by positivity
+example {a : ℤ} (ha : 0 < a) : 0 < Int.euclideanDiv a a ha.ne' := by positivity
+example {a b : ℤ} (ha : 0 < a) (hb : 0 ≤ b) (hb₀ : b ≠ 0) :
+    0 ≤ Int.euclideanDiv a b hb₀ := by positivity
+example {a b : ℤ} (ha : 0 ≤ a) (hb : 0 < b) : 0 ≤ Int.euclideanDiv a b hb.ne' := by positivity
+example {a b : ℤ} (ha : 0 ≤ a) (hb : 0 ≤ b) (hb₀ : b ≠ 0) :
+    0 ≤ Int.euclideanDiv a b hb₀ := by positivity
 
 example {a : ℚ} (ha : 0 < a) : 0 < a⁻¹ := by positivity
 example {a : ℚ} (ha : 0 ≤ a) (ha₀ : a ≠ 0) : 0 ≤ a⁻¹ := by positivity
@@ -245,7 +247,8 @@ example {a : ℤ} (ha : 3 < a) : 0 < a + a := by positivity
 
 example {a b : ℚ} (ha : 3 < a) (hb : 4 ≤ b) : 0 < 3 + a * b / 7 + b + 7 + 14 := by positivity
 
-example {a b : ℤ} (ha : 3 < a) (hb : 4 ≤ b) : 0 < 3 + a * b / 7 + b + 7 + 14 := by positivity
+example {a b : ℤ} (ha : 3 < a) (hb : 4 ≤ b) :
+    0 < 3 + Int.euclideanDiv (a * b) 7 + b + 7 + 14 := by positivity
 
 section
 variable {q : ℚ}
@@ -422,10 +425,10 @@ example (a : ℤ) : 0 ≤ a⁻ := by positivity
 end Abs
 
 -- -- test that the tactic can ignore arithmetic operations whose associated extension tactic
--- -- requires more typeclass assumptions than are available
+-- Probe the division handler without its algebraic assumptions.
 example {R : Type*} [Zero R] [Div R] [LinearOrder R] {a b c : R} (_h1 : 0 < a) (_h2 : 0 < b)
   (h3 : 0 < c) :
-  0 < max (a / b) c := by positivity
+  0 < max (HDiv.hDiv a b) c := by positivity
 
 example
     [Semiring α] [PartialOrder α] [IsOrderedRing α]

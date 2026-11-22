@@ -47,7 +47,7 @@ lemma ρ_sq : (ρ : ℂ) ^ 2 = -ρ - 1 := by
   simp [Complex.ext_iff, pow_two, ρ]
   constructor <;> nlinarith [Real.sq_sqrt (by norm_num : (0 : ℝ) ≤ 3)]
 
-lemma norm_ρ : ‖(ρ : ℂ)‖ = 1 := by norm_num [norm_def, normSq, ← pow_two, ρ, div_pow]
+lemma norm_ρ : ‖(ρ : ℂ)‖ = 1 := by norm_num [norm_def, normSq, ← pow_two, ρ, div_pow₀]
 
 instance : Inhabited ℍ := ⟨.I⟩
 

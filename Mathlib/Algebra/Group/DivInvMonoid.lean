@@ -121,11 +121,11 @@ instance ZPow.toPow {M : Type*} [ZPow M] : Pow M ℤ :=
 @[to_additive ofSMul]
 instance ZPow.ofPow {M : Type*} [Pow M ℤ] : ZPow M := ⟨fun n x ↦ Pow.pow x n⟩
 
-/-- A `DivInvMonoid` is a `Monoid` with operations `/` and `⁻¹` satisfying
-`div_eq_mul_inv : ∀ a b, a / b = a * b⁻¹`.
+/-- A `DivInvMonoid` is a `Monoid` with division and inversion satisfying
+`div_eq_mul_inv : ∀ a b, HDiv.hDiv a b = a * b⁻¹`.
 
 This deduplicates the name `div_eq_mul_inv`.
-The default for `div` is such that `a / b = a * b⁻¹` holds by definition.
+The default for `div` is such that `HDiv.hDiv a b = a * b⁻¹` holds by definition.
 
 Adding `div` as a field rather than defining `a / b := a * b⁻¹` allows us to
 avoid certain classes of unification failures, for example:
@@ -141,8 +141,8 @@ explanations on this.
 -/
 class DivInvMonoid (G : Type*) extends Monoid G, Inv G, Div G, ZPow G where
   protected div := DivInvMonoid.div'
-  /-- `a / b := a * b⁻¹` -/
-  protected div_eq_mul_inv : ∀ a b : G, a / b = a * b⁻¹ := by intros; rfl
+  /-- Division is multiplication by the inverse. -/
+  protected div_eq_mul_inv : ∀ a b : G, HDiv.hDiv a b = a * b⁻¹ := by intros; rfl
   zpow := zpowRec npowRec
   /-- `a ^ 0 = 1` -/
   protected zpow_zero' (a : G) : a ^ (0 : ℤ) = 1 := by intros; rfl
@@ -253,21 +253,10 @@ This is a duplicate of `DivInvMonoid.div_eq_mul_inv` ensuring that the types unf
 -/
 @[to_additive /-- Subtracting an element is the same as adding by its negative.
 This is a duplicate of `SubNegMonoid.sub_eq_add_neg` ensuring that the types unfold better. -/]
-theorem div_eq_mul_inv (a b : G) : a / b = a * b⁻¹ :=
+theorem div_eq_mul_inv (a b : G) : HDiv.hDiv a b = a * b⁻¹ :=
   DivInvMonoid.div_eq_mul_inv _ _
 
 alias division_def := div_eq_mul_inv
-
-@[to_additive]
-theorem inv_eq_one_div (x : G) : x⁻¹ = 1 / x := by rw [div_eq_mul_inv, one_mul]
-
-@[to_additive]
-theorem mul_div_assoc (a b c : G) : a * b / c = a * (b / c) := by
-  rw [div_eq_mul_inv, div_eq_mul_inv, mul_assoc]
-
-@[to_additive (attr := simp)]
-theorem one_div (a : G) : 1 / a = a⁻¹ :=
-  (inv_eq_one_div a).symm
 
 @[to_additive one_zsmul]
 lemma zpow_one (a : G) : a ^ (1 : ℤ) = a := by rw [zpow_ofNat, pow_one]
@@ -287,6 +276,19 @@ lemma zpow_neg_coe_of_pos (a : G) : ∀ {n : ℕ}, 0 < n → a ^ (-(n : ℤ)) = 
   | _ + 1, _ => zpow_negSucc _ _
 
 end DivInvMonoid
+
+section SubNegMonoid
+
+variable [SubNegMonoid G]
+
+theorem neg_eq_zero_sub (x : G) : -x = 0 - x := by rw [sub_eq_add_neg, zero_add]
+
+theorem add_sub_assoc (a b c : G) : a + b - c = a + (b - c) := by
+  rw [sub_eq_add_neg, sub_eq_add_neg, add_assoc]
+
+@[simp] theorem zero_sub (a : G) : 0 - a = -a := (neg_eq_zero_sub a).symm
+
+end SubNegMonoid
 
 section InvOneClass
 

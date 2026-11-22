@@ -36,8 +36,8 @@ theorem find_specified_factor {p : ℕ} (hp : Nat.Prime p) (hp2 : p ≠ 2) (hp3 
   -- Nat arithmetic needed to deal with powers
   have hp' : p - 1 = p - 2 + 1 := Eq.symm <| Nat.succ_pred <| (tsub_pos_of_lt hp.one_lt).ne'
   -- Thus it suffices to show that `6 * a (p - 2) ≡ 0 [ZMOD p]`
-  rw [← Int.modEq_zero_iff_dvd, ← Int.ediv_one p, ← Nat.cast_one, ← this]
-  refine Int.ModEq.cancel_left_div_gcd (Nat.cast_pos.2 hp.pos) ?_
+  apply (Int.isCoprime_iff_gcd_eq_one.2 this).dvd_of_dvd_mul_left
+  rw [← Int.modEq_zero_iff_dvd]
   calc
     6 * a (p - 2) = 3 * 2 ^ (p - 1) + 2 * 3 ^ (p - 1) + (2 * 3) ^ (p - 1) - 6 := by
       simp only [a, hp', pow_succ']; ring

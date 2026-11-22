@@ -30,7 +30,7 @@ open Set Filter Finset
 
 open scoped Real
 
-theorem cos_eq_zero_iff {θ : ℂ} : cos θ = 0 ↔ ∃ k : ℤ, θ = (2 * k + 1) * π / 2 := by
+theorem cos_eq_zero_iff {θ : ℂ} : cos θ = 0 ↔ ∃ k : ℤ, θ = (2 * k + 1) * (π : ℂ) / 2 := by
   have h : (exp (θ * I) + exp (-θ * I)) / 2 = 0 ↔ exp (2 * θ * I) = -1 := by
     rw [div_eq_iff, zero_mul, add_eq_zero_iff_eq_neg, neg_eq_neg_one_mul,
       ← div_eq_iff (hb := (exp_ne_zero (-θ * I)).isUnit), ← exp_sub]
@@ -40,7 +40,7 @@ theorem cos_eq_zero_iff {θ : ℂ} : cos θ = 0 ↔ ∃ k : ℤ, θ = (2 * k + 1
   refine (iff_of_eq <| congr_arg _ ?_).trans (mul_right_inj' <| mul_ne_zero two_ne_zero I_ne_zero)
   ring
 
-theorem cos_ne_zero_iff {θ : ℂ} : cos θ ≠ 0 ↔ ∀ k : ℤ, θ ≠ (2 * k + 1) * π / 2 := by
+theorem cos_ne_zero_iff {θ : ℂ} : cos θ ≠ 0 ↔ ∀ k : ℤ, θ ≠ (2 * k + 1) * (π : ℂ) / 2 := by
   contrapose!; exact cos_eq_zero_iff
 
 theorem sin_eq_zero_iff {θ : ℂ} : sin θ = 0 ↔ ∃ k : ℤ, θ = k * π := by
@@ -93,11 +93,11 @@ theorem cos_eq_neg_one_iff {x : ℂ} : cos x = -1 ↔ ∃ k : ℤ, π + k * (2 *
   rw [← neg_eq_iff_eq_neg, ← cos_sub_pi, cos_eq_one_iff]
   simp only [eq_sub_iff_add_eq']
 
-theorem sin_eq_one_iff {x : ℂ} : sin x = 1 ↔ ∃ k : ℤ, π / 2 + k * (2 * π) = x := by
+theorem sin_eq_one_iff {x : ℂ} : sin x = 1 ↔ ∃ k : ℤ, (π : ℂ) / 2 + k * (2 * π) = x := by
   rw [← cos_sub_pi_div_two, cos_eq_one_iff]
   simp only [eq_sub_iff_add_eq']
 
-theorem sin_eq_neg_one_iff {x : ℂ} : sin x = -1 ↔ ∃ k : ℤ, -(π / 2) + k * (2 * π) = x := by
+theorem sin_eq_neg_one_iff {x : ℂ} : sin x = -1 ↔ ∃ k : ℤ, -((π : ℂ) / 2) + k * (2 * π) = x := by
   rw [← neg_eq_iff_eq_neg, ← cos_add_pi_div_two, cos_eq_one_iff]
   simp only [← sub_eq_neg_add, sub_eq_iff_eq_add]
 
@@ -250,7 +250,7 @@ theorem range_cos : Set.range cos = Set.univ :=
 theorem sin_surjective : Function.Surjective sin := by
   intro x
   rcases cos_surjective x with ⟨z, rfl⟩
-  exact ⟨z + π / 2, sin_add_pi_div_two z⟩
+  exact ⟨z + (π : ℂ) / 2, sin_add_pi_div_two z⟩
 
 @[simp]
 theorem range_sin : Set.range sin = Set.univ :=

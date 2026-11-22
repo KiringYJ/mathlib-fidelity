@@ -79,7 +79,7 @@ theorem rotation_ne_conjLIE (a : Circle) : rotation a ≠ conjLIE := by
 unit circle. -/
 @[simps]
 def rotationOf (e : ℂ ≃ₗᵢ[ℝ] ℂ) : Circle :=
-  ⟨e 1 / ‖e 1‖, by simp [Submonoid.unitSphere]⟩
+  ⟨e 1 / (‖e 1‖ : ℂ), by simp [Submonoid.unitSphere]⟩
 
 @[simp]
 theorem rotationOf_rotation (a : Circle) : rotationOf (rotation a) = a :=

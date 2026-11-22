@@ -178,7 +178,7 @@ private lemma hasSum_Λ_of_qExpansion_isBigO {r : ℝ}
         _ = 2 * π * I ^ 2 * t := by ring
         _ = _ := by rw [I_sq]; ring
     have hq : Function.Periodic.qParam (cuspWidth Γ) (ofComplex (I * t)) hh.ne' =
-        cexp (-(2 * π * t) / (cuspWidth Γ : ℂ)) := by
+        cexp (-((2 : ℂ) * π * t) / (cuspWidth Γ : ℂ)) := by
       rw [Function.Periodic.qParam, ht_coe, hi]
     have := hasSum_qExpansion f hh hΓ (ofComplex (I * t))
     convert! hasSum_ite_sub_hasSum this 0 using 2 with n
@@ -343,12 +343,12 @@ lemma Λ_eq_mellin : (fun s ↦ Λ hk f ⟨s, regular hk f s⟩) =
   funext s
   exact (isStrongFEPair hk f).Λ_eq ⟨s, regular hk f s⟩
 
-lemma hasSum_Λ (hk : 0 < k) (hs : k / 2 + 1 < s.re) :
+lemma hasSum_Λ (hk : 0 < k) (hs : (k : ℝ) / 2 + 1 < s.re) :
     HasSum (fun n : ℕ+ ↦ Checked.div
       (π ^ (-s) * Gamma s * (qExpansion (cuspWidth Γ) f Γ.strictWidthInfty_pos.ne').coeff n)
       ((mellinFrequency Γ n : ℂ) ^ s) (mellinFrequency_cpow_isUnit Γ n s))
       (Λ hk f ⟨s, regular hk f s⟩) := by
-  refine hasSum_Λ_of_qExpansion_isBigO hk f (r := k / 2)
+  refine hasSum_Λ_of_qExpansion_isBigO hk f (r := (k : ℝ) / 2)
     (by linarith [show (0 : ℝ) < k from mod_cast hk]) hs _ ?_ ?_
   · simpa only [ModularForm.Λ, (isStrongFEPair hk f).hf₀, sub_zero] using
       (isStrongFEPair hk f).Λ_eq ⟨s, regular hk f s⟩
@@ -364,7 +364,7 @@ lemma differentiable_L : Differentiable ℂ (fun s ↦ L hk f ⟨s, (regular hk 
   rw [hL]
   exact (differentiable_reciprocalGammaℂ.const_mul _).mul (weakFEPair hk f).differentiable_Λ₀
 
-theorem hasSum_L (hs : k / 2 + 1 < s.re) :
+theorem hasSum_L (hs : (k : ℝ) / 2 + 1 < s.re) :
     HasSum (fun n : ℕ+ ↦ Checked.div
       ((qExpansion (cuspWidth Γ) f Γ.strictWidthInfty_pos.ne').coeff n) (((n : ℕ) : ℂ) ^ s)
       (isUnit_pnat_cpow n s)) ((cuspWidth Γ : ℂ) ^ (-s) * L hk f ⟨s, (regular hk f s).2⟩) :=

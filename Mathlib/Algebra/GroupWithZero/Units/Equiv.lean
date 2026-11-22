@@ -54,7 +54,7 @@ theorem _root_.mulRight_bijective₀ (a : G₀) (ha : a ≠ 0) : Function.Biject
 underlying type. -/
 @[simps! +simpRhs]
 noncomputable def divRight₀ (a : G₀) (ha : a ≠ 0) : Perm G₀ where
-  toFun := (· / a)
+  toFun x := Checked.div x a ha.isUnit
   invFun := (· * a)
   left_inv _ := by simp
   right_inv _ := by simp

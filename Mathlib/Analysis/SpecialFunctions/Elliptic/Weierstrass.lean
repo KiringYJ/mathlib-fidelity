@@ -246,10 +246,10 @@ lemma weierstrassP_bound (r : ℝ) (hr : 0 < r) (s : ℂ) (hs : ‖s‖ < r) (l 
       subst s
       linarith) :
     ‖1 / (s - l) ^ 2 - 1 / l ^ 2‖ ≤ 10 * r * ‖l‖ ^ (-3 : ℝ) := by
-  have : s ≠ ↑l := by rintro rfl; linarith
+  have : s ≠ l := by rintro rfl; linarith
   have hlpos : 0 < ‖l‖ := by linarith
   calc
-    _ = ‖(↑l ^ 2 - (s - ↑l) ^ 2) / ((s - ↑l) ^ 2 * ↑l ^ 2)‖ := by
+    _ = ‖(l ^ 2 - (s - l) ^ 2) / ((s - l) ^ 2 * l ^ 2)‖ := by
       rw [div_sub_div, one_mul, mul_one]
     _ = ‖l ^ 2 - (s - l) ^ 2‖ / (‖s - l‖ ^ 2 * ‖l‖ ^ 2) := by simp
     _ ≤ ‖l ^ 2 - (s - l) ^ 2‖ / ((‖l‖ / 2) ^ 2 * ‖l‖ ^ 2) := by

@@ -139,7 +139,7 @@ variable {G : Type*} [Group G] [TopologicalSpace G] [IsTopologicalGroup G]
 
 @[to_additive]
 instance : IsTopologicalTorsor G where
-  continuous_sdiv := by simp only [sdiv_eq_div]; fun_prop
+  continuous_sdiv := by simp only [sdiv_eq_div, div_eq_mul_inv]; fun_prop
 
 end Group
 

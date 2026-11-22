@@ -193,7 +193,9 @@ theorem symm_inv {G} [SigmaAlgebra G] [InvolutiveInv G] [MeasurableInv G] :
 @[to_additive /-- `equiv.subRight` as a `MeasurableEquiv` -/]
 def divRight [MeasurableMul G] (g : G) : G ≃ᵐ G where
   toEquiv := Equiv.divRight g
-  measurable_toFun := measurable_div_const' g
+  measurable_toFun := by
+    change Measurable fun x ↦ x / g
+    simpa only [div_eq_mul_inv] using measurable_mul_const g⁻¹
   measurable_invFun := measurable_mul_const g
 
 @[to_additive]
@@ -205,7 +207,9 @@ lemma _root_.measurableEmbedding_divRight [MeasurableMul G] (g : G) :
 @[to_additive /-- `equiv.subLeft` as a `MeasurableEquiv` -/]
 def divLeft [MeasurableMul G] [MeasurableInv G] (g : G) : G ≃ᵐ G where
   toEquiv := Equiv.divLeft g
-  measurable_toFun := measurable_id.const_div g
+  measurable_toFun := by
+    change Measurable fun x ↦ g / x
+    simpa only [div_eq_mul_inv] using measurable_inv.const_mul g
   measurable_invFun := measurable_inv.mul_const g
 
 @[to_additive]

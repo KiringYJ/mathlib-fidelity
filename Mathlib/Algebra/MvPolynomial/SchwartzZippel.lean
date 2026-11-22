@@ -75,8 +75,8 @@ lemma schwartz_zippel_sup_sum :
       (hS : ∀ i, (S i).Nonempty),
       haveI (i : Fin n) : NeZero (#(S i) : ℚ≥0) := ⟨Nat.cast_ne_zero.2 (hS i).card_ne_zero⟩
       haveI : NeZero (∏ i, (#(S i) : ℚ≥0)) := ⟨Finset.prod_ne_zero_iff.2 fun i _ ↦ NeZero.ne _⟩
-      #{x ∈ S ^^ n | eval x p = 0} / ∏ i, (#(S i) : ℚ≥0) ≤
-        p.support.sup fun s ↦ ∑ i, (s i / #(S i) : ℚ≥0)
+      (#{x ∈ S ^^ n | eval x p = 0} : ℚ≥0) / ∏ i, (#(S i) : ℚ≥0) ≤
+        p.support.sup fun s ↦ ∑ i, ((s i : ℚ≥0) / (#(S i) : ℚ≥0))
   | 0, p, hp, S, hS => by
     -- Because `p` is a polynomial over zero variables, it is constant.
     rw [p.eq_C_of_isEmpty] at *
@@ -97,41 +97,43 @@ lemma schwartz_zippel_sup_sum :
     have hpₖ₀ : pₖ ≠ 0 := by simpa [pₖ, k]
     calc
       -- We split the set of possible zeros into a union of two cases.
-      #{x ∈ S ^^ (n + 1) | eval x p = 0} / ∏ i, (#(S i) : ℚ≥0)
+      (#{x ∈ S ^^ (n + 1) | eval x p = 0} : ℚ≥0) / ∏ i, (#(S i) : ℚ≥0)
           -- In the first case, `pₖ` evaluates to `0`.
-        = #{x ∈ S ^^ (n + 1) | eval x p = 0 ∧ eval (tail x) pₖ = 0} / ∏ i, (#(S i) : ℚ≥0)
+        = (#{x ∈ S ^^ (n + 1) | eval x p = 0 ∧ eval (tail x) pₖ = 0} : ℚ≥0) / ∏ i, (#(S i) : ℚ≥0)
           -- In the second case, `pₖ` does not evaluate to `0`.
-          + #{x ∈ S ^^ (n + 1) | eval x p = 0 ∧ eval (tail x) pₖ ≠ 0} / ∏ i, (#(S i) : ℚ≥0) := by
+          + (#{x ∈ S ^^ (n + 1) | eval x p = 0 ∧ eval (tail x) pₖ ≠ 0} : ℚ≥0) /
+              ∏ i, (#(S i) : ℚ≥0) := by
         rw [← add_div, ← Nat.cast_add, ← card_union_add_card_inter, filter_union_right,
           ← filter_and]
         simp [← and_or_left, em, and_and_and_comm]
-      _ ≤ (pₖ.support.sup fun s ↦ ∑ i, (s i / #(S i.succ) : ℚ≥0)) + p.degreeOf 0 / #(S 0) := ?_
-      _ ≤ p.support.sup fun s ↦ ∑ i, (s i / #(S i) : ℚ≥0) := ?_
+      _ ≤ (pₖ.support.sup fun s ↦ ∑ i, ((s i : ℚ≥0) / (#(S i.succ) : ℚ≥0))) +
+        (p.degreeOf 0 : ℚ≥0) / (#(S 0) : ℚ≥0) := ?_
+      _ ≤ p.support.sup fun s ↦ ∑ i, ((s i : ℚ≥0) / (#(S i) : ℚ≥0)) := ?_
     · gcongr ?_ + ?_
       · -- We bound the size of the first set by induction
         calc
-          #{x ∈ S ^^ (n + 1) | eval x p = 0 ∧ eval (tail x) pₖ = 0} / ∏ i, (#(S i) : ℚ≥0)
-            ≤ #{x ∈ S ^^ (n + 1) | eval (tail x) pₖ = 0} / ∏ i, (#(S i) : ℚ≥0) := by
+          (#{x ∈ S ^^ (n + 1) | eval x p = 0 ∧ eval (tail x) pₖ = 0} : ℚ≥0) / ∏ i, (#(S i) : ℚ≥0)
+            ≤ (#{x ∈ S ^^ (n + 1) | eval (tail x) pₖ = 0} : ℚ≥0) / ∏ i, (#(S i) : ℚ≥0) := by
             gcongr with x; exact And.right
-          _ = #(S 0) * #{xₜ ∈ tail S ^^ n | eval xₜ pₖ = 0}
-              / (#(S 0) * (∏ i, #(S (.succ i)) : ℚ≥0)) := by
+          _ = (#(S 0) : ℚ≥0) * (#{xₜ ∈ tail S ^^ n | eval xₜ pₖ = 0} : ℚ≥0)
+              / ((#(S 0) : ℚ≥0) * (∏ i, #(S (.succ i)) : ℚ≥0)) := by
             rw [card_consEquiv_filter_piFinset S fun x ↦ eval x pₖ = 0]
             simp only [prod_univ_succ, tail_def, Nat.cast_mul]
-          _ = #{xₜ ∈ tail S ^^ n | eval xₜ pₖ = 0} / ∏ i, (#(S (.succ i)) : ℚ≥0) :=
+          _ = (#{xₜ ∈ tail S ^^ n | eval xₜ pₖ = 0} : ℚ≥0) / ∏ i, (#(S (.succ i)) : ℚ≥0) :=
             mul_div_mul_left _ _
-          _ ≤ (pₖ.support.sup fun s ↦ ∑ i, (s i / #(S (.succ i)) : ℚ≥0)) :=
+          _ ≤ (pₖ.support.sup fun s ↦ ∑ i, ((s i : ℚ≥0) / (#(S (.succ i)) : ℚ≥0))) :=
             schwartz_zippel_sup_sum hpₖ₀ _ fun i ↦ hS i.succ
       · -- We bound the second set by noting that if `x` is in it, then `x₀` is the root of
         -- the univariate polynomial`pₓ` obtained by evaluating each (multivariate polynomial)
         -- coefficient at `xₜ`. Since `pₓ` has degree `k`, there are at most `k` such `x₀` for
         -- each `xₜ`, which gives the result.
         calc
-          #{x ∈ S ^^ (n + 1) | eval x p = 0 ∧ eval (tail x) pₖ ≠ 0} / ∏ i, (#(S i) : ℚ≥0)
-            ≤ ↑(p.degreeOf 0 * ∏ i, #(S (.succ i))) / ∏ i, (#(S i) : ℚ≥0) := ?_
-          _ = p.degreeOf 0 * (∏ i, (#(S (.succ i)) : ℚ≥0)) /
-                (#(S 0) * ∏ i, (#(S (.succ i)) : ℚ≥0)) := by
+          (#{x ∈ S ^^ (n + 1) | eval x p = 0 ∧ eval (tail x) pₖ ≠ 0} : ℚ≥0) / ∏ i, (#(S i) : ℚ≥0)
+            ≤ ((p.degreeOf 0 * ∏ i, #(S (.succ i)) : ℕ) : ℚ≥0) / ∏ i, (#(S i) : ℚ≥0) := ?_
+          _ = (p.degreeOf 0 : ℚ≥0) * (∏ i, (#(S (.succ i)) : ℚ≥0)) /
+                ((#(S 0) : ℚ≥0) * ∏ i, (#(S (.succ i)) : ℚ≥0)) := by
             simp only [Nat.cast_mul, Nat.cast_prod, prod_univ_succ]
-          _ = (p.degreeOf 0 / #(S 0) : ℚ≥0) := mul_div_mul_right _ _
+          _ = ((p.degreeOf 0 : ℚ≥0) / (#(S 0) : ℚ≥0)) := mul_div_mul_right _ _
         gcongr
         calc
           #{x ∈ S ^^ (n + 1) | eval x p = 0 ∧ eval (tail x) pₖ ≠ 0}
@@ -189,11 +191,13 @@ lemma schwartz_zippel_sum_degreeOf {n} {p : MvPolynomial (Fin n) R} (hp : p ≠ 
     (S : Fin n → Finset R) (hS : ∀ i, (S i).Nonempty) :
     haveI (i : Fin n) : NeZero (#(S i) : ℚ≥0) := ⟨Nat.cast_ne_zero.2 (hS i).card_ne_zero⟩
     haveI : NeZero (∏ i, (#(S i) : ℚ≥0)) := ⟨Finset.prod_ne_zero_iff.2 fun i _ ↦ NeZero.ne _⟩
-    #{x ∈ S ^^ n | eval x p = 0} / ∏ i, (#(S i) : ℚ≥0) ≤ ∑ i, (p.degreeOf i / #(S i) : ℚ≥0) := by
+    (#{x ∈ S ^^ n | eval x p = 0} : ℚ≥0) /
+              ∏ i, (#(S i) : ℚ≥0) ≤
+      ∑ i, ((p.degreeOf i : ℚ≥0) / (#(S i) : ℚ≥0)) := by
   have (i : Fin n) : NeZero (#(S i) : ℚ≥0) := ⟨Nat.cast_ne_zero.2 (hS i).card_ne_zero⟩
   calc
-    _ ≤ p.support.sup fun s ↦ ∑ i, (s i / #(S i) : ℚ≥0) := schwartz_zippel_sup_sum hp S hS
-    _ ≤ ∑ i, (p.degreeOf i / #(S i) : ℚ≥0) := Finset.sup_le fun s hs ↦ by
+    _ ≤ p.support.sup fun s ↦ ∑ i, ((s i : ℚ≥0) / (#(S i) : ℚ≥0)) := schwartz_zippel_sup_sum hp S hS
+    _ ≤ ∑ i, ((p.degreeOf i : ℚ≥0) / (#(S i) : ℚ≥0)) := Finset.sup_le fun s hs ↦ by
       gcongr with i; exact monomial_le_degreeOf i hs
 
 /-- The **Schwartz-Zippel lemma**
@@ -205,13 +209,15 @@ domain is bounded by the degree of `p` over `#S`. This version presents this lem
 lemma schwartz_zippel_totalDegree {n} {p : MvPolynomial (Fin n) R} (hp : p ≠ 0) (S : Finset R)
     (hS : S.Nonempty) :
     haveI : NeZero (#S : ℚ≥0) := ⟨Nat.cast_ne_zero.2 hS.card_ne_zero⟩
-    #{f ∈ piFinset fun _ ↦ S | eval f p = 0} / (#S ^ n : ℚ≥0) ≤ p.totalDegree / #S := by
+    (#{f ∈ piFinset fun _ ↦ S | eval f p = 0} : ℚ≥0) / ((#S : ℚ≥0) ^ n) ≤
+      (p.totalDegree : ℚ≥0) / (#S : ℚ≥0) := by
   have : NeZero (#S : ℚ≥0) := ⟨Nat.cast_ne_zero.2 hS.card_ne_zero⟩
   have : NeZero (∏ _i : Fin n, (#S : ℚ≥0)) := ⟨Finset.prod_ne_zero_iff.2 fun i _ ↦ NeZero.ne _⟩
   calc
-    _ = #{f ∈ piFinset fun _ ↦ S | eval f p = 0} / (∏ i : Fin n, #S : ℚ≥0) := by simp
-    _ ≤ p.support.sup fun s ↦ ∑ i, (s i / #S : ℚ≥0) := schwartz_zippel_sup_sum hp _ fun _ ↦ hS
-    _ = p.totalDegree / #S := by
+    _ = (#{f ∈ piFinset fun _ ↦ S | eval f p = 0} : ℚ≥0) / (∏ _i : Fin n, (#S : ℚ≥0)) := by simp
+    _ ≤ p.support.sup fun s ↦ ∑ i, ((s i : ℚ≥0) / (#S : ℚ≥0)) :=
+      schwartz_zippel_sup_sum hp _ fun _ ↦ hS
+    _ = (p.totalDegree : ℚ≥0) / (#S : ℚ≥0) := by
       simp_rw [totalDegree, Nat.cast_finsetSup]
       rw [sup_div₀ (by positivity)]
       simp [div_eq_mul_inv₀, ← Finset.sum_mul, Finsupp.sum_fintype]

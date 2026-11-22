@@ -119,21 +119,25 @@ theorem tprod_one_sub_pow_eq_powMulProdOneSubPow (j : ℕ) {x : R} (hx : IsTopol
     (hsum : ∀ k, Summable (powMulProdOneSubPow k · x))
     (h : ∀ k, Multipliable (fun n ↦ 1 - x ^ (n + k + 1))) :
     ∏' n, (1 - x ^ (n + 1)) = ∑ k ∈ Finset.range (j + 1),
-      (-1) ^ k * (x ^ (k * (3 * k + 1) / 2) - x ^ ((k + 1) * (3 * k + 2) / 2))
-      + (-1) ^ (j + 1) * x ^ ((j + 1) * (3 * j + 4) / 2) * ∑' n, powMulProdOneSubPow j n x := by
+      (-1) ^ k * (x ^ Nat.euclideanDiv (k * (3 * k + 1)) 2 -
+        x ^ Nat.euclideanDiv ((k + 1) * (3 * k + 2)) 2)
+      + (-1) ^ (j + 1) * x ^ Nat.euclideanDiv ((j + 1) * (3 * j + 4)) 2 *
+        ∑' n, powMulProdOneSubPow j n x := by
   induction j with
   | zero =>
     simp [tprod_one_sub_pow_eq_powMulProdOneSubPow_zero hsum h, powMulProdOneSubPow,
-      ← sub_eq_add_neg]
+      ← sub_eq_add_neg, Nat.euclideanDiv_eq_core]
   | succ n ih =>
     rw [ih, tsum_powMulProdOneSubPow _ hx hsum h, Finset.sum_range_succ _ (n + 1)]
-    have h (n) : (n + 1 + 1) * (3 * (n + 1) + 2) / 2 =
-        (n + 1) * (3 * n + 4) / 2 + (2 * n + 3) := by
+    have h (n) : Nat.euclideanDiv ((n + 1 + 1) * (3 * (n + 1) + 2)) 2 =
+        Nat.euclideanDiv ((n + 1) * (3 * n + 4)) 2 + (2 * n + 3) := by
+      simp only [Nat.euclideanDiv_eq_core]
       rw [← Nat.add_mul_div_left _ _ (by simp)]
       ring_nf
     simp_rw [h]
-    have h (n) : (n + 1 + 1) * (3 * (n + 1) + 4) / 2 =
-        (n + 1) * (3 * n + 4) / 2 + (3 * n + 5) := by
+    have h (n) : Nat.euclideanDiv ((n + 1 + 1) * (3 * (n + 1) + 4)) 2 =
+        Nat.euclideanDiv ((n + 1) * (3 * n + 4)) 2 + (3 * n + 5) := by
+      simp only [Nat.euclideanDiv_eq_core]
       rw [← Nat.add_mul_div_left _ _ (by simp)]
       ring_nf
     simp_rw [h]
@@ -149,7 +153,7 @@ public theorem tprod_one_sub_pow {x : R} (hx : IsTopologicallyNilpotent x)
     (hlhs : ∀ k, Multipliable (fun n ↦ 1 - x ^ (n + k + 1)))
     (hrhs : Summable fun k : ℕ ↦
       (-1) ^ k * (x ^ pentagonal (-k) - x ^ pentagonal (k + 1)))
-    (htail : Tendsto (fun k ↦ (-1) ^ (k + 1) * x ^ ((k + 1) * (3 * k + 4) / 2) *
+    (htail : Tendsto (fun k ↦ (-1) ^ (k + 1) * x ^ (Nat.euclideanDiv ((k + 1) * (3 * k + 4)) 2) *
       ∑' (n : ℕ), x ^ ((k + 1) * n) * ∏ i ∈ Finset.range (n + 1), (1 - x ^ (k + i + 1)))
       atTop (𝓝 0)) :
     ∏' n, (1 - x ^ (n + 1)) =
@@ -159,8 +163,18 @@ public theorem tprod_one_sub_pow {x : R} (hx : IsTopologicallyNilpotent x)
   refine (HasSum.tsum_eq ?_).symm
   rw [hrhs.hasSum_iff_tendsto_nat, (map_add_atTop_eq_nat 1).symm]
   apply tendsto_map'
-  have h1 (k : ℕ) : pentagonal (k + 1) = ((k + 1) * (3 * k + 2) / 2) := by grind [pentagonal_def]
-  have h2 (k : ℕ) : pentagonal (-k) = (k * (3 * k + 1) / 2) := by grind [pentagonal_neg]
+  have h1 (k : ℕ) : pentagonal (k + 1) = (Nat.euclideanDiv ((k + 1) * (3 * k + 2)) 2) := by
+    symm
+    apply Nat.euclideanDiv_eq_of_remainder (r := 0) (by decide) _ (by decide)
+    rw [Nat.add_zero]
+    have h := two_mul_natCast_pentagonal ((k : ℤ) + 1)
+    rw [show 3 * ((k : ℤ) + 1) - 1 = 3 * k + 2 by ring] at h
+    exact_mod_cast h.symm
+  have h2 (k : ℕ) : pentagonal (-k) = (Nat.euclideanDiv (k * (3 * k + 1)) 2) := by
+    symm
+    apply Nat.euclideanDiv_eq_of_remainder (r := 0) (by decide) _ (by decide)
+    rw [Nat.add_zero]
+    exact_mod_cast (two_mul_natCast_pentagonal_neg (k : ℤ)).symm
   simp_rw [h1, h2, Function.comp_def, ← h]
   rw [← tendsto_sub_nhds_zero_iff]
   simpa [powMulProdOneSubPow] using htail.neg

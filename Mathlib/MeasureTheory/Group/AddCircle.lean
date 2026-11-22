@@ -52,13 +52,14 @@ theorem closedBall_ae_eq_ball {x : AddCircle T} {ε : ℝ} : closedBall x ε =�
 any set `I` that is almost equal to a ball of radius `T / 2n` is a fundamental domain for the action
 of `G` on `AddCircle T` by left addition. -/
 theorem isAddFundamentalDomain_of_ae_ball (I : Set <| AddCircle T) (u x : AddCircle T)
-    (hu : IsOfFinAddOrder u) (hI : I =ᵐ[volume] ball x (T / (2 * addOrderOf u))) :
+    (hu : IsOfFinAddOrder u) (hI : I =ᵐ[volume] ball x (T / (2 * (addOrderOf u : ℝ)))) :
     IsAddFundamentalDomain (AddSubgroup.zmultiples u) I := by
   set G := AddSubgroup.zmultiples u
   set n := addOrderOf u
   have hn : 1 ≤ (n : ℝ) := by norm_cast; linarith [hu.addOrderOf_pos]
-  set B := ball x (T / (2 * n))
-  have h_two : 2 * (T / (2 * (n : ℝ))) = T / n := by
+  have hn₀ : (n : ℝ) ≠ 0 := (zero_lt_one.trans_le hn).ne'
+  set B := ball x (T / (2 * (n : ℝ)))
+  have h_two : 2 * (T / (2 * (n : ℝ))) = T / (n : ℝ) := by
     rw [← mul_div_assoc₀, mul_div_mul_left]
   refine IsAddFundamentalDomain.mk_of_measure_univ_le ?_ ?_ ?_ ?_
   · -- `NullMeasurableSet I volume`
@@ -69,7 +70,7 @@ theorem isAddFundamentalDomain_of_ae_ball (I : Set <| AddCircle T) (u x : AddCir
     change AEDisjoint volume (g +ᵥ I) I
     refine AEDisjoint.congr (Disjoint.aedisjoint ?_)
       ((quasiMeasurePreserving_add_left volume (-g)).vadd_ae_eq_of_ae_eq g hI) hI
-    have hBg : g +ᵥ B = ball (g + x) (T / (2 * n)) := by
+    have hBg : g +ᵥ B = ball (g + x) (T / (2 * (n : ℝ))) := by
       rw [add_comm g x, ← singleton_add_ball _ x g, add_ball, thickening_singleton]
     rw [hBg]
     apply ball_disjoint_ball
@@ -95,7 +96,7 @@ theorem isAddFundamentalDomain_of_ae_ball (I : Set <| AddCircle T) (u x : AddCir
 
 theorem volume_of_add_preimage_eq (s I : Set <| AddCircle T) (u x : AddCircle T)
     (hu : IsOfFinAddOrder u) (hs : (u +ᵥ s : Set <| AddCircle T) =ᵐ[volume] s)
-    (hI : I =ᵐ[volume] ball x (T / (2 * addOrderOf u))) :
+    (hI : I =ᵐ[volume] ball x (T / (2 * (addOrderOf u : ℝ)))) :
     volume s = addOrderOf u • volume (s ∩ I) := by
   let G := AddSubgroup.zmultiples u
   have : Fintype G := @Fintype.ofFinite _ hu.finite_zmultiples

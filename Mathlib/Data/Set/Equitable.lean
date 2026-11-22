@@ -7,6 +7,7 @@ module
 
 public import Mathlib.Algebra.Order.BigOperators.Group.Finset
 public import Mathlib.Algebra.Order.Ring.Defs
+public import Mathlib.Lean.Elab.NativeDivision
 
 /-!
 # Equitable functions
@@ -91,19 +92,24 @@ variable {s : Finset α} {f : α → ℕ} {a : α}
 
 theorem equitableOn_iff_le_le_add_one :
     EquitableOn (s : Set α) f ↔
-      ∀ a ∈ s, (∑ i ∈ s, f i) / s.card ≤ f a ∧ f a ≤ (∑ i ∈ s, f i) / s.card + 1 := by
+      ∀ a (ha : a ∈ s),
+        Nat.euclideanDiv (∑ i ∈ s, f i) s.card (card_ne_zero_of_mem ha) ≤ f a ∧
+          f a ≤ Nat.euclideanDiv (∑ i ∈ s, f i) s.card (card_ne_zero_of_mem ha) + 1 := by
+  rcases s.eq_empty_or_nonempty with rfl | hs
+  · simp
   rw [Set.equitableOn_iff_exists_le_le_add_one]
-  refine ⟨?_, fun h => ⟨_, h⟩⟩
+  refine ⟨?_, fun h => ⟨Nat.euclideanDiv (∑ i ∈ s, f i) s.card hs.card_pos.ne', h⟩⟩
   rintro ⟨b, hb⟩
   by_cases! h : ∀ a ∈ s, f a = b + 1
   · intro a ha
-    rw [h _ ha, sum_const_nat h, Nat.mul_div_cancel_left _ (card_pos.2 ⟨a, ha⟩)]
+    rw [h _ ha, sum_const_nat h, Nat.euclideanDiv_mul_left_cancel]
     exact ⟨le_rfl, Nat.le_succ _⟩
   obtain ⟨x, hx₁, hx₂⟩ := h
-  suffices h : b = (∑ i ∈ s, f i) / s.card by
+  suffices h : b = Nat.euclideanDiv (∑ i ∈ s, f i) s.card hs.card_pos.ne' by
     simp_rw [← h]
     apply hb
   symm
+  rw [Nat.euclideanDiv_eq_core]
   refine
     Nat.div_eq_of_lt_le (le_trans (by simp [mul_comm]) (sum_le_sum fun a ha => (hb a ha).1))
       ((sum_lt_sum (fun a ha => (hb a ha).2) ⟨_, hx₁, (hb _ hx₁).2.lt_of_ne hx₂⟩).trans_le ?_)
@@ -111,16 +117,18 @@ theorem equitableOn_iff_le_le_add_one :
   exact fun _ _ => rfl
 
 theorem EquitableOn.le (h : EquitableOn (s : Set α) f) (ha : a ∈ s) :
-    (∑ i ∈ s, f i) / s.card ≤ f a :=
+    Nat.euclideanDiv (∑ i ∈ s, f i) s.card (card_ne_zero_of_mem ha) ≤ f a :=
   (equitableOn_iff_le_le_add_one.1 h a ha).1
 
 theorem EquitableOn.le_add_one (h : EquitableOn (s : Set α) f) (ha : a ∈ s) :
-    f a ≤ (∑ i ∈ s, f i) / s.card + 1 :=
+    f a ≤ Nat.euclideanDiv (∑ i ∈ s, f i) s.card (card_ne_zero_of_mem ha) + 1 :=
   (equitableOn_iff_le_le_add_one.1 h a ha).2
 
 theorem equitableOn_iff :
     EquitableOn (s : Set α) f ↔
-      ∀ a ∈ s, f a = (∑ i ∈ s, f i) / s.card ∨ f a = (∑ i ∈ s, f i) / s.card + 1 := by
+      ∀ a (ha : a ∈ s),
+        f a = Nat.euclideanDiv (∑ i ∈ s, f i) s.card (card_ne_zero_of_mem ha) ∨
+          f a = Nat.euclideanDiv (∑ i ∈ s, f i) s.card (card_ne_zero_of_mem ha) + 1 := by
   simp_rw [equitableOn_iff_le_le_add_one, Nat.le_and_le_add_one_iff]
 
 end Finset

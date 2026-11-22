@@ -141,7 +141,7 @@ theorem natDegree_of_mem_normalizedFactors_cyclotomic
   `n`-th cyclotomic polynomial over `K`, where `p` and `n` are coprime. This result computes the
   number of distinct irreducible factors of `cyclotomic n K`. -/
 theorem normalizedFactors_cyclotomic_card : (normalizedFactors (cyclotomic n K)).toFinset.card =
-    φ n / orderOf (unitOfCoprime _ (hn.pow_left f)) := by
+    Nat.euclideanDiv (φ n) (orderOf (unitOfCoprime _ (hn.pow_left f))) (orderOf_pos _).ne' := by
   have h := prod_normalizedFactors (cyclotomic_ne_zero n K)
   have : ∀ P ∈ normalizedFactors (cyclotomic n K),
       P.natDegree = orderOf (unitOfCoprime _ (hn.pow_left f)) := fun P hP ↦
@@ -150,7 +150,7 @@ theorem normalizedFactors_cyclotomic_card : (normalizedFactors (cyclotomic n K))
   rw [natDegree_cyclotomic, natDegree_multiset_prod _ (zero_notMem_normalizedFactors _),
     map_congr rfl this] at H
   simp only [map_const', sum_replicate, smul_eq_mul] at H
-  rw [← H, mul_div_left _ (orderOf_pos _), toFinset_card_of_nodup]
+  rw [← H, Nat.euclideanDiv_mul_right_cancel _ (orderOf_pos _).ne', toFinset_card_of_nodup]
   refine nodup_iff_count_le_one.mpr (fun P ↦ ?_)
   by_contra! H
   have : NeZero (n : K) := by

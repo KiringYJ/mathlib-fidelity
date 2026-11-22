@@ -131,10 +131,11 @@ info: @Function.Bijective
      *
      *
      (@HMul.hMul ℕ ℕ * * #0 3)
-     (@HDiv.hDiv ℕ ℕ * * 4 (@HPow.hPow ℕ ℕ * * (@HVAdd.hVAdd ℕ ℕ * * 3 (@HSMul.hSMul ℕ ℕ * * 2 5)) #0)))
+     (@Nat.euclideanDiv 4 (@HPow.hPow ℕ ℕ * * (@HVAdd.hVAdd ℕ ℕ * * 3 (@HSMul.hSMul ℕ ℕ * * 2 5)) #0) *))
 -/
 #guard_msgs in
-#log_keys Function.Bijective fun x => x*3+4/(3+ᵥ2•5)^x
+#log_keys Function.Bijective fun x : ℕ =>
+  x * 3 + Nat.euclideanDiv 4 ((3 +ᵥ 2 • 5 : ℕ) ^ x) (pow_ne_zero _ (by decide))
 
 /--
 info: Nat.sqrt
@@ -144,11 +145,11 @@ info: Nat.sqrt
      *
      *
      (@HVAdd.hVAdd ℕ (ℕ → ℕ) * * (@HSMul.hSMul ℕ ℕ * * 2 1) (@id ℕ))
-     (@HDiv.hDiv (ℕ → ℕ) (ℕ → ℕ) * * (@HMul.hMul (ℕ → ℕ) (ℕ → ℕ) * * 4 5) (@HPow.hPow (ℕ → ℕ) ℕ * * (@id ℕ) 9))
+     (@HSub.hSub (ℕ → ℕ) (ℕ → ℕ) * * (@HMul.hMul (ℕ → ℕ) (ℕ → ℕ) * * 4 5) (@HPow.hPow (ℕ → ℕ) ℕ * * (@id ℕ) 9))
      5)
 -/
 #guard_msgs in
-#log_keys Nat.sqrt $ ((2•1+ᵥid)+4*5/id^9 : Nat → Nat) 5
+#log_keys Nat.sqrt $ ((2 • 1 +ᵥ id) + (4 * 5 - id ^ 9) : Nat → Nat) 5
 
 
 /-- info: @Function.Bijective ℕ ℕ (λ, @HPow.hPow ℕ ℕ * * #0 #0) -/

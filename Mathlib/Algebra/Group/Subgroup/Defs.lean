@@ -126,10 +126,16 @@ theorem inv_mem_iff {S G} [InvolutiveInv G] {_ : SetLike S G} [InvMemClass S G] 
 
 variable {M S : Type*} [DivInvMonoid M] [SetLike S M] [hSM : SubgroupClass S M] {H K : S}
 
-/-- A subgroup is closed under division. -/
-@[to_additive (attr := aesop 90% (rule_sets := [SetLike]))
-  /-- An additive subgroup is closed under subtraction. -/]
-theorem div_mem {x y : M} (hx : x ∈ H) (hy : y ∈ H) : x / y ∈ H := by
+/-- An additive subgroup is closed under subtraction. -/
+@[aesop 90% (rule_sets := [SetLike])]
+theorem sub_mem {A S : Type*} [SubNegMonoid A] [SetLike S A] [AddSubgroupClass S A] {H : S}
+    {x y : A} (hx : x ∈ H) (hy : y ∈ H) : x - y ∈ H := by
+  rw [sub_eq_add_neg]; exact add_mem hx (neg_mem hy)
+
+/-- A subgroup is closed under group division. -/
+@[to_additive sub_mem_of_addGroup, aesop 90% (rule_sets := [SetLike])]
+theorem div_mem {G S : Type*} [Group G] [SetLike S G] [SubgroupClass S G] {H : S}
+    {x y : G} (hx : x ∈ H) (hy : y ∈ H) : x / y ∈ H := by
   rw [div_eq_mul_inv]; exact mul_mem hx (inv_mem hy)
 
 @[to_additive (attr := aesop 90% (rule_sets := [SetLike]))]
@@ -186,19 +192,15 @@ theorem subset_union [LE S] [IsConcreteLE S G] {H K L : S} :
     ((h yH).resolve_left fun yK ↦ xK <| (mul_mem_cancel_right yK).mp ·)
     (mul_mem_cancel_left <| (h xH).resolve_left xK).mp
 
-/-- A subgroup of a group inherits a division -/
-@[to_additive /-- An additive subgroup of an `AddGroup` inherits a subtraction. -/]
-instance div {G S : Type*} [DivInvMonoid G] [SetLike S G] [SubgroupClass S G] {H : S} : Div H :=
-  ⟨fun a b => ⟨a / b, div_mem a.2 b.2⟩⟩
+/-- An additive subgroup inherits subtraction from its ambient additive monoid with negation. -/
+instance _root_.AddSubgroupClass.sub {A S : Type*} [SubNegMonoid A] [SetLike S A]
+    [AddSubgroupClass S A] {H : S} : Sub H :=
+  ⟨fun a b ↦ ⟨(a : A) - (b : A), sub_mem a.property b.property⟩⟩
 
 /-- A subgroup of a group inherits an integer power. -/
 @[to_additive /-- An additive subgroup of an `AddGroup` inherits an integer scaling. -/]
 instance instZPow {M S} [DivInvMonoid M] [SetLike S M] [SubgroupClass S M] {H : S} : Pow H ℤ :=
   ⟨fun a n => ⟨a.1 ^ n, zpow_mem a.2 n⟩⟩
-
-@[to_additive (attr := simp, norm_cast)]
-theorem coe_div (x y : H) : (x / y).1 = x.1 / y.1 :=
-  rfl
 
 variable (H)
 
@@ -206,8 +208,14 @@ variable (H)
 /-- A subgroup of a group inherits a group structure. -/
 @[to_additive /-- An additive subgroup of an `AddGroup` inherits an `AddGroup` structure. -/]
 instance (priority := 75) toGroup : Group H := fast_instance%
+  letI : Div H := ⟨fun a b ↦ ⟨(a : G) / (b : G), by
+    rw [div_eq_mul_inv]; exact mul_mem a.property (inv_mem b.property)⟩⟩
   Subtype.coe_injective.group _ rfl (fun _ _ => rfl) (fun _ => rfl) (fun _ _ => rfl)
     (fun _ _ => rfl) fun _ _ => rfl
+
+variable {H} in
+@[to_additive (attr := simp, norm_cast)]
+theorem coe_div (x y : H) : (x / y).1 = x.1 / y.1 := rfl
 
 -- Prefer subclasses of `CommGroup` over subclasses of `SubgroupClass`.
 /-- A subgroup of a `CommGroup` is a `CommGroup`. -/
@@ -446,8 +454,8 @@ protected theorem inv_mem {x : G} : x ∈ H → x⁻¹ ∈ H :=
 
 /-- A subgroup is closed under division. -/
 @[to_additive /-- An `AddSubgroup` is closed under subtraction. -/]
-protected theorem div_mem {x y : G} (hx : x ∈ H) (hy : y ∈ H) : x / y ∈ H :=
-  div_mem hx hy
+protected theorem div_mem {x y : G} (hx : x ∈ H) (hy : y ∈ H) : x / y ∈ H := by
+  rw [div_eq_mul_inv]; exact H.mul_mem hx (H.inv_mem hy)
 
 @[to_additive]
 protected theorem inv_mem_iff {x : G} : x⁻¹ ∈ H ↔ x ∈ H :=
@@ -502,10 +510,9 @@ instance one : One H :=
 instance inv : Inv H :=
   ⟨fun a => ⟨a⁻¹, H.inv_mem a.2⟩⟩
 
-/-- A subgroup of a group inherits a division -/
-@[to_additive /-- An `AddSubgroup` of an `AddGroup` inherits a subtraction. -/]
-instance div : Div H :=
-  ⟨fun a b => ⟨a / b, H.div_mem a.2 b.2⟩⟩
+/-- An additive subgroup inherits its ambient subtraction. -/
+instance _root_.AddSubgroup.sub {A : Type*} [AddGroup A] (H : AddSubgroup A) : Sub H :=
+  AddSubgroupClass.sub
 
 /-- A subgroup of a group inherits a natural power -/
 @[to_additive /-- An `AddSubgroup` of an `AddGroup` inherits a natural scaling. -/]
@@ -529,10 +536,6 @@ theorem coe_one : ((1 : H) : G) = 1 :=
 theorem coe_inv (x : H) : ↑(x⁻¹ : H) = (x⁻¹ : G) :=
   rfl
 
-@[to_additive (attr := simp, norm_cast)]
-theorem coe_div (x y : H) : (↑(x / y) : G) = ↑x / ↑y :=
-  rfl
-
 @[to_additive (attr := norm_cast)]
 theorem coe_mk (x : G) (hx : x ∈ H) : ((⟨x, hx⟩ : H) : G) = x :=
   rfl
@@ -552,6 +555,9 @@ theorem mk_eq_one {g : G} {h} : (⟨g, h⟩ : H) = 1 ↔ g = 1 := Submonoid.mk_e
 @[to_additive /-- An `AddSubgroup` of an `AddGroup` inherits an `AddGroup` structure. -/]
 instance toGroup {G : Type*} [Group G] (H : Subgroup G) : Group H :=
   SubgroupClass.toGroup H
+
+@[to_additive (attr := simp, norm_cast)]
+theorem coe_div (x y : H) : (↑(x / y) : G) = (x : G) / (y : G) := rfl
 
 /-- A subgroup of a `CommGroup` is a `CommGroup`. -/
 @[to_additive /-- An `AddSubgroup` of an `AddCommGroup` is an `AddCommGroup`. -/]

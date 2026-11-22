@@ -452,8 +452,8 @@ theorem mul_le_addHaar_image_of_lt_det (A : E →L[ℝ] E) {m : ℝ≥0}
   -- the condition to be checked can be reformulated in terms of the inverse maps
   suffices H : μ (F.symm '' F.target) ≤ (m⁻¹ : ℝ≥0) * μ F.target by
     change (m : ℝ≥0∞) * μ F.source ≤ μ F.target
-    rwa [← F.symm_image_target_eq_source, mul_comm, ← ENNReal.le_div_iff_mul_le, div_eq_mul_inv,
-      mul_comm, ← ENNReal.coe_inv (hr := mpos.ne'.isUnit)]
+    rwa [← F.symm_image_target_eq_source, mul_comm, ← ENNReal.le_div_iff_mul_le,
+      ENNReal.div_eq_mul_inv, mul_comm, ← ENNReal.coe_inv (hr := mpos.ne'.isUnit)]
     · apply Or.inl
       simpa only [ENNReal.coe_eq_zero, Ne] using mpos.ne'
     · simp

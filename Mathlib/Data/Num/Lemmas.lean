@@ -815,24 +815,21 @@ theorem castNum_shiftRight (m : Num) (n : Nat) : ↑(m >>> n) = (m : ℕ) >>> (n
   induction n generalizing m with
   | zero => cases m <;> rfl
   | succ n IH => ?_
-  have hdiv2 : ∀ m, Nat.div2 (m + m) = m := by intro; rw [Nat.div2_val]; lia
   obtain - | m | m := m <;> dsimp only [PosNum.shiftr, ← PosNum.shiftr_eq_shiftRight]
-  · rw [Nat.shiftRight_eq_div_pow]
-    symm
-    apply Nat.div_eq_of_lt
-    simp
+  · change 0 = (1 : ℕ) >>> (n + 1)
+    rw [Nat.add_comm n 1, Nat.shiftRight_add, show (1 : ℕ) >>> 1 = 0 by decide, Nat.zero_shiftRight]
   · trans
     · apply IH
     change Nat.shiftRight m n = Nat.shiftRight (m + m + 1) (n + 1)
     rw [add_comm n 1, @Nat.shiftRight_eq _ (1 + n), Nat.shiftRight_add]
     apply congr_arg fun x => Nat.shiftRight x n
-    simp [-add_assoc, Nat.shiftRight_succ, Nat.shiftRight_zero, ← Nat.div2_val, hdiv2]
+    simpa only [Nat.bit, cond, Nat.two_mul] using (Nat.bit_shiftRight_one true (m : ℕ)).symm
   · trans
     · apply IH
     change Nat.shiftRight m n = Nat.shiftRight (m + m) (n + 1)
     rw [add_comm n 1, @Nat.shiftRight_eq _ (1 + n), Nat.shiftRight_add]
     apply congr_arg fun x => Nat.shiftRight x n
-    simp [-add_assoc, Nat.shiftRight_succ, Nat.shiftRight_zero, ← Nat.div2_val, hdiv2]
+    simpa only [Nat.bit, cond, Nat.two_mul] using (Nat.bit_shiftRight_one false (m : ℕ)).symm
 
 @[simp]
 theorem castNum_testBit (m n) : testBit m n = Nat.testBit m n := by

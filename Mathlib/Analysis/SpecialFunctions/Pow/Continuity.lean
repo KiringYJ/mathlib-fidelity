@@ -396,7 +396,7 @@ theorem continuousAt_rpow {x : ℝ≥0} {y : ℝ} (h : x ≠ 0 ∨ 0 < y) :
   · fun_prop
 
 theorem eventually_pow_one_div_le (x : ℝ≥0) {y : ℝ≥0} (hy : 1 < y) :
-    ∀ᶠ n : {n : ℕ // n ≠ 0} in comap Subtype.val atTop, x ^ (1 / (n : ℕ) : ℝ) ≤ y := by
+    ∀ᶠ n : {n : ℕ // n ≠ 0} in comap Subtype.val atTop, x ^ (1 / ((n : ℕ) : ℝ)) ≤ y := by
   obtain ⟨m, hm⟩ := add_one_pow_unbounded_of_pos x (tsub_pos_of_lt hy)
   rw [tsub_add_cancel_of_le hy.le] at hm
   filter_upwards [tendsto_comap.eventually (eventually_ge_atTop (m + 1))] with n hn
@@ -446,14 +446,14 @@ end NNReal
 namespace ENNReal
 
 theorem eventually_pow_one_div_le {x : ℝ≥0∞} (hx : x ≠ ∞) {y : ℝ≥0∞} (hy : 1 < y) :
-    ∀ᶠ n : {n : ℕ // n ≠ 0} in comap Subtype.val atTop, x ^ (1 / (n : ℕ) : ℝ) ≤ y := by
+    ∀ᶠ n : {n : ℕ // n ≠ 0} in comap Subtype.val atTop, x ^ (1 / ((n : ℕ) : ℝ)) ≤ y := by
   lift x to ℝ≥0 using hx
   by_cases h : y = ∞
   · exact Eventually.of_forall fun n => h.symm ▸ le_top
   · lift y to ℝ≥0 using h
     have := NNReal.eventually_pow_one_div_le x (mod_cast hy : 1 < y)
     refine this.congr (Eventually.of_forall fun n => ?_)
-    rw [← coe_rpow_of_nonneg x (by positivity : 0 ≤ (1 / (n : ℕ) : ℝ)), coe_le_coe]
+    rw [← coe_rpow_of_nonneg x (by positivity : 0 ≤ (1 / ((n : ℕ) : ℝ))), coe_le_coe]
 
 private theorem continuousAt_rpow_const_of_pos {x : ℝ≥0∞} {y : ℝ} (h : 0 < y) :
     ContinuousAt (fun a : ℝ≥0∞ => a ^ y) x := by

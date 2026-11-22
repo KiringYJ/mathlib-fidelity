@@ -408,21 +408,22 @@ theorem tendstoInMeasure_of_tendsto_eLpNorm_of_stronglyMeasurable [SeminormedAdd
     {l : Filter ι} (hfg : Tendsto (fun n => eLpNorm (f n - g) p μ) l (𝓝 0)) :
     TendstoInMeasure μ f l g := by
   refine tendstoInMeasure_of_ne_top fun ε hε hε_top ↦ ?_
-  replace hfg := ENNReal.Tendsto.const_mul (a := 1 / ε ^ p.toReal)
-    (Tendsto.ennrpow_const p.toReal hfg) (Or.inr <| by simp [hε.ne'])
+  have hεpow : ε ^ p.toReal ≠ 0 := (ENNReal.rpow_pos hε hε_top).ne'
+  replace hfg := ENNReal.Tendsto.const_mul (a := (ε ^ p.toReal)⁻¹)
+    (Tendsto.ennrpow_const p.toReal hfg) (Or.inr <| ENNReal.inv_ne_top.mpr hεpow)
   simp only [mul_zero,
     ENNReal.zero_rpow_of_pos (ENNReal.toReal_pos hp_ne_zero hp_ne_top)] at hfg
   rw [ENNReal.tendsto_nhds_zero] at hfg ⊢
   intro δ hδ
   refine (hfg δ hδ).mono fun n hn => ?_
   refine le_trans ?_ hn
-  rw [one_div, ← ENNReal.inv_mul_le_iff, inv_inv]
+  rw [← ENNReal.inv_mul_le_iff, inv_inv]
   · convert!
       mul_meas_ge_le_pow_eLpNorm' μ hp_ne_zero hp_ne_top ((hf n).sub hg).aestronglyMeasurable ε
       using 6
     simp [edist_eq_enorm_sub]
-  · simp [hε_top]
-  · simp [hε.ne']
+  · exact ENNReal.inv_ne_zero.mpr (ENNReal.rpow_ne_top_of_nonneg ENNReal.toReal_nonneg hε_top)
+  · exact ENNReal.inv_ne_top.mpr hεpow
 
 /-- This lemma is superseded by `MeasureTheory.tendstoInMeasure_of_tendsto_eLpNorm` where we
 allow `p = ∞`. -/
@@ -447,7 +448,7 @@ theorem tendstoInMeasure_of_tendsto_eLpNorm_top {E} [SeminormedAddCommGroup E] {
   simp only [eLpNorm_exponent_top, eLpNormEssSup] at hfg
   rw [ENNReal.tendsto_nhds_zero] at hfg ⊢
   intro ε hε
-  specialize hfg (δ / 2) (ENNReal.div_pos_iff.2 ⟨hδ.ne', ENNReal.ofNat_ne_top⟩)
+  specialize hfg (ENNReal.div δ 2) (ENNReal.div_pos_iff.2 ⟨hδ.ne', ENNReal.ofNat_ne_top⟩)
   refine hfg.mono fun n hn => ?_
   simp only [Pi.sub_apply] at *
   have : essSup (fun x : α => ‖f n x - g x‖ₑ) μ < δ :=

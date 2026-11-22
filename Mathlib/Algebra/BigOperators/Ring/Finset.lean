@@ -318,10 +318,10 @@ end Fintype
 namespace Nat
 variable {ι : Type*} {s : Finset ι} {f : ι → ℕ} {n : ℕ}
 
-protected lemma sum_div (hf : ∀ i ∈ s, n ∣ f i) : (∑ i ∈ s, f i) / n = ∑ i ∈ s, f i / n := by
-  obtain rfl | hn := n.eq_zero_or_pos
-  · simp
-  rw [Nat.div_eq_iff_eq_mul_left hn (dvd_sum hf), sum_mul]
+protected lemma sum_div (hn : n ≠ 0) (hf : ∀ i ∈ s, n ∣ f i) :
+    Nat.euclideanDiv (∑ i ∈ s, f i) n hn = ∑ i ∈ s, Nat.euclideanDiv (f i) n hn := by
+  simp only [Nat.euclideanDiv_eq_core]
+  rw [Nat.div_eq_iff_eq_mul_left (Nat.pos_of_ne_zero hn) (dvd_sum hf), sum_mul]
   refine sum_congr rfl fun s hs ↦ ?_
   rw [Nat.div_mul_cancel (hf _ hs)]
 
@@ -357,9 +357,9 @@ end Nat
 namespace Int
 variable {ι : Type*} {s : Finset ι} {f : ι → ℤ} {n : ℤ}
 
-protected lemma sum_div (hf : ∀ i ∈ s, n ∣ f i) : (∑ i ∈ s, f i) / n = ∑ i ∈ s, f i / n := by
-  obtain rfl | hn := eq_or_ne n 0
-  · simp
+protected lemma sum_div (hn : n ≠ 0) (hf : ∀ i ∈ s, n ∣ f i) :
+    Int.euclideanDiv (∑ i ∈ s, f i) n hn = ∑ i ∈ s, Int.euclideanDiv (f i) n hn := by
+  simp only [Int.euclideanDiv_eq_core]
   rw [Int.ediv_eq_iff_eq_mul_left hn (dvd_sum hf), sum_mul]
   refine sum_congr rfl fun s hs ↦ ?_
   rw [Int.ediv_mul_cancel (hf _ hs)]

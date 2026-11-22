@@ -102,7 +102,7 @@ theorem cyclotomic_prime_pow_comp_X_add_one_isEisensteinAt [hp : Fact p.Prime] (
           natDegree_cyclotomic, Nat.totient_prime_pow hp.out (Nat.succ_pos _), Nat.add_one_sub_one]
           at hn hi
         rw [hk, pow_succ', mul_assoc] at hi
-        rw [hk, mul_comm, Nat.mul_div_cancel _ hp.out.pos]
+        rw [hk, mul_comm, Nat.euclideanDiv_mul_right_cancel _ hp.out.ne_zero]
         replace hn := hn (lt_of_mul_lt_mul_left' hi)
         rw [Ideal.submodule_span_eq, Ideal.mem_span_singleton, ← ZMod.intCast_zmod_eq_zero_iff_dvd,
            show ↑(_ : ℤ) = Int.castRingHom (ZMod p) _ by rfl, ← coeff_map] at hn

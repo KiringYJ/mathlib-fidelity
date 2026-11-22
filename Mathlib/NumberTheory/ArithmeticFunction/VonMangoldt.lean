@@ -140,16 +140,16 @@ theorem sum_moebius_mul_log_eq {n : ℕ} : (∑ d ∈ n.divisors, (μ d : ℝ) *
   simp only [← log_mul_moebius_eq_vonMangoldt, mul_comm log, mul_apply, log_apply, intCoe_apply, ←
     Finset.sum_neg_distrib, neg_mul_eq_mul_neg]
   rw [sum_divisorsAntidiagonal fun i j => (μ i : ℝ) * -Real.log j]
-  have : (∑ i ∈ n.divisors, (μ i : ℝ) * -Real.log (n / i : ℕ)) =
+  have : (∑ i ∈ n.divisors.attach,
+      (μ i.val : ℝ) * -Real.log (Nat.euclideanDiv n i.val (pos_of_mem_divisors i.property).ne')) =
       ∑ i ∈ n.divisors, ((μ i : ℝ) * Real.log i - μ i * Real.log n) := by
+    rw [← Finset.sum_attach n.divisors
+      (fun i => (μ i : ℝ) * Real.log i - μ i * Real.log n)]
     apply sum_congr rfl
-    simp only [and_imp, Ne, mem_divisors]
-    intro m mn hn
-    have : (m : ℝ) ≠ 0 := by
-      rw [cast_ne_zero]
-      rintro rfl
-      exact hn (by simpa using mn)
-    rw [Nat.cast_div mn this, Real.log_div (cast_ne_zero.2 hn), neg_sub, mul_sub]
+    intro i _
+    obtain ⟨hi, hn⟩ := Nat.mem_divisors.mp i.property
+    rw [Nat.cast_div_charZero hi (pos_of_mem_divisors i.property).ne',
+      Real.log_div (cast_ne_zero.2 hn), neg_sub, mul_sub]
   rw [this, sum_sub_distrib, ← sum_mul, ← Int.cast_sum, ← coe_mul_zeta_apply, eq_comm, sub_eq_self,
     moebius_mul_coe_zeta]
   rcases eq_or_ne n 1 with (hn | hn) <;> simp [hn]

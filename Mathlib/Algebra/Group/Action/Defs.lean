@@ -355,10 +355,15 @@ lemma mul_smul_comm [Mul β] [SMul α β] [SMulCommClass α β β] (s : α) (x y
 lemma smul_mul_assoc [Mul β] [SMul α β] [IsScalarTower α β β] (r : α) (x y : β) :
     r • x * y = r • (x * y) := smul_assoc r x y
 
-/-- Note that the `IsScalarTower α β β` typeclass argument is usually satisfied by `Algebra α β`. -/
-@[to_additive]
-lemma smul_div_assoc [DivInvMonoid β] [SMul α β] [IsScalarTower α β β] (r : α) (x y : β) :
-    r • x / y = r • (x / y) := by simp [div_eq_mul_inv, smul_mul_assoc]
+/-- Right multiplication by an inverse commutes with scalar multiplication. -/
+lemma smul_div_assoc [Mul β] [Inv β] [SMul α β] [IsScalarTower α β β] (r : α) (x y : β) :
+    r • x * y⁻¹ = r • (x * y⁻¹) :=
+  smul_mul_assoc r x y⁻¹
+
+/-- Subtracting on the right commutes with the additive action. -/
+lemma vadd_sub_assoc [SubNegMonoid β] [VAdd α β] [VAddAssocClass α β β] (r : α) (x y : β) :
+    (r +ᵥ x) - y = r +ᵥ (x - y) := by
+  simpa only [sub_eq_add_neg] using vadd_add_assoc r x (-y)
 
 @[to_additive]
 lemma smul_smul_smul_comm [SMul α β] [SMul α γ] [SMul β δ] [SMul α δ] [SMul γ δ]

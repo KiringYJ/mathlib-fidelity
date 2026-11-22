@@ -316,14 +316,15 @@ theorem laplacian_neg :
 theorem _root_.ContDiffWithinAt.laplacianWithin_sub (h₁ : ContDiffWithinAt ℝ 2 f₁ s x)
     (h₂ : ContDiffWithinAt ℝ 2 f₂ s x) (hs : UniqueDiffOn ℝ s) (hx : x ∈ s) :
     (Δ[s] (f₁ - f₂)) x = (Δ[s] f₁) x - (Δ[s] f₂) x := by
-  simp [laplacianWithin_eq_iteratedFDerivWithin_stdOrthonormalBasis _ hs hx,
-    ← Finset.sum_sub_distrib, iteratedFDerivWithin_sub_apply h₁ h₂ hs hx]
+  have hneg : ContDiffWithinAt ℝ 2 (-f₂) s x := h₂.neg
+  rw [sub_eq_add_neg, h₁.laplacianWithin_add hneg hs hx, laplacianWithin_neg hs hx,
+    sub_eq_add_neg]
 
 /-- The Laplacian commutes with subtraction. -/
 theorem _root_.ContDiffAt.laplacian_sub (h₁ : ContDiffAt ℝ 2 f₁ x) (h₂ : ContDiffAt ℝ 2 f₂ x) :
     Δ (f₁ - f₂) x = Δ f₁ x - Δ f₂ x := by
-  simp [laplacian_eq_iteratedFDeriv_stdOrthonormalBasis,
-    ← Finset.sum_sub_distrib, iteratedFDeriv_sub_apply h₁ h₂]
+  have hneg : ContDiffAt ℝ 2 (-f₂) x := h₂.neg
+  rw [sub_eq_add_neg, h₁.laplacian_add hneg, laplacian_neg, Pi.neg_apply, sub_eq_add_neg]
 
 /-- The Laplacian commutes with subtraction. -/
 theorem _root_.ContDiffAt.laplacianWithin_sub_nhdsWithin (h₁ : ContDiffWithinAt ℝ 2 f₁ s x)

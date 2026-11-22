@@ -135,11 +135,13 @@ theorem two_mul_card_alternatingGroup [Nontrivial α] :
   simp only [← Nat.card_eq_fintype_card, two_mul_nat_card_alternatingGroup]
 
 theorem card_alternatingGroup [Nontrivial α] :
-    card (alternatingGroup α) = (card α).factorial / 2 :=
-  Nat.eq_div_of_mul_eq_right two_ne_zero (two_mul_card_alternatingGroup.trans card_perm)
+    card (alternatingGroup α) = (card α).factorial.euclideanDiv 2 := by
+  symm
+  apply Nat.euclideanDiv_eq_of_remainder (r := 0) two_ne_zero _ Nat.zero_lt_two
+  simpa only [Nat.add_zero] using (two_mul_card_alternatingGroup.trans card_perm).symm
 
 theorem nat_card_alternatingGroup [Nontrivial α] :
-    Nat.card (alternatingGroup α) = (Nat.card α).factorial / 2 := by
+    Nat.card (alternatingGroup α) = (Nat.card α).factorial.euclideanDiv 2 := by
   simp only [Nat.card_eq_fintype_card, card_alternatingGroup]
 
 namespace alternatingGroup
@@ -151,7 +153,7 @@ theorem isCyclic_of_card_le_three (hα : Nat.card α ≤ 3) :
   have : 1 < Nat.card α := Finite.one_lt_card
   apply isCyclic_of_card_dvd_prime (p := 3)
   rw [nat_card_alternatingGroup]
-  interval_cases (Nat.card α) <;> simp [Nat.factorial_succ]
+  interval_cases (Nat.card α) <;> simp [Nat.factorial_succ, Nat.euclideanDiv_eq_core]
 
 theorem isMulCommutative_of_card_le_three (hα : Nat.card α ≤ 3) :
     IsMulCommutative (alternatingGroup α) :=

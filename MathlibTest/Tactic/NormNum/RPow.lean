@@ -66,7 +66,7 @@ run_meta do
     match ← derive e with
     | .isNat _ (.lit (.natVal 0)) _ => pure ()
     | _ => throwError "expected a raw zero literal for {e}"
-  check q((0 : ℝ) ^ (-1 / 3 : ℝ))
+  check q((0 : ℝ) ^ ((-1 : ℝ) / (3 : ℝ)))
   check q((0 : ℝ) ^ (-3 : ℝ))
-  check q((0 : ℝ≥0) ^ (-1 / 3 : ℝ))
+  check q((0 : ℝ≥0) ^ ((-1 : ℝ) / (3 : ℝ)))
   check q((0 : ℝ≥0) ^ (-3 : ℝ))

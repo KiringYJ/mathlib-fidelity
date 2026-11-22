@@ -245,7 +245,7 @@ protected theorem coe_inv (r : ℝ≥0) {hr : IsUnit r} : ((r⁻¹ : ℝ≥0) : 
 
 @[simp, norm_cast]
 protected theorem coe_div (r₁ r₂ : ℝ≥0) {hr₂ : IsUnit r₂} :
-    ((r₁ / r₂ : ℝ≥0) : ℝ) = (r₁ : ℝ) / r₂ :=
+    ((r₁ / r₂ : ℝ≥0) : ℝ) = (r₁ : ℝ) / (r₂ : ℝ) :=
   map_div₀ toRealHom r₁ r₂
 
 section Actions

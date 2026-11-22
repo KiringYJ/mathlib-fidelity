@@ -51,8 +51,9 @@ def round (x : α) : ℤ :=
 /-- Formula for `round` in terms of `Int.floor`, a version that works over any ring.
 
 TODO: decide if we want to use this as a definition. It may be slightly faster over `ℚ`. -/
-theorem round_eq_div (x : α) : round x = (⌊2 * x⌋ + 1) / 2 := by
-  rw [← floor_add_fract x, round, fract_intCast_add, fract_fract, floor_intCast_add, mul_add,
+theorem round_eq_div (x : α) : round x = Int.euclideanDiv (⌊2 * x⌋ + 1) 2 := by
+  rw [Int.euclideanDiv_eq_core, ← floor_add_fract x, round, fract_intCast_add, fract_fract,
+    floor_intCast_add, mul_add,
     ← Int.cast_ofNat, ← Int.cast_mul, floor_intCast_add, ceil_intCast_add, add_assoc,
     Int.mul_add_ediv_left _ _ two_ne_zero, Int.cast_ofNat]
   split_ifs with h <;> congr 1
@@ -85,12 +86,14 @@ theorem round_ofNat (n : ℕ) [n.AtLeastTwo] : round (ofNat(n) : α) = ofNat(n) 
 theorem round_intCast (n : ℤ) : round (n : α) = n := by simp [round]
 
 /-- Away from the points with fractional part `1 / 2`, `round x = ⌈2 * x⌉ / 2`. -/
-theorem round_eq_half_ceil_two_mul {x : α} (hx : 2 * fract x ≠ 1) : round x = ⌈2 * x⌉ / 2 := by
+theorem round_eq_half_ceil_two_mul {x : α} (hx : 2 * fract x ≠ 1) :
+    round x = Int.euclideanDiv ⌈2 * x⌉ 2 := by
   rcases em (2 * x ∈ range Int.cast) with ⟨m, hm⟩ | hx'
   · rw [← hm, ceil_intCast]
     rcases m.even_or_odd with ⟨m, rfl⟩ | ⟨m, rfl⟩
     · obtain rfl : m = x := mul_left_cancel₀ two_ne_zero <| by simp [← hm, ← two_mul]
-      rw [round_intCast, ← two_mul, Int.mul_ediv_cancel_left _ two_ne_zero]
+      rw [round_intCast, Int.euclideanDiv_eq_core, ← two_mul,
+        Int.mul_ediv_cancel_left _ two_ne_zero]
     · refine absurd ?_ hx
       exact (mul_fract_eq_one_iff_exists_int one_lt_two).mpr ⟨m, mod_cast hm.symm⟩
   · rw [round_eq_div, (ceil_eq_floor_add_one_iff_notMem _).mpr hx']
@@ -173,11 +176,12 @@ section LinearOrderedField
 
 variable [Field α] [LinearOrder α] [IsStrictOrderedRing α] [FloorRing α]
 
-theorem round_eq (x : α) : round x = ⌊x + 1 / 2⌋ := by
+theorem round_eq (x : α) : round x = ⌊x + (1 : α) / 2⌋ := by
   rw [← cast_mul_floor_div_cancel_of_pos two_pos, round_eq_div]
-  simp [mul_add]
+  simp [mul_add, Int.euclideanDiv_eq_core]
 
-theorem round_eq_iff {x : α} {n : ℤ} : round x = n ↔ x ∈ Ico (n - 1 / 2 : α) (n + 1 / 2) := by
+theorem round_eq_iff {x : α} {n : ℤ} :
+    round x = n ↔ x ∈ Ico (n - (1 : α) / 2 : α) (n + (1 : α) / 2) := by
   norm_num [round_eq, floor_eq_iff, ← lt_sub_iff_add_lt, add_sub_assoc]
 
 @[simp]
@@ -187,31 +191,32 @@ theorem round_two_inv : round (2⁻¹ : α) = 1 := by norm_num [round_eq_iff]
 theorem round_neg_two_inv : round (-2⁻¹ : α) = 0 := by norm_num [round_eq_iff]
 
 @[simp]
-theorem round_eq_zero_iff {x : α} : round x = 0 ↔ x ∈ Ico (-(1 / 2)) ((1 : α) / 2) := by
+theorem round_eq_zero_iff {x : α} : round x = 0 ↔ x ∈ Ico (-((1 : α) / 2)) ((1 : α) / 2) := by
   simp [round_eq_iff]
 
-theorem abs_sub_round (x : α) : |x - round x| ≤ 1 / 2 := by
+theorem abs_sub_round (x : α) : |x - round x| ≤ (1 : α) / 2 := by
   rw [round_eq, abs_sub_le_iff]
-  have := floor_le (x + 1 / 2)
-  have := lt_floor_add_one (x + 1 / 2)
+  have := floor_le (x + (1 : α) / 2)
+  have := lt_floor_add_one (x + (1 : α) / 2)
   constructor <;> linarith
 
 theorem abs_sub_round_div_natCast_eq {m n : ℕ} {hn : IsUnit (n : α)} :
-    |(m : α) / n - round ((m : α) / n)| = ↑(min (m % n) (n - m % n)) / n := by
+    |(m : α) / (n : α) - round ((m : α) / (n : α))| =
+      ((min (m % n) (n - m % n) : ℕ) : α) / (n : α) := by
   have hn₀ : 0 < n := Nat.pos_of_ne_zero (Nat.cast_ne_zero.mp hn.ne_zero)
   have hn' : 0 < (n : α) := by exact_mod_cast hn₀
   rw [abs_sub_round_eq_min, Nat.cast_min, ← min_div_div_right hn'.le,
     fract_div_natCast_eq_div_natCast_mod, Nat.cast_sub (m.mod_lt hn₀).le, sub_div, div_self]
 
 @[bound]
-theorem sub_half_lt_round (x : α) : x - 1 / 2 < round x := by
-  rw [round_eq x, show x - 1 / 2 = x + 1 / 2 - 1 by linarith]
-  exact Int.sub_one_lt_floor (x + 1 / 2)
+theorem sub_half_lt_round (x : α) : x - (1 : α) / 2 < round x := by
+  rw [round_eq x, show x - (1 : α) / 2 = x + (1 : α) / 2 - 1 by linarith]
+  exact Int.sub_one_lt_floor (x + (1 : α) / 2)
 
 @[bound]
-theorem round_le_add_half (x : α) : round x ≤ x + 1 / 2 := by
+theorem round_le_add_half (x : α) : round x ≤ x + (1 : α) / 2 := by
   rw [round_eq x]
-  exact Int.floor_le (x + 1 / 2)
+  exact Int.floor_le (x + (1 : α) / 2)
 
 end LinearOrderedField
 

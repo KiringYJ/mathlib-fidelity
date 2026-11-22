@@ -288,7 +288,7 @@ lemma summable_norm_sub_rpow (r : ℝ) (hr : r < -Module.finrank ℤ L) (x : E) 
   have hs : Summable (s.indicator fun z : L ↦ ‖(z : E)‖ ^ r) :=
     (summable_subtype_iff_indicator (s := s)).mp (summable_norm_rpow L r hr)
   apply (summable_subtype_iff_indicator (s := t) (f := fun z : L ↦ ‖(z : E) - x‖ ^ r)).mpr
-  refine Summable.of_norm_bounded_eventually (.mul_left ((1 / 2) ^ r) hs) ?_
+  refine Summable.of_norm_bounded_eventually (.mul_left ((1 / 2 : ℝ) ^ r) hs) ?_
   have H : IsClosed (X := E) L := L.toAddSubgroup.isClosed_of_discreteTopology
   refine ((Metric.finite_isBounded_inter_isClosed DiscreteTopology.isDiscrete
     (Metric.isBounded_closedBall (x := (0 : E)) (r := 2 * ‖x‖)) H).preimage_embedding

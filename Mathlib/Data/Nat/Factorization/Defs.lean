@@ -201,11 +201,12 @@ theorem isSquare_iff_even_factorization {n : ℕ} :
   · intro ⟨m, hmn⟩ p hp
     have hm : m ≠ 0 := mul_self_ne_zero.mp (hmn ▸ h0)
     simp [hmn, factorization_mul hm hm]
-  · refine fun h ↦ ⟨n.factorization.prod fun a b ↦ a ^ (b / 2), ?_⟩
+  · refine fun h ↦ ⟨n.factorization.prod fun a b ↦ a ^ (Nat.euclideanDiv b 2), ?_⟩
     rw [← pow_two, ← powMonoidHom_apply, map_finsuppProd]
     nth_rw 1 [← prod_factorization_pow_eq_self h0]
     refine Finsupp.prod_congr fun p hp ↦ ?_
-    rw [powMonoidHom_apply, ← pow_mul, div_two_mul_two_of_even (h p (prime_of_mem_primeFactors hp))]
+    rw [powMonoidHom_apply, ← pow_mul,
+      div_two_mul_two_of_even (h p (prime_of_mem_primeFactors hp))]
 
 end Nat
 
@@ -328,14 +329,21 @@ value is `1`; as `Nat.factorization 0 = 0`, also `ordProj 0 p = 1`. The `ord` na
 complementary projection. -/
 def ordProj (n p : ℕ) : ℕ := p ^ n.factorization p
 
+theorem ordProj_of_not_prime (n p : ℕ) (hp : ¬p.Prime) : n.ordProj p = 1 := by
+  simp [ordProj, hp]
+
+theorem ordProj_pos (n p : ℕ) : 0 < n.ordProj p := by
+  if pp : p.Prime then exact Nat.pow_pos pp.pos else simp [ordProj_of_not_prime n p pp]
+
 /-- `n.ordCompl p` is `n / n.ordProj p`, the part of `n` complementary to `n.ordProj p`: for
 `n ≠ 0`, the product of the factors of its prime factorization at the primes other than `p`. For
 example, `n.ordCompl 2` is the odd part of `n`. -/
-def ordCompl (n p : ℕ) : ℕ := n / n.ordProj p
+def ordCompl (n p : ℕ) : ℕ := Nat.euclideanDiv n (n.ordProj p) (ordProj_pos n p).ne'
 
 theorem ordProj_def (n p : ℕ) : n.ordProj p = p ^ n.factorization p := rfl
 
-theorem ordCompl_def (n p : ℕ) : n.ordCompl p = n / n.ordProj p := rfl
+theorem ordCompl_def (n p : ℕ) :
+    n.ordCompl p = Nat.euclideanDiv n (n.ordProj p) (ordProj_pos n p).ne' := rfl
 
 theorem ordProj_dvd (n p : ℕ) : n.ordProj p ∣ n := by
   rw [ordProj]

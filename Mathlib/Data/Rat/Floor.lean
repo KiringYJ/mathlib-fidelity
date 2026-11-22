@@ -12,6 +12,7 @@ public import Mathlib.Tactic.FieldSimp
 public import Mathlib.Tactic.Ring
 public meta import Mathlib.Algebra.Order.Round
 public meta import Mathlib.Algebra.GroupWithZero.Checked.Notation
+public meta import Mathlib.Tactic.NormNum.DivMod
 
 /-!
 # Floor Function for Rational Numbers
@@ -43,22 +44,27 @@ instance : FloorRing ℚ :=
 /--
 This variant of `floor_def` uses the `Int.floor` (for any `FloorRing`) rather than `Rat.floor`.
 -/
-protected theorem floor_def' {q : ℚ} : ⌊q⌋ = q.num / q.den := Rat.floor_def q
+protected theorem floor_def' {q : ℚ} :
+    ⌊q⌋ = Int.euclideanDiv q.num q.den (Int.ofNat_ne_zero.2 q.den_nz) := by
+  rw [Int.euclideanDiv_eq_core]
+  exact Rat.floor_def q
 
 /--
 This variant of `ceil_def` uses the `Int.ceil` (for any `FloorRing`) rather than `Rat.ceil`.
 -/
-protected theorem ceil_def' (q : ℚ) : ⌈q⌉ = -(-q.num / ↑q.den) := by
+protected theorem ceil_def' (q : ℚ) :
+    ⌈q⌉ = -Int.euclideanDiv (-q.num) q.den (Int.ofNat_ne_zero.2 q.den_nz) := by
   change -⌊-q⌋ = _
-  rw [Rat.floor_def', num_neg_eq_neg_num, den_neg_eq_den]
+  simp only [Rat.floor_def', Int.euclideanDiv_eq_core, num_neg_eq_neg_num, den_neg_eq_den]
 
 
 @[norm_cast]
 theorem floor_intCast_div_natCast (n : ℤ) (d : ℕ) {hd : IsUnit (d : ℚ)} :
-    ⌊(↑n / ↑d : ℚ)⌋ = n / (↑d : ℤ) := by
-  rw [Rat.floor_def']
+    ⌊(n : ℚ) / (d : ℚ)⌋ =
+      Int.euclideanDiv n d (Int.ofNat_ne_zero.2 (Nat.cast_ne_zero.mp hd.ne_zero)) := by
+  simp only [Rat.floor_def', Int.euclideanDiv_eq_core]
   have hd₀ : 0 < d := Nat.pos_of_ne_zero (Nat.cast_ne_zero.mp hd.ne_zero)
-  set q := (n : ℚ) / d with q_eq
+  set q := (n : ℚ) / (d : ℚ) with q_eq
   obtain ⟨c, n_eq_c_mul_num, d_eq_c_mul_denom⟩ : ∃ c, n = c * q.num ∧ (d : ℤ) = c * q.den := by
     rw [q_eq]
     exact mod_cast Rat.exists_eq_mul_div_num_and_eq_mul_div_den n (d := d) (hd := by simpa using hd)
@@ -68,26 +74,29 @@ theorem floor_intCast_div_natCast (n : ℤ) (d : ℕ) {hd : IsUnit (d : ℚ)} :
 
 @[norm_cast]
 theorem ceil_intCast_div_natCast (n : ℤ) (d : ℕ) {hd : IsUnit (d : ℚ)} :
-    ⌈(↑n / ↑d : ℚ)⌉ = -((-n) / (↑d : ℤ)) := by
+    ⌈(n : ℚ) / (d : ℚ)⌉ =
+      -Int.euclideanDiv (-n) d (Int.ofNat_ne_zero.2 (Nat.cast_ne_zero.mp hd.ne_zero)) := by
   conv_lhs => rw [← neg_neg ⌈_⌉, ← floor_neg]
   rw [← neg_div₀, ← Int.cast_neg, floor_intCast_div_natCast]
 
 @[norm_cast]
 theorem floor_natCast_div_natCast (n d : ℕ) {hd : IsUnit (d : ℚ)} :
-    ⌊(↑n / ↑d : ℚ)⌋ = n / d :=
-  floor_intCast_div_natCast n d
+    ⌊(n : ℚ) / (d : ℚ)⌋ = (Nat.euclideanDiv n d (Nat.cast_ne_zero.mp hd.ne_zero) : ℤ) := by
+  simpa only [Nat.euclideanDiv_eq_core, Int.euclideanDiv_eq_core, Int.natCast_ediv,
+    Int.cast_natCast] using
+    floor_intCast_div_natCast (n : ℤ) d (hd := hd)
 
 @[norm_cast]
 theorem ceil_natCast_div_natCast (n d : ℕ) {hd : IsUnit (d : ℚ)} :
-    ⌈(↑n / ↑d : ℚ)⌉ = -((-n) / d) :=
+    ⌈(n : ℚ) / (d : ℚ)⌉ =
+      -Int.euclideanDiv (-(n : ℤ)) d (Int.ofNat_ne_zero.2 (Nat.cast_ne_zero.mp hd.ne_zero)) :=
   ceil_intCast_div_natCast n d
 
 @[norm_cast]
 theorem natFloor_natCast_div_natCast (n d : ℕ) {hd : IsUnit (d : ℚ)} :
-    ⌊(↑n / ↑d : ℚ)⌋₊ = n / d := by
+    ⌊(n : ℚ) / (d : ℚ)⌋₊ = Nat.euclideanDiv n d (Nat.cast_ne_zero.mp hd.ne_zero) := by
   rw [← Int.ofNat_inj, Int.natCast_floor_eq_floor (by positivity)]
-  push_cast
-  exact floor_intCast_div_natCast n d
+  exact floor_natCast_div_natCast n d
 
 @[simp, norm_cast]
 theorem floor_cast (x : ℚ) : ⌊(x : α)⌋ = ⌊x⌋ :=
@@ -99,7 +108,7 @@ theorem ceil_cast (x : ℚ) : ⌈(x : α)⌉ = ⌈x⌉ := by
 
 @[simp, norm_cast]
 theorem round_cast (x : ℚ) : round (x : α) = round x := by
-  have : ((x + 1 / 2 : ℚ) : α) = x + 1 / 2 := by simp
+  have : ((x + (1 : ℚ) / 2 : ℚ) : α) = x + (1 : α) / 2 := by simp
   rw [round_eq, round_eq, ← this, floor_cast]
 
 @[simp, norm_cast]
@@ -153,26 +162,45 @@ theorem isInt_intFloor {R} [Ring R] [LinearOrder R] [IsStrictOrderedRing R] [Flo
     (r : R) (m : ℤ) :
     IsInt r m → IsInt ⌊r⌋ m := by rintro ⟨⟨⟩⟩; exact ⟨by simp⟩
 
-theorem isNat_intFloor_ofIsNNRat (r : α) (n : ℕ) (d : ℕ) :
-    IsNNRat r n d → IsNat ⌊r⌋ (n / d) := by
-  intro h
-  have hd : d ≠ 0 := fun hd => h.den_nz (by simp [hd])
+theorem isNat_intFloor_ofIsNNRat (r : α) (n d : ℕ) (h : IsNNRat r n d) :
+    IsNat ⌊r⌋ (Nat.euclideanDiv n d (Nat.cast_ne_zero.mp h.den_nz)) := by
+  have hd : d ≠ 0 := Nat.cast_ne_zero.mp h.den_nz
   constructor
-  rw [h.eq_cast_fraction r n d hd, floor_cast, fraction_eq_div, floor_intCast_div_natCast]
-  exact Int.ofNat_ediv_ofNat
+  conv_lhs => rw [h.eq_cast_fraction r n d hd]
+  rw [floor_cast, fraction_eq_div, floor_intCast_div_natCast]
+  simpa only [Int.euclideanDiv_eq_core, Nat.euclideanDiv_eq_core] using
+    (Int.ofNat_ediv_ofNat (a := n) (b := d))
 
-theorem isInt_intFloor_ofIsRat_neg (r : α) (n : ℕ) (d : ℕ) :
-    IsRat r (.negOfNat n) d → IsInt ⌊r⌋ (.negOfNat (-(-n / d) : ℤ).toNat) := by
-  intro h
-  have hd : d ≠ 0 := fun hd => h.den_nz (by simp [hd])
-  have hq : -(n : ℤ) / (d : ℤ) ≤ 0 :=
-    Int.ediv_nonpos_of_nonpos_of_neg (neg_nonpos.mpr (Int.natCast_nonneg n))
+theorem isInt_intFloor_ofIsRat_neg (r : α) (n d : ℕ) (h : IsRat r (.negOfNat n) d) :
+    IsInt ⌊r⌋ (.negOfNat (-Int.euclideanDiv (-(n : ℤ)) d
+      (Int.ofNat_ne_zero.2 (Nat.cast_ne_zero.mp h.den_nz))).toNat) := by
+  have hd : d ≠ 0 := Nat.cast_ne_zero.mp h.den_nz
+  have hq : Int.euclideanDiv (-(n : ℤ)) d (Int.ofNat_ne_zero.2 hd) ≤ 0 := by
+    rw [Int.euclideanDiv_eq_core]
+    exact Int.ediv_nonpos_of_nonpos_of_neg (neg_nonpos.mpr (Int.natCast_nonneg n))
       (Int.natCast_pos.mpr (Nat.pos_of_ne_zero hd))
   constructor
-  rw [h.eq_cast_fraction r (.negOfNat n) d hd, floor_cast, fraction_eq_div,
+  conv_lhs => rw [h.eq_cast_fraction r (.negOfNat n) d hd]
+  rw [floor_cast, fraction_eq_div,
     floor_intCast_div_natCast]
   simp only [Int.cast_id, Int.negOfNat_eq, Int.ofNat_eq_natCast,
     Int.natCast_toNat_eq_self.mpr (neg_nonneg.mpr hq), neg_neg]
+
+-- The named quotients need arithmetic certificates when their implementations are hidden.
+private meta def deriveNatEuclideanDivEq (n d : Q(ℕ)) (hd : Q($d ≠ 0)) :
+    Lean.Meta.MetaM ((z : Q(ℕ)) × Q(Nat.euclideanDiv $n $d $hd = $z)) := do
+  let ⟨z, h⟩ ← deriveNat q(Nat.euclideanDiv $n $d $hd) q(Nat.instAddMonoidWithOne)
+  pure ⟨z, q(IsNat.to_eq $h rfl)⟩
+
+private meta def deriveNegEuclideanDivToNatEq (n d : Q(ℕ)) (hd : Q($d ≠ 0)) :
+    Lean.Meta.MetaM ((z : Q(ℕ)) × Q((-Int.euclideanDiv (-(Int.ofNat $n)) (Int.ofNat $d)
+      (Int.ofNat_ne_zero.2 $hd)).toNat = $z)) := do
+  let e : Q(ℤ) := q(Int.euclideanDiv (-(Int.ofNat $n)) (Int.ofNat $d) (Int.ofNat_ne_zero.2 $hd))
+  let ⟨qz, h⟩ ← deriveInt e q(Int.instRing)
+  have z : Q(ℕ) := Lean.mkRawNatLit (-qz.intLit!).toNat
+  let hz ← mkDecideProofQ q((-$qz).toNat = $z)
+  let he : Q($e = $qz) := q((IsInt.out $h).trans Int.cast_id)
+  pure ⟨z, q((congrArg (fun k : ℤ => (-k).toNat) $he).trans $hz)⟩
 
 /-- `norm_num` extension for `Int.floor` -/
 @[norm_num ⌊_⌋]
@@ -190,20 +218,22 @@ meta def evalIntFloor : NormNumExt where eval {u αZ} e := do
       assertInstancesCommute
       -- floor always keeps naturals negative, so we can shortcut `.isInt`
       return .isNegNat q(inferInstance) _ q(isInt_intFloor _ _ $pb)
-    | .isNNRat _ q n d h => do
+    | .isNNRat _ _ n d h => do
       let _i ← synthInstanceQ q(Field $α)
       let _i ← synthInstanceQ q(IsStrictOrderedRing $α)
       assertInstancesCommute
-      have z : Q(ℕ) := Lean.mkRawNatLit q.floor.toNat
-      letI : $z =Q $n / $d := ⟨⟩
-      return .isNat q(inferInstance) z q(isNat_intFloor_ofIsNNRat $x $n $d $h)
-    | .isNegNNRat _ q n d h => do
+      let hd ← mkDecideProofQ q($d ≠ 0)
+      let ⟨z, hz⟩ ← deriveNatEuclideanDivEq n d hd
+      let proof : Q(IsNat ⌊$x⌋ $z) := q($hz ▸ isNat_intFloor_ofIsNNRat $x $n $d $h)
+      return .isNat q(inferInstance) z proof
+    | .isNegNNRat _ _ n d h => do
       let _i ← synthInstanceQ q(Field $α)
       let _i ← synthInstanceQ q(IsStrictOrderedRing $α)
       assertInstancesCommute
-      have z : Q(ℕ) := Lean.mkRawNatLit (-q.floor).toNat
-      letI : $z =Q (-(-$n / $d) : ℤ).toNat := ⟨⟩
-      return .isNegNat q(inferInstance) z q(isInt_intFloor_ofIsRat_neg $x $n $d $h)
+      let hd ← mkDecideProofQ q($d ≠ 0)
+      let ⟨z, hz⟩ ← deriveNegEuclideanDivToNatEq n d hd
+      let proof : Q(IsInt ⌊$x⌋ (.negOfNat $z)) := q($hz ▸ isInt_intFloor_ofIsRat_neg $x $n $d $h)
+      return .isNegNat q(inferInstance) z proof
   | _, _, _ => failure
 
 theorem isNat_intCeil {R} [Ring R] [LinearOrder R] [IsStrictOrderedRing R] [FloorRing R]
@@ -214,25 +244,27 @@ theorem isInt_intCeil {R} [Ring R] [LinearOrder R] [IsStrictOrderedRing R] [Floo
     (r : R) (m : ℤ) :
     IsInt r m → IsInt ⌈r⌉ m := by rintro ⟨⟨⟩⟩; exact ⟨by simp⟩
 
-theorem isNat_intCeil_ofIsNNRat (r : α) (n : ℕ) (d : ℕ) :
-    IsNNRat r n d → IsNat ⌈r⌉ (-(-n / d) : ℤ).toNat := by
-  intro h
-  have hd : d ≠ 0 := fun hd => h.den_nz (by simp [hd])
-  have hq : -(n : ℤ) / (d : ℤ) ≤ 0 :=
-    Int.ediv_nonpos_of_nonpos_of_neg (neg_nonpos.mpr (Int.natCast_nonneg n))
+theorem isNat_intCeil_ofIsNNRat (r : α) (n d : ℕ) (h : IsNNRat r n d) :
+    IsNat ⌈r⌉ (-Int.euclideanDiv (-(n : ℤ)) d
+      (Int.ofNat_ne_zero.2 (Nat.cast_ne_zero.mp h.den_nz))).toNat := by
+  have hd : d ≠ 0 := Nat.cast_ne_zero.mp h.den_nz
+  have hq : Int.euclideanDiv (-(n : ℤ)) d (Int.ofNat_ne_zero.2 hd) ≤ 0 := by
+    rw [Int.euclideanDiv_eq_core]
+    exact Int.ediv_nonpos_of_nonpos_of_neg (neg_nonpos.mpr (Int.natCast_nonneg n))
       (Int.natCast_pos.mpr (Nat.pos_of_ne_zero hd))
   constructor
-  rw [h.eq_cast_fraction r n d hd, ceil_cast, fraction_eq_div, ceil_intCast_div_natCast]
+  conv_lhs => rw [h.eq_cast_fraction r n d hd]
+  rw [ceil_cast, fraction_eq_div, ceil_intCast_div_natCast]
   exact (Int.natCast_toNat_eq_self.mpr (neg_nonneg.mpr hq)).symm
 
-theorem isInt_intCeil_ofIsRat_neg (r : α) (n : ℕ) (d : ℕ) :
-    IsRat r (.negOfNat n) d → IsInt ⌈r⌉ (.negOfNat (n / d)) := by
-  intro h
-  have hd : d ≠ 0 := fun hd => h.den_nz (by simp [hd])
+theorem isInt_intCeil_ofIsRat_neg (r : α) (n d : ℕ) (h : IsRat r (.negOfNat n) d) :
+    IsInt ⌈r⌉ (.negOfNat (Nat.euclideanDiv n d (Nat.cast_ne_zero.mp h.den_nz))) := by
+  have hd : d ≠ 0 := Nat.cast_ne_zero.mp h.den_nz
   constructor
-  rw [h.eq_cast_fraction r (.negOfNat n) d hd, ceil_cast, fraction_eq_div,
+  conv_lhs => rw [h.eq_cast_fraction r (.negOfNat n) d hd]
+  rw [ceil_cast, fraction_eq_div,
     ceil_intCast_div_natCast]
-  norm_num [Int.negOfNat_eq]
+  norm_num [Int.negOfNat_eq, Nat.euclideanDiv_eq_core, Int.euclideanDiv_eq_core]
 
 /-- `norm_num` extension for `Int.ceil` -/
 @[norm_num ⌈_⌉]
@@ -250,20 +282,22 @@ meta def evalIntCeil : NormNumExt where eval {u αZ} e := do
       assertInstancesCommute
       -- ceil always keeps naturals negative, so we can shortcut `.isInt`
       return .isNegNat q(inferInstance) _ q(isInt_intCeil _ _ $pb)
-    | .isNNRat _ q n d h => do
+    | .isNNRat _ _ n d h => do
       let _i ← synthInstanceQ q(Field $α)
       let _i ← synthInstanceQ q(IsStrictOrderedRing $α)
       assertInstancesCommute
-      have z : Q(ℕ) := Lean.mkRawNatLit q.ceil.toNat
-      letI : $z =Q (-(-$n / $d) : ℤ).toNat := ⟨⟩
-      return .isNat q(inferInstance) z q(isNat_intCeil_ofIsNNRat $x $n $d $h)
-    | .isNegNNRat _ q n d h => do
+      let hd ← mkDecideProofQ q($d ≠ 0)
+      let ⟨z, hz⟩ ← deriveNegEuclideanDivToNatEq n d hd
+      let proof : Q(IsNat ⌈$x⌉ $z) := q($hz ▸ isNat_intCeil_ofIsNNRat $x $n $d $h)
+      return .isNat q(inferInstance) z proof
+    | .isNegNNRat _ _ n d h => do
       let _i ← synthInstanceQ q(Field $α)
       let _i ← synthInstanceQ q(IsStrictOrderedRing $α)
       assertInstancesCommute
-      have z : Q(ℕ) := Lean.mkRawNatLit (-q.ceil).toNat
-      letI : $z =Q $n / $d := ⟨⟩
-      return .isNegNat q(inferInstance) z q(isInt_intCeil_ofIsRat_neg $x $n $d $h)
+      let hd ← mkDecideProofQ q($d ≠ 0)
+      let ⟨z, hz⟩ ← deriveNatEuclideanDivEq n d hd
+      let proof : Q(IsInt ⌈$x⌉ (.negOfNat $z)) := q($hz ▸ isInt_intCeil_ofIsRat_neg $x $n $d $h)
+      return .isNegNat q(inferInstance) z proof
   | _, _, _ => failure
 
 theorem isNat_intFract_of_isNat (r : R) (m : ℕ) : IsNat r m → IsNat (Int.fract r) 0 := by
@@ -276,7 +310,7 @@ theorem isNNRat_intFract_of_isNNRat (r : α) (n d : ℕ) :
     IsNNRat r n d → IsNNRat (Int.fract r) (n % d) d := by
   intro h
   have hd : (d : α) ≠ 0 := h.den_nz
-  have hraw : IsNNRat ((n % d : ℕ) / (d : α)) (n % d) d := IsNNRat.of_raw α (n % d) d hd
+  have hraw : IsNNRat (((n % d : ℕ) : α) / (d : α)) (n % d) d := IsNNRat.of_raw α (n % d) d hd
   rwa [h.to_eq rfl rfl, fract_div_natCast_eq_div_natCast_mod]
 
 theorem isRat_intFract_of_isRat_negOfNat (r : α) (n d : ℕ) :
@@ -390,13 +424,13 @@ end NormNum
 end Rat
 
 theorem Int.mod_nat_eq_sub_mul_floor_rat_div {n : ℤ} {d : ℕ} {hd : IsUnit (d : ℚ)} :
-    n % d = n - d * ⌊(n : ℚ) / d⌋ := by
-  rw [Int.emod_def, Rat.floor_intCast_div_natCast]
+    n % d = n - d * ⌊(n : ℚ) / (d : ℚ)⌋ := by
+  rw [Int.emod_def, Rat.floor_intCast_div_natCast, Int.euclideanDiv_eq_core]
 
 theorem Nat.coprime_sub_mul_floor_rat_div_of_coprime {n d : ℕ} {hd : IsUnit (d : ℚ)}
     (n_coprime_d : n.Coprime d) :
-    ((n : ℤ) - d * ⌊(n : ℚ) / d⌋).natAbs.Coprime d := by
-  have : (n : ℤ) % d = n - d * ⌊(n : ℚ) / d⌋ := Int.mod_nat_eq_sub_mul_floor_rat_div
+    ((n : ℤ) - d * ⌊(n : ℚ) / (d : ℚ)⌋).natAbs.Coprime d := by
+  have : (n : ℤ) % d = n - d * ⌊(n : ℚ) / (d : ℚ)⌋ := Int.mod_nat_eq_sub_mul_floor_rat_div
   rw [← this]
   have : d.Coprime n := n_coprime_d.symm
   rwa [Nat.Coprime, Nat.gcd_rec] at this

@@ -106,7 +106,7 @@ lemma IsUnit.smul_sub_iff_sub_inv_smul [Group G] [Monoid R] [AddGroup R] [Distri
 
 theorem div_smul_div_comm [Group G] [Monoid G₀] [MulAction G G₀]
     [IsScalarTower G G₀ G₀] [SMulCommClass G G₀ G₀] (g h : G) (a b : G₀) {hb : IsUnit b} :
-    (g / h) • (a / b) = Checked.div (g • a) (h • b) (hb.smul h) := by
+    (g / h) • Checked.div a b hb = Checked.div (g • a) (h • b) (hb.smul h) := by
   have hu : (hb.smul h).unit = h • hb.unit := Units.ext rfl
   change (g / h) • (a * ↑hb.unit⁻¹) = (g • a) * ↑(hb.smul h).unit⁻¹
   rw [hu, Units.smul_inv, Units.val_smul, smul_mul_smul_comm, div_eq_mul_inv]

@@ -407,13 +407,17 @@ theorem y_dvd_iff (m n) : yn a1 m ∣ yn a1 n ↔ m ∣ n :=
   ⟨fun h =>
     Nat.dvd_of_mod_eq_zero <|
       (Nat.eq_zero_or_pos _).resolve_right fun hp => by
-        have co : Nat.Coprime (yn a1 m) (xn a1 (m * (n / m))) :=
-          Nat.Coprime.symm <| (xy_coprime a1 _).coprime_dvd_right (y_mul_dvd a1 m (n / m))
         have m0 : 0 < m :=
           m.eq_zero_or_pos.resolve_left fun e => by
             rw [e, Nat.mod_zero] at hp;rw [e] at h
             exact _root_.ne_of_lt (strictMono_y a1 hp) (eq_zero_of_zero_dvd h).symm
-        rw [← Nat.mod_add_div n m, yn_add] at h
+        let q := Nat.euclideanDiv n m m0.ne'
+        have co : Nat.Coprime (yn a1 m) (xn a1 (m * q)) :=
+          Nat.Coprime.symm <| (xy_coprime a1 _).coprime_dvd_right (y_mul_dvd a1 m q)
+        have hn : n % m + m * q = n := by
+          rw [Nat.add_comm]
+          exact Nat.euclideanDiv_mul_add_mod n m m0.ne'
+        rw [← hn, yn_add] at h
         exact
           not_le_of_gt (strictMono_y _ <| Nat.mod_lt n m0)
             (Nat.le_of_dvd (strictMono_y _ hp) <|

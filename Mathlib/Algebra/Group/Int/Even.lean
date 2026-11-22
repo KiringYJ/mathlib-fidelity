@@ -8,6 +8,7 @@ module
 public import Mathlib.Algebra.Group.Int.Defs
 public import Mathlib.Algebra.Group.Nat.Even
 public import Mathlib.Data.Int.Sqrt
+public import Mathlib.Lean.Elab.NativeDivision
 public import Mathlib.Tactic.Attr.Core
 
 /-!
@@ -34,7 +35,9 @@ variable {m n : ℤ}
 @[grind =]
 lemma even_iff : Even n ↔ n % 2 = 0 where
   mp := fun ⟨m, hm⟩ ↦ by simp [← Int.two_mul, hm]
-  mpr h := ⟨n / 2, by grind⟩
+  mpr h := ⟨n.euclideanDiv 2, by
+    simpa only [h, Int.add_zero, Int.two_mul] using
+      (Int.euclideanDiv_mul_add_mod n 2 (by decide)).symm⟩
 
 lemma not_even_iff : ¬Even n ↔ n % 2 = 1 := by grind
 
@@ -74,9 +77,11 @@ lemma even_pow' {n : ℕ} (h : n ≠ 0) : Even (m ^ n) ↔ Even m := by grind
 lemma even_coe_nat (n : ℕ) : Even (n : ℤ) ↔ Even n := by
   rw_mod_cast [even_iff, Nat.even_iff]
 
-lemma two_mul_ediv_two_of_even : Even n → 2 * (n / 2) = n := by grind
+lemma two_mul_ediv_two_of_even (h : Even n) : 2 * n.euclideanDiv 2 = n := by
+  simpa only [even_iff.mp h, Int.add_zero] using Int.euclideanDiv_mul_add_mod n 2 (by decide)
 
-lemma ediv_two_mul_two_of_even : Even n → n / 2 * 2 = n := by grind
+lemma ediv_two_mul_two_of_even (h : Even n) : n.euclideanDiv 2 * 2 = n := by
+  simpa only [Int.mul_comm] using two_mul_ediv_two_of_even h
 
 -- Here are examples of how `parity_simps` can be used with `Int`.
 example (m n : ℤ) (h : Even m) : ¬Even (n + 3) ↔ Even (m ^ 2 + m + n) := by

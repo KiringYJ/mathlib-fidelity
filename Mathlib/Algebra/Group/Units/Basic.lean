@@ -240,6 +240,42 @@ section Monoid
 
 variable [Monoid M] {a b c : M}
 
+@[simp]
+protected lemma div_mul_cancel (h : IsUnit b) (a : M) : a /ₚ h.unit * b = a :=
+  divp_mul_cancel a h.unit
+
+@[simp]
+protected lemma mul_div_cancel_right (h : IsUnit b) (a : M) : a * b /ₚ h.unit = a :=
+  mul_divp_cancel a h.unit
+
+protected lemma mul_one_div_cancel (h : IsUnit a) : a * (1 /ₚ h.unit) = 1 := by
+  rw [one_divp, h.mul_val_inv]
+
+protected lemma one_div_mul_cancel (h : IsUnit a) : (1 /ₚ h.unit) * a = 1 := by
+  rw [one_divp, h.val_inv_mul]
+
+protected lemma div_left_inj (h : IsUnit c) : a /ₚ h.unit = b /ₚ h.unit ↔ a = b :=
+  divp_left_inj h.unit
+
+protected lemma div_eq_iff (h : IsUnit b) : a /ₚ h.unit = c ↔ a = c * b :=
+  divp_eq_iff_mul_eq.trans eq_comm
+
+protected lemma eq_div_iff (h : IsUnit c) : a = b /ₚ h.unit ↔ a * c = b :=
+  eq_divp_iff_mul_eq
+
+protected lemma div_eq_of_eq_mul (h : IsUnit b) : a = c * b → a /ₚ h.unit = c :=
+  h.div_eq_iff.2
+
+protected lemma eq_div_of_mul_eq (h : IsUnit c) : a * c = b → a = b /ₚ h.unit :=
+  h.eq_div_iff.2
+
+protected lemma mul_mul_div (a : M) (h : IsUnit b) : a * b * (1 /ₚ h.unit) = a := by
+  rw [one_divp]
+  exact Units.mul_inv_cancel_right a h.unit
+
+protected lemma div_eq_one_iff_eq (h : IsUnit b) : a /ₚ h.unit = 1 ↔ a = b :=
+  divp_eq_one_iff_eq
+
 @[to_additive]
 theorem mul_left_inj (h : IsUnit a) : b * a = c * a ↔ b = c :=
   let ⟨u, hu⟩ := h
@@ -292,6 +328,25 @@ theorem isUnit_iff_mulRight_bijective {a : M} :
 
 end Monoid
 
+section CommMonoid
+variable [CommMonoid M] {a b c d : M}
+
+protected lemma mul_div_cancel_left (h : IsUnit a) (b : M) : a * b /ₚ h.unit = b := by
+  rw [mul_comm, h.mul_div_cancel_right]
+
+protected lemma mul_div_cancel (h : IsUnit a) (b : M) : a * (b /ₚ h.unit) = b := by
+  rw [mul_comm, h.div_mul_cancel]
+
+protected lemma div_eq_div_iff (hb : IsUnit b) (hd : IsUnit d) :
+    a /ₚ hb.unit = c /ₚ hd.unit ↔ a * d = c * b :=
+  divp_eq_divp_iff
+
+protected lemma mul_eq_mul_of_div_eq_div (hb : IsUnit b) (hd : IsUnit d)
+    (a c : M) (h : a /ₚ hb.unit = c /ₚ hd.unit) : a * d = c * b :=
+  (hb.div_eq_div_iff hd).mp h
+
+end CommMonoid
+
 section DivisionMonoid
 variable [DivisionMonoid α] {a b c : α}
 
@@ -335,100 +390,103 @@ protected lemma mul_eq_one_iff_eq_inv (h : IsUnit b) : a * b = 1 ↔ a = b⁻¹ 
 protected lemma mul_eq_one_iff_inv_eq (h : IsUnit a) : a * b = 1 ↔ a⁻¹ = b :=
   @Units.mul_eq_one_iff_inv_eq _ _ h.unit' _
 
-@[to_additive (attr := simp)]
-protected lemma div_mul_cancel (h : IsUnit b) (a : α) : a / b * b = a := by
-  rw [div_eq_mul_inv, h.inv_mul_cancel_right]
-
-@[to_additive (attr := simp)]
-protected lemma mul_div_cancel_right (h : IsUnit b) (a : α) : a * b / b = a := by
-  rw [div_eq_mul_inv, h.mul_inv_cancel_right]
-
-@[to_additive]
-protected lemma mul_one_div_cancel (h : IsUnit a) : a * (1 / a) = 1 := by simp [h]
-
-@[to_additive]
-protected lemma one_div_mul_cancel (h : IsUnit a) : 1 / a * a = 1 := by simp [h]
-
-@[to_additive]
-protected lemma div_left_inj (h : IsUnit c) : a / c = b / c ↔ a = b := by
-  simp only [div_eq_mul_inv]
-  exact Units.mul_left_inj h.inv.unit'
-
-@[to_additive]
-protected lemma div_eq_iff (h : IsUnit b) : a / b = c ↔ a = c * b := by
-  rw [div_eq_mul_inv, h.mul_inv_eq_iff_eq_mul]
-
-@[to_additive]
-protected lemma eq_div_iff (h : IsUnit c) : a = b / c ↔ a * c = b := by
-  rw [div_eq_mul_inv, h.eq_mul_inv_iff_mul_eq]
-
-@[to_additive]
-protected lemma div_eq_of_eq_mul (h : IsUnit b) : a = c * b → a / b = c :=
-  h.div_eq_iff.2
-
-@[to_additive]
-protected lemma eq_div_of_mul_eq (h : IsUnit c) : a * c = b → a = b / c :=
-  h.eq_div_iff.2
-
-@[to_additive]
-protected lemma div_eq_one_iff_eq (h : IsUnit b) : a / b = 1 ↔ a = b :=
-  ⟨eq_of_div_eq_one, fun hab => hab.symm ▸ h.div_self⟩
-
-@[to_additive]
-protected lemma div_mul_left (h : IsUnit b) : b / (a * b) = 1 / a := by
-  rw [h.div_mul_cancel_right, one_div]
-
-@[to_additive]
-protected lemma mul_mul_div (a : α) (h : IsUnit b) : a * b * (1 / b) = a := by simp [h]
-
 end DivisionMonoid
 
 section DivisionCommMonoid
 variable [DivisionCommMonoid α] {a b c d : α}
 
 @[to_additive]
-protected lemma div_mul_right (h : IsUnit a) (b : α) : a / (a * b) = 1 / b := by
-  rw [mul_comm, h.div_mul_left]
-
-@[to_additive]
-protected lemma mul_div_cancel_left (h : IsUnit a) (b : α) : a * b / a = b := by
-  rw [mul_comm, h.mul_div_cancel_right]
-
-@[to_additive]
-protected lemma mul_div_cancel (h : IsUnit a) (b : α) : a * (b / a) = b := by
-  rw [mul_comm, h.div_mul_cancel]
-
-@[to_additive]
-protected lemma mul_eq_mul_of_div_eq_div (hb : IsUnit b) (hd : IsUnit d)
-    (a c : α) (h : a / b = c / d) : a * d = c * b := by
-  rw [← mul_one a, ← hb.div_self, ← mul_comm_div, h, div_mul_eq_mul_div, hd.div_mul_cancel]
-
-@[to_additive]
-protected lemma div_eq_div_iff (hb : IsUnit b) (hd : IsUnit d) :
-    a / b = c / d ↔ a * d = c * b := by
-  rw [← (hb.mul hd).mul_left_inj, ← mul_assoc, hb.div_mul_cancel, ← mul_assoc, mul_right_comm,
-    hd.div_mul_cancel]
-
-@[to_additive]
 protected lemma mul_inv_eq_mul_inv_iff (hb : IsUnit b) (hd : IsUnit d) :
-    a * b⁻¹ = c * d⁻¹ ↔ a * d = c * b := by
-  rw [← div_eq_mul_inv, ← div_eq_mul_inv, hb.div_eq_div_iff hd]
+    a * b⁻¹ = c * d⁻¹ ↔ a * d = c * b :=
+  Units.mul_inv_eq_mul_inv_iff a c hb.unit' hd.unit'
 
 @[to_additive]
 protected lemma inv_mul_eq_inv_mul_iff (hb : IsUnit b) (hd : IsUnit d) :
-    b⁻¹ * a = d⁻¹ * c ↔ a * d = c * b := by
-  rw [← div_eq_inv_mul, ← div_eq_inv_mul, hb.div_eq_div_iff hd]
+    b⁻¹ * a = d⁻¹ * c ↔ a * d = c * b :=
+  Units.inv_mul_eq_inv_mul_iff a c hb.unit' hd.unit'
 
-@[to_additive]
-protected lemma div_div_cancel (h : IsUnit a) : a / (a / b) = b := by
-  rw [div_div_eq_mul_div, h.mul_div_cancel_left]
+@[to_additive IsAddUnit.add_neg_add_neg_cancel]
+protected lemma div_div_cancel (h : IsUnit a) :
+    a * (a * b⁻¹)⁻¹ = b := by
+  rw [mul_inv_rev, inv_inv, mul_left_comm, h.mul_inv_cancel, mul_one]
 
-@[to_additive]
-protected lemma div_div_cancel_left (h : IsUnit a) : a / b / a = b⁻¹ := by
-  rw [div_eq_mul_inv, div_eq_mul_inv, mul_right_comm, h.mul_inv_cancel, one_mul]
+protected lemma div_div_cancel_left (h : IsUnit a) : a * b⁻¹ /ₚ h.unit = b⁻¹ :=
+  h.mul_div_cancel_left _
 
 end DivisionCommMonoid
 end IsUnit
+
+namespace IsAddUnit
+section SubtractionMonoid
+variable [SubtractionMonoid α] {a b c : α}
+
+@[simp]
+protected lemma sub_add_cancel (h : IsAddUnit b) (a : α) : a - b + b = a := by
+  rw [sub_eq_add_neg, h.neg_add_cancel_right]
+
+@[simp]
+protected lemma add_sub_cancel_right (h : IsAddUnit b) (a : α) : a + b - b = a := by
+  rw [sub_eq_add_neg, h.add_neg_cancel_right]
+
+protected lemma add_zero_sub_cancel (h : IsAddUnit a) : a + (0 - a) = 0 := by simp [h]
+
+protected lemma zero_sub_add_cancel (h : IsAddUnit a) : 0 - a + a = 0 := by simp [h]
+
+protected lemma sub_left_inj (h : IsAddUnit c) : a - c = b - c ↔ a = b := by
+  simp only [sub_eq_add_neg]
+  exact AddUnits.add_left_inj h.neg.addUnit'
+
+protected lemma sub_eq_iff (h : IsAddUnit b) : a - b = c ↔ a = c + b := by
+  rw [sub_eq_add_neg, h.add_neg_eq_iff_eq_add]
+
+protected lemma eq_sub_iff (h : IsAddUnit c) : a = b - c ↔ a + c = b := by
+  rw [sub_eq_add_neg, h.eq_add_neg_iff_add_eq]
+
+protected lemma sub_eq_of_eq_add (h : IsAddUnit b) : a = c + b → a - b = c :=
+  h.sub_eq_iff.2
+
+protected lemma eq_sub_of_add_eq (h : IsAddUnit c) : a + c = b → a = b - c :=
+  h.eq_sub_iff.2
+
+protected lemma add_add_sub (a : α) (h : IsAddUnit b) : a + b + (0 - b) = a := by simp [h]
+
+protected lemma sub_eq_zero_iff_eq (h : IsAddUnit b) : a - b = 0 ↔ a = b := by
+  rw [sub_eq_add_neg, h.add_neg_eq_zero]
+
+protected lemma sub_add_left (h : IsAddUnit b) : b - (a + b) = 0 - a := by
+  rw [h.sub_add_cancel_right, zero_sub]
+
+end SubtractionMonoid
+
+section SubtractionCommMonoid
+variable [SubtractionCommMonoid α] {a b c d : α}
+
+protected lemma add_sub_cancel_left (h : IsAddUnit a) (b : α) : a + b - a = b := by
+  rw [add_comm, h.add_sub_cancel_right]
+
+protected lemma add_sub_cancel (h : IsAddUnit a) (b : α) : a + (b - a) = b := by
+  rw [add_comm, h.sub_add_cancel]
+
+protected lemma sub_eq_sub_iff (hb : IsAddUnit b) (hd : IsAddUnit d) :
+    a - b = c - d ↔ a + d = c + b := by
+  rw [← (hb.add hd).add_left_inj, ← add_assoc, hb.sub_add_cancel, ← add_assoc, add_right_comm,
+    hd.sub_add_cancel]
+
+protected lemma sub_sub_cancel_left (h : IsAddUnit a) : a - b - a = -b := by
+  rw [sub_eq_add_neg, sub_eq_add_neg, add_right_comm, h.add_neg_cancel, zero_add]
+
+protected lemma sub_sub_cancel (h : IsAddUnit a) : a - (a - b) = b := by
+  simpa only [sub_eq_add_neg] using h.add_neg_add_neg_cancel (b := b)
+
+protected lemma sub_add_right (h : IsAddUnit a) (b : α) : a - (a + b) = 0 - b := by
+  rw [h.sub_add_cancel_left, zero_sub]
+
+protected lemma add_eq_add_of_sub_eq_sub (hb : IsAddUnit b) (hd : IsAddUnit d)
+    (a c : α) (h : a - b = c - d) : a + d = c + b :=
+  (hb.sub_eq_sub_iff hd).mp h
+
+end SubtractionCommMonoid
+end IsAddUnit
 
 -- namespace
 end IsUnit

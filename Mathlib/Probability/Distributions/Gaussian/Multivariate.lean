@@ -124,10 +124,9 @@ lemma charFun_stdGaussian (t : E) :
     integral_fintype_prod_eq_prod (f := fun i x ↦ exp (⟪x • stdOrthonormalBasis ℝ E i, t⟫ * I)),
     real_inner_smul_left, mul_comm _ (⟪_, _⟫), ofReal_mul, ← charFun_apply_real,
     charFun_gaussianReal]
-  simp only [ofReal_zero, mul_zero, zero_mul, NNReal.coe_one, ofReal_one, one_mul,
-    zero_sub]
-  simp_rw [← exp_sum, Finset.sum_neg_distrib, ← Finset.sum_div, ← ofReal_pow,
-    ← ofReal_sum, (stdOrthonormalBasis ℝ E).sum_sq_inner_right, neg_div₀]
+  simp only [ofReal_zero, mul_zero, zero_mul, NNReal.coe_one, one_mul, zero_sub]
+  simp_rw [← exp_sum, Finset.sum_neg_distrib, ← ofReal_sum, ← Finset.sum_div,
+    (stdOrthonormalBasis ℝ E).sum_sq_inner_right, neg_div₀, ofReal_neg]
 
 instance isGaussian_stdGaussian : IsGaussian (stdGaussian E) := by
   refine isGaussian_iff_gaussian_charFun.2 ⟨0, innerSL ℝ,
@@ -161,7 +160,7 @@ lemma map_pi_eq_stdGaussian :
     (Measure.pi (fun _ ↦ gaussianReal 0 1)).map (toLp 2) = stdGaussian (EuclideanSpace ℝ ι) := by
   apply Measure.ext_of_charFun (E := EuclideanSpace ℝ ι)
   ext t
-  simp_rw [charFun_stdGaussian, charFun_pi, charFun_gaussianReal, ← exp_sum, ← ofReal_pow,
+  simp_rw [charFun_stdGaussian, charFun_pi, charFun_gaussianReal, ← exp_sum,
     EuclideanSpace.real_norm_sq_eq]
   simp [div_eq_mul_inv₀, Finset.sum_mul]
 

@@ -946,7 +946,7 @@ roots formula would give `a⁻¹ ^ 2`, and there is no common convention. The pr
 omitted when it is a hypothesis. -/
 @[nolint unusedArguments]
 noncomputable def discr (f : R[X]) (hf : 0 < f.natDegree := by assumption) : R :=
-  f.sylvesterDeriv.det * (-1) ^ (f.natDegree * (f.natDegree - 1) / 2)
+  f.sylvesterDeriv.det * (-1) ^ Nat.euclideanDiv (f.natDegree * (f.natDegree - 1)) 2
 
 /-- The discriminant of a linear polynomial is `1`. -/
 lemma discr_of_degree_eq_one {f : R[X]} (hf : f.degree = 1) :
@@ -960,7 +960,7 @@ lemma discr_of_degree_eq_one {f : R[X]} (hf : f.degree = 1) :
     obtain ⟨rfl⟩ : i = 0 := by lia
     obtain ⟨rfl⟩ : j = 0 := by lia
     simp [e, sylvesterDeriv, mul_comm, hf]
-  simp [discr, ← Matrix.det_reindex_self e, this, hf]
+  simp [discr, Nat.euclideanDiv_eq_core, ← Matrix.det_reindex_self e, this, hf]
 
 set_option linter.style.whitespace false in -- manual alignment is not recognised
 /-- Standard formula for the discriminant of a quadratic polynomial. -/
@@ -989,10 +989,10 @@ the degree is genuinely needed.) -/
 lemma resultant_deriv {f : R[X]} (hf : 0 < f.degree) :
     haveI := natDegree_pos_iff_degree_pos.mpr hf
     resultant f f.derivative f.natDegree (f.natDegree - 1) =
-      (-1) ^ (f.natDegree * (f.natDegree - 1) / 2) * f.leadingCoeff * f.discr := by
+      (-1) ^ Nat.euclideanDiv (f.natDegree * (f.natDegree - 1)) 2 * f.leadingCoeff * f.discr := by
   rw [← natDegree_pos_iff_degree_pos] at hf
   rw [resultant_comm, resultant, ← sylvesterDeriv_updateRow f hf, Matrix.det_updateRow_smul,
-    Matrix.updateRow_eq_self, discr, mul_comm f.natDegree]
+    Matrix.updateRow_eq_self, discr, Nat.euclideanDiv_eq_core, mul_comm f.natDegree]
   ring_nf
   rw [Nat.div_mul_cancel (by convert! Nat.two_dvd_mul_add_one (f.natDegree - 1) using 2; lia)]
 

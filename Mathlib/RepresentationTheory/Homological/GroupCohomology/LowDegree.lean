@@ -706,13 +706,17 @@ theorem isMulCocycle₁_of_mem_cocycles₁
 @[simps]
 def coboundariesOfIsMulCoboundary₁ {f : G → M} (hf : IsMulCoboundary₁ f) :
     coboundaries₁ (Rep.ofMulDistribMulAction G M) :=
-  ⟨Additive.ofMul ∘ f, hf.choose, funext hf.choose_spec⟩
+  ⟨Additive.ofMul ∘ f, hf.choose, funext fun g ↦ by
+    change Additive.ofMul (g • hf.choose) - Additive.ofMul hf.choose = Additive.ofMul (f g)
+    simpa only [ofMul_div] using congrArg Additive.ofMul (hf.choose_spec g)⟩
 
 theorem isMulCoboundary₁_of_mem_coboundaries₁
     (f : G → M) (hf : f ∈ coboundaries₁ (Rep.ofMulDistribMulAction G M)) :
     IsMulCoboundary₁ (M := M) (Additive.ofMul ∘ f) := by
   rcases hf with ⟨x, rfl⟩
-  exact ⟨x, fun _ =>  rfl⟩
+  let a : M := x
+  refine ⟨a, fun g ↦ ?_⟩
+  exact (toMul_sub (α := M) (Additive.ofMul (g • a)) (Additive.ofMul a)).symm
 
 /-- Given an abelian group `M` with a `MulDistribMulAction` of `G`, and a function
 `f : G × G → M` satisfying the multiplicative 2-cocycle condition, produces a 2-cocycle for the
@@ -732,13 +736,19 @@ theorem isMulCocycle₂_of_mem_cocycles₂
 2-coboundary for the representation on `M` induced by the `MulDistribMulAction`. -/
 def coboundariesOfIsMulCoboundary₂ {f : G × G → M} (hf : IsMulCoboundary₂ f) :
     coboundaries₂ (Rep.ofMulDistribMulAction G M) :=
-  ⟨Additive.ofMul ∘ f, hf.choose, funext fun g ↦ hf.choose_spec g.1 g.2⟩
+  ⟨Additive.ofMul ∘ f, hf.choose, funext fun g ↦ by
+    change Additive.ofMul (g.1 • hf.choose g.2) - Additive.ofMul (hf.choose (g.1 * g.2)) +
+      Additive.ofMul (hf.choose g.1) = Additive.ofMul (f g)
+    simpa only [ofMul_mul, ofMul_div] using congrArg Additive.ofMul (hf.choose_spec g.1 g.2)⟩
 
 theorem isMulCoboundary₂_of_mem_coboundaries₂
     (f : G × G → M) (hf : f ∈ coboundaries₂ (Rep.ofMulDistribMulAction G M)) :
     IsMulCoboundary₂ (M := M) (Additive.toMul ∘ f) := by
   rcases hf with ⟨x, rfl⟩
-  exact ⟨x, fun _ _ => rfl⟩
+  let a : G → M := x
+  refine ⟨a, fun g h ↦ ?_⟩
+  exact congrArg (fun m : M ↦ m * a g)
+    (toMul_sub (α := M) (Additive.ofMul (g • a h)) (Additive.ofMul (a (g * h)))).symm
 
 end ofMulDistribMulAction
 

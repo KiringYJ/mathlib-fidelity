@@ -377,7 +377,7 @@ theorem inv₀_def (i x) {hx : IsUnit (⟦⟨i, x⟩⟧ : DirectLimit G f)} :
   inv_eq_of_mul_eq_one_right₀ <| by rw [mul_def, mul_inv_cancel₀, one_def i]
 
 theorem div₀_def (i x y) {hy : IsUnit (⟦⟨i, y⟩⟧ : DirectLimit G f)} :
-    (⟦⟨i, x⟩⟧ : DirectLimit G f) / (⟦⟨i, y⟩⟧ : DirectLimit G f) =
+    Checked.div (⟦⟨i, x⟩⟧ : DirectLimit G f) ⟦⟨i, y⟩⟧ hy =
       ⟦⟨i, Checked.div x y (isUnit_mk_iff.mp hy)⟩⟧ := by
   rw [div_eq_mul_inv₀, inv₀_def, mul_def, div_eq_mul_inv₀]
 
@@ -398,7 +398,7 @@ theorem lift_inv₀ (g : ∀ i, H i) (h) (x : DirectLimit G f) {hx : IsUnit x} :
 
 @[simp]
 theorem lift_div₀ (g : ∀ i, H i) (h) (x y : DirectLimit G f) {hy : IsUnit y} :
-    DirectLimit.lift f (g ·) h (x / y) =
+    DirectLimit.lift f (g ·) h (Checked.div x y hy) =
       Checked.div (DirectLimit.lift f (g ·) h x) (DirectLimit.lift f (g ·) h y)
         (isUnit_lift g h hy) := by
   rw [div_eq_mul_inv₀, lift_mul, lift_inv₀, div_eq_mul_inv₀]

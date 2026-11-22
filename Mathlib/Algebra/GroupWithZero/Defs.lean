@@ -181,34 +181,6 @@ lemma IsRightCancelMulZero.to_isCancelMulZero [IsRightCancelMulZero M₀] :
 
 end CommMagma
 
-/-- Prop-valued mixin for a monoid with zero to be equipped with a cancelling total division, such
-as the Euclidean quotient of `ℕ`, `ℤ` and, more generally, any Euclidean domain.
-
-Groups with zero have no ambient division; their division by an invertible element has its own
-cancellation theorems `mul_div_cancel_right₀` and `mul_div_cancel_left₀`. -/
-class MulDivCancelClass (M₀ : Type*) [MonoidWithZero M₀] [Div M₀] : Prop where
-  protected mul_div_cancel (a b : M₀) : b ≠ 0 → a * b / b = a
-
-namespace MulDivCancelClass
-
-section MonoidWithZero
-variable [MonoidWithZero M₀] [Div M₀] [MulDivCancelClass M₀]
-
-@[simp] protected lemma mul_div_cancel_right₀ (a : M₀) {b : M₀} (hb : b ≠ 0) : a * b / b = a :=
-  MulDivCancelClass.mul_div_cancel _ _ hb
-
-end MonoidWithZero
-
-section CommMonoidWithZero
-variable [CommMonoidWithZero M₀] [Div M₀] [MulDivCancelClass M₀]
-
-@[simp] protected lemma mul_div_cancel_left₀ (b : M₀) {a : M₀} (ha : a ≠ 0) : a * b / a = b := by
-  rw [mul_comm, MulDivCancelClass.mul_div_cancel_right₀ _ ha]
-
-end CommMonoidWithZero
-
-end MulDivCancelClass
-
 /-- A monoid with a zero distinct from one in which every nonzero element is a unit.
 Inversion, division and integer powers are operations on its group of units. -/
 class GroupWithZero (G₀ : Type u) extends MonoidWithZero G₀, Nontrivial G₀ where

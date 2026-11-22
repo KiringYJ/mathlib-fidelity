@@ -58,13 +58,16 @@ lemma congr {q : ℕ} (h : p = q) : CharP R q := h ▸ ‹CharP R p›
 
 @[simp] lemma cast_eq_zero : (p : R) = 0 := (cast_eq_zero_iff R p p).2 dvd_rfl
 
-lemma cast_eq_mod (k : ℕ) : (k : R) = (k % p : ℕ) :=
-  have (a : ℕ) : ((p * a : ℕ) : R) = 0 := by
+lemma cast_eq_mod (k : ℕ) : (k : R) = (k % p : ℕ) := by
+  by_cases hp : p = 0
+  · simp [hp]
+  have h (a : ℕ) : ((p * a : ℕ) : R) = 0 := by
     rw [CharP.cast_eq_zero_iff R p]
     exact Nat.dvd_mul_right p a
   calc
-    (k : R) = ↑(k % p + p * (k / p)) := by rw [Nat.mod_add_div]
-    _ = ↑(k % p) := by simp [this]
+    (k : R) = ↑(k % p + p * Nat.euclideanDiv k p hp) := by
+      rw [Nat.add_comm (k % p), Nat.euclideanDiv_mul_add_mod]
+    _ = ↑(k % p) := by simp [h]
 
 lemma cast_eq_iff_mod_eq [IsLeftCancelAdd R] : (a : R) = (b : R) ↔ a % p = b % p := by
   wlog! hle : a ≤ b

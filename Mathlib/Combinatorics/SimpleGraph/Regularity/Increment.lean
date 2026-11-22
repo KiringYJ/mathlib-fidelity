@@ -51,8 +51,6 @@ open scoped SzemerediRegularity.Positivity
 variable {α : Type*} [Fintype α] [DecidableEq α] {P : Finpartition (univ : Finset α)}
   (hP : P.IsEquipartition) (G : SimpleGraph α) [DecidableRel G.Adj] (ε : ℝ)
 
-local notation3 "m" => (card α / stepBound #P.parts : ℕ)
-
 namespace SzemerediRegularity
 
 /-- The **increment partition** in Szemerédi's Regularity Lemma.
@@ -72,24 +70,22 @@ variable {hP G ε}
 theorem card_increment (hPα : #P.parts * 16 ^ #P.parts ≤ card α) (hPG : ¬P.IsUniform G ε) :
     #(increment hP G ε).parts = stepBound #P.parts := by
   have hPα' : stepBound #P.parts ≤ card α := by grw [← hPα, stepBound]; gcongr; simp
-  have hPpos : 0 < stepBound #P.parts := stepBound_pos (nonempty_of_not_uniform hPG).card_pos
+  have hparts := nonempty_of_not_uniform hPG
+  have hm : chunkSize P hparts ≠ 0 := by
+    rw [chunkSize, Nat.euclideanDiv_eq_core]
+    exact (Nat.div_pos hPα' (stepBound_pos hparts.card_pos)).ne'
   rw [increment, card_bind]
-  simp_rw [chunk, apply_dite Finpartition.parts, apply_dite card, sum_dite]
-  rw [sum_const_nat, sum_const_nat, univ_eq_attach, univ_eq_attach, card_attach, card_attach]
-  any_goals exact fun x hx => card_parts_equitabilise _ _ (Nat.div_pos hPα' hPpos).ne'
-  rw [Nat.sub_add_cancel a_add_one_le_four_pow_parts_card,
-    Nat.sub_add_cancel ((Nat.le_succ _).trans a_add_one_le_four_pow_parts_card), ← add_mul]
-  congr
-  rw [card_filter_add_card_filter_not, card_attach]
+  simp [card_chunk hm, stepBound]
 
 variable (hP G ε)
 
 theorem increment_isEquipartition : (increment hP G ε).IsEquipartition := by
-  simp_rw [IsEquipartition, Set.equitableOn_iff_exists_eq_eq_add_one]
-  refine ⟨m, fun A hA => ?_⟩
-  rw [mem_coe, increment, mem_bind] at hA
+  intro A B hA hB
+  rw [mem_coe, increment, mem_bind] at hA hB
   obtain ⟨U, hU, hA⟩ := hA
-  exact card_eq_of_mem_parts_chunk hA
+  obtain ⟨V, hV, hB⟩ := hB
+  exact (card_le_m_add_one_of_mem_chunk_parts hA).trans
+    (Nat.succ_le_succ (m_le_card_of_mem_chunk_parts hB))
 
 set_option backward.privateInPublic true in
 /-- The contribution to `Finpartition.energy` of a pair of distinct parts of a `Finpartition`. -/
@@ -144,7 +140,8 @@ lemma le_sum_distinctPairs_edgeDensity_sq (x : {i // i ∈ P.parts.offDiag}) (h�
           (P.nonempty_of_mem_parts (mem_offDiag.1 x.2).2.1) then 0 else ε ^ 4 / 3) - ε ^ 5 / 25) ≤
     (∑ i : ↥(distinctPairs hP G ε x), (G.edgeDensity i.1.1 i.1.2
       (Finpartition.nonempty_of_mem_parts _ (mem_product.1 i.2).1)
-      (Finpartition.nonempty_of_mem_parts _ (mem_product.1 i.2).2) : ℝ) ^ 2) / 16 ^ #P.parts := by
+      (Finpartition.nonempty_of_mem_parts _ (mem_product.1 i.2).2) : ℝ) ^ 2) /
+        (16 : ℝ) ^ #P.parts := by
   rw [← add_sub_assoc, add_sub_right_comm]
   split_ifs with h
   · rw [add_zero]
@@ -202,7 +199,7 @@ theorem energy_increment (hP : P.IsEquipartition) (hP₇ : 7 ≤ #P.parts)
         (P.nonempty_of_mem_parts (mem_offDiag.1 x.2).2.1) : ℝ) ^ 2 + #P.parts ^ 2 * (ε ^ 5 / 4) ≤
       ∑ x : P.parts.offDiag, (∑ i : ↥(distinctPairs hP G ε x), (G.edgeDensity i.1.1 i.1.2
         (nonempty_of_mem_distinctPairs i.2).1 (nonempty_of_mem_distinctPairs i.2).2 : ℝ) ^ 2) /
-          16 ^ #P.parts := by
+          (16 : ℝ) ^ #P.parts := by
     calc
       _ ≤ ∑ x : P.parts.offDiag, (G.edgeDensity x.1.1 x.1.2
             (P.nonempty_of_mem_parts (mem_offDiag.1 x.2).1)
@@ -210,8 +207,8 @@ theorem energy_increment (hP : P.IsEquipartition) (hP₇ : 7 ≤ #P.parts)
           (#(P.nonUniforms G ε) * (ε ^ 4 / 3) - #P.parts.offDiag * (ε ^ 5 / 25)) := by
         gcongr
         calc
-          _ = (6 / 7 * #P.parts ^ 2) * ε ^ 5 * (7 / 24) := by ring
-          _ ≤ #P.parts.offDiag * ε ^ 5 * (22 / 75) := by
+          _ = ((6 : ℝ) / 7 * #P.parts ^ 2) * ε ^ 5 * ((7 : ℝ) / 24) := by ring
+          _ ≤ #P.parts.offDiag * ε ^ 5 * ((22 : ℝ) / 75) := by
               gcongr ?_ * _ * ?_
               · rw [← mul_div_right_comm₀, div_le_iff₀ (by simp), offDiag_card]
                 norm_cast
@@ -236,14 +233,14 @@ theorem energy_increment (hP : P.IsEquipartition) (hP₇ : 7 ≤ #P.parts)
     _ = (∑ x : P.parts.offDiag, (G.edgeDensity x.1.1 x.1.2
           (P.nonempty_of_mem_parts (mem_offDiag.1 x.2).1)
           (P.nonempty_of_mem_parts (mem_offDiag.1 x.2).2.1) : ℝ) ^ 2 +
-            #P.parts ^ 2 * (ε ^ 5 / 4)) / #P.parts ^ 2 := by
+            #P.parts ^ 2 * (ε ^ 5 / 4)) / (#P.parts : ℝ) ^ 2 := by
       rw [add_div, mul_div_cancel_left₀]
     _ ≤ (∑ x : P.parts.offDiag, (∑ i : ↥(distinctPairs hP G ε x), (G.edgeDensity i.1.1 i.1.2
           (nonempty_of_mem_distinctPairs i.2).1 (nonempty_of_mem_distinctPairs i.2).2 : ℝ) ^ 2) /
-            16 ^ #P.parts) / #P.parts ^ 2 := by gcongr
+            (16 : ℝ) ^ #P.parts) / (#P.parts : ℝ) ^ 2 := by gcongr
     _ = (∑ x : P.parts.offDiag, ∑ i : ↥(distinctPairs hP G ε x), (G.edgeDensity i.1.1 i.1.2
           (nonempty_of_mem_distinctPairs i.2).1 (nonempty_of_mem_distinctPairs i.2).2 : ℝ) ^ 2) /
-            (#P.parts * 4 ^ #P.parts) ^ 2 := by
+            ((#P.parts : ℝ) * 4 ^ #P.parts) ^ 2 := by
       have h4 : ((#P.parts : ℝ) * 4 ^ #P.parts) ^ 2 = #P.parts ^ 2 * 16 ^ #P.parts := by
         rw [mul_pow, ← pow_mul, show (16 : ℝ) = 4 ^ 2 by norm_num, ← pow_mul]
         ring
@@ -251,7 +248,7 @@ theorem energy_increment (hP : P.IsEquipartition) (hP₇ : 7 ≤ #P.parts)
     _ ≤ (∑ y : (increment hP G ε).parts.offDiag, (G.edgeDensity y.1.1 y.1.2
           ((increment hP G ε).nonempty_of_mem_parts (mem_offDiag.1 y.2).1)
           ((increment hP G ε).nonempty_of_mem_parts (mem_offDiag.1 y.2).2.1) : ℝ) ^ 2) /
-            (#P.parts * 4 ^ #P.parts) ^ 2 := by gcongr
+            ((#P.parts : ℝ) * 4 ^ #P.parts) ^ 2 := by gcongr
     _ = _ := by simp only [hcard, coe_stepBound]
 
 end SzemerediRegularity

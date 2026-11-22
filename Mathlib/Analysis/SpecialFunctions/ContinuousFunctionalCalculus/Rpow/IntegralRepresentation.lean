@@ -290,7 +290,7 @@ lemma le_integral_rpowIntegrand₀₁_one (hp : p ∈ Ioo 0 1) :
   calc _ = (1 / 2) * -((1 : ℝ) ^ (p - 1)) / (p - 1) := by
         simp only [one_rpow]
         field_simp
-    _ = ∫ t in Ioi 1, (1 / 2) * t ^ (p - 2) := by
+    _ = ∫ t in Ioi 1, ((1 : ℝ) / 2) * t ^ (p - 2) := by
       rw [integral_const_mul, integral_Ioi_rpow_of_lt (by linarith [hp.2]) zero_lt_one]
       ring_nf
     _ ≤ ∫ t in Ioi 1, g t := by

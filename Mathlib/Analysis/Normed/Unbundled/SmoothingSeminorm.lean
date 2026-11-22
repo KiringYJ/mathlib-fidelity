@@ -91,9 +91,9 @@ private theorem exists_pow_bound_of_smoothingFun_lt (hμ1 : μ 1 ≤ 1) (x : R) 
       one_div_mul_cancel, rpow_one] using h
   let C := max 1 (∑ k ∈ Finset.range (m : ℕ), μ (x ^ k) / r ^ k)
   refine ⟨C, le_max_left _ _, fun n ↦ ?_⟩
-  let q := n / (m : ℕ)
+  let q := Nat.euclideanDiv n m m.pos.ne'
   let k := n % (m : ℕ)
-  have hdecomp : (m : ℕ) * q + k = n := Nat.div_add_mod _ _
+  have hdecomp : (m : ℕ) * q + k = n := Nat.euclideanDiv_mul_add_mod n m m.pos.ne'
   have hk : μ (x ^ k) ≤ C * r ^ k := by
     apply (div_le_iff₀ (pow_pos hr0 _)).1
     exact (Finset.single_le_sum (f := fun j : ℕ ↦ μ (x ^ j) / r ^ j)

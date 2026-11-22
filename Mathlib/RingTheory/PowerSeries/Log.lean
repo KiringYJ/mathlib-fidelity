@@ -48,13 +48,13 @@ variable (A : Type*) [CommRing A] [Algebra ℚ A]
 
 /-- Power series for `log(1 + X) = X - X²/2 + X³/3 - ⋯`. -/
 noncomputable def log : PowerSeries A :=
-  mk fun n ↦ if h : n = 0 then 0 else algebraMap ℚ A ((-1 : ℚ) ^ (n + 1) / n)
+  mk fun n ↦ if h : n = 0 then 0 else algebraMap ℚ A ((-1 : ℚ) ^ (n + 1) / (n : ℚ))
 
 variable {A}
 
 @[simp]
 theorem coeff_log (n : ℕ) :
-    coeff n (log A) = if h : n = 0 then 0 else algebraMap ℚ A ((-1 : ℚ) ^ (n + 1) / n) :=
+    coeff n (log A) = if h : n = 0 then 0 else algebraMap ℚ A ((-1 : ℚ) ^ (n + 1) / (n : ℚ)) :=
   coeff_mk _ _
 
 @[simp]

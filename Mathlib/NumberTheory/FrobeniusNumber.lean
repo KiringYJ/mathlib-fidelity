@@ -138,13 +138,17 @@ theorem exists_mem_span_nat_finset_of_ge :
     (span_singleton_setGcd s ▸ mem_span_singleton_self _)
   -- Let `x` be an arbitrary nonzero element in `s`.
   have ⟨x, hxs, hx⟩ := exists_ne_zero_of_setGcd_ne_zero h0
-  let n := (x / setGcd s) * ∑ i, (-a i).toNat * i
+  obtain ⟨k, hk⟩ := setGcd_dvd_of_mem hxs
+  let n := k * ∑ i, (-a i).toNat * i
   refine ⟨insert x t, n, by simpa [Set.insert_subset_iff] using ⟨hxs, hts⟩, fun m ge dvd ↦ ?_⟩
   -- For `m ≥ n`, write `m = q * x + (r + n)` with 0 ≤ r < x.
   obtain ⟨c, rfl⟩ := exists_add_of_le ge
-  rw [← c.div_add_mod' x]
-  set q := c / x
-  set r := c % x
+  let q := Nat.euclideanDiv c x hx
+  let r := c % x
+  have hc : q * x + r = c := by
+    rw [mul_comm]
+    exact Nat.euclideanDiv_mul_add_mod c x hx
+  rw [← hc]
   rw [add_comm, add_assoc]
   refine add_mem (mul_mem_left _ q (subset_span (Finset.mem_insert_self ..)))
     (Submodule.span_mono (s := t) (Finset.subset_insert ..) ?_)
@@ -155,7 +159,7 @@ theorem exists_mem_span_nat_finset_of_ge :
   convert!
     (sum_mem fun i _ ↦ mul_mem_left _ _ (subset_span i.2) :
       -- an explicit ℕ-linear combination of elements of `t` that is equal to `r + n`
-       ∑ i : t, (if 0 ≤ a i then rx else x / setGcd s - rx) * (a i).natAbs * i ∈ span t)
+       ∑ i : t, (if 0 ≤ a i then rx else k - rx) * (a i).natAbs * i ∈ span t)
   simp_rw [← Int.natCast_inj, hrx, n, Finset.mul_sum, mul_comm _ rx, cast_add, cast_sum, cast_mul,
     ← eq, Finset.mul_sum, smul_eq_mul, ← mul_assoc, ← Finset.sum_add_distrib, ← add_mul]
   congr! 2 with i
@@ -164,8 +168,7 @@ theorem exists_mem_span_nat_finset_of_ge :
       Int.natCast_natAbs, abs_eq_self.mpr hai]
   · rw [cast_sub, Int.natCast_natAbs, abs_eq_neg_self.mpr (by lia), sub_mul,
       ← Int.eq_natCast_toNat.mpr (by lia), mul_neg (rx : ℤ), sub_neg_eq_add, add_comm]
-    rw [← Nat.mul_le_mul_left_iff (pos_of_ne_zero h0), ← hrx,
-      Nat.mul_div_cancel' (setGcd_dvd_of_mem hxs)]
+    rw [← Nat.mul_le_mul_left_iff (pos_of_ne_zero h0), ← hrx, ← hk]
     exact (c.mod_lt (pos_of_ne_zero hx)).le
 
 theorem exists_mem_closure_of_ge : ∃ n, ∀ m ≥ n, setGcd s ∣ m → m ∈ AddSubmonoid.closure s :=

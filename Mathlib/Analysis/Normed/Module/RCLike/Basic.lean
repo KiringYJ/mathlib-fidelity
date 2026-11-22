@@ -69,7 +69,7 @@ theorem LinearMap.bound_of_sphere_bound {r : ℝ} (r_pos : 0 < r) (c : ℝ) (f :
     rw [mem_sphere_zero_iff_norm]
     exact norm_smul_inv_norm' r_pos.le z_zero
   have r_ne_zero : (r : 𝕜) ≠ 0 := RCLike.ofReal_ne_zero.mpr r_pos.ne'
-  have eq : f z = ‖z‖ / r * f z₁ := by
+  have eq : f z = (‖z‖ : 𝕜) / (r : 𝕜) * f z₁ := by
     rw [hz₁, map_smul, smul_eq_mul]
     rw [← mul_assoc, ← mul_assoc, div_mul_cancel₀, mul_inv_cancel₀, one_mul]
   rw [eq, norm_mul, norm_div]

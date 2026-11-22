@@ -8,6 +8,7 @@ module
 public import Mathlib.Algebra.Field.Defs
 public import Mathlib.Algebra.GroupWithZero.Units.Basic
 public import Mathlib.Algebra.Ring.Int.Defs
+public import Mathlib.Lean.Elab.NativeDivision
 
 /-!
 # Cast of integers into fields
@@ -16,7 +17,8 @@ This file concerns the canonical homomorphism `ℤ → F`, where `F` is a field.
 
 ## Main results
 
-* `Int.cast_div`: if `n` divides `m`, then `↑(m / n) = ↑m / ↑n`
+* `Int.cast_div`: casting an exact integer quotient agrees with division by the cast denominator
+  when that denominator is nonzero.
 -/
 
 public section
@@ -38,7 +40,8 @@ theorem cast_neg_natCast {R} [DivisionRing R] (n : ℕ) : ((-n : ℤ) : R) = -n 
 
 @[simp]
 theorem cast_div [DivisionRing α] {m n : ℤ} (n_dvd : n ∣ m) (hn : (n : α) ≠ 0) :
-    ((m / n : ℤ) : α) = m / n := by
-  rw [eq_div_iff, ← Int.cast_mul, Int.ediv_mul_cancel n_dvd]
+    (Int.exactQuotient m n n_dvd (fun h => hn (h ▸ Int.cast_zero)) : α) =
+      (m : α) / (n : α) := by
+  rw [eq_div_iff, ← Int.cast_mul, Int.mul_comm, Int.mul_exactQuotient]
 
 end Int

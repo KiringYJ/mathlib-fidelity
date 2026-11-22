@@ -67,6 +67,7 @@ theorem coe_zeta_smul_apply {M} [Semiring R] [AddCommMonoid M] [MulAction R M]
     rcases mem_divisorsAntidiagonal.1 hi with ⟨rfl, h⟩
     rw [natCoe_apply, zeta_apply_ne (left_ne_zero_of_mul h), cast_one, one_smul]
   · rw [← map_div_left_divisors, sum_map, Function.Embedding.coeFn_mk]
+    exact Finset.sum_attach x.divisors f
 
 /-- `@[simp]`-normal form of `coe_zeta_smul_apply`. -/
 @[simp]

@@ -47,12 +47,12 @@ section definition
 /-- Lower linear growth of a sequence: the `liminf` of `u n / n` as `n → ∞`, over the nonzero
 natural numbers, where the quotient is defined. -/
 noncomputable def linearGrowthInf (u : ℕ → EReal) : EReal :=
-  liminf (fun n : {n : ℕ // n ≠ 0} ↦ u n / (n : ℕ)) (comap Subtype.val atTop)
+  liminf (fun n : {n : ℕ // n ≠ 0} ↦ u n / ((n : ℕ) : EReal)) (comap Subtype.val atTop)
 
 /-- Upper linear growth of a sequence: the `limsup` of `u n / n` as `n → ∞`, over the nonzero
 natural numbers, where the quotient is defined. -/
 noncomputable def linearGrowthSup (u : ℕ → EReal) : EReal :=
-  limsup (fun n : {n : ℕ // n ≠ 0} ↦ u n / (n : ℕ)) (comap Subtype.val atTop)
+  limsup (fun n : {n : ℕ // n ≠ 0} ↦ u n / ((n : ℕ) : EReal)) (comap Subtype.val atTop)
 
 end definition
 
@@ -537,8 +537,8 @@ lemma _root_.Monotone.le_linearGrowthSup_comp (h : Monotone u)
     exact le_trans (by gcongr) <| bn_un.trans (h n_vk)
 
 lemma _root_.Monotone.linearGrowthInf_comp {a : EReal} (h : Monotone u)
-    (hv : Tendsto (fun n : {n : ℕ // n ≠ 0} ↦ (v n : EReal) / (n : ℕ)) (comap Subtype.val atTop)
-      (𝓝 a)) (ha : a ≠ 0) (ha' : a ≠ ⊤) :
+    (hv : Tendsto (fun n : {n : ℕ // n ≠ 0} ↦ (v n : EReal) / ((n : ℕ) : EReal))
+      (comap Subtype.val atTop) (𝓝 a)) (ha : a ≠ 0) (ha' : a ≠ ⊤) :
     linearGrowthInf (u ∘ v) = a * linearGrowthInf u := by
   have hv₁ : 0 < linearGrowthInf fun n ↦ (v n : EReal) := by
     rw [← hv.liminf_eq] at ha
@@ -570,8 +570,8 @@ lemma _root_.Monotone.linearGrowthInf_comp {a : EReal} (h : Monotone u)
       exact le_linearGrowthInf_comp h' v_top
 
 lemma _root_.Monotone.linearGrowthSup_comp {a : EReal} (h : Monotone u)
-    (hv : Tendsto (fun n : {n : ℕ // n ≠ 0} ↦ (v n : EReal) / (n : ℕ)) (comap Subtype.val atTop)
-      (𝓝 a)) (ha : a ≠ 0) (ha' : a ≠ ⊤) :
+    (hv : Tendsto (fun n : {n : ℕ // n ≠ 0} ↦ (v n : EReal) / ((n : ℕ) : EReal))
+      (comap Subtype.val atTop) (𝓝 a)) (ha : a ≠ 0) (ha' : a ≠ ⊤) :
     linearGrowthSup (u ∘ v) = a * linearGrowthSup u := by
   have hv₁ : 0 < linearGrowthInf fun n ↦ (v n : EReal) := by
     rw [← hv.liminf_eq] at ha
@@ -602,7 +602,7 @@ lemma _root_.Monotone.linearGrowthSup_comp {a : EReal} (h : Monotone u)
 
 lemma _root_.Monotone.linearGrowthInf_comp_mul {m : ℕ} (h : Monotone u) (hm : m ≠ 0) :
     linearGrowthInf (fun n ↦ u (m * n)) = m * linearGrowthInf u := by
-  have : Tendsto (fun n : {n : ℕ // n ≠ 0} ↦ ((m * n : ℕ) : EReal) / (n : ℕ))
+  have : Tendsto (fun n : {n : ℕ // n ≠ 0} ↦ ((m * n : ℕ) : EReal) / ((n : ℕ) : EReal))
       (comap Subtype.val atTop) (𝓝 m) := by
     refine tendsto_nhds_of_eventually_eq (Eventually.of_forall fun x ↦ ?_)
     rw [natCast_mul, mul_div_cancel_right₀]
@@ -610,7 +610,7 @@ lemma _root_.Monotone.linearGrowthInf_comp_mul {m : ℕ} (h : Monotone u) (hm : 
 
 lemma _root_.Monotone.linearGrowthSup_comp_mul {m : ℕ} (h : Monotone u) (hm : m ≠ 0) :
     linearGrowthSup (fun n ↦ u (m * n)) = m * linearGrowthSup u := by
-  have : Tendsto (fun n : {n : ℕ // n ≠ 0} ↦ ((m * n : ℕ) : EReal) / (n : ℕ))
+  have : Tendsto (fun n : {n : ℕ // n ≠ 0} ↦ ((m * n : ℕ) : EReal) / ((n : ℕ) : EReal))
       (comap Subtype.val atTop) (𝓝 m) := by
     refine tendsto_nhds_of_eventually_eq (Eventually.of_forall fun x ↦ ?_)
     rw [natCast_mul, mul_div_cancel_right₀]

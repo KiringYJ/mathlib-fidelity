@@ -11,6 +11,7 @@ public import Mathlib.Algebra.Ring.Defs
 public import Mathlib.Algebra.Ring.Int.Defs
 public import Mathlib.Data.Nat.Cast.Basic
 public import Mathlib.Data.Nat.Cast.Commute
+public meta import Mathlib.Lean.Elab.NativeDivision
 public import Mathlib.Tactic.HaveI
 public import Mathlib.Tactic.NormNum.Inv.Basic
 public import Mathlib.Tactic.NormNum.Core
@@ -22,7 +23,7 @@ This file adds `norm_num` plugins for
 * constructors and constants
 * `Nat.cast` and `Int.cast`
 * `+`, `-`, `*`, and `/`
-* `Nat.succ`, `Nat.sub`, `Nat.mod`, and `Nat.div`.
+* `Nat.succ`, `Nat.sub`, `Nat.mod`, and checked natural division.
 
 See other files in this directory for many more plugins.
 -/
@@ -205,10 +206,10 @@ theorem isNNRat_add {α} [Semiring α] {f : α → α → α} {a b : α} {na nb 
   have := invertibleOfMul' (α := α) h₂
   use this
   have H := (Nat.cast_commute (α := α) da db).invOf_left.invOf_right.right_comm
-  have h₁ := congr_arg (↑· * (⅟↑da * ⅟↑db : α)) h₁
+  have h₁ := congr_arg (fun x : ℕ ↦ (x : α) * (⅟↑da * ⅟↑db)) h₁
   simp only [Nat.cast_add, Nat.cast_mul, ← mul_assoc,
     add_mul, mul_invOf_cancel_right] at h₁
-  have h₂ := congr_arg (↑nc * ↑· * (⅟↑da * ⅟↑db * ⅟↑dc : α)) h₂
+  have h₂ := congr_arg (fun x : ℕ ↦ (nc : α) * (x : α) * (⅟↑da * ⅟↑db * ⅟↑dc)) h₂
   simp only [H, mul_invOf_cancel_right', Nat.cast_mul, ← mul_assoc] at h₁ h₂
   rw [h₁, h₂, Nat.cast_commute]
   simp only [mul_invOf_cancel_right,
@@ -227,10 +228,10 @@ theorem isRat_add {α} [Ring α] {f : α → α → α} {a b : α} {na nb nc : �
   have := invertibleOfMul' (α := α) h₂
   use this
   have H := (Nat.cast_commute (α := α) da db).invOf_left.invOf_right.right_comm
-  have h₁ := congr_arg (↑· * (⅟↑da * ⅟↑db : α)) h₁
+  have h₁ := congr_arg (fun x : ℤ ↦ (x : α) * (⅟↑da * ⅟↑db)) h₁
   simp only [Int.cast_add, Int.cast_mul, Int.cast_natCast, ← mul_assoc,
     add_mul, mul_invOf_cancel_right] at h₁
-  have h₂ := congr_arg (↑nc * ↑· * (⅟↑da * ⅟↑db * ⅟↑dc : α)) h₂
+  have h₂ := congr_arg (fun x : ℕ ↦ (nc : α) * (x : α) * (⅟↑da * ⅟↑db * ⅟↑dc)) h₂
   simp only [H, mul_invOf_cancel_right', Nat.cast_mul, ← mul_assoc] at h₁ h₂
   rw [h₁, h₂, Nat.cast_commute]
   simp only [mul_invOf_cancel_right,
@@ -261,7 +262,7 @@ def Result.add {u : Level} {α : Q(Type u)} {a b : Q($α)} (ra : Result q($a)) (
     let ⟨qa, na, da, pa⟩ ← ra.toNNRat' dsα; let ⟨qb, nb, db, pb⟩ ← rb.toNNRat' dsα
     let qc := qa + qb
     let dd := qa.den * qb.den
-    let k := dd / qc.den
+    let k := Nat.euclideanDiv dd qc.den qc.den_nz
     have t1 : Q(ℕ) := mkRawNatLit (k * qc.num.toNat)
     have t2 : Q(ℕ) := mkRawNatLit dd
     have nc : Q(ℕ) := mkRawNatLit qc.num.toNat
@@ -276,7 +277,7 @@ def Result.add {u : Level} {α : Q(Type u)} {a b : Q($α)} (ra : Result q($a)) (
     let ⟨qa, na, da, pa⟩ ← ra.toRat' dα; let ⟨qb, nb, db, pb⟩ ← rb.toRat' dα
     let qc := qa + qb
     let dd := qa.den * qb.den
-    let k := dd / qc.den
+    let k := Nat.euclideanDiv dd qc.den qc.den_nz
     have t1 : Q(ℤ) := mkRawIntLit (k * qc.num)
     have t2 : Q(ℕ) := mkRawNatLit dd
     have nc : Q(ℤ) := mkRawIntLit qc.num
@@ -402,7 +403,7 @@ def Result.sub {u : Level} {α : Q(Type u)} {a b : Q($α)} (ra : Result q($a)) (
     let ⟨qa, na, da, pa⟩ ← ra.toRat' dα; let ⟨qb, nb, db, pb⟩ ← rb.toRat' dα
     let qc := qa - qb
     let dd := qa.den * qb.den
-    let k := dd / qc.den
+    let k := Nat.euclideanDiv dd qc.den qc.den_nz
     have t1 : Q(ℤ) := mkRawIntLit (k * qc.num)
     have t2 : Q(ℕ) := mkRawNatLit dd
     have nc : Q(ℤ) := mkRawIntLit qc.num
@@ -456,7 +457,7 @@ theorem isNNRat_mul {α} [Semiring α] {f : α → α → α} {a b : α} {na nb 
   have h₁ := congr_arg (Nat.cast (R := α)) h₁
   simp only [Nat.cast_mul] at h₁
   simp only [← mul_assoc, (Nat.cast_commute (α := α) da nb).invOf_left.right_comm, h₁]
-  have h₂ := congr_arg (↑nc * ↑· * (⅟↑da * ⅟↑db * ⅟↑dc : α)) h₂
+  have h₂ := congr_arg (fun x : ℕ ↦ (nc : α) * (x : α) * (⅟↑da * ⅟↑db * ⅟↑dc)) h₂
   simp only [Nat.cast_mul, ← mul_assoc] at h₂; rw [H] at h₂
   simp only [mul_invOf_cancel_right'] at h₂; rw [h₂, Nat.cast_commute]
   simp only [mul_invOf_cancel_right',
@@ -476,7 +477,7 @@ theorem isRat_mul {α} [Ring α] {f : α → α → α} {a b : α} {na nb nc : �
   have h₁ := congr_arg (Int.cast (R := α)) h₁
   simp only [Int.cast_mul, Int.cast_natCast] at h₁
   simp only [← mul_assoc, (Nat.cast_commute (α := α) da nb).invOf_left.right_comm, h₁]
-  have h₂ := congr_arg (↑nc * ↑· * (⅟↑da * ⅟↑db * ⅟↑dc : α)) h₂
+  have h₂ := congr_arg (fun x : ℕ ↦ (nc : α) * (x : α) * (⅟↑da * ⅟↑db * ⅟↑dc)) h₂
   simp only [Nat.cast_mul, ← mul_assoc] at h₂; rw [H] at h₂
   simp only [mul_invOf_cancel_right'] at h₂; rw [h₂, Nat.cast_commute]
   simp only [mul_invOf_cancel_right,
@@ -500,7 +501,7 @@ def Result.mul {u : Level} {α : Q(Type u)} {a b : Q($α)} (ra : Result q($a)) (
     let ⟨qa, na, da, pa⟩ ← ra.toNNRat' dsα; let ⟨qb, nb, db, pb⟩ ← rb.toNNRat' dsα
     let qc := qa * qb
     let dd := qa.den * qb.den
-    let k := dd / qc.den
+    let k := Nat.euclideanDiv dd qc.den qc.den_nz
     have nc : Q(ℕ) := mkRawNatLit qc.num.toNat
     have dc : Q(ℕ) := mkRawNatLit qc.den
     have k : Q(ℕ) := mkRawNatLit k
@@ -514,7 +515,7 @@ def Result.mul {u : Level} {α : Q(Type u)} {a b : Q($α)} (ra : Result q($a)) (
     let ⟨qa, na, da, pa⟩ ← ra.toRat' dα; let ⟨qb, nb, db, pb⟩ ← rb.toRat' dα
     let qc := qa * qb
     let dd := qa.den * qb.den
-    let k := dd / qc.den
+    let k := Nat.euclideanDiv dd qc.den qc.den_nz
     have nc : Q(ℤ) := mkRawIntLit qc.num
     have dc : Q(ℕ) := mkRawNatLit qc.den
     have k : Q(ℕ) := mkRawNatLit k
@@ -689,24 +690,30 @@ such that `norm_num` successfully recognises both `a` and `b`. -/
   haveI' : Nat.mod $na $nb =Q $nc := ⟨⟩
   return .isNat sℕ nc q(isNat_natMod $pa $pb (.refl $nc))
 
-theorem isNat_natDiv : {a b : ℕ} → {a' b' c : ℕ} →
-    IsNat a a' → IsNat b b' → Nat.div a' b' = c → IsNat (a / b) c
-  | _, _, _, _, _, ⟨rfl⟩, ⟨rfl⟩, rfl => ⟨by aesop⟩
+theorem isNat_natDiv {a b a' b' c r : ℕ} (hb : b ≠ 0)
+    (pa : IsNat a a') (pb : IsNat b b') (h : b' * c + r = a') (hr : r.blt b' = true) :
+    IsNat (Nat.euclideanDiv a b hb) c := by
+  obtain ⟨⟨rfl⟩, ⟨rfl⟩⟩ := pa, pb
+  exact ⟨Nat.euclideanDiv_eq_of_remainder hb h.symm (Nat.blt_eq.mp hr)⟩
 
-/-- The `norm_num` extension which identifies expressions of the form `Nat.div a b`,
-such that `norm_num` successfully recognises both `a` and `b`. -/
-@[norm_num (_ : ℕ) / _]
+/-- Normalize a natural Euclidean quotient with numeral operands. -/
+@[norm_num Nat.euclideanDiv _ _ _]
 def evalNatDiv : NormNumExt where eval {u α} e := do
-  let .app (.app f (a : Q(ℕ))) (b : Q(ℕ)) ← whnfR e | failure
-  haveI' : u =QL 0 := ⟨⟩; haveI' : $α =Q ℕ := ⟨⟩
-  haveI' : $e =Q $a / $b := ⟨⟩
-  -- We assert that the default instance for `HDiv` is `Nat.div` when the first parameter is `ℕ`.
-  guard <|← withNewMCtxDepth <| isDefEq f q(HDiv.hDiv (α := ℕ))
-  let sℕ : Q(AddMonoidWithOne ℕ) := q(Nat.instAddMonoidWithOne)
-  let ⟨na, pa⟩ ← deriveNat a sℕ; let ⟨nb, pb⟩ ← deriveNat b sℕ
-  have nc : Q(ℕ) := mkRawNatLit (na.natLit! / nb.natLit!)
-  haveI' : Nat.div $na $nb =Q $nc := ⟨⟩
-  return .isNat sℕ nc q(isNat_natDiv $pa $pb (.refl $nc))
+  match u, α, e with
+  | 0, ~q(ℕ), ~q(Nat.euclideanDiv $a $b $hb) =>
+    let sℕ : Q(AddMonoidWithOne ℕ) := q(Nat.instAddMonoidWithOne)
+    let ⟨na, pa⟩ ← deriveNat a sℕ
+    let ⟨nb, pb⟩ ← deriveNat b sℕ
+    let n := na.natLit!
+    let d := nb.natLit!
+    if hd : d ≠ 0 then
+      have nc : Q(ℕ) := mkRawNatLit (Nat.euclideanDiv n d hd)
+      have nr : Q(ℕ) := mkRawNatLit (n % d)
+      have h : Q($nb * $nc + $nr = $na) := (q(Eq.refl $na) : Expr)
+      have hr : Q(Nat.blt $nr $nb = true) := (q(Eq.refl true) : Expr)
+      return .isNat sℕ nc q(isNat_natDiv $hb $pa $pb $h $hr)
+    else failure
+  | _, _, _ => failure
 
 theorem isNat_dvd_true : {a b : ℕ} → {a' b' : ℕ} →
     IsNat a a' → IsNat b b' → Nat.mod b' a' = nat_lit 0 → a ∣ b

@@ -107,7 +107,7 @@ lemma fg_top_iff :
     refine top_le_iff.mp fun x _ ↦ ?_
     obtain ⟨x, s, rfl⟩ := IsLocalization.exists_mk'_eq (Algebra.EssFiniteType.submonoid F E) x
     have hs : s.1.1 ≠ 0 := (IsLocalization.map_units E s).ne_zero
-    have H : IsLocalization.mk' E x s = x / s := by
+    have H : IsLocalization.mk' E x s = (x : E) / (s.1 : E) := by
       rw [IsLocalization.mk'_eq_iff_eq_mul]
       exact (div_mul_cancel₀ (x : E) (hb := hs.isUnit)).symm
     rw [H]

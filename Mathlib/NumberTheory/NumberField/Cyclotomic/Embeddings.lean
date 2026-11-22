@@ -44,11 +44,11 @@ theorem isTotallyComplex [IsCyclotomicExtension {n} ℚ K] (hn : 2 < n) :
 
 variable (n)
 
-/-- If `K` is an `n`-th cyclotomic extension of `ℚ`, then there are `φ n / n` complex places
-of `K`. Note that this uses `1 / 2 = 0` in the cases `n = 1, 2`. -/
+/-- If `K` is an `n`-th cyclotomic extension of `ℚ`, then there are `⌊φ n / 2⌋` complex places
+of `K`. For `n = 1, 2` the totient is one and there are no complex places. -/
 theorem nrComplexPlaces_eq_totient_div_two [h : IsCyclotomicExtension {n} ℚ K] :
     haveI := IsCyclotomicExtension.numberField {n} ℚ K
-    nrComplexPlaces K = φ n / 2 := by
+    nrComplexPlaces K = Nat.euclideanDiv (φ n) 2 := by
   have := IsCyclotomicExtension.numberField {n} ℚ K
   by_cases hn : 2 < n
   · obtain ⟨k, hk : φ n = k + k⟩ := totient_even hn
@@ -56,14 +56,14 @@ theorem nrComplexPlaces_eq_totient_div_two [h : IsCyclotomicExtension {n} ℚ K]
     rw [nrRealPlaces_eq_zero K hn, zero_add, IsCyclotomicExtension.finrank (n := n) K
       (cyclotomic.irreducible_rat (NeZero.pos _)), hk, ← two_mul,
       Nat.mul_right_inj (by simp)] at key
-    simp [hk, key, ← two_mul]
+    simp [hk, key, ← two_mul, Nat.euclideanDiv_eq_core]
   · have : φ n = 1 := by
       by_cases h1 : 1 < n
       · convert! totient_two
         exact (eq_of_le_of_not_lt (succ_le_of_lt h1) hn).symm
       · convert! totient_one
         exact eq_of_le_of_not_lt (not_lt.mp h1) (by simp [NeZero.ne _])
-    rw [this]
+    rw [this, Nat.euclideanDiv_eq_core]
     apply nrComplexPlaces_eq_zero_of_finrank_eq_one
     rw [IsCyclotomicExtension.finrank K (cyclotomic.irreducible_rat (NeZero.pos n)), this]
 

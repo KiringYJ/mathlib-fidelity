@@ -94,11 +94,11 @@ theorem Complex.tsum_exp_neg_quadratic {a : ℂ} (ha : 0 < a.re) (b : ℂ) :
     (cpow_ne_zero_iff.2 (Or.inl ha'.ne_zero)).isUnit
   let f : ℝ → ℂ := fun x ↦ cexp (-π * a * x ^ 2 + 2 * π * b * x)
   have hFf : 𝓕 f = fun x : ℝ ↦
-      1 / a ^ (1 / 2 : ℂ) * cexp (-π / a * (x + I * b) ^ 2) := fourier_gaussian_pi' ha b
+      1 / a ^ (1 / 2 : ℂ) * cexp (-(π : ℂ) / a * (x + I * b) ^ 2) := fourier_gaussian_pi' ha b
   have h1 : 0 < (π * a).re := by
     rw [re_ofReal_mul]
     exact mul_pos pi_pos ha
-  have h2 : 0 < (π / a).re := by
+  have h2 : 0 < ((π : ℂ) / a).re := by
     rw [div_eq_mul_inv₀, re_ofReal_mul, inv_re]
     exact mul_pos pi_pos (div_pos ha (normSq_pos.mpr ha'.ne_zero))
   have f_bd : f =O[cocompact ℝ] (fun x => |x| ^ (-2 : ℝ)) := by
@@ -106,8 +106,8 @@ theorem Complex.tsum_exp_neg_quadratic {a : ℂ} (ha : 0 < a.re) (b : ℂ) :
     rwa [neg_mul, neg_re, neg_lt_zero]
   have Ff_bd : (𝓕 f) =O[cocompact ℝ] (fun x => |x| ^ (-2 : ℝ)) := by
     rw [hFf]
-    have : ∀ (x : ℝ), -π / a * (x + I * b) ^ 2 =
-        -π / a * x ^ 2 + (-2 * π * I * b) / a * x + π * b ^ 2 / a := by
+    have : ∀ (x : ℝ), -(π : ℂ) / a * (x + I * b) ^ 2 =
+        -(π : ℂ) / a * x ^ 2 + (-2 * π * I * b) / a * x + π * b ^ 2 / a := by
       intro x; ring_nf; rw [I_sq]; ring
     simp_rw [this]
     conv => enter [2, x]; rw [Complex.exp_add, ← mul_assoc _ _ (Complex.exp _), mul_comm]

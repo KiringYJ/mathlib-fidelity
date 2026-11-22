@@ -71,7 +71,7 @@ lemma Nat.roughNumbersUpTo_card_le' (N k : ℕ) :
           (prime_of_mem_primesBelow (Finset.mem_sdiff.mp p.2).1).ne_zero).isUnit := by
   rw [Finset.mul_sum]
   refine (Nat.cast_le.mpr <| roughNumbersUpTo_card_le N k).trans ?_
-  rw [cast_sum, ← Finset.sum_coe_sort]
+  rw [cast_sum]
   refine Finset.sum_le_sum fun p _ ↦ ?_
   have hp : (p : ℕ) ≠ 0 := (prime_of_mem_primesBelow (Finset.mem_sdiff.mp p.2).1).ne_zero
   rw [mul_one_div₀]

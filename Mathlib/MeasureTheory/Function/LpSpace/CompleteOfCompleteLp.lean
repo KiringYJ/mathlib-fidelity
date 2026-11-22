@@ -68,7 +68,7 @@ lemma nontrivial_Lp_real_of_nontrivial_Lp [Nontrivial (Lp E p μ)] : Nontrivial 
     apply nontrivial_of_ne (indicatorConstLp p s_meas s_top.ne 1) 0
     intro hzero
     have : ‖indicatorConstLp p s_meas s_top.ne (1 : ℝ)‖ = ‖(0 : Lp ℝ p μ)‖ := by rw [hzero]
-    simp only [norm_indicatorConstLp hp h'p.ne, norm_one, one_div, one_mul, Lp.norm_zero] at this
+    simp only [norm_indicatorConstLp hp h'p.ne, norm_one, one_mul, Lp.norm_zero] at this
     rw [Real.rpow_eq_zero (by positivity) (by simp [ENNReal.toReal_eq_zero_iff, hp, h'p.ne]),
       measureReal_eq_zero_iff] at this
     order

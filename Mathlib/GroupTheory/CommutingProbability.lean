@@ -36,10 +36,10 @@ variable (M : Type*) [Mul M] [Finite M] [Nonempty M]
 /-- The commuting probability of a finite nonempty type with a multiplication operation: the
 proportion of the pairs of elements that commute. -/
 def commProb : ℚ :=
-  Nat.card { p : M × M // Commute p.1 p.2 } / (Nat.card M : ℚ) ^ 2
+  (Nat.card { p : M × M // Commute p.1 p.2 } : ℚ) / (Nat.card M : ℚ) ^ 2
 
 theorem commProb_def :
-    commProb M = Nat.card { p : M × M // Commute p.1 p.2 } / (Nat.card M : ℚ) ^ 2 :=
+    commProb M = (Nat.card { p : M × M // Commute p.1 p.2 } : ℚ) / (Nat.card M : ℚ) ^ 2 :=
   rfl
 
 theorem commProb_prod (M' : Type*) [Mul M'] [Finite M'] [Nonempty M'] :
@@ -92,7 +92,7 @@ theorem commProb_eq_one [IsMulCommutative M] : commProb M = 1 :=
 
 variable (G : Type*) [Group G] [Finite G]
 
-theorem commProb_def' : commProb G = Nat.card (ConjClasses G) / Nat.card G := by
+theorem commProb_def' : commProb G = (Nat.card (ConjClasses G) : ℚ) / (Nat.card G : ℚ) := by
   rw [commProb, card_comm_eq_card_conjClasses_mul_card, Nat.cast_mul]
   simp only [sq]
   exact mul_div_mul_right _ _
@@ -128,13 +128,10 @@ theorem inv_card_commutator_le_commProb : (↑(Nat.card (commutator G)))⁻¹ �
 namespace DihedralGroup
 
 lemma commProb_odd {n : ℕ} [NeZero n] (hn : Odd n) :
-    commProb (DihedralGroup n) = (n + 3) / (4 * n) := by
-  have h2 : 2 ∣ n + 3 := by rw [Nat.dvd_iff_mod_eq_zero, Nat.add_mod, Nat.odd_iff.mp hn]
-  rw [commProb_def', DihedralGroup.card_conjClasses_odd hn, Nat.cast_div h2 two_ne_zero]
-  simp only [nat_card]
-  push_cast
-  rw [div_div₀]
-  congr 1
+    commProb (DihedralGroup n) = ((n : ℚ) + 3) / (4 * (n : ℚ)) := by
+  simp only [commProb_def, card_commute_odd hn, nat_card, Nat.cast_mul, Nat.cast_add,
+    Nat.cast_ofNat]
+  rw [div_eq_div_iff]
   ring
 
 /-- A list of Dihedral groups whose product will have commuting probability `1 / n`, for
@@ -143,9 +140,14 @@ def reciprocalFactors (n : ℕ) : List ℕ :=
   if _ : n = 0 then [0]
   else if _ : n = 1 then []
   else if Even n then
-    3 :: reciprocalFactors (n / 2)
+    3 :: reciprocalFactors (Nat.euclideanDiv n 2)
   else
-    n % 4 * n :: reciprocalFactors (n / 4 + 1)
+    n % 4 * n :: reciprocalFactors (Nat.euclideanDiv n 4 + 1)
+termination_by n
+decreasing_by
+  all_goals first
+    | have := Nat.euclideanDiv_mul_add_mod n 2 (by decide); omega
+    | have := Nat.euclideanDiv_mul_add_mod n 4 (by decide); omega
 
 @[simp] lemma reciprocalFactors_zero : reciprocalFactors 0 = [0] := by
   unfold reciprocalFactors; rfl
@@ -154,14 +156,14 @@ def reciprocalFactors (n : ℕ) : List ℕ :=
   unfold reciprocalFactors; rfl
 
 lemma reciprocalFactors_even {n : ℕ} (h0 : n ≠ 0) (h2 : Even n) :
-    reciprocalFactors n = 3 :: reciprocalFactors (n / 2) := by
+    reciprocalFactors n = 3 :: reciprocalFactors (Nat.euclideanDiv n 2) := by
   have h1 : n ≠ 1 := by
     rintro rfl
     norm_num at h2
   rw [reciprocalFactors, dite_eq_right h0, dite_eq_right h1, ite_eq_left h2]
 
 lemma reciprocalFactors_odd {n : ℕ} (h1 : n ≠ 1) (h2 : Odd n) :
-    reciprocalFactors n = n % 4 * n :: reciprocalFactors (n / 4 + 1) := by
+    reciprocalFactors n = n % 4 * n :: reciprocalFactors (Nat.euclideanDiv n 4 + 1) := by
   have h0 : n ≠ 0 := by
     rintro rfl
     norm_num [← Nat.not_even_iff_odd] at h2
@@ -189,18 +191,25 @@ instance instFiniteProductReciprocalFactors (n : ℕ) [NeZero n] :
     rw [reciprocalFactors_one]
     infer_instance
   rcases Nat.even_or_odd n with h2 | h2
-  · have : NeZero (n / 2) := ⟨by have := NeZero.ne n; omega⟩
-    have := instFiniteProductReciprocalFactors (n / 2)
+  · have : NeZero (Nat.euclideanDiv n 2) := ⟨by
+      have := NeZero.ne n
+      have := Nat.euclideanDiv_mul_add_mod n 2 (by decide)
+      omega⟩
+    have := instFiniteProductReciprocalFactors (Nat.euclideanDiv n 2)
     rw [reciprocalFactors_even (NeZero.ne n) h2]
     infer_instance
   · have : NeZero (n % 4 * n) :=
       ⟨Nat.mul_ne_zero (by have := Nat.odd_iff.mp h2; omega) (NeZero.ne n)⟩
-    have : NeZero (n / 4 + 1) := ⟨by omega⟩
-    have := instFiniteProductReciprocalFactors (n / 4 + 1)
+    have : NeZero (Nat.euclideanDiv n 4 + 1) := ⟨by omega⟩
+    have := instFiniteProductReciprocalFactors (Nat.euclideanDiv n 4 + 1)
     rw [reciprocalFactors_odd h1 h2]
     infer_instance
 termination_by n
-decreasing_by all_goals have := NeZero.ne n; omega
+decreasing_by
+  all_goals have := NeZero.ne n
+  all_goals first
+    | have := Nat.euclideanDiv_mul_add_mod n 2 (by decide); omega
+    | have := Nat.euclideanDiv_mul_add_mod n 4 (by decide); omega
 
 lemma commProb_nil : commProb (Product []) = 1 :=
   commProb_eq_one_iff.mpr ⟨⟨fun _ _ ↦ funext fun i ↦ Fin.elim0 i⟩⟩
@@ -225,31 +234,38 @@ lemma commProb_cons (n : ℕ) [NeZero n] (l : List ℕ) [Finite (Product l)] :
 
 /-- Construction of a group with commuting probability `1 / n`, for `n ≠ 0`. -/
 theorem commProb_reciprocal (n : ℕ) [NeZero n] :
-    commProb (Product (reciprocalFactors n)) = 1 / n := by
+    commProb (Product (reciprocalFactors n)) = (1 : ℚ) / (n : ℚ) := by
   have h0 : n ≠ 0 := NeZero.ne n
   by_cases h1 : n = 1
   · subst h1
     rw [commProb_product_congr reciprocalFactors_one, commProb_nil]
     simp
   rcases Nat.even_or_odd n with h2 | h2
-  · have : NeZero (n / 2) := ⟨by omega⟩
+  · have : NeZero (Nat.euclideanDiv n 2) := ⟨by
+      have := Nat.euclideanDiv_mul_add_mod n 2 (by decide)
+      omega⟩
     rw [commProb_product_congr (reciprocalFactors_even h0 h2), commProb_cons,
-      commProb_reciprocal (n / 2), commProb_odd (by decide)]
+      commProb_reciprocal (Nat.euclideanDiv n 2), commProb_odd (by decide)]
     simp [field, h2.two_dvd]
     norm_num
   · have hn : Odd (n % 4) := by grind
     have : NeZero (n % 4 * n) := ⟨(hn.mul h2).pos.ne'⟩
-    have : NeZero (n / 4 + 1) := ⟨by omega⟩
+    have : NeZero (Nat.euclideanDiv n 4 + 1) := ⟨by omega⟩
     rw [commProb_product_congr (reciprocalFactors_odd h1 h2), commProb_cons,
-      commProb_reciprocal (n / 4 + 1), commProb_odd (hn.mul h2), div_mul_div_comm₀,
+      commProb_reciprocal (Nat.euclideanDiv n 4 + 1), commProb_odd (hn.mul h2), div_mul_div_comm₀,
       div_eq_div_iff]
     norm_cast
-    have h4 := Nat.div_add_mod n 4
+    have h4 := Nat.euclideanDiv_mul_add_mod n 4 (by decide)
     obtain hr | hr : n % 4 = 1 ∨ n % 4 = 3 := by have := Nat.odd_iff.mp h2; omega
     all_goals
       rw [hr] at h4 ⊢
-      generalize n / 4 = q at h4 ⊢
+      generalize Nat.euclideanDiv n 4 = q at h4 ⊢
       subst h4
       ring
+termination_by n
+decreasing_by
+  all_goals first
+    | have := Nat.euclideanDiv_mul_add_mod n 2 (by decide); omega
+    | have := Nat.euclideanDiv_mul_add_mod n 4 (by decide); omega
 
 end DihedralGroup

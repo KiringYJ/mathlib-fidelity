@@ -158,13 +158,14 @@ theorem mulIndicator_inv (s : Set α) (f : α → G) :
 
 @[to_additive]
 theorem mulIndicator_div (s : Set α) (f g : α → G) :
-    (mulIndicator s fun a => f a / g a) = fun a => mulIndicator s f a / mulIndicator s g a :=
-  (mulIndicatorHom G s).map_div f g
+    (mulIndicator s fun a => f a / g a) = fun a => mulIndicator s f a / mulIndicator s g a := by
+  funext a
+  by_cases ha : a ∈ s <;> simp [ha]
 
 @[to_additive]
 theorem mulIndicator_div' (s : Set α) (f g : α → G) :
-    mulIndicator s (f / g) = mulIndicator s f / mulIndicator s g :=
-  mulIndicator_div s f g
+    mulIndicator s (f / g) = mulIndicator s f / mulIndicator s g := by
+  simpa only [Pi.div_def] using mulIndicator_div s f g
 
 @[to_additive indicator_compl']
 theorem mulIndicator_compl (s : Set α) (f : α → G) :

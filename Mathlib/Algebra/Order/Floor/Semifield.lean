@@ -31,16 +31,18 @@ namespace Nat
 section LinearOrderedSemifield
 variable [Semifield K] [LinearOrder K] [IsStrictOrderedRing K] [FloorSemiring K]
 
-theorem floor_div_natCast (a : K) (n : ℕ) {hn : IsUnit (n : K)} : ⌊a / n⌋₊ = ⌊a⌋₊ / n := by
+theorem floor_div_natCast (a : K) (n : ℕ) {hn : IsUnit (n : K)} :
+    ⌊Checked.div a (n : K) hn⌋₊ = Nat.euclideanDiv ⌊a⌋₊ n (Nat.cast_ne_zero.mp hn.ne_zero) := by
   nth_rw 2 [← div_mul_cancel₀ a (hb := hn)]
   rw [mul_cast_floor_div_cancel (Nat.cast_ne_zero.mp hn.ne_zero)]
 
 theorem floor_div_ofNat (a : K) (n : ℕ) [n.AtLeastTwo] :
-    ⌊a / ofNat(n)⌋₊ = ⌊a⌋₊ / ofNat(n) :=
+    ⌊Checked.div a (ofNat(n) : K)⌋₊ = Nat.euclideanDiv ⌊a⌋₊ (ofNat(n)) (NeZero.ne _) :=
   floor_div_natCast a n
 
 /-- Natural division is the floor of field division. -/
-theorem floor_div_eq_div (m n : ℕ) {hn : IsUnit (n : K)} : ⌊(m : K) / n⌋₊ = m / n := by
+theorem floor_div_eq_div (m n : ℕ) {hn : IsUnit (n : K)} :
+    ⌊Checked.div (m : K) (n : K) hn⌋₊ = Nat.euclideanDiv m n (Nat.cast_ne_zero.mp hn.ne_zero) := by
   rw [floor_div_natCast, floor_natCast]
 
 end LinearOrderedSemifield
@@ -56,7 +58,7 @@ lemma mul_lt_floor (hb₀ : 0 < b) (hb : b < 1) (hba : ⌈b / (1 - b)⌉₊ ≤ 
         ← ceil_le]
       exact le_floor hba
 
-lemma ceil_lt_mul (hb : 1 < b) (hba : ⌈(b - 1)⁻¹⌉₊ / b < a) : ⌈a⌉₊ < b * a := by
+lemma ceil_lt_mul (hb : 1 < b) (hba : (⌈(b - 1)⁻¹⌉₊ : K) / b < a) : ⌈a⌉₊ < b * a := by
   obtain hab | hba := le_total a (b - 1)⁻¹
   · calc
       ⌈a⌉₊ ≤ (⌈(b - 1)⁻¹⌉₊ : K) := by gcongr
@@ -68,7 +70,7 @@ lemma ceil_lt_mul (hb : 1 < b) (hba : ⌈(b - 1)⁻¹⌉₊ / b < a) : ⌈a⌉�
       _ ≤ a + (b - 1) * a := by gcongr
       _ = b * a := by rw [sub_one_mul, add_sub_cancel]
 
-lemma ceil_le_mul (hb : 1 < b) (hba : ⌈(b - 1)⁻¹⌉₊ / b ≤ a) : ⌈a⌉₊ ≤ b * a := by
+lemma ceil_le_mul (hb : 1 < b) (hba : (⌈(b - 1)⁻¹⌉₊ : K) / b ≤ a) : ⌈a⌉₊ ≤ b * a := by
   obtain rfl | hba := hba.eq_or_lt
   · rw [mul_div_cancel₀, cast_le, ceil_le]
     exact _root_.div_le_self (by positivity) hb.le
@@ -106,10 +108,13 @@ theorem IsInt.natFloor {R : Type*} [Ring R] [LinearOrder R] [IsStrictOrderedRing
   exact ⟨Nat.floor_of_nonpos <| by simp⟩
 
 theorem IsNNRat.natFloor {R : Type*} [Semifield R] [LinearOrder R] [IsStrictOrderedRing R]
-    [FloorSemiring R] (r : R) (n d : ℕ) (h : IsNNRat r n d) (res : ℕ) (hres : n / d = res) :
+    [FloorSemiring R] (r : R) (n d : ℕ) (h : IsNNRat r n d) (res : ℕ)
+    (hres : Nat.euclideanDiv n d (Nat.cast_ne_zero.mp h.den_nz) = res) :
     IsNat ⌊r⌋₊ res := by
   constructor
-  rw [← hres, h.to_eq rfl rfl, Nat.floor_div_eq_div, Nat.cast_id]
+  rw [← hres, Nat.cast_id]
+  conv_lhs => rw [h.to_eq rfl rfl]
+  exact Nat.floor_div_eq_div (hn := h.isUnit_of_den_eq rfl) n d
 
 theorem IsRat.natFloor {R : Type*} [Field R] [LinearOrder R] [IsStrictOrderedRing R]
     [FloorSemiring R] (r : R) (n d : ℕ) (h : IsRat r (Int.negOfNat n) d) : IsNat ⌊r⌋₊ 0 := by
@@ -141,9 +146,13 @@ meta def evalNatFloor : NormNumExt where eval {u αZ} e := do
       let instLinearOrder ← synthInstanceQ q(LinearOrder $α)
       let instIsStrictOrderedRing ← synthInstanceQ q(IsStrictOrderedRing $α)
       assertInstancesCommute
-      have z : Q(ℕ) := mkRawNatLit (q.num.toNat / q.den)
-      haveI : $z =Q $n / $d := ⟨⟩
-      return .isNat q(inferInstance) z q(IsNNRat.natFloor _ $n $d $h $z rfl)
+      have z : Q(ℕ) := mkRawNatLit (Nat.euclideanDiv q.num.toNat q.den q.den_nz)
+      have rem : Q(ℕ) := mkRawNatLit (q.num.toNat % q.den)
+      have heq : Q($n = $d * $z + $rem) := (q(Eq.refl $n) : Expr)
+      have hlt : Q(Nat.blt $rem $d = true) := (q(Eq.refl true) : Expr)
+      return .isNat q(inferInstance) z q(IsNNRat.natFloor _ $n $d $h $z
+        (Nat.euclideanDiv_eq_of_remainder (Nat.cast_ne_zero.mp (IsNNRat.den_nz $h))
+          $heq (Nat.blt_eq.mp $hlt)))
     | .isNegNNRat _ q n d h => do
       let instField ← synthInstanceQ q(Field $α)
       let instLinearOrder ← synthInstanceQ q(LinearOrder $α)

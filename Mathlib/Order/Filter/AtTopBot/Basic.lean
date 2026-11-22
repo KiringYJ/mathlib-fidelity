@@ -339,8 +339,10 @@ theorem tendsto_add_atTop_iff_nat {f : ℕ → α} {l : Filter α} (k : ℕ) :
   show Tendsto (f ∘ fun n => n + k) atTop l ↔ Tendsto f atTop l by
     rw [← tendsto_map'_iff, map_add_atTop_eq_nat]
 
-theorem map_div_atTop_eq_nat (k : ℕ) (hk : 0 < k) : map (fun a => a / k) atTop = atTop :=
-  map_atTop_eq_of_gc (fun b => k * b + (k - 1)) 1 (fun _ _ h => Nat.div_le_div_right h)
+theorem map_div_atTop_eq_nat (k : ℕ) (hk : 0 < k) :
+    map (fun a => Nat.euclideanDiv a k hk.ne') atTop = atTop := by
+  simp only [Nat.euclideanDiv_eq_core]
+  exact map_atTop_eq_of_gc (fun b => k * b + (k - 1)) 1 (fun _ _ h => Nat.div_le_div_right h)
     (fun a b _ => by rw [Nat.div_le_iff_le_mul_add_pred hk])
     fun b _ => by rw [Nat.mul_add_div hk, Nat.div_eq_of_lt, Nat.add_zero]; lia
 

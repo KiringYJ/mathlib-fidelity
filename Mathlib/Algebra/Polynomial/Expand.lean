@@ -89,16 +89,17 @@ theorem derivative_expand (f : R[X]) : Polynomial.derivative (expand R p f) =
   rw [coe_expand, derivative_eval₂_C, derivative_pow, C_eq_natCast, derivative_X, mul_one]
 
 theorem coeff_expand {p : ℕ} (hp : 0 < p) (f : R[X]) (n : ℕ) :
-    (expand R p f).coeff n = if p ∣ n then f.coeff (n / p) else 0 := by
+    (expand R p f).coeff n = if p ∣ n then f.coeff (Nat.euclideanDiv n p hp.ne') else 0 := by
   simp only [expand_eq_sum]
   simp_rw [coeff_sum, ← pow_mul, C_mul_X_pow_eq_monomial, coeff_monomial, sum]
   split_ifs with h
-  · rw [Finset.sum_eq_single (n / p), Nat.mul_div_cancel' h, ite_eq_left rfl]
+  · obtain ⟨k, rfl⟩ := h
+    rw [Nat.euclideanDiv_mul_left_cancel, Finset.sum_eq_single k, ite_eq_left rfl]
     · intro b _ hb2
       rw [ite_eq_right]
       intro hb3
       apply hb2
-      rw [← hb3, Nat.mul_div_cancel_left b hp]
+      exact Nat.eq_of_mul_eq_mul_left hp hb3
     · intro hn
       rw [notMem_support_iff.1 hn]
       split_ifs <;> rfl
@@ -110,7 +111,7 @@ theorem coeff_expand {p : ℕ} (hp : 0 < p) (f : R[X]) (n : ℕ) :
 @[simp]
 theorem coeff_expand_mul {p : ℕ} (hp : 0 < p) (f : R[X]) (n : ℕ) :
     (expand R p f).coeff (n * p) = f.coeff n := by
-  rw [coeff_expand hp, ite_eq_left (dvd_mul_left _ _), Nat.mul_div_cancel _ hp]
+  rw [coeff_expand hp, ite_eq_left (dvd_mul_left _ _), Nat.euclideanDiv_mul_right_cancel]
 
 @[simp]
 theorem coeff_expand_mul' {p : ℕ} (hp : 0 < p) (f : R[X]) (n : ℕ) :
@@ -145,8 +146,10 @@ theorem natDegree_expand (p : ℕ) (f : R[X]) : (expand R p f).natDegree = f.nat
     · rw [coeff_eq_zero_of_natDegree_lt]
       contrapose! hn
       norm_cast
-      rw [← Nat.div_mul_cancel hpn]
-      exact Nat.mul_le_mul_right p hn
+      have he : Nat.euclideanDiv n p hp.ne' * p = n := by
+        simpa only [Nat.mul_comm p, Nat.mod_eq_zero_of_dvd hpn, Nat.add_zero] using
+          Nat.euclideanDiv_mul_add_mod n p hp.ne'
+      exact he ▸ Nat.mul_le_mul_right p hn
     · rfl
   · refine le_degree_of_ne_zero ?_
     rw [coeff_expand_mul hp, ← leadingCoeff]
@@ -201,7 +204,7 @@ theorem map_contract {p : ℕ} (hp : p ≠ 0) {f : R →+* S} {q : R[X]} :
 
 theorem contract_expand {f : R[X]} (hp : p ≠ 0) : contract p (expand R p f) = f := by
   ext
-  simp [coeff_contract hp, coeff_expand hp.bot_lt, Nat.mul_div_cancel _ hp.bot_lt]
+  simp [coeff_contract hp, coeff_expand hp.bot_lt]
 
 theorem contract_one {f : R[X]} : contract 1 f = f :=
   ext fun n ↦ by rw [coeff_contract one_ne_zero, mul_one]
@@ -241,7 +244,8 @@ theorem expand_contract [CharP R p] [NoZeroDivisors R] {f : R[X]} (hf : Polynomi
   ext n
   rw [coeff_expand hp.bot_lt, coeff_contract hp]
   split_ifs with h
-  · rw [Nat.div_mul_cancel h]
+  · obtain ⟨k, rfl⟩ := h
+    rw [Nat.euclideanDiv_mul_left_cancel, Nat.mul_comm]
   · rcases n with - | n
     · exact absurd (dvd_zero p) h
     have := coeff_derivative f n
@@ -327,7 +331,9 @@ variable (R : Type u) [CommRing R] [IsDomain R]
 theorem isLocalHom_expand {p : ℕ} (hp : 0 < p) : IsLocalHom (expand R p) := by
   refine ⟨fun f hf1 => ?_⟩
   have hf2 := eq_C_of_degree_eq_zero (degree_eq_zero_of_isUnit hf1)
-  rw [coeff_expand hp, ite_eq_left (dvd_zero _), p.zero_div] at hf2
+  have hz : Nat.euclideanDiv 0 p hp.ne' = 0 :=
+    Nat.euclideanDiv_eq_of_remainder (r := 0) hp.ne' (by simp) hp
+  rw [coeff_expand hp, ite_eq_left (dvd_zero _), hz] at hf2
   rw [hf2, isUnit_C] at hf1; rw [expand_eq_C hp] at hf2; rwa [hf2, isUnit_C]
 
 variable {R}

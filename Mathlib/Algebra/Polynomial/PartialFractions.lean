@@ -520,7 +520,9 @@ theorem div_eq_quo_add_rem_div_add_rem_div (f : R[X]) {g₁ g₂ : R[X]} (hg₁ 
     haveI := hg₂.isUnit_algebraMap K
     ∃ q r₁ r₂ : R[X],
       r₁.degree < g₁.degree ∧
-        r₂.degree < g₂.degree ∧ (f : K) / (↑g₁ * ↑g₂) = ↑q + ↑r₁ / ↑g₁ + ↑r₂ / ↑g₂ := by
+        r₂.degree < g₂.degree ∧
+          (f : K) / ((g₁ : K) * (g₂ : K)) =
+            (q : K) + (r₁ : K) / (g₁ : K) + (r₂ : K) / (g₂ : K) := by
   have : Nontrivial R :=
     have : Nontrivial R[X] := Module.nontrivial R[X] K
     Module.nontrivial R R[X]
@@ -551,7 +553,8 @@ theorem quo_add_rem_div_add_rem_div_unique {g₁ g₂ : R[X]} (hg₁ : g₁.Moni
     (hf :
       haveI := hg₁.isUnit_algebraMap K
       haveI := hg₂.isUnit_algebraMap K
-      (↑q₁ + ↑r₁₁ / ↑g₁ + ↑r₂₁ / ↑g₂ : K) = ↑q₂ + ↑r₁₂ / ↑g₁ + ↑r₂₂ / ↑g₂) :
+      (q₁ : K) + (r₁₁ : K) / (g₁ : K) + (r₂₁ : K) / (g₂ : K) =
+        (q₂ : K) + (r₁₂ : K) / (g₁ : K) + (r₂₂ : K) / (g₂ : K)) :
     q₁ = q₂ ∧ r₁₁ = r₁₂ ∧ r₂₁ = r₂₂ := by
   let g : Bool → R[X] := Bool.rec g₂ g₁
   let r₁ : Bool → R[X] := Bool.rec r₂₁ r₁₁

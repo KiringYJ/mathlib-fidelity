@@ -40,7 +40,8 @@ evaluations of `f`. The number of trapezoids must be positive. -/
 noncomputable def trapezoidal_integral (f : ℝ → ℝ) (N : ℕ) (a b : ℝ)
     (hN : 0 < N := by first | assumption | positivity) : ℝ :=
   have hN' : IsUnit (N : ℝ) := (Nat.cast_pos.mpr hN).ne'.isUnit
-  ((b - a) / N) * ((f a + f b) / 2 + ∑ k ∈ range (N - 1), f (a + (k + 1) * (b - a) / N))
+  ((b - a) / (N : ℝ)) *
+    ((f a + f b) / 2 + ∑ k ∈ range (N - 1), f (a + (k + 1) * (b - a) / (N : ℝ)))
 
 /-- The signed error of trapezoidal integration. -/
 noncomputable def trapezoidal_error (f : ℝ → ℝ) (N : ℕ) (a b : ℝ)
@@ -93,7 +94,8 @@ theorem sum_trapezoidal_integral_adjacent_intervals {f : ℝ → ℝ} {N : ℕ} 
     (N_nonzero : 0 < N) : ∑ i ∈ range N, trapezoidal_integral f 1 (a + i * h) (a + (i + 1) * h)
       = trapezoidal_integral f N a (a + N * h) := by
   simp_rw [trapezoidal_integral_one, add_sub_add_left_eq_sub, ← sub_mul, trapezoidal_integral,
-    add_sub_cancel_left, one_mul, ← mul_sum, ← mul_div₀, show N * (h / N) = h by field]
+    add_sub_cancel_left, one_mul, ← mul_sum, ← mul_div₀,
+    show (N : ℝ) * (h / (N : ℝ)) = h by field]
   rw [sum_add_distrib, ← Nat.sub_one_add_one_eq_of_pos N_nonzero, sum_range_succ', sum_range_succ,
     add_add_add_comm, ← sum_add_distrib, add_comm, Nat.sub_one_add_one_eq_of_pos N_nonzero]
   simp_rw [Nat.cast_sub N_nonzero, Nat.cast_add, Nat.cast_one, ← two_mul, ← mul_sum]
@@ -168,11 +170,12 @@ private lemma trapezoidal_error_le_of_lt' {f : ℝ → ℝ} {ζ : ℝ} {a b : �
     exact le_of_eq (by ring)
   have key {φ φ' : ℝ → ℝ} (h : ∀ x ∈ Icc a b, HasDerivWithinAt φ (φ' x) (Icc a b) x) (h0 : φ a = 0)
       {c : ℝ} {n : ℕ} (h_bound : ∀ t ∈ Icc a b, |φ' t| ≤ c * (t - a) ^ n) :
-      ∀ t ∈ Icc a b, |φ t| ≤ c / (n + 1) * (t - a) ^ (n + 1) := by
+      ∀ t ∈ Icc a b, |φ t| ≤ c / (n + 1 : ℝ) * (t - a) ^ (n + 1) := by
     intro t ht
-    have hB (x) : HasDerivAt (fun y ↦ c / (n + 1) * (y - a) ^ (n + 1)) (c * (x - a) ^ n) x := by
+    have hB (x) : HasDerivAt (fun y ↦ c / (n + 1 : ℝ) * (y - a) ^ (n + 1))
+        (c * (x - a) ^ n) x := by
       convert!
-        (hasDerivAt_const x (c / (n + 1))).mul
+        (hasDerivAt_const x (c / (n + 1 : ℝ))).mul
           (((hasDerivAt_id x).sub (hasDerivAt_const x a)).pow (n + 1)) using 1
       simp [sub_eq_add_neg, field]
     simpa [Real.norm_eq_abs, h0] using image_norm_le_of_norm_deriv_right_le_deriv_boundary
@@ -190,8 +193,8 @@ private lemma trapezoidal_error_le_of_lt {f : ℝ → ℝ} {ζ : ℝ} {a b : ℝ
     (h_ddf : DifferentiableOn ℝ (derivWithin f (Icc a b)) (Icc a b))
     (fpp_bound : ∀ x, |iteratedDerivWithin 2 f (Icc a b) x| ≤ ζ)
     {N : ℕ} (N_nonzero : 0 < N) :
-    |trapezoidal_error f N a b| ≤ (b - a) ^ 3 * ζ / (12 * N ^ 2) := by
-  let h := (b - a) / N
+    |trapezoidal_error f N a b| ≤ (b - a) ^ 3 * ζ / (12 * (N : ℝ) ^ 2) := by
+  let h := (b - a) / (N : ℝ)
   let ak (k : ℕ) := a + k * h
   have h0 : ∀ k : ℕ, ak (k + 1) - ak k = h := by simp [ak, ← sub_mul]
   have hab : 0 < b - a := sub_pos.mpr a_lt_b
@@ -241,7 +244,7 @@ theorem trapezoidal_error_le {f : ℝ → ℝ} {a b : ℝ}
     (h_df : DifferentiableOn ℝ f [[a, b]])
     (h_ddf : DifferentiableOn ℝ (derivWithin f [[a, b]]) [[a, b]]) {ζ : ℝ}
     (fpp_bound : ∀ x, |iteratedDerivWithin 2 f [[a, b]] x| ≤ ζ) {N : ℕ} (N_nonzero : 0 < N) :
-    |trapezoidal_error f N a b| ≤ |b - a| ^ 3 * ζ / (12 * N ^ 2) := by
+    |trapezoidal_error f N a b| ≤ |b - a| ^ 3 * ζ / (12 * (N : ℝ) ^ 2) := by
   rcases lt_trichotomy a b with h_lt | h_eq | h_gt
   -- Standard case: a < b
   · rw [uIcc_of_lt h_lt] at *
@@ -259,7 +262,7 @@ theorem trapezoidal_error_le {f : ℝ → ℝ} {a b : ℝ}
 `f` is `C^2`. -/
 theorem trapezoidal_error_le_of_c2 {f : ℝ → ℝ} {a b : ℝ} (h_f_c2 : ContDiffOn ℝ 2 f [[a, b]])
     {ζ : ℝ} (fpp_bound : ∀ x, |iteratedDerivWithin 2 f [[a, b]] x| ≤ ζ) {N : ℕ}
-    (N_nonzero : 0 < N) : |trapezoidal_error f N a b| ≤ |b - a| ^ 3 * ζ / (12 * N ^ 2) := by
+    (N_nonzero : 0 < N) : |trapezoidal_error f N a b| ≤ |b - a| ^ 3 * ζ / (12 * (N : ℝ) ^ 2) := by
   -- This use of rcases slightly duplicates effort from the proof of trapezoidal_error_le, but doing
   -- it any other way that I can think of would be worse.
   rcases eq_or_ne a b with h_eq | h_ne

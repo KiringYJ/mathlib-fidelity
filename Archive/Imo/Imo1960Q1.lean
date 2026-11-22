@@ -31,7 +31,7 @@ def sumOfSquares (L : List ℕ) : ℕ :=
   (L.map fun x => x * x).sum
 
 def ProblemPredicate (n : ℕ) : Prop :=
-  (Nat.digits 10 n).length = 3 ∧ 11 ∣ n ∧ n / 11 = sumOfSquares (Nat.digits 10 n)
+  (Nat.digits 10 n).length = 3 ∧ 11 ∣ n ∧ n.euclideanDiv 11 = sumOfSquares (Nat.digits 10 n)
 
 def SolutionPredicate (n : ℕ) : Prop :=
   n = 550 ∨ n = 803
@@ -74,7 +74,7 @@ theorem searchUpTo_step {c n} (H : SearchUpTo c n) {c' n'} (ec : c + 1 = c') (en
   obtain ⟨h₁, ⟨m, rfl⟩, h₂⟩ := id p
   by_cases h : 11 * m < c * 11; · exact H _ h p
   obtain rfl : m = c := by lia
-  rw [Nat.mul_div_cancel_left _ (by decide), mul_comm] at h₂
+  rw [Nat.euclideanDiv_mul_left_cancel, mul_comm] at h₂
   refine (H' h₂).imp ?_ ?_ <;> · rintro rfl; norm_num
 
 theorem searchUpTo_end {c} (H : SearchUpTo c 1001) {n : ℕ} (ppn : ProblemPredicate n) :
@@ -86,14 +86,15 @@ theorem right_direction {n : ℕ} : ProblemPredicate n → SolutionPredicate n :
   iterate 82
     replace :=
       searchUpTo_step this (by norm_num1; rfl) (by norm_num1; rfl) rfl
-        (by simp +decide)
+        (by simp +decide [Nat.euclideanDiv_eq_core])
   exact searchUpTo_end this
 
 /-
 Now we just need to prove the equivalence, for the precise problem statement.
 -/
 theorem left_direction (n : ℕ) (spn : SolutionPredicate n) : ProblemPredicate n := by
-  rcases spn with (rfl | rfl) <;> refine ⟨?_, by decide, ?_⟩ <;> norm_num <;> rfl
+  rcases spn with (rfl | rfl) <;> refine ⟨?_, by decide, ?_⟩ <;>
+    norm_num [Nat.euclideanDiv_eq_core] <;> rfl
 
 end Imo1960Q1
 

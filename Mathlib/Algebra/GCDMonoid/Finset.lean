@@ -252,18 +252,23 @@ theorem extract_gcd (f : β → α) (hs : s.Nonempty) :
       · simp only [hb, hg, dite_true]
       rw [dite_eq_left hb, hg hb]
 
-variable [Div α] [MulDivCancelClass α] {f : ι → α} {s : Finset ι} {i : ι}
+variable {f : ι → α} {s : Finset ι} {i : ι}
 
-/-- Given a nonempty Finset `s` and a function `f` from `s` to `ℕ`, if `d = s.gcd`,
-then the `gcd` of `(f i) / d` is equal to `1`. -/
-lemma gcd_div_eq_one (his : i ∈ s) (hfi : f i ≠ 0) : s.gcd (fun j ↦ f j / s.gcd f) = 1 := by
-  obtain ⟨g, he, hg⟩ := Finset.extract_gcd f ⟨i, his⟩
-  refine (Finset.gcd_congr rfl fun a ha ↦ ?_).trans hg
-  rw [he a ha, MulDivCancelClass.mul_div_cancel_left₀]
-  exact mt Finset.gcd_eq_zero_iff.1 fun h ↦ hfi <| h i his
+/-- If some value is nonzero, the cofactors obtained by extracting the common gcd have gcd one. -/
+lemma gcd_div_eq_one (his : i ∈ s) (hfi : f i ≠ 0) :
+    s.attach.gcd (fun j ↦ (gcd_dvd (f := f) j.property).choose) = 1 := by
+  classical
+  have hattach : s.attach.gcd (fun j ↦ f j.val) = s.gcd f := by
+    simpa only [attach_image_val, Function.comp_def] using
+      (gcd_image (f := f) (g := Subtype.val) s.attach).symm
+  apply extract_gcd' (fun j ↦ f j.val) _ ⟨⟨i, his⟩, mem_attach .., hfi⟩
+  intro j _
+  rw [hattach]
+  exact (gcd_dvd (f := f) j.property).choose_spec
 
 lemma gcd_div_id_eq_one {s : Finset α} {a : α} (has : a ∈ s) (ha : a ≠ 0) :
-    s.gcd (fun b ↦ b / s.gcd id) = 1 := gcd_div_eq_one has ha
+    s.attach.gcd (fun b ↦ (gcd_dvd (f := id) b.property).choose) = 1 :=
+  gcd_div_eq_one (f := id) has ha
 
 end gcd
 

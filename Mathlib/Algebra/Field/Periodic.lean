@@ -63,16 +63,16 @@ theorem Periodic.mul_const [Semiring α] (h : Periodic f c) (a : α) {ha : IsUni
   fun x => by simpa only [add_mul, inv_mul_cancel_right₀] using h (x * a)
 
 theorem Periodic.mul_const' [Semiring α] (h : Periodic f c) (a : α) {ha : IsUnit a} :
-    Periodic (fun x => f (x * a)) (c / a) :=
-  fun x => by simpa only [add_mul, div_mul_cancel₀] using h (x * a)
+    Periodic (fun x => f (x * a)) (Checked.div c a ha) :=
+  h.mul_const a (ha := ha)
 
 theorem Periodic.mul_const_inv [Semiring α] (h : Periodic f c) (a : α) {ha : IsUnit a} :
     Periodic (fun x => f (x * a⁻¹)) (c * a) :=
   fun x => by simpa only [add_mul, mul_inv_cancel_right₀] using h (x * a⁻¹)
 
 theorem Periodic.div_const [Semiring α] (h : Periodic f c) (a : α) {ha : IsUnit a} :
-    Periodic (fun x => f (x / a)) (c * a) :=
-  fun x => by simpa only [add_div, mul_div_cancel_right₀] using h (x / a)
+    Periodic (fun x => f (Checked.div x a ha)) (c * a) :=
+  h.mul_const_inv a (ha := ha)
 
 /-- If a function `f` is `Periodic` with positive period `c`, then for all `x` there exists some
   `y ∈ Ico 0 c` such that `f x = f y`. -/
@@ -159,16 +159,16 @@ theorem Antiperiodic.mul_const [Semiring α] [Neg β] (h : Antiperiodic f c) {a 
   fun x => by simpa only [add_mul, inv_mul_cancel_right₀] using h (x * a)
 
 theorem Antiperiodic.mul_const' [Semiring α] [Neg β] (h : Antiperiodic f c) {a : α}
-    {ha : IsUnit a} : Antiperiodic (fun x => f (x * a)) (c / a) :=
-  fun x => by simpa only [add_mul, div_mul_cancel₀] using h (x * a)
+    {ha : IsUnit a} : Antiperiodic (fun x => f (x * a)) (Checked.div c a ha) :=
+  h.mul_const (ha := ha)
 
 theorem Antiperiodic.mul_const_inv [Semiring α] [Neg β] (h : Antiperiodic f c) {a : α}
     {ha : IsUnit a} : Antiperiodic (fun x => f (x * a⁻¹)) (c * a) :=
   fun x => by simpa only [add_mul, mul_inv_cancel_right₀] using h (x * a⁻¹)
 
 theorem Antiperiodic.div_inv [Semiring α] [Neg β] (h : Antiperiodic f c) {a : α}
-    {ha : IsUnit a} : Antiperiodic (fun x => f (x / a)) (c * a) :=
-  fun x => by simpa only [add_div, mul_div_cancel_right₀] using h (x / a)
+    {ha : IsUnit a} : Antiperiodic (fun x => f (Checked.div x a ha)) (c * a) :=
+  h.mul_const_inv (ha := ha)
 
 end Function
 

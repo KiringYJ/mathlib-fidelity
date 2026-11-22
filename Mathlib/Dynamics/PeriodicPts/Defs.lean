@@ -217,11 +217,13 @@ theorem periodicPts_subset_range : periodicPts f ⊆ range f := by
 theorem isPeriodicPt_of_mem_periodicPts_of_isPeriodicPt_iterate (hx : x ∈ periodicPts f)
     (hm : IsPeriodicPt f m (f^[n] x)) : IsPeriodicPt f m x := by
   rcases hx with ⟨r, hr, hr'⟩
-  suffices n ≤ (n / r + 1) * r by
+  let q := Nat.euclideanDiv n r hr.ne'
+  suffices n ≤ (q + 1) * r by
     unfold IsPeriodicPt IsFixedPt
-    convert! (hm.apply_iterate ((n / r + 1) * r - n)).eq <;>
+    convert! (hm.apply_iterate ((q + 1) * r - n)).eq <;>
       rw [← iterate_add_apply, Nat.sub_add_cancel this, iterate_mul, (hr'.iterate _).eq]
-  rw [Nat.add_mul, one_mul]
+  change n ≤ (Nat.euclideanDiv n r hr.ne' + 1) * r
+  rw [Nat.euclideanDiv_eq_core, Nat.add_mul, one_mul]
   exact (Nat.lt_div_mul_add hr).le
 
 variable (f)
@@ -412,8 +414,10 @@ theorem Commute.minimalPeriod_of_comp_dvd_lcm {g : α → α} (h : Commute f g)
 
 theorem minimalPeriod_iterate_eq_div_gcd (hx : x ∈ periodicPts f) (n : ℕ) :
     minimalPeriod f^[n] x (mem_periodicPts_iterate hx n) =
-      minimalPeriod f x / Nat.gcd (minimalPeriod f x) n := by
+      Nat.euclideanDiv (minimalPeriod f x) (Nat.gcd (minimalPeriod f x) n)
+        (Nat.ne_of_gt (Nat.gcd_pos_of_pos_left n (minimalPeriod_pos hx))) := by
   have h : 0 < gcd (minimalPeriod f x) n := gcd_pos_of_pos_left n (minimalPeriod_pos hx)
+  rw [Nat.euclideanDiv_eq_core]
   apply Nat.dvd_antisymm
   · apply IsPeriodicPt.minimalPeriod_dvd _ (mem_periodicPts_iterate hx n)
     rw [IsPeriodicPt, IsFixedPt, ← iterate_mul, ← Nat.mul_div_assoc _ (gcd_dvd_left _ _),

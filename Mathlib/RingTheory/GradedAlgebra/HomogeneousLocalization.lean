@@ -1010,17 +1010,26 @@ theorem Away.adjoin_mk_prod_pow_eq_top_of_pos {f : A} {d : ℕ} (hf : f ∈ 𝒜
   change ⊤ ≤ (Algebra.adjoin (𝒜 0) _).toSubmodule
   rw [← HomogeneousLocalization.Away.span_mk_prod_pow_eq_top hf v hx dv hxd, Submodule.span_le]
   rintro _ ⟨a, ai, hai, rfl⟩
-  have H₀ : (a - ∑ i : ι', dv i * (ai i / d)) • d = ∑ k : ι', (ai k % d) • dv k := by
+  rcases d.eq_zero_or_pos with hd | hd
+  · have hzero : ∀ i, ai i = 0 := by simpa [hd, fun i ↦ (hxd' i).ne'] using hai
+    exact Algebra.subset_adjoin ⟨a, ai, hai, fun i ↦ (hzero i).le.trans (Nat.zero_le d), rfl⟩
+  let q (i : ι') := Nat.euclideanDiv (ai i) d hd.ne'
+  have hsplit (i : ι') : ai i % d + d * q i = ai i :=
+    (Nat.add_comm ..).trans (Nat.euclideanDiv_mul_add_mod (ai i) d hd.ne')
+  have hbound (i : ι') : q i * d ≤ ai i := by
+    rw [Nat.mul_comm]
+    exact (Nat.le_add_left _ _).trans_eq (hsplit i)
+  have H₀ : (a - ∑ i : ι', dv i * q i) • d = ∑ k : ι', (ai k % d) • dv k := by
     rw [smul_eq_mul, tsub_mul, ← smul_eq_mul, ← hai]
-    conv => enter [1, 1, 2, i]; rw [← Nat.mod_add_div (ai i) d]
+    conv => enter [1, 1, 2, i]; rw [← hsplit i]
     simp_rw [smul_eq_mul, add_mul, Finset.sum_add_distrib,
-      mul_assoc, ← Finset.mul_sum, mul_comm d, mul_comm (_ / _)]
+      mul_assoc, ← Finset.mul_sum, mul_comm d, mul_comm (q _)]
     simp only [add_tsub_cancel_right]
   have H : Away.mk 𝒜 hf a (∏ i, v i ^ ai i)
       (hai ▸ SetLike.prod_pow_mem_graded _ _ _ _ fun i _ ↦ hxd i) =
-      Away.mk 𝒜 hf (a - ∑ i : ι', dv i * (ai i / d)) (∏ i, v i ^ (ai i % d))
+      Away.mk 𝒜 hf (a - ∑ i : ι', dv i * q i) (∏ i, v i ^ (ai i % d))
       (H₀ ▸ SetLike.prod_pow_mem_graded _ _ _ _ fun i _ ↦ hxd i) *
-      ∏ i, Away.isLocalizationElem hf (hxd i) ^ (ai i / d) := by
+      ∏ i, Away.isLocalizationElem hf (hxd i) ^ q i := by
     apply (show Function.Injective (algebraMap (Away 𝒜 f) (Localization.Away f))
       from val_injective _)
     simp only [map_pow, map_prod, map_mul]
@@ -1030,24 +1039,18 @@ theorem Away.adjoin_mk_prod_pow_eq_top_of_pos {f : A} {d : ℕ} (hf : f ∈ 𝒜
     congr
     · ext i
       congr
-      exact Eq.symm (Nat.mod_add_div (ai i) d)
+      exact (hsplit i).symm
     · simp only [SubmonoidClass.coe_finsetProd, ← pow_add, ← pow_mul,
         Finset.prod_pow_eq_pow_sum, SubmonoidClass.coe_pow]
       rw [tsub_add_cancel_of_le]
-      rcases d.eq_zero_or_pos with hd | hd
-      · simp [hd]
       rw [← mul_le_mul_iff_of_pos_right hd, ← smul_eq_mul (a := a), ← hai, Finset.sum_mul]
       simp_rw [smul_eq_mul, mul_comm (ai _), mul_assoc]
       gcongr
-      exact Nat.div_mul_le_self (ai _) d
+      exact hbound _
   rw [H, SetLike.mem_coe]
   apply (Algebra.adjoin (𝒜 0) _).mul_mem
   · apply Algebra.subset_adjoin
-    refine ⟨a - ∑ i : ι', dv i * (ai i / d), (ai · % d), H₀.symm, ?_, rfl⟩
-    rcases d.eq_zero_or_pos with hd | hd
-    · have : ∀ (x : ι'), ai x = 0 := by simpa [hd, fun i ↦ (hxd' i).ne'] using hai
-      simp [this]
-    exact fun i ↦ (Nat.mod_lt _ hd).le
+    exact ⟨a - ∑ i : ι', dv i * q i, (ai · % d), H₀.symm, fun i ↦ (Nat.mod_lt _ hd).le, rfl⟩
   apply prod_mem
   · classical
     rintro j -

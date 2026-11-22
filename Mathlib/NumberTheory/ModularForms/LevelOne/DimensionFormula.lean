@@ -259,30 +259,34 @@ theorem levelOne_weight_two_rank_zero : Module.rank ℂ (ModularForm 𝒮ℒ 2) 
   simpa [rank_zero_iff_forall_zero, ModularForm.qExpansion_eq_zero_iff]
     using weight_two_qExpansion_eq_zero
 
+private theorem quotient_weight_sub_twelve {k : ℕ} (hk : 12 ≤ k) :
+    Nat.euclideanDiv k 12 = Nat.euclideanDiv (k - 12) 12 + 1 := by
+  simpa only [Nat.euclideanDiv_eq_core] using Nat.div_eq_sub_div (by decide : 0 < 12) hk
+
 /-- The dimension formula for `𝒮ℒ` modular forms of even weight. -/
 theorem dimension_level_one (k : ℕ) (hk2 : Even k) :
     Module.rank ℂ (ModularForm 𝒮ℒ k) =
-      if k ≡ 2 [MOD 12] then k / 12 else k / 12 + 1 := by
+      if k ≡ 2 [MOD 12] then Nat.euclideanDiv k 12 else Nat.euclideanDiv k 12 + 1 := by
   induction k using Nat.strong_induction_on with | h k ihn =>
   have : k < 3 ∨ (3 ≤ k ∧ k < 12) ∨ 12 ≤ k := by grind
   rcases this with hk | hk | hk
   · -- `k < 3`: direct case-by-case check
     interval_cases k
-    · simpa using! levelOne_weight_zero_rank_one
+    · simpa [Nat.euclideanDiv_eq_core] using! levelOne_weight_zero_rank_one
     · grind
-    · simpa [Nat.ModEq] using levelOne_weight_two_rank_zero
+    · simpa [Nat.ModEq, Nat.euclideanDiv_eq_core] using levelOne_weight_two_rank_zero
   · -- `3 ≤ k < 12`: rank decomposition + the weight `k - 12` space is zero
     rw [rank_eq_one_add_rank_cuspForm hk.1 hk2, CuspForm.discriminantEquiv.rank_eq,
       levelOne_neg_weight_rank_zero (by lia)]
     have : k ∈ (Finset.Icc 3 11).filter Even := by grind
-    fin_cases this <;> simp [Nat.ModEq]
+    fin_cases this <;> simp [Nat.ModEq, Nat.euclideanDiv_eq_core]
   · -- `12 ≤ k`: rank decomposition + induction hypothesis at weight `k - 12`
     rw [rank_eq_one_add_rank_cuspForm (by lia) hk2, CuspForm.discriminantEquiv.rank_eq,
       show ((k : ℤ) - 12 : ℤ) = ((k - 12 : ℕ) : ℤ) by lia,
       ihn (k - 12) (by lia) (by grind)]
-    simp only [Nat.ModEq, show k / 12 = (k - 12) / 12 + 1 by lia,
+    simp only [Nat.ModEq, quotient_weight_sub_twelve hk,
       show (k - 12) % 12 = k % 12 by lia]
-    split_ifs <;> grind
+    split_ifs <;> simp only [Nat.cast_add, Nat.cast_one] <;> ac_rfl
 
 instance (k : ℤ) : FiniteDimensional ℂ (ModularForm 𝒮ℒ k) := by
   rw [FiniteDimensional, ← Module.rank_lt_aleph0_iff]
@@ -299,7 +303,7 @@ instance (k : ℤ) : FiniteDimensional ℂ (ModularForm 𝒮ℒ k) := by
 /-- **Sturm bound for level-1 modular forms (natural weight).** If a modular form `f` of weight
 `k : ℕ` has q-expansion of order strictly greater than `k / 12`, then `f` is identically zero. -/
 theorem sturm_bound_levelOne_nat {k : ℕ} {f : ModularForm 𝒮ℒ (k : ℤ)}
-    (h : (↑(k / 12) : ℕ∞) < (qExpansion 1 f).order) : f = 0 := by
+    (h : (↑(Nat.euclideanDiv k 12) : ℕ∞) < (qExpansion 1 f).order) : f = 0 := by
   induction k using Nat.strong_induction_on with | _ k ih =>
   have h0 : (qExpansion 1 f).coeff 0 = 0 :=
     PowerSeries.coeff_of_lt_order _ ((Nat.cast_nonneg _).trans_lt h)
@@ -309,16 +313,16 @@ theorem sturm_bound_levelOne_nat {k : ℕ} {f : ModularForm 𝒮ℒ (k : ℤ)}
   · apply rank_zero_iff_forall_zero.mp (levelOne_neg_weight_rank_zero (by lia))
   · rw [← mcast_eq_zero_iff (b := ↑(k - 12)) (by lia) rfl]
     refine ih (k - 12) (by lia) ?_
-    have hsucc : k / 12 = (k - 12) / 12 + 1 := by lia
     rw [qExpansion_eq_qExpansion_discriminant_mul f h0, PowerSeries.order_mul,
-      discriminant_qExpansion_order, add_comm, hsucc, Nat.cast_add, Nat.cast_one] at h
+      discriminant_qExpansion_order, add_comm, quotient_weight_sub_twelve hk12,
+      Nat.cast_add, Nat.cast_one] at h
     exact (ENat.add_lt_add_iff_right (ENat.natCast_ne_top 1)).mp h
 
 /-- **Sturm bound for level-1 modular forms.** If a modular form `f` of weight `k` for `SL(2, ℤ)`
 has q-expansion of order strictly greater than `k / 12`, then `f` is identically zero.
 Corollary of the natural-weight version `sturm_bound_levelOne_nat`. -/
 theorem sturm_bound_levelOne {k : ℤ} {f : ModularForm 𝒮ℒ k}
-    (h : (↑(k.toNat / 12) : ℕ∞) < (qExpansion 1 f).order) : f = 0 := by
+    (h : (↑(Nat.euclideanDiv k.toNat 12) : ℕ∞) < (qExpansion 1 f).order) : f = 0 := by
   rcases lt_or_ge k 0 with hk | hk
   · exact rank_zero_iff_forall_zero.mp (levelOne_neg_weight_rank_zero hk) f
   · lift k to ℕ using hk

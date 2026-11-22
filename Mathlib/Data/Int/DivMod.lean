@@ -6,6 +6,7 @@ Authors: Kim Morrison
 module
 
 public import Mathlib.Init
+public import Mathlib.Lean.Elab.NativeDivision
 
 /-!
 # Basic lemmas about division and modulo for integers
@@ -18,12 +19,10 @@ namespace Int
 
 /-! ### `ediv` and `fdiv` -/
 
-theorem mul_ediv_le_mul_ediv_assoc {a : Int} (ha : 0 ≤ a) (b : Int) {c : Int} (hc : 0 ≤ c) :
-    a * (b / c) ≤ a * b / c := by
-  obtain rfl | hlt : c = 0 ∨ 0 < c := by lia
-  · simp
-  · rw [Int.le_ediv_iff_mul_le hlt, Int.mul_assoc]
-    exact Int.mul_le_mul_of_nonneg_left (Int.ediv_mul_le b (Int.ne_of_gt hlt)) ha
+theorem mul_ediv_le_mul_ediv_assoc {a : Int} (ha : 0 ≤ a) (b : Int) {c : Int} (hc : 0 < c) :
+    a * Int.euclideanDiv b c (Int.ne_of_gt hc) ≤ Int.euclideanDiv (a * b) c (Int.ne_of_gt hc) := by
+  rw [Int.euclideanDiv_eq_core, Int.euclideanDiv_eq_core, Int.le_ediv_iff_mul_le hc, Int.mul_assoc]
+  exact Int.mul_le_mul_of_nonneg_left (Int.ediv_mul_le b (Int.ne_of_gt hc)) ha
 
 theorem fdiv_fdiv_eq_fdiv_mul (m : Int) {n k : Int} (hn : 0 ≤ n) (hk : 0 ≤ k) :
     (m.fdiv n).fdiv k = m.fdiv (n * k) := by

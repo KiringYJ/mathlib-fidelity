@@ -542,20 +542,17 @@ theorem sin_eq_zero_iff_cos_eq {x : ℝ} : sin x = 0 ↔ cos x = 1 ∨ cos x = -
 theorem cos_eq_zero_iff_sin_eq {x : ℝ} : cos x = 0 ↔ sin x = 1 ∨ sin x = -1 := by
   rw [← mul_self_eq_one_iff, ← sin_sq_add_cos_sq, sq, sq, left_eq_add, mul_eq_zero, or_self]
 
-theorem cos_eq_one_iff (x : ℝ) : cos x = 1 ↔ ∃ n : ℤ, (n : ℝ) * (2 * π) = x :=
-  ⟨fun h =>
-    let ⟨n, hn⟩ := sin_eq_zero_iff.1 (sin_eq_zero_iff_cos_eq.2 (Or.inl h))
-    ⟨n / 2,
-      (Int.emod_two_eq_zero_or_one n).elim
-        (fun hn0 => by
-          rwa [← mul_assoc, ← @Int.cast_two ℝ, ← Int.cast_mul,
-            Int.ediv_mul_cancel (Int.dvd_iff_emod_eq_zero.2 hn0)])
-        fun hn1 => by
-        rw [← Int.emod_add_mul_ediv n 2, hn1, Int.cast_add, Int.cast_one, add_mul, one_mul,
-          add_comm, mul_comm (2 : ℤ), Int.cast_mul, mul_assoc, Int.cast_two] at hn
-        rw [← hn, cos_int_mul_two_pi_add_pi] at h
-        exact absurd h (by norm_num)⟩,
-    fun ⟨_, hn⟩ => hn ▸ cos_int_mul_two_pi _⟩
+theorem cos_eq_one_iff (x : ℝ) : cos x = 1 ↔ ∃ n : ℤ, (n : ℝ) * (2 * π) = x := by
+  constructor
+  · intro h
+    obtain ⟨n, rfl⟩ := sin_eq_zero_iff.1 (sin_eq_zero_iff_cos_eq.2 (Or.inl h))
+    obtain ⟨k, rfl | rfl⟩ := Int.even_or_odd' n
+    · exact ⟨k, by push_cast; ring⟩
+    · have hx : ((2 * k + 1 : ℤ) : ℝ) * π = k * (2 * π) + π := by push_cast; ring
+      rw [hx, cos_int_mul_two_pi_add_pi] at h
+      norm_num at h
+  · rintro ⟨n, rfl⟩
+    exact cos_int_mul_two_pi n
 
 theorem cos_eq_one_iff_of_lt_of_lt {x : ℝ} (hx₁ : -(2 * π) < x) (hx₂ : x < 2 * π) :
     cos x = 1 ↔ x = 0 :=
@@ -1108,15 +1105,15 @@ theorem cos_eq_zero_iff_sin_eq {z : ℂ} : cos z = 0 ↔ sin z = 1 ∨ sin z = -
   rw [← mul_self_eq_one_iff, ← sin_sq_add_cos_sq, sq, sq, left_eq_add, mul_eq_zero, or_self]
 
 @[simp]
-theorem cos_pi_div_two : cos (π / 2) = 0 :=
+theorem cos_pi_div_two : cos ((π : ℂ) / 2) = 0 :=
   calc
-    cos (π / 2) = Real.cos (π / 2) := by rw [ofReal_cos]; simp
+    cos ((π : ℂ) / 2) = Real.cos (π / 2) := by rw [ofReal_cos]; simp
     _ = 0 := by simp
 
 @[simp]
-theorem sin_pi_div_two : sin (π / 2) = 1 :=
+theorem sin_pi_div_two : sin ((π : ℂ) / 2) = 1 :=
   calc
-    sin (π / 2) = Real.sin (π / 2) := by rw [ofReal_sin]; simp
+    sin ((π : ℂ) / 2) = Real.sin (π / 2) := by rw [ofReal_sin]; simp
     _ = 1 := by simp
 
 @[simp]
@@ -1237,17 +1234,20 @@ theorem cos_nat_mul_two_pi_sub_pi (n : ℕ) : cos (n * (2 * π) - π) = -1 := by
 theorem cos_int_mul_two_pi_sub_pi (n : ℤ) : cos (n * (2 * π) - π) = -1 := by
   simpa only [cos_zero] using (cos_periodic.int_mul n).sub_antiperiod_eq cos_antiperiodic
 
-theorem sin_add_pi_div_two (x : ℂ) : sin (x + π / 2) = cos x := by simp [sin_add]
+theorem sin_add_pi_div_two (x : ℂ) : sin (x + (π : ℂ) / 2) = cos x := by simp [sin_add]
 
-theorem sin_sub_pi_div_two (x : ℂ) : sin (x - π / 2) = -cos x := by simp [sub_eq_add_neg, sin_add]
+theorem sin_sub_pi_div_two (x : ℂ) : sin (x - (π : ℂ) / 2) = -cos x := by
+  simp [sub_eq_add_neg, sin_add]
 
-theorem sin_pi_div_two_sub (x : ℂ) : sin (π / 2 - x) = cos x := by simp [sub_eq_add_neg, sin_add]
+theorem sin_pi_div_two_sub (x : ℂ) : sin ((π : ℂ) / 2 - x) = cos x := by
+  simp [sub_eq_add_neg, sin_add]
 
-theorem cos_add_pi_div_two (x : ℂ) : cos (x + π / 2) = -sin x := by simp [cos_add]
+theorem cos_add_pi_div_two (x : ℂ) : cos (x + (π : ℂ) / 2) = -sin x := by simp [cos_add]
 
-theorem cos_sub_pi_div_two (x : ℂ) : cos (x - π / 2) = sin x := by simp [sub_eq_add_neg, cos_add]
+theorem cos_sub_pi_div_two (x : ℂ) : cos (x - (π : ℂ) / 2) = sin x := by
+  simp [sub_eq_add_neg, cos_add]
 
-theorem cos_pi_div_two_sub (x : ℂ) : cos (π / 2 - x) = sin x := by
+theorem cos_pi_div_two_sub (x : ℂ) : cos ((π : ℂ) / 2 - x) = sin x := by
   rw [← cos_neg, neg_sub, cos_sub_pi_div_two]
 
 /-- A tangent at a point where the sine does not vanish is nonzero. -/
@@ -1290,8 +1290,8 @@ theorem tan_pi_sub (x : ℂ) {h : cos (π - x) ≠ 0} :
   tan_eq_neg_tan_of_eq_mul (c := -1) (by rw [sin_pi_sub, neg_one_mul, neg_neg])
     (by rw [cos_pi_sub, neg_one_mul])
 
-theorem tan_pi_div_two_sub (x : ℂ) {h : cos (π / 2 - x) ≠ 0} (hx : cos x ≠ 0) :
-    tan (π / 2 - x) h =
+theorem tan_pi_div_two_sub (x : ℂ) {h : cos ((π : ℂ) / 2 - x) ≠ 0} (hx : cos x ≠ 0) :
+    tan ((π : ℂ) / 2 - x) h =
       Checked.inv (tan x hx) (tan_ne_zero_of_sin_ne_zero (cos_pi_div_two_sub x ▸ h)).isUnit := by
   simp only [tan_eq_sin_div_cos, inv_div₀, sin_pi_div_two_sub, cos_pi_div_two_sub]
 
@@ -1363,11 +1363,11 @@ theorem exp_two_pi_mul_I : exp (2 * π * I) = 1 :=
   exp_periodic.eq.trans exp_zero
 
 @[simp]
-lemma exp_pi_div_two_mul_I : exp (π / 2 * I) = I := by
+lemma exp_pi_div_two_mul_I : exp ((π : ℂ) / 2 * I) = I := by
   rw [← cos_add_sin_I, cos_pi_div_two, sin_pi_div_two, one_mul, zero_add]
 
 @[simp]
-lemma exp_neg_pi_div_two_mul_I : exp (-π / 2 * I) = -I := by
+lemma exp_neg_pi_div_two_mul_I : exp (-(π : ℂ) / 2 * I) = -I := by
   rw [← cos_add_sin_I, neg_div₀, cos_neg, cos_pi_div_two, sin_neg, sin_pi_div_two, zero_add,
     neg_mul, one_mul]
 

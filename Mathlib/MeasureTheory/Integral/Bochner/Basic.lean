@@ -918,12 +918,12 @@ theorem L1.norm_of_fun_eq_integral_norm {f : α → H} (hf : Integrable f μ) :
 
 theorem MemLp.eLpNorm_eq_integral_rpow_norm {f : α → H} {p : ℝ≥0∞} (hp1 : p ≠ 0) (hp2 : p ≠ ∞)
     (hf : MemLp f p μ) :
-    eLpNorm f p μ = ENNReal.ofReal ((∫ a, ‖f a‖ ^ p.toReal ∂μ) ^ (1 / p).toReal) := by
+    eLpNorm f p μ = ENNReal.ofReal ((∫ a, ‖f a‖ ^ p.toReal ∂μ) ^ (ENNReal.div 1 p).toReal) := by
   have hpUnit : IsUnit p.toReal := (ENNReal.toReal_pos hp1 hp2).ne'.isUnit
   have A : ∫⁻ a : α, ENNReal.ofReal (‖f a‖ ^ p.toReal) ∂μ = ∫⁻ a : α, ‖f a‖ₑ ^ p.toReal ∂μ := by
     simp_rw [← ofReal_rpow_of_nonneg (norm_nonneg _) toReal_nonneg, ofReal_norm]
   simp only [eLpNorm_eq_lintegral_rpow_enorm_toReal hp1 hp2,
-    one_div, ENNReal.toReal_inv (ha := hpUnit), one_div₀]
+    ENNReal.one_div, ENNReal.toReal_inv (ha := hpUnit), one_div₀]
   rw [integral_eq_lintegral_of_nonneg_ae]; rotate_left
   · exact ae_of_all _ fun x => by positivity
   · exact (hf.aestronglyMeasurable.norm.aemeasurable.pow_const _).aestronglyMeasurable
@@ -1341,7 +1341,7 @@ theorem eLpNorm_one_le_of_le {r : ℝ≥0} (hfint : Integrable f μ) (hfint' : 0
   rw [MemLp.eLpNorm_eq_integral_rpow_norm one_ne_zero ENNReal.one_ne_top
       (memLp_one_iff_integrable.2 hfint),
     ENNReal.ofReal_le_iff_le_toReal (by finiteness)]
-  simp_rw [one_div_one, ENNReal.toReal_one, Real.rpow_one, Real.norm_eq_abs, ←
+  simp_rw [ENNReal.one_div, inv_one, ENNReal.toReal_one, Real.rpow_one, Real.norm_eq_abs, ←
     max_zero_add_max_neg_zero_eq_abs_self, ← Real.coe_toNNReal']
   rw [integral_add hfint.real_toNNReal]
   · simp only [Real.coe_toNNReal', ENNReal.toReal_mul, ENNReal.coe_toReal,

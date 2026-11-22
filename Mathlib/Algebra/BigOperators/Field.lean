@@ -20,11 +20,12 @@ open Fintype
 variable {ι K : Type*} [DivisionSemiring K]
 
 lemma Multiset.sum_map_div (s : Multiset ι) (f : ι → K) (a : K) {ha : IsUnit a} :
-    (s.map (fun x ↦ f x / a)).sum = (s.map f).sum / a := by
+    (s.map (fun x ↦ Checked.div (f x) a ha)).sum = Checked.div (s.map f).sum a ha := by
   simp only [div_eq_mul_inv₀, Multiset.sum_map_mul_right]
 
 lemma Finset.sum_div (s : Finset ι) (f : ι → K) (a : K) {ha : IsUnit a} :
-    (∑ i ∈ s, f i) / a = ∑ i ∈ s, f i / a := by simp only [div_eq_mul_inv₀, sum_mul]
+    Checked.div (∑ i ∈ s, f i) a ha = ∑ i ∈ s, Checked.div (f i) a ha := by
+  simp only [div_eq_mul_inv₀, sum_mul]
 
 -- TODO: Move these to `Algebra.BigOperators.Group.Finset.Basic`, next to the corresponding `card`
 -- lemmas, once `Finset.dens` doesn't depend on `Field` anymore.

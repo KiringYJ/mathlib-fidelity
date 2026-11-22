@@ -324,7 +324,7 @@ private lemma eventually_smoothed_brackets (i : α) :
   simp only [neg_one_mul, ← sub_eq_add_neg, one_mul] at hm hp
   have hm' := sub_nonpos.mp (neg_of_mul_neg_left hm hlp.le).le
   have hp' := sub_nonneg.mp ((mul_pos_iff_of_pos_right hlp).mp hp).le
-  have hc : (((r i n : ℝ) / n) ^ p a b) * (n : ℝ) ^ p a b = (r i n : ℝ) ^ p a b := by
+  have hc : (((r i n : ℝ) / (n : ℝ)) ^ p a b) * (n : ℝ) ^ p a b = (r i n : ℝ) ^ p a b := by
     rw [div_rpow (Nat.cast_nonneg _) (Nat.cast_nonneg _) _, div_mul_cancel₀]
   constructor
   · simpa only [mul_right_comm _ _ ((n : ℝ) ^ p a b), hc] using

@@ -76,9 +76,8 @@ theorem gl_smul_eq_self_iff_dist_sq_eq (h : g.val.det < 0) (htrace : g.val.trace
   simp only [num, Fin.isValue, htrace, Complex.ofReal_neg, neg_mul, Complex.conjCAE_apply, denom,
     Complex.ext_iff, Complex.add_re, Complex.neg_re, Complex.mul_re, Complex.ofReal_re, coe_re,
     Complex.ofReal_im, coe_im, zero_mul, sub_zero, Complex.conj_re, Complex.conj_im, Complex.add_im,
-    Complex.mul_im, add_zero, sub_neg_eq_add, Complex.neg_im, Complex.sub_re, Complex.div_ofReal_re,
-    Complex.sub_im, Complex.div_ofReal_im, neg_zero, zero_div, pow_two, det_fin_two, neg_sub,
-    fieldEq]
+    Complex.mul_im, add_zero, sub_neg_eq_add, Complex.neg_im, Complex.sub_re, Complex.sub_im,
+    pow_two, det_fin_two, neg_sub, fieldEq]
   constructor
   · rintro ⟨hr, _⟩
     linear_combination -g 1 0 * hr

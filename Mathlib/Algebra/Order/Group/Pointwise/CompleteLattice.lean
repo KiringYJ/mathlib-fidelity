@@ -63,15 +63,15 @@ lemma csInf_mul (hs₀ : s.Nonempty) (hs₁ : BddBelow s) (ht₀ : t.Nonempty) (
   csInf_image2_eq_csInf_csInf (fun _ => (OrderIso.mulRight _).symm.to_galoisConnection)
     (fun _ => (OrderIso.mulLeft _).symm.to_galoisConnection) hs₀ hs₁ ht₀ ht₁
 
-@[to_additive]
+@[to_additive csSup_add_neg]
 lemma csSup_div (hs₀ : s.Nonempty) (hs₁ : BddAbove s) (ht₀ : t.Nonempty) (ht₁ : BddBelow t) :
-    sSup (s / t) = sSup s / sInf t := by
-  rw [div_eq_mul_inv, csSup_mul hs₀ hs₁ ht₀.inv ht₁.inv, csSup_inv ht₀ ht₁, div_eq_mul_inv]
+    sSup (s * t⁻¹) = sSup s / sInf t := by
+  rw [csSup_mul hs₀ hs₁ ht₀.inv ht₁.inv, csSup_inv ht₀ ht₁, div_eq_mul_inv]
 
-@[to_additive]
+@[to_additive csInf_add_neg]
 lemma csInf_div (hs₀ : s.Nonempty) (hs₁ : BddBelow s) (ht₀ : t.Nonempty) (ht₁ : BddAbove t) :
-    sInf (s / t) = sInf s / sSup t := by
-  rw [div_eq_mul_inv, csInf_mul hs₀ hs₁ ht₀.inv ht₁.inv, csInf_inv ht₀ ht₁, div_eq_mul_inv]
+    sInf (s * t⁻¹) = sInf s / sSup t := by
+  rw [csInf_mul hs₀ hs₁ ht₀.inv ht₁.inv, csInf_inv ht₀ ht₁, div_eq_mul_inv]
 
 end Group
 end ConditionallyCompleteLattice
@@ -111,11 +111,39 @@ lemma sInf_mul : sInf (s * t) = sInf s * sInf t :=
   (sInf_image2_eq_sInf_sInf fun _ => (OrderIso.mulRight _).symm.to_galoisConnection) fun _ =>
     (OrderIso.mulLeft _).symm.to_galoisConnection
 
-@[to_additive]
-lemma sSup_div : sSup (s / t) = sSup s / sInf t := by simp_rw [div_eq_mul_inv, sSup_mul, sSup_inv]
+@[to_additive sSup_add_neg]
+lemma sSup_div : sSup (s * t⁻¹) = sSup s / sInf t := by
+  simp_rw [div_eq_mul_inv, sSup_mul, sSup_inv]
 
-@[to_additive]
-lemma sInf_div : sInf (s / t) = sInf s / sSup t := by simp_rw [div_eq_mul_inv, sInf_mul, sInf_inv]
+@[to_additive sInf_add_neg]
+lemma sInf_div : sInf (s * t⁻¹) = sInf s / sSup t := by
+  simp_rw [div_eq_mul_inv, sInf_mul, sInf_inv]
 
 end Group
 end CompleteLattice
+
+section AddGroup
+variable [AddGroup M]
+
+section ConditionallyCompleteLattice
+variable [ConditionallyCompleteLattice M] [AddLeftMono M] [AddRightMono M] {s t : Set M}
+
+lemma csSup_sub (hs₀ : s.Nonempty) (hs₁ : BddAbove s) (ht₀ : t.Nonempty) (ht₁ : BddBelow t) :
+    sSup (s - t) = sSup s - sInf t := by
+  simpa only [sub_eq_add_neg] using csSup_add_neg hs₀ hs₁ ht₀ ht₁
+
+lemma csInf_sub (hs₀ : s.Nonempty) (hs₁ : BddBelow s) (ht₀ : t.Nonempty) (ht₁ : BddAbove t) :
+    sInf (s - t) = sInf s - sSup t := by
+  simpa only [sub_eq_add_neg] using csInf_add_neg hs₀ hs₁ ht₀ ht₁
+
+end ConditionallyCompleteLattice
+
+variable [CompleteLattice M] [AddLeftMono M] [AddRightMono M] (s t : Set M)
+
+lemma sSup_sub : sSup (s - t) = sSup s - sInf t := by
+  simpa only [sub_eq_add_neg] using sSup_add_neg s t
+
+lemma sInf_sub : sInf (s - t) = sInf s - sSup t := by
+  simpa only [sub_eq_add_neg] using sInf_add_neg s t
+
+end AddGroup

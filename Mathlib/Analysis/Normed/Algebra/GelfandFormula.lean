@@ -107,7 +107,7 @@ open ContinuousMultilinearMap in
 /-- The `limsup` relationship for the spectral radius used to prove `spectrum.gelfand_formula`. -/
 theorem limsup_pow_nnnorm_pow_one_div_le_spectralRadius (a : A) :
     limsup (fun n : {n : ℕ // n ≠ 0} ↦
-      (‖a ^ (n : ℕ)‖₊ : ℝ≥0∞) ^ (1 / (n : ℕ) : ℝ))
+      (‖a ^ (n : ℕ)‖₊ : ℝ≥0∞) ^ (1 / ((n : ℕ) : ℝ)))
       (comap Subtype.val atTop) ≤ spectralRadius ℂ a := by
   refine ENNReal.inv_le_inv.mp (le_of_forall_pos_nnreal_lt fun r r_pos r_lt => ?_)
   simp_rw [inv_limsup]
@@ -128,7 +128,7 @@ theorem limsup_pow_nnnorm_pow_one_div_le_spectralRadius (a : A) :
 `spectralRadius` of `a` is the limit of the sequence `‖a ^ n‖₊ ^ (1 / n)`. -/
 theorem pow_nnnorm_pow_one_div_tendsto_nhds_spectralRadius (a : A) :
     Tendsto (fun n : {n : ℕ // n ≠ 0} ↦
-      (‖a ^ (n : ℕ)‖₊ : ℝ≥0∞) ^ (1 / (n : ℕ) : ℝ))
+      (‖a ^ (n : ℕ)‖₊ : ℝ≥0∞) ^ (1 / ((n : ℕ) : ℝ)))
       (comap Subtype.val atTop) (𝓝 (spectralRadius ℂ a)) :=
   tendsto_of_le_liminf_of_limsup_le (spectralRadius_le_liminf_pow_nnnorm_pow_one_div ℂ a)
     (limsup_pow_nnnorm_pow_one_div_le_spectralRadius a)
@@ -140,7 +140,7 @@ instead of `nnnorm`. -/
 /-- **Gelfand's formula**: Given an element `a : A` of a complex Banach algebra, the
 `spectralRadius` of `a` is the limit of the sequence `‖a ^ n‖₊ ^ (1 / n)`. -/
 theorem pow_norm_pow_one_div_tendsto_nhds_spectralRadius (a : A) :
-    Tendsto (fun n : {n : ℕ // n ≠ 0} ↦ ENNReal.ofReal (‖a ^ (n : ℕ)‖ ^ (1 / (n : ℕ) : ℝ)))
+    Tendsto (fun n : {n : ℕ // n ≠ 0} ↦ ENNReal.ofReal (‖a ^ (n : ℕ)‖ ^ (1 / ((n : ℕ) : ℝ))))
       (comap Subtype.val atTop)
       (𝓝 (spectralRadius ℂ a)) := by
   convert! pow_nnnorm_pow_one_div_tendsto_nhds_spectralRadius a using 1

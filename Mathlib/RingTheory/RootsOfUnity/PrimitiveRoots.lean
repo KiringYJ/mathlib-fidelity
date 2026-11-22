@@ -181,12 +181,12 @@ lemma isUnit_unit' {ζ : G} {n} (hn) (hζ : IsPrimitiveRoot ζ n) :
     IsPrimitiveRoot (hζ.isUnit hn).unit' n := coe_units_iff.mp hζ
 
 theorem pow_div_gcd (h : IsPrimitiveRoot ζ k) (j : ℕ) (h0 : k.gcd j ≠ 0) :
-    IsPrimitiveRoot (ζ ^ j) (k / k.gcd j) where
+    IsPrimitiveRoot (ζ ^ j) (Nat.euclideanDiv k (k.gcd j) h0) where
   pow_eq_one := by
-    rw [← pow_mul, ← Nat.mul_div_assoc j (k.gcd_dvd_left j), mul_comm,
+    rw [Nat.euclideanDiv_eq_core, ← pow_mul, ← Nat.mul_div_assoc j (k.gcd_dvd_left j), mul_comm,
       Nat.mul_div_assoc k (k.gcd_dvd_right j), pow_mul, h.pow_eq_one, one_pow]
   dvd_of_pow_eq_one l hl := by
-    rw [Nat.div_dvd_iff_dvd_mul (k.gcd_dvd_left j) h0.pos]
+    rw [Nat.euclideanDiv_eq_core, Nat.div_dvd_iff_dvd_mul (k.gcd_dvd_left j) h0.pos]
     grw [← k.gcd_dvd_right l, ← Nat.gcd_mul_right_dvd_mul_gcd]
     apply h.dvd_of_pow_eq_one
     rw [pow_gcd_eq_one]
@@ -194,7 +194,8 @@ theorem pow_div_gcd (h : IsPrimitiveRoot ζ k) (j : ℕ) (h0 : k.gcd j ≠ 0) :
 
 theorem pow_of_coprime (h : IsPrimitiveRoot ζ k) (i : ℕ) (hi : i.Coprime k) :
     IsPrimitiveRoot (ζ ^ i) k := by
-  grind [pow_div_gcd h i (by grind)]
+  have hki := hi.symm.gcd_eq_one
+  simpa [hki, Nat.euclideanDiv_eq_core] using h.pow_div_gcd i (by simp [hki])
 
 theorem pow_of_prime (h : IsPrimitiveRoot ζ k) {p : ℕ} (hprime : Nat.Prime p) (hdiv : ¬p ∣ k) :
     IsPrimitiveRoot (ζ ^ p) k :=
@@ -238,18 +239,23 @@ protected theorem iff_orderOf : IsPrimitiveRoot ζ k ↔ orderOf ζ = k :=
 theorem pow_mul_pow_lcm {ζ' : M} {k' : ℕ} (hζ : IsPrimitiveRoot ζ k) (hζ' : IsPrimitiveRoot ζ' k')
     (hk : k ≠ 0) (hk' : k' ≠ 0) :
     IsPrimitiveRoot
-      (ζ ^ (k / Nat.factorizationLCMLeft k k') * ζ' ^ (k' / Nat.factorizationLCMRight k k'))
+      (ζ ^ Nat.euclideanDiv k (Nat.factorizationLCMLeft k k')
+          (Nat.factorizationLCMLeft_pos _ _).ne' *
+        ζ' ^ Nat.euclideanDiv k' (Nat.factorizationLCMRight k k')
+          (Nat.factorizationLCMRight_pos _ _).ne')
       (Nat.lcm k k') := by
   convert! IsPrimitiveRoot.orderOf _
   convert!
     ((Commute.all ζ ζ').orderOf_mul_pow_eq_lcm (by simpa [← hζ.eq_orderOf])
         (by simpa [← hζ'.eq_orderOf])).symm using 2
-  all_goals simp [hζ.eq_orderOf, hζ'.eq_orderOf]
+  all_goals simp [hζ.eq_orderOf, hζ'.eq_orderOf, Nat.euclideanDiv_eq_core]
 
 theorem pow_of_dvd (h : IsPrimitiveRoot ζ k) {p : ℕ} (hp : p ≠ 0) (hdiv : p ∣ k) :
-    IsPrimitiveRoot (ζ ^ p) (k / p) := by
+    IsPrimitiveRoot (ζ ^ p) (Nat.euclideanDiv k p hp) := by
   rw [h.eq_orderOf] at hdiv ⊢
-  rw [← orderOf_pow_of_dvd hp hdiv]
+  have he : Nat.euclideanDiv (orderOf ζ) p hp = orderOf (ζ ^ p) := by
+    simpa only [Nat.euclideanDiv_eq_core] using (orderOf_pow_of_dvd hp hdiv).symm
+  rw [he]
   exact IsPrimitiveRoot.orderOf _
 
 /-- If `ζ` is a primitive `k`-th root of unity with `k` odd, then every power of `ζ` is an even

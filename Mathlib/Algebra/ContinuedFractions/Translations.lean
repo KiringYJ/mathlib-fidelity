@@ -89,11 +89,12 @@ theorem num_eq_conts_a : g.nums n = (g.conts n).a :=
 theorem den_eq_conts_b : g.dens n = (g.conts n).b :=
   rfl
 
-theorem conv_eq_num_div_den {hB : IsUnit (g.dens n)} : g.convs n = g.nums n / g.dens n :=
+theorem conv_eq_num_div_den {hB : IsUnit (g.dens n)} :
+    g.convs n = Checked.div (g.nums n) (g.dens n) hB :=
   rfl
 
 theorem conv_eq_conts_a_div_conts_b {hB : IsUnit (g.dens n)} :
-    g.convs n = (g.conts n).a / (g.conts n).b :=
+    g.convs n = Checked.div (g.conts n).a (g.conts n).b hB :=
   rfl
 
 theorem exists_conts_a_of_num {A : K} (nth_num_eq : g.nums n = A) :
@@ -156,14 +157,15 @@ open scoped Classical in
 and the resulting denominator is a unit. -/
 theorem convs'Aux_succ_some {s : Stream'.Seq (Pair K)} {p : Pair K} (h : s.head = some p)
     (n : ℕ) : convs'Aux s (n + 1) = (convs'Aux s.tail n).bind fun t ↦
-      if hB : IsUnit (p.b + t) then some (p.a / (p.b + t)) else none := by
+      if hB : IsUnit (p.b + t) then some (Checked.div p.a (p.b + t) hB) else none := by
   simp [convs'Aux, h]
 
 /-- One step of the direct evaluation has a value exactly when the evaluation of the tail has a
-value `t` with `p.b + t` a unit, and the value is then `p.a / (p.b + t)`. -/
+value `t` with `p.b + t` a unit, and the value is the checked quotient of `p.a` by `p.b + t`. -/
 theorem convs'Aux_succ_eq_some_iff {s : Stream'.Seq (Pair K)} {p : Pair K}
     (h : s.head = some p) {x : K} : convs'Aux s (n + 1) = some x ↔
-      ∃ t, convs'Aux s.tail n = some t ∧ ∃ hB : IsUnit (p.b + t), p.a / (p.b + t) = x := by
+      ∃ t, convs'Aux s.tail n = some t ∧
+        ∃ hB : IsUnit (p.b + t), Checked.div p.a (p.b + t) hB = x := by
   classical
   rw [convs'Aux_succ_some h, Option.bind_eq_some_iff]
   refine exists_congr fun t ↦ and_congr_right fun _ ↦ ?_

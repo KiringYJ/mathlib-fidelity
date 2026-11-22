@@ -199,13 +199,17 @@ theorem sum_sq_le_of_mem_box (hx : x ∈ box n d) : ∑ i : Fin n, x i ^ 2 ≤ n
     Nat.pow_le_pow_left (Nat.le_sub_one_of_lt (hx i)) _
   exact (sum_le_card_nsmul univ _ _ fun i _ => this i).trans (by rw [Finset.card_fin, smul_eq_mul])
 
-theorem sum_eq : (∑ i : Fin n, d * (2 * d + 1) ^ (i : ℕ)) = ((2 * d + 1) ^ n - 1) / 2 := by
+theorem sum_eq : (∑ i : Fin n, d * (2 * d + 1) ^ (i : ℕ)) =
+    Nat.euclideanDiv ((2 * d + 1) ^ n - 1) 2 := by
+  rw [Nat.euclideanDiv_eq_core]
   refine (Nat.div_eq_of_eq_mul_left zero_lt_two ?_).symm
   rw [← sum_range fun i => d * (2 * d + 1) ^ (i : ℕ), ← mul_sum, mul_right_comm, mul_comm d, ←
     geom_sum_mul_add, add_tsub_cancel_right, mul_comm]
 
 theorem sum_lt : (∑ i : Fin n, d * (2 * d + 1) ^ (i : ℕ)) < (2 * d + 1) ^ n :=
-  sum_eq.trans_lt <| (Nat.div_le_self _ 2).trans_lt <| pred_lt (pow_pos (succ_pos _) _).ne'
+  sum_eq.trans_lt <| by
+    rw [Nat.euclideanDiv_eq_core]
+    exact (Nat.div_le_self _ 2).trans_lt <| pred_lt (pow_pos (succ_pos _) _).ne'
 
 theorem card_sphere_le_rothNumberNat (n d k : ℕ) :
     #(sphere n d k) ≤ rothNumberNat ((2 * d - 1) ^ n) := by
@@ -233,7 +237,8 @@ that we then optimize by tweaking the parameters. The (almost) optimal parameter
 
 
 theorem exists_large_sphere_aux (n d : ℕ) : ∃ k ∈ range (n * (d - 1) ^ 2 + 1),
-    (↑(d ^ n) / ((n * (d - 1) ^ 2 :) + 1) : ℝ) ≤ #(sphere n d k) := by
+    (Checked.div ((d ^ n : ℕ) : ℝ) (((n * (d - 1) ^ 2 : ℕ) : ℝ) + 1)
+      (cast_add_one_pos _).ne'.isUnit) ≤ #(sphere n d k) := by
   refine exists_le_card_fiber_of_nsmul_le_card_of_maps_to (fun x hx => ?_) nonempty_range_add_one ?_
   · rw [mem_range, Nat.lt_succ_iff]
     exact sum_sq_le_of_mem_box hx
@@ -312,7 +317,7 @@ theorem le_sqrt_log (hN : 4096 ≤ N) : log B * (69 / 50) ≤ √(log ↑N) := b
       gcongr
       exact mod_cast hN
 
-theorem exp_neg_two_mul_le {x : ℝ} (hx : 0 < x) : exp (-2 * x) < exp (2 - ⌈x⌉₊) / ⌈x⌉₊ := by
+theorem exp_neg_two_mul_le {x : ℝ} (hx : 0 < x) : exp (-2 * x) < exp (2 - ⌈x⌉₊) / (⌈x⌉₊ : ℝ) := by
   have h₁ := ceil_lt_add_one hx.le
   have h₂ : 1 - x ≤ 2 - ⌈x⌉₊ := by linarith
   calc

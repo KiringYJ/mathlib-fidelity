@@ -63,12 +63,12 @@ lemma rightShift_v (a n' : ℤ) (hn' : n' + a = n) (p q : ℤ) (hpq : p + n' = q
 
 /-- The map `Cochain K L n → Cochain (K⟦a⟧) L n'` when `n + a = n'`. -/
 def leftShift (a n' : ℤ) (hn' : n + a = n') : Cochain (K⟦a⟧) L n' :=
-  Cochain.mk (fun p q hpq => (a * n' + ((a * (a - 1)) / 2)).negOnePow •
+  Cochain.mk (fun p q hpq => (a * n' + Int.euclideanDiv (a * (a - 1)) 2).negOnePow •
     (K.shiftFunctorObjXIso a p (p + a) rfl).hom ≫ γ.v (p + a) q (by lia))
 
 lemma leftShift_v (a n' : ℤ) (hn' : n + a = n') (p q : ℤ) (hpq : p + n' = q)
     (p' : ℤ) (hp' : p' + n = q) :
-    (γ.leftShift a n' hn').v p q hpq = (a * n' + ((a * (a - 1)) / 2)).negOnePow •
+    (γ.leftShift a n' hn').v p q hpq = (a * n' + Int.euclideanDiv (a * (a - 1)) 2).negOnePow •
       (K.shiftFunctorObjXIso a p p'
         (by rw [← add_left_inj n, hp', add_assoc, add_comm a, hn', hpq])).hom ≫ γ.v p' q hp' := by
   obtain rfl : p' = p + a := by lia
@@ -92,12 +92,12 @@ lemma rightUnshift_v {n' a : ℤ} (γ : Cochain K (L⟦a⟧) n') (n : ℤ) (hn :
 /-- The map `Cochain (K⟦a⟧) L n' → Cochain K L n` when `n + a = n'`. -/
 def leftUnshift {n' a : ℤ} (γ : Cochain (K⟦a⟧) L n') (n : ℤ) (hn : n + a = n') :
     Cochain K L n :=
-  Cochain.mk (fun p q hpq => (a * n' + ((a * (a - 1)) / 2)).negOnePow •
+  Cochain.mk (fun p q hpq => (a * n' + Int.euclideanDiv (a * (a - 1)) 2).negOnePow •
     (K.shiftFunctorObjXIso a (p - a) p (by lia)).inv ≫ γ.v (p - a) q (by lia))
 
 lemma leftUnshift_v {n' a : ℤ} (γ : Cochain (K⟦a⟧) L n') (n : ℤ) (hn : n + a = n')
     (p q : ℤ) (hpq : p + n = q) (p' : ℤ) (hp' : p' + n' = q) :
-    (γ.leftUnshift n hn).v p q hpq = (a * n' + ((a * (a - 1)) / 2)).negOnePow •
+    (γ.leftUnshift n hn).v p q hpq = (a * n' + Int.euclideanDiv (a * (a - 1)) 2).negOnePow •
       (K.shiftFunctorObjXIso a p' p (by lia)).inv ≫ γ.v p' q (by lia) := by
   obtain rfl : p' = p - a := by lia
   rfl
@@ -459,14 +459,14 @@ lemma δ_shift (a m : ℤ) :
 
 lemma leftShift_rightShift (a n' : ℤ) (hn' : n' + a = n) :
     (γ.rightShift a n' hn').leftShift a n hn' =
-      (a * n + (a * (a - 1)) / 2).negOnePow • γ.shift a := by
+      (a * n + Int.euclideanDiv (a * (a - 1)) 2).negOnePow • γ.shift a := by
   ext p q hpq
   simp [leftShift_v _ a n hn' p q hpq (p + a) (by lia),
     rightShift_v _ a n' hn' (p + a) q (by lia) (q + a) (by lia), shift_v']
 
 lemma rightShift_leftShift (a n' : ℤ) (hn' : n + a = n') :
     (γ.leftShift a n' hn').rightShift a n hn' =
-      (a * n' + (a * (a - 1)) / 2).negOnePow • γ.shift a := by
+      (a * n' + Int.euclideanDiv (a * (a - 1)) 2).negOnePow • γ.shift a := by
   ext p q hpq
   simp only [rightShift_v _ a n hn' p q hpq (q + a) (by lia),
     leftShift_v _ a n' hn' p (q + a) (by lia) (p + a) (by lia), units_smul_v, shift_v']

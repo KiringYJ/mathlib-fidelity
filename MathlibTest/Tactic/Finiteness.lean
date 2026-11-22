@@ -15,10 +15,11 @@ example {a : ℝ≥0∞} (ha : a ≠ ∞) : a + 3 < ∞ := by finiteness
 example {a : ℝ≥0∞} (ha : a < ∞) : a + 3 < ∞ := by finiteness
 
 example {a : ℝ≥0∞} (ha : a ≠ ∞) : a ^ 10 ≠ ∞ := by finiteness
-example {a : ℝ≥0∞} (ha : a ≠ ∞) : a / 10 + 5 ≠ ∞ := by finiteness
-example {a b : ℝ≥0∞} (ha : a ≠ ∞) (hb : b ≠ 0) : a / b ≠ ∞ := by finiteness
-example {a : ℝ≥0∞} {b : ℝ≥0} (ha : a ≠ ∞) (hb : b ≠ 0) : a / b ≠ ∞ := by finiteness
-example {a b : ℝ≥0∞} (ha : a ≠ ∞) : a / (b + 5) ≠ ∞ := by finiteness
+example {a : ℝ≥0∞} (ha : a ≠ ∞) : ENNReal.div a 10 + 5 ≠ ∞ := by finiteness
+example {a b : ℝ≥0∞} (ha : a ≠ ∞) (hb : b ≠ 0) : ENNReal.div a b ≠ ∞ := by finiteness
+example {a : ℝ≥0∞} {b : ℝ≥0} (ha : a ≠ ∞) (hb : b ≠ 0) :
+    ENNReal.div a (b : ℝ≥0∞) ≠ ∞ := by finiteness
+example {a b : ℝ≥0∞} (ha : a ≠ ∞) : ENNReal.div a (b + 5) ≠ ∞ := by finiteness
 
 example {a b : ℝ≥0∞} (ha : a ≠ ∞) (hb : b ≠ ∞) : a * b ≠ ∞ := by finiteness
 example {a : ℝ≥0∞} (ha : 0 < a) : a⁻¹ ≠ ∞ := by finiteness
@@ -34,7 +35,8 @@ example {a : ℝ≥0∞} (ha : a ≠ 0) (ha' : a ≠ ∞) : a ^ (-10 : ℝ) ≠ 
 example {a : ℝ} : (10 : ℝ≥0∞) ^ a ≠ ∞ := by finiteness
 example {a : ℝ≥0∞} {t : ℝ} (ha : a ≠ 0) (ha : a ≠ ∞) : a ^ t ≠ ∞ := by finiteness
 
-example {a : ℝ≥0∞} : a * a⁻¹ ≠ ∞ := by finiteness
+example {a : ℝ≥0∞} : a * a⁻¹ ≠ ∞ := by
+  finiteness [ENNReal.mul_inv_ne_top a]
 example {a : ℝ≥0∞} : a⁻¹ * a ≠ ∞ := by finiteness
 example {a : ℝ≥0∞} : 2 * (a⁻¹ * a) ≠ ∞ := by finiteness
 example {a : ℝ≥0∞} : 2 * a⁻¹ * a ≠ ∞ := by rw [mul_assoc]; finiteness

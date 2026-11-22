@@ -70,8 +70,8 @@ lemma _root_.MonoidHom.exists_nhds_isBounded (f : G →* H) (hf : Measurable f) 
     ?_⟩
   have : Bornology.IsBounded (f '' (interior K ∩ f ⁻¹' ball 1 n)) :=
     isBounded_ball.subset <| (image_mono inter_subset_right).trans <| image_preimage_subset _ _
-  rw [image_smul_distrib, image_div]
-  exact (this.div this).smul _
+  rw [image_smul_distrib, image_mul, image_inv]
+  exact (this.mul this.inv).smul _
 
 end SeminormedGroup
 

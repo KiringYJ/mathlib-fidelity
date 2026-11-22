@@ -72,8 +72,21 @@ end AddCommGrpCat
 def groupAddGroupEquivalence : GrpCat ≌ AddGrpCat where
   functor := GrpCat.toAddGrp
   inverse := AddGrpCat.toGrp
-  unitIso := Iso.refl _
-  counitIso := Iso.refl _
+  unitIso := NatIso.ofComponents (fun X => MulEquiv.toGrpIso {
+    toEquiv := Equiv.refl (X : Type _)
+    map_mul' := fun _ _ => rfl }) (by
+    intro X Y f
+    ext x
+    rfl)
+  counitIso := NatIso.ofComponents (fun X => AddEquiv.toAddGrpIso {
+    toEquiv := Equiv.refl (X : Type _)
+    map_add' := fun _ _ => rfl }) (by
+    intro X Y f
+    ext x
+    rfl)
+  functor_unitIso_comp X := by
+    ext x
+    rfl
 
 /-- The equivalence of categories between `CommGrpCat` and `AddCommGrpCat`.
 -/
@@ -81,5 +94,18 @@ def groupAddGroupEquivalence : GrpCat ≌ AddGrpCat where
 def commGroupAddCommGroupEquivalence : CommGrpCat ≌ AddCommGrpCat where
   functor := CommGrpCat.toAddCommGrp
   inverse := AddCommGrpCat.toCommGrp
-  unitIso := Iso.refl _
-  counitIso := Iso.refl _
+  unitIso := NatIso.ofComponents (fun X => MulEquiv.toCommGrpIso {
+    toEquiv := Equiv.refl (X : Type _)
+    map_mul' := fun _ _ => rfl }) (by
+    intro X Y f
+    ext x
+    rfl)
+  counitIso := NatIso.ofComponents (fun X => AddEquiv.toAddCommGrpIso {
+    toEquiv := Equiv.refl (X : Type _)
+    map_add' := fun _ _ => rfl }) (by
+    intro X Y f
+    ext x
+    rfl)
+  functor_unitIso_comp X := by
+    ext x
+    rfl

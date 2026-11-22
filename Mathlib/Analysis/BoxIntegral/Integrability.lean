@@ -114,13 +114,14 @@ theorem HasIntegral.of_aeEq_zero {l : IntegrationParams} {I : Box ι} {f : (ι �
   change μ.restrict I {x | f x ≠ 0} = 0 at hf
   set N : (ι → ℝ) → ℕ := fun x => ⌈‖f x‖⌉₊
   have N0 : ∀ {x}, N x = 0 ↔ f x = 0 := by simp [N]
-  have : ∀ n, ∃ U, N ⁻¹' {n} ⊆ U ∧ IsOpen U ∧ μ.restrict I U < δ n / n := fun n ↦ by
+  have : ∀ n, ∃ U, N ⁻¹' {n} ⊆ U ∧ IsOpen U ∧
+      μ.restrict I U < ENNReal.div (δ n : ℝ≥0∞) (n : ℝ≥0∞) := fun n ↦ by
     refine (N ⁻¹' {n}).exists_isOpen_lt_of_lt _ ?_
     rcases n with - | n
     · simp [ENNReal.div_zero (ENNReal.coe_pos.2 (δ0 _)).ne']
     · refine (measure_mono_null ?_ hf).le.trans_lt ?_
       · exact fun x hxN hxf => n.succ_ne_zero ((Eq.symm hxN).trans <| N0.2 hxf)
-      · simp [(δ0 _).ne']
+      · exact ENNReal.div_pos (ENNReal.coe_pos.2 (δ0 _)).ne' (ENNReal.natCast_ne_top _)
   choose U hNU hUo hμU using this
   have : ∀ x, ∃ r : Ioi (0 : ℝ), closedBall x r ⊆ U (N x) := fun x => by
     obtain ⟨r, hr₀, hr⟩ := nhds_basis_closedBall.mem_iff.1 ((hUo _).mem_nhds (hNU _ rfl))
@@ -142,7 +143,7 @@ theorem HasIntegral.of_aeEq_zero {l : IntegrationParams} {I : Box ι} {f : (ι �
   rw [← sum_mul, ← Prepartition.measure_iUnion_toReal]
   let m := μ (π.filter fun J => N (π.tag J) = n).iUnion
   change m.toReal * ↑n ≤ ↑(δ n)
-  have : m < δ n / n := by
+  have : m < ENNReal.div (δ n : ℝ≥0∞) (n : ℝ≥0∞) := by
     simp only [Measure.restrict_apply (hUo _).measurableSet] at hμU
     refine (measure_mono ?_).trans_lt (hμU _)
     simp only [Set.subset_def, TaggedPrepartition.mem_iUnion, TaggedPrepartition.mem_filter]

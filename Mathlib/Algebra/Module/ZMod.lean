@@ -25,8 +25,8 @@ See note [reducible non-instances]. -/
 abbrev AddCommMonoid.zmodModule [NeZero n] [AddCommMonoid M] (h : ∀ (x : M), n • x = 0) :
     Module (ZMod n) M := by
   have h_mod (c : ℕ) (x : M) : (c % n) • x = c • x := by
-    suffices (c % n + c / n * n) • x = c • x by rwa [add_nsmul, mul_nsmul, h, add_zero] at this
-    rw [Nat.mod_add_div']
+    simpa [add_nsmul, mul_nsmul, h] using
+      congrArg (fun k : ℕ ↦ k • x) (Nat.euclideanDiv_mul_add_mod c n (NeZero.ne n))
   have := NeZero.ne n
   match n with
   | n + 1 => exact {

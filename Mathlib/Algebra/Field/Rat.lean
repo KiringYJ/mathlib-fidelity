@@ -89,7 +89,8 @@ instance instSemifield : Semifield ℚ≥0 where
   apply inv_eq_of_mul_eq_one_right₀
   rw [← coe_mul, mul_inv_cancel₀, coe_one]
 
-@[simp, norm_cast] lemma coe_div (p q : ℚ≥0) {hq : IsUnit q} : ((p / q : ℚ≥0) : ℚ) = p / q := by
+@[simp, norm_cast] lemma coe_div (p q : ℚ≥0) {hq : IsUnit q} :
+    ((Checked.div p q hq : ℚ≥0) : ℚ) = (p : ℚ) / (q : ℚ) := by
   rw [div_eq_mul_inv₀, coe_mul, coe_inv, div_eq_mul_inv₀]
 
 @[simp, norm_cast] lemma coe_zpow (p : ℚ≥0) (n : ℤ) {h : n < 0 → IsUnit p} :
@@ -106,7 +107,8 @@ theorem divNat_mul_den (n d : ℕ) (hd : d ≠ 0) :
   simpa only [NNRat.coe_mul, NNRat.coe_natCast, NNRat.coe_divNat, Int.cast_natCast] using
     Rat.fraction_mul_den (n : ℤ) d hd
 
-theorem divNat_eq_div (a b : ℕ) (hb : b ≠ 0) : divNat a b hb = a / b :=
+theorem divNat_eq_div (a b : ℕ) (hb : b ≠ 0) :
+    divNat a b hb = Checked.div (a : ℚ≥0) (b : ℚ≥0) (Nat.cast_ne_zero.mpr hb).isUnit :=
   eq_div_of_mul_eq (divNat_mul_den a b hb)
 
 lemma inv_def (q : ℚ≥0) {hq : IsUnit q} :
@@ -115,7 +117,7 @@ lemma inv_def (q : ℚ≥0) {hq : IsUnit q} :
   rw [divNat_eq_div, ← mul_div_assoc₀, mul_den_eq_num, div_self]
 
 lemma div_def (p q : ℚ≥0) {hq : IsUnit q} :
-    p / q = divNat (p.num * q.den) (p.den * q.num)
+    Checked.div p q hq = divNat (p.num * q.den) (p.den * q.num)
       (Nat.mul_ne_zero p.den_ne_zero (num_ne_zero.mpr hq.ne_zero)) := by
   rw [div_eq_mul_inv₀, inv_def,
     ← divNat_mul_divNat _ _ p.den_ne_zero (num_ne_zero.mpr hq.ne_zero), num_divNat_den]
@@ -132,7 +134,8 @@ lemma den_inv_of_ne_zero {q : ℚ≥0} {hq : IsUnit q} : q⁻¹.den = q.num := b
   rw [Rat.normalize_eq_mk' _ _ _ (by simpa using q.coprime_num_den.symm)]
 
 @[simp]
-lemma num_div_den (q : ℚ≥0) : (q.num : ℚ≥0) / q.den = q := by
+lemma num_div_den (q : ℚ≥0) :
+    Checked.div (q.num : ℚ≥0) (q.den : ℚ≥0) (Nat.cast_ne_zero.mpr q.den_ne_zero).isUnit = q := by
   rw [← divNat_eq_div _ _ q.den_ne_zero, num_divNat_den]
 
 end NNRat

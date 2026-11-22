@@ -22,7 +22,7 @@ For sets `s` and `t` and scalar `a`:
 * `s + t`: Addition, set of all `x + y` where `x ∈ s` and `y ∈ t`.
 * `s⁻¹`: Inversion, set of all `x⁻¹` where `x ∈ s`.
 * `-s`: Negation, set of all `-x` where `x ∈ s`.
-* `s / t`: Division, set of all `x / y` where `x ∈ s` and `y ∈ t`.
+* For a commutative group, `s / t`: the set of all `x / y` where `x ∈ s` and `y ∈ t`.
 * `s - t`: Subtraction, set of all `x - y` where `x ∈ s` and `y ∈ t`.
 
 For `α` a semigroup/monoid, `Set α` is a semigroup/monoid.
@@ -429,118 +429,226 @@ end Mul
 /-! ### Set subtraction/division -/
 
 
-section Div
+section Sub
 
-variable [Div α] {s s₁ s₂ t t₁ t₂ u : Set α} {a b : α}
+variable [Sub α] {s s₁ s₂ t t₁ t₂ u : Set α} {a b : α}
 
-/-- The pointwise division of sets `s / t` is defined as `{x / y | x ∈ s, y ∈ t}` in locale
-`Pointwise`. -/
-@[to_additive (attr := instance_reducible)
-      /-- The pointwise subtraction of sets `s - t` is defined as `{x - y | x ∈ s, y ∈ t}` in locale
-      `Pointwise`. -/]
-protected def div : Div (Set α) :=
-  ⟨image2 (· / ·)⟩
+/-- The pointwise subtraction of sets is the image of subtraction on their product. -/
+@[instance_reducible] protected def sub : Sub (Set α) :=
+  ⟨image2 (· - ·)⟩
 
-scoped[Pointwise] attribute [instance] Set.div Set.sub
+scoped[Pointwise] attribute [instance] Set.sub
 
-@[to_additive (attr := simp)]
-theorem image2_div : image2 (· / ·) s t = s / t :=
+@[simp]
+theorem image2_sub : image2 (· - ·) s t = s - t :=
   rfl
 
-@[to_additive (attr := push)]
-theorem mem_div : a ∈ s / t ↔ ∃ x ∈ s, ∃ y ∈ t, x / y = a :=
+@[push]
+theorem mem_sub : a ∈ s - t ↔ ∃ x ∈ s, ∃ y ∈ t, x - y = a :=
   Iff.rfl
 
-@[to_additive]
-theorem div_mem_div : a ∈ s → b ∈ t → a / b ∈ s / t :=
+theorem sub_mem_sub : a ∈ s → b ∈ t → a - b ∈ s - t :=
   mem_image2_of_mem
 
-@[to_additive sub_image_prod]
-theorem image_div_prod : (fun x : α × α => x.fst / x.snd) '' s ×ˢ t = s / t :=
+theorem sub_image_prod : (fun x : α × α => x.fst - x.snd) '' s ×ˢ t = s - t :=
   image_prod _
 
-@[to_additive (attr := simp)]
-theorem empty_div : ∅ / s = ∅ :=
+@[simp]
+theorem empty_sub : ∅ - s = ∅ :=
   image2_empty_left
 
-@[to_additive (attr := simp)]
-theorem div_empty : s / ∅ = ∅ :=
+@[simp]
+theorem sub_empty : s - ∅ = ∅ :=
   image2_empty_right
 
-@[to_additive (attr := simp)]
-theorem div_eq_empty : s / t = ∅ ↔ s = ∅ ∨ t = ∅ :=
+@[simp]
+theorem sub_eq_empty : s - t = ∅ ↔ s = ∅ ∨ t = ∅ :=
   image2_eq_empty_iff
 
-@[to_additive (attr := simp)]
-theorem div_nonempty : (s / t).Nonempty ↔ s.Nonempty ∧ t.Nonempty :=
+@[simp]
+theorem sub_nonempty : (s - t).Nonempty ↔ s.Nonempty ∧ t.Nonempty :=
   image2_nonempty_iff
 
-@[to_additive]
-theorem Nonempty.div : s.Nonempty → t.Nonempty → (s / t).Nonempty :=
+theorem Nonempty.sub : s.Nonempty → t.Nonempty → (s - t).Nonempty :=
   Nonempty.image2
 
-@[to_additive]
-theorem Nonempty.of_div_left : (s / t).Nonempty → s.Nonempty :=
+theorem Nonempty.of_sub_left : (s - t).Nonempty → s.Nonempty :=
   Nonempty.of_image2_left
 
-@[to_additive]
-theorem Nonempty.of_div_right : (s / t).Nonempty → t.Nonempty :=
+theorem Nonempty.of_sub_right : (s - t).Nonempty → t.Nonempty :=
   Nonempty.of_image2_right
 
-@[to_additive (attr := simp)]
-theorem div_singleton : s / {b} = (· / b) '' s :=
+@[simp]
+theorem sub_singleton : s - {b} = (· - b) '' s :=
   image2_singleton_right
 
-@[to_additive (attr := simp)]
-theorem singleton_div : {a} / t = (· / ·) a '' t :=
+@[simp]
+theorem singleton_sub : {a} - t = (· - ·) a '' t :=
   image2_singleton_left
 
-@[to_additive]
-theorem singleton_div_singleton : ({a} : Set α) / {b} = {a / b} :=
+theorem singleton_sub_singleton : ({a} : Set α) - {b} = {a - b} :=
   image2_singleton
 
-@[to_additive (attr := mono, gcongr)]
-theorem div_subset_div : s₁ ⊆ t₁ → s₂ ⊆ t₂ → s₁ / s₂ ⊆ t₁ / t₂ :=
+@[mono, gcongr]
+theorem sub_subset_sub : s₁ ⊆ t₁ → s₂ ⊆ t₂ → s₁ - s₂ ⊆ t₁ - t₂ :=
   image2_subset
 
-@[to_additive]
-theorem div_subset_div_left : t₁ ⊆ t₂ → s / t₁ ⊆ s / t₂ :=
+theorem sub_subset_sub_left : t₁ ⊆ t₂ → s - t₁ ⊆ s - t₂ :=
   image2_subset_left
 
-@[to_additive]
-theorem div_subset_div_right : s₁ ⊆ s₂ → s₁ / t ⊆ s₂ / t :=
+theorem sub_subset_sub_right : s₁ ⊆ s₂ → s₁ - t ⊆ s₂ - t :=
   image2_subset_right
 
-@[to_additive]
-theorem div_subset_iff : s / t ⊆ u ↔ ∀ x ∈ s, ∀ y ∈ t, x / y ∈ u :=
+theorem sub_subset_iff : s - t ⊆ u ↔ ∀ x ∈ s, ∀ y ∈ t, x - y ∈ u :=
   image2_subset_iff
 
-@[to_additive]
-theorem union_div : (s₁ ∪ s₂) / t = s₁ / t ∪ s₂ / t :=
+theorem union_sub : (s₁ ∪ s₂) - t = (s₁ - t) ∪ (s₂ - t) :=
   image2_union_left
 
-@[to_additive]
-theorem div_union : s / (t₁ ∪ t₂) = s / t₁ ∪ s / t₂ :=
+theorem sub_union : s - (t₁ ∪ t₂) = (s - t₁) ∪ (s - t₂) :=
   image2_union_right
 
-@[to_additive]
-theorem inter_div_subset : s₁ ∩ s₂ / t ⊆ s₁ / t ∩ (s₂ / t) :=
+theorem inter_sub_subset : (s₁ ∩ s₂) - t ⊆ (s₁ - t) ∩ (s₂ - t) :=
   image2_inter_subset_left
 
-@[to_additive]
-theorem div_inter_subset : s / (t₁ ∩ t₂) ⊆ s / t₁ ∩ (s / t₂) :=
+theorem sub_inter_subset : s - (t₁ ∩ t₂) ⊆ (s - t₁) ∩ (s - t₂) :=
   image2_inter_subset_right
 
-@[to_additive]
-theorem inter_div_union_subset_union : s₁ ∩ s₂ / (t₁ ∪ t₂) ⊆ s₁ / t₁ ∪ s₂ / t₂ :=
+theorem inter_sub_union_subset_union : (s₁ ∩ s₂) - (t₁ ∪ t₂) ⊆ (s₁ - t₁) ∪ (s₂ - t₂) :=
   image2_inter_union_subset_union
 
-@[to_additive]
-theorem union_div_inter_subset_union : (s₁ ∪ s₂) / (t₁ ∩ t₂) ⊆ s₁ / t₁ ∪ s₂ / t₂ :=
+theorem union_sub_inter_subset_union : (s₁ ∪ s₂) - (t₁ ∩ t₂) ⊆ (s₁ - t₁) ∪ (s₂ - t₂) :=
   image2_union_inter_subset_union
 
-@[to_additive (attr := simp) prod_sub_prod_comm]
-lemma prod_div_prod_comm [Div β] (s₁ s₂ : Set α) (t₁ t₂ : Set β) :
+@[simp]
+lemma prod_sub_prod_comm [Sub β] (s₁ s₂ : Set α) (t₁ t₂ : Set β) :
+    (s₁ ×ˢ t₁) - (s₂ ×ˢ t₂) = (s₁ - s₂) ×ˢ (t₁ - t₂) := by aesop (add simp mem_sub)
+
+end Sub
+
+section Div
+
+variable [CommGroup α] {s s₁ s₂ t t₁ t₂ u : Set α} {a b : α}
+
+/-- Pointwise subtraction with the binder shape needed by `to_additive` for Set.div. -/
+protected abbrev addCommGroupSub {β : Type*} [AddCommGroup β] : Sub (Set β) :=
+  Set.sub
+
+/-- The pointwise quotient of subsets of a commutative group is the product with the inverse set. -/
+@[to_additive existing Set.addCommGroupSub, instance_reducible]
+protected def div : Div (Set α) :=
+  ⟨fun s t => s * t⁻¹⟩
+
+scoped[Pointwise] attribute [instance] Set.div
+
+@[simp]
+theorem image2_div : image2 (· / ·) s t = s / t := by
+  change image2 (· / ·) s t = s * t⁻¹
+  rw [← image_id (image2 (· / ·) s t), ← image_inv_eq_inv]
+  exact image_image2_distrib_right div_eq_mul_inv
+
+@[push]
+theorem mem_div : a ∈ s / t ↔ ∃ x ∈ s, ∃ y ∈ t, x / y = a := by
+  simp only [← image2_div]
+  exact Iff.rfl
+
+theorem div_mem_div : a ∈ s → b ∈ t → a / b ∈ s / t := by
+  simp only [← image2_div]
+  exact mem_image2_of_mem
+
+theorem image_div_prod : (fun x : α × α => x.fst / x.snd) '' s ×ˢ t = s / t := by
+  simp only [← image2_div]
+  exact image_prod _
+
+@[simp]
+theorem empty_div : ∅ / s = ∅ := by
+  simp only [← image2_div]
+  exact image2_empty_left
+
+@[simp]
+theorem div_empty : s / ∅ = ∅ := by
+  simp only [← image2_div]
+  exact image2_empty_right
+
+@[simp]
+theorem div_eq_empty : s / t = ∅ ↔ s = ∅ ∨ t = ∅ := by
+  simp only [← image2_div]
+  exact image2_eq_empty_iff
+
+@[simp]
+theorem div_nonempty : (s / t).Nonempty ↔ s.Nonempty ∧ t.Nonempty := by
+  simp only [← image2_div]
+  exact image2_nonempty_iff
+
+theorem Nonempty.div : s.Nonempty → t.Nonempty → (s / t).Nonempty := by
+  simp only [← image2_div]
+  exact Nonempty.image2
+
+theorem Nonempty.of_div_left : (s / t).Nonempty → s.Nonempty := by
+  simp only [← image2_div]
+  exact Nonempty.of_image2_left
+
+theorem Nonempty.of_div_right : (s / t).Nonempty → t.Nonempty := by
+  simp only [← image2_div]
+  exact Nonempty.of_image2_right
+
+@[simp]
+theorem div_singleton : s / {b} = (· / b) '' s := by
+  simp only [← image2_div]
+  exact image2_singleton_right
+
+@[simp]
+theorem singleton_div : {a} / t = (· / ·) a '' t := by
+  simp only [← image2_div]
+  exact image2_singleton_left
+
+theorem singleton_div_singleton : ({a} : Set α) / {b} = {a / b} := by
+  simp only [← image2_div]
+  exact image2_singleton
+
+@[mono, gcongr]
+theorem div_subset_div : s₁ ⊆ t₁ → s₂ ⊆ t₂ → s₁ / s₂ ⊆ t₁ / t₂ := by
+  simp only [← image2_div]
+  exact image2_subset
+
+theorem div_subset_div_left : t₁ ⊆ t₂ → s / t₁ ⊆ s / t₂ := by
+  simp only [← image2_div]
+  exact image2_subset_left
+
+theorem div_subset_div_right : s₁ ⊆ s₂ → s₁ / t ⊆ s₂ / t := by
+  simp only [← image2_div]
+  exact image2_subset_right
+
+theorem div_subset_iff : s / t ⊆ u ↔ ∀ x ∈ s, ∀ y ∈ t, x / y ∈ u := by
+  simp only [← image2_div]
+  exact image2_subset_iff
+
+theorem union_div : (s₁ ∪ s₂) / t = s₁ / t ∪ s₂ / t := by
+  simp only [← image2_div]
+  exact image2_union_left
+
+theorem div_union : s / (t₁ ∪ t₂) = s / t₁ ∪ s / t₂ := by
+  simp only [← image2_div]
+  exact image2_union_right
+
+theorem inter_div_subset : s₁ ∩ s₂ / t ⊆ s₁ / t ∩ (s₂ / t) := by
+  simp only [← image2_div]
+  exact image2_inter_subset_left
+
+theorem div_inter_subset : s / (t₁ ∩ t₂) ⊆ s / t₁ ∩ (s / t₂) := by
+  simp only [← image2_div]
+  exact image2_inter_subset_right
+
+theorem inter_div_union_subset_union : s₁ ∩ s₂ / (t₁ ∪ t₂) ⊆ s₁ / t₁ ∪ s₂ / t₂ := by
+  simp only [← image2_div]
+  exact image2_inter_union_subset_union
+
+theorem union_div_inter_subset_union : (s₁ ∪ s₂) / (t₁ ∩ t₂) ⊆ s₁ / t₁ ∪ s₂ / t₂ := by
+  simp only [← image2_div]
+  exact image2_union_inter_subset_union
+
+@[simp]
+lemma prod_div_prod_comm [CommGroup β] (s₁ s₂ : Set α) (t₁ t₂ : Set β) :
     (s₁ ×ˢ t₁) / (s₂ ×ˢ t₂) = (s₁ / s₂) ×ˢ (t₁ / t₂) := by aesop (add simp mem_div)
 
 end Div
@@ -797,20 +905,32 @@ protected theorem mul_eq_one_iff : s * t = 1 ↔ ∃ a b, s = {a} ∧ t = {b} �
     ((· * a⁻¹) '' s ∩ t).Nonempty ↔ ((a * ·) '' s⁻¹ ∩ t⁻¹).Nonempty := by
   rw [← nonempty_inv, inter_inv]; simp_rw [← image_inv_eq_inv, image_image, mul_inv_rev, inv_inv]
 
-/-- `Set α` is a division monoid under pointwise operations if `α` is. -/
-@[to_additive (attr := instance_reducible)
-    /-- `Set α` is a subtraction monoid under pointwise operations if `α` is. -/]
+/-- The pointwise subtraction monoid inherits the elementwise subtraction. -/
+@[instance_reducible] protected def subtractionMonoid {α : Type*} [SubtractionMonoid α] :
+    SubtractionMonoid (Set α) :=
+  { Set.addMonoid, Set.involutiveNeg, Set.sub, @Set.ZSMul α _ _ _ with
+    neg_add_rev := fun s t => by
+      simp_rw [← image_neg_eq_neg]
+      exact image_image2_antidistrib neg_add_rev
+    neg_eq_of_add := fun s t h => by
+      obtain ⟨a, b, rfl, rfl, hab⟩ := Set.add_eq_zero_iff.1 h
+      rw [neg_singleton, neg_eq_of_add_eq_zero_right hab]
+    sub_eq_add_neg := fun s t => by
+      rw [← image_id (s - t), ← image_neg_eq_neg]
+      exact image_image2_distrib_right sub_eq_add_neg }
+
+/-- Pointwise multiplication and inversion induce a division monoid on sets. -/
+@[to_additive existing, instance_reducible]
 protected def divisionMonoid : DivisionMonoid (Set α) :=
-  { Set.monoid, Set.involutiveInv, Set.div, @Set.ZPow α _ _ _ with
+  { Set.monoid, Set.involutiveInv, @Set.ZPow α _ _ _ with
+    div := fun s t => s * t⁻¹
     mul_inv_rev := fun s t => by
       simp_rw [← image_inv_eq_inv]
       exact image_image2_antidistrib mul_inv_rev
     inv_eq_of_mul := fun s t h => by
       obtain ⟨a, b, rfl, rfl, hab⟩ := Set.mul_eq_one_iff.1 h
       rw [inv_singleton, inv_eq_of_mul_eq_one_right hab]
-    div_eq_mul_inv := fun s t => by
-      rw [← image_id (s / t), ← image_inv_eq_inv]
-      exact image_image2_distrib_right div_eq_mul_inv }
+    div_eq_mul_inv := fun _ _ => rfl }
 
 scoped[Pointwise] attribute [instance] Set.divisionMonoid Set.subtractionMonoid
 
@@ -825,14 +945,15 @@ theorem isUnit_iff : IsUnit s ↔ ∃ a, s = {a} ∧ IsUnit a := by
   · rintro ⟨a, rfl, ha⟩
     exact ha.set
 
-@[to_additive (attr := simp)]
-lemma univ_div_univ : (univ / univ : Set α) = univ := by simp [div_eq_mul_inv]
+@[to_additive univ_add_neg_univ]
+lemma univ_div_univ : ((univ : Set α) * univ⁻¹) = univ := by simp
 
-@[to_additive] lemma subset_div_left (ht : 1 ∈ t) : s ⊆ s / t := by
-  rw [div_eq_mul_inv]; exact subset_mul_left _ <| by simpa
+@[to_additive subset_add_neg_left] lemma subset_div_left (ht : 1 ∈ t) : s ⊆ s * t⁻¹ := by
+  exact subset_mul_left _ <| by simpa
 
-@[to_additive] lemma inv_subset_div_right (hs : 1 ∈ s) : t⁻¹ ⊆ s / t := by
-  rw [div_eq_mul_inv]; exact subset_mul_right _ hs
+@[to_additive neg_subset_add_neg_right]
+lemma inv_subset_div_right (hs : 1 ∈ s) : t⁻¹ ⊆ s * t⁻¹ := by
+  exact subset_mul_right _ hs
 
 @[to_additive (attr := simp) zsmul_empty]
 lemma empty_zpow (hn : n ≠ 0) : (∅ : Set α) ^ n = ∅ := by cases n <;> aesop
@@ -856,6 +977,20 @@ lemma singleton_zpow (a : α) (n : ℤ) : ({a} : Set α) ^ n = {a ^ n} := by cas
 
 end DivisionMonoid
 
+section SubtractionMonoid
+variable [SubtractionMonoid α] {s t : Set α}
+
+@[simp] lemma univ_sub_univ : (univ - univ : Set α) = univ := by
+  simpa only [sub_eq_add_neg] using univ_add_neg_univ (α := α)
+
+lemma subset_sub_left (ht : 0 ∈ t) : s ⊆ s - t := by
+  simpa only [sub_eq_add_neg] using subset_add_neg_left (s := s) ht
+
+lemma neg_subset_sub_right (hs : 0 ∈ s) : -t ⊆ s - t := by
+  simpa only [sub_eq_add_neg] using neg_subset_add_neg_right (t := t) hs
+
+end SubtractionMonoid
+
 /-- `Set α` is a commutative division monoid under pointwise operations if `α` is. -/
 @[to_additive (attr := instance_reducible) subtractionCommMonoid
       /-- `Set α` is a commutative subtraction monoid under pointwise operations if `α` is. -/]
@@ -869,19 +1004,24 @@ section Group
 
 variable [Group α] {s t : Set α} {a b : α}
 
-/-! Note that `Set` is not a `Group` because `s / s ≠ 1` in general. -/
+/-! Note that `Set` is not a `Group` because `s * s⁻¹ ≠ 1` in general. -/
 
 
-@[to_additive (attr := simp)]
-theorem one_mem_div_iff : (1 : α) ∈ s / t ↔ ¬Disjoint s t := by
-  simp [not_disjoint_iff_nonempty_inter, mem_div, div_eq_one, Set.Nonempty]
+@[to_additive (attr := simp) zero_mem_add_neg_iff]
+theorem one_mem_div_iff : (1 : α) ∈ s * t⁻¹ ↔ ¬Disjoint s t := by
+  rw [not_disjoint_iff_nonempty_inter]
+  constructor
+  · rintro ⟨a, ha, b, hb, hab⟩
+    exact ⟨a, ha, (mul_eq_one_iff_eq_inv.mp hab).symm ▸ hb⟩
+  · rintro ⟨a, ha, hb⟩
+    exact ⟨a, ha, a⁻¹, inv_mem_inv.mpr hb, mul_inv_cancel a⟩
 
 @[to_additive (attr := simp)]
 lemma one_mem_inv_mul_iff : (1 : α) ∈ t⁻¹ * s ↔ ¬Disjoint s t := by
   aesop (add simp [not_disjoint_iff_nonempty_inter, mem_mul, mul_eq_one_iff_eq_inv, Set.Nonempty])
 
-@[to_additive]
-theorem one_notMem_div_iff : (1 : α) ∉ s / t ↔ Disjoint s t :=
+@[to_additive zero_notMem_add_neg_iff]
+theorem one_notMem_div_iff : (1 : α) ∉ s * t⁻¹ ↔ Disjoint s t :=
   one_mem_div_iff.not_left
 
 @[to_additive]
@@ -889,12 +1029,12 @@ lemma one_notMem_inv_mul_iff : (1 : α) ∉ t⁻¹ * s ↔ Disjoint s t := one_m
 
 alias ⟨_, _root_.Disjoint.one_notMem_div_set⟩ := one_notMem_div_iff
 
-attribute [to_additive] Disjoint.one_notMem_div_set
+attribute [to_additive Disjoint.zero_notMem_add_neg_set] Disjoint.one_notMem_div_set
 
-@[to_additive]
-theorem Nonempty.one_mem_div (h : s.Nonempty) : (1 : α) ∈ s / s :=
+@[to_additive Nonempty.zero_mem_add_neg]
+theorem Nonempty.one_mem_div (h : s.Nonempty) : (1 : α) ∈ s * s⁻¹ :=
   let ⟨a, ha⟩ := h
-  mem_div.2 ⟨a, ha, a, ha, div_self' _⟩
+  ⟨a, ha, a⁻¹, inv_mem_inv.mpr ha, mul_inv_cancel a⟩
 
 @[to_additive]
 theorem isUnit_singleton (a : α) : IsUnit ({a} : Set α) :=
@@ -969,6 +1109,21 @@ lemma image_inv [DivisionMonoid β] [FunLike F α β] [MonoidHomClass F α β] (
 
 end Group
 
+section AddGroup
+variable [AddGroup α] {s t : Set α}
+
+@[simp] theorem zero_mem_sub_iff : (0 : α) ∈ s - t ↔ ¬Disjoint s t := by
+  simpa only [sub_eq_add_neg] using zero_mem_add_neg_iff (s := s) (t := t)
+
+theorem zero_notMem_sub_iff : (0 : α) ∉ s - t ↔ Disjoint s t := zero_mem_sub_iff.not_left
+
+alias ⟨_, _root_.Disjoint.zero_notMem_sub_set⟩ := zero_notMem_sub_iff
+
+theorem Nonempty.zero_mem_sub (hs : s.Nonempty) : (0 : α) ∈ s - s := by
+  simpa only [sub_eq_add_neg] using hs.zero_mem_add_neg
+
+end AddGroup
+
 section Mul
 
 variable [Mul α] [Mul β] [FunLike F α β] [MulHomClass F α β] (m : F) {s t : Set α}
@@ -1025,30 +1180,54 @@ section Group
 
 variable [Group α] [DivisionMonoid β] [FunLike F α β] [MonoidHomClass F α β] (m : F) {s t : Set α}
 
-@[to_additive]
-theorem image_div : m '' (s / t) = m '' s / m '' t :=
-  image_image2_distrib <| map_div m
+@[to_additive image_add_neg]
+theorem image_div : m '' (s * t⁻¹) = m '' s * (m '' t)⁻¹ := by
+  rw [image_mul, image_inv]
 
-@[to_additive]
-lemma div_subset_range {s t : Set β} (hs : s ⊆ range m) (ht : t ⊆ range m) : s / t ⊆ range m := by
+@[to_additive add_neg_subset_range]
+lemma div_subset_range {s t : Set β} (hs : s ⊆ range m) (ht : t ⊆ range m) :
+    s * t⁻¹ ⊆ range m := by
   rintro _ ⟨a, ha, b, hb, rfl⟩
   obtain ⟨a, rfl⟩ := hs ha
-  obtain ⟨b, rfl⟩ := ht hb
-  exact ⟨a / b, map_div ..⟩
+  obtain ⟨c, hc⟩ := ht (mem_inv.mp hb)
+  exact ⟨a * c⁻¹, by rw [map_mul, map_inv, hc, inv_inv]⟩
 
-@[to_additive]
-theorem preimage_div_preimage_subset {s t : Set β} : m ⁻¹' s / m ⁻¹' t ⊆ m ⁻¹' (s / t) := by
-  rintro _ ⟨_, _, _, _, rfl⟩
-  exact ⟨_, ‹_›, _, ‹_›, (map_div m ..).symm⟩
+@[to_additive preimage_add_neg_preimage_subset]
+theorem preimage_div_preimage_subset {s t : Set β} :
+    (m ⁻¹' s) * (m ⁻¹' t)⁻¹ ⊆ m ⁻¹' (s * t⁻¹) := by
+  rintro _ ⟨a, ha, b, hb, rfl⟩
+  rw [mem_preimage, map_mul]
+  exact mul_mem_mul ha (mem_inv.mpr (by simpa only [mem_inv, mem_preimage, map_inv] using hb))
 
-@[to_additive]
+@[to_additive preimage_add_neg]
 lemma preimage_div (hm : Injective m) {s t : Set β} (hs : s ⊆ range m) (ht : t ⊆ range m) :
-    m ⁻¹' (s / t) = m ⁻¹' s / m ⁻¹' t :=
+    m ⁻¹' (s * t⁻¹) = (m ⁻¹' s) * (m ⁻¹' t)⁻¹ :=
   hm.image_injective <| by
     rw [image_div, image_preimage_eq_iff.2 hs, image_preimage_eq_iff.2 ht,
       image_preimage_eq_iff.2 (div_subset_range m hs ht)]
 
 end Group
+
+section AddGroup
+variable [AddGroup α] [SubtractionMonoid β] [FunLike F α β] [AddMonoidHomClass F α β]
+  (m : F) {s t : Set α}
+
+theorem image_sub : m '' (s - t) = m '' s - m '' t := by
+  simpa only [sub_eq_add_neg] using image_add_neg (s := s) (t := t) m
+
+lemma sub_subset_range {s t : Set β} (hs : s ⊆ range m) (ht : t ⊆ range m) :
+    s - t ⊆ range m := by
+  simpa only [sub_eq_add_neg] using add_neg_subset_range m hs ht
+
+theorem preimage_sub_preimage_subset {s t : Set β} :
+    (m ⁻¹' s) - (m ⁻¹' t) ⊆ m ⁻¹' (s - t) := by
+  simpa only [sub_eq_add_neg] using preimage_add_neg_preimage_subset (s := s) (t := t) m
+
+lemma preimage_sub (hm : Injective m) {s t : Set β} (hs : s ⊆ range m) (ht : t ⊆ range m) :
+    m ⁻¹' (s - t) = (m ⁻¹' s) - (m ⁻¹' t) := by
+  simpa only [sub_eq_add_neg] using preimage_add_neg m hm hs ht
+
+end AddGroup
 
 section Pi
 
@@ -1074,9 +1253,12 @@ lemma MapsTo.inv [InvolutiveInv β] {A : Set α} {B : Set β} {f : α → β} (h
   fun _ ha => inv_mem_inv.2 (h ha)
 
 
-@[to_additive]
-lemma MapsTo.div [Div β] {A : Set α} {B₁ B₂ : Set β} {f₁ f₂ : α → β}
-    (h₁ : MapsTo f₁ A B₁) (h₂ : MapsTo f₂ A B₂) : MapsTo (f₁ / f₂) A (B₁ / B₂) :=
+lemma MapsTo.sub [Sub β] {A : Set α} {B₁ B₂ : Set β} {f₁ f₂ : α → β}
+    (h₁ : MapsTo f₁ A B₁) (h₂ : MapsTo f₂ A B₂) : MapsTo (f₁ - f₂) A (B₁ - B₂) :=
+  fun _ ha => sub_mem_sub (h₁ ha) (h₂ ha)
+
+lemma MapsTo.div [CommGroup β] {A : Set α} {B₁ B₂ : Set β} {f₁ f₂ : α → β}
+    (h₁ : MapsTo f₁ A B₁) (h₂ : MapsTo f₂ A B₂) : MapsTo (fun x => f₁ x / f₂ x) A (B₁ / B₂) :=
   fun _ ha => div_mem_div (h₁ ha) (h₂ ha)
 
 end Pointwise

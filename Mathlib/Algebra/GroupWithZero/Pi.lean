@@ -86,7 +86,7 @@ theorem inv_apply₀ (f : ∀ i, α i) {hf : IsUnit f} (i : ι) :
   hf.val_inv_apply i
 
 theorem div_apply₀ (f g : ∀ i, α i) {hg : IsUnit g} (i : ι) :
-    (f / g) i = Checked.div (f i) (g i) (hg.apply i) :=
+    Checked.div f g hg i = Checked.div (f i) (g i) (hg.apply i) :=
   congrArg (f i * ·) (hg.val_inv_apply i)
 
 theorem zpow_apply₀ (f : ∀ i, α i) (n : ℤ) {h : n < 0 → IsUnit f} (i : ι) :

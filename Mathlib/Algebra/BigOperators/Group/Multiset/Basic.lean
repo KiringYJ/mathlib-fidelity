@@ -191,16 +191,23 @@ theorem prod_map_inv' (m : Multiset G) : (m.map Inv.inv).prod = m.prod⁻¹ :=
 theorem prod_map_inv : (m.map fun i => (f i)⁻¹).prod = (m.map f).prod⁻¹ := by
   rw [← (m.map f).prod_map_inv', map_map, Function.comp_def]
 
-@[to_additive (attr := simp)]
-theorem prod_map_div : (m.map fun i => f i / g i).prod = (m.map f).prod / (m.map g).prod :=
-  m.prod_hom₂ (· / ·) mul_div_mul_comm (div_one _) _ _
-
 @[to_additive]
 theorem prod_map_zpow {n : ℤ} : (m.map fun i => f i ^ n).prod = (m.map f).prod ^ n := by
   convert! (m.map f).prod_hom (zpowGroupHom n : G →* G)
   simp only [map_map, Function.comp_apply, zpowGroupHom_apply]
 
 end DivisionCommMonoid
+
+@[simp] theorem sum_map_sub [SubtractionCommMonoid G] {m : Multiset ι} {f g : ι → G} :
+    (m.map fun i => f i - g i).sum = (m.map f).sum - (m.map g).sum :=
+  m.sum_hom₂ (· - ·) add_sub_add_comm (sub_zero _) f g
+
+@[to_additive AddCommGroup.sum_map_sub]
+theorem prod_map_div [CommGroup G] {m : Multiset ι} {f g : ι → G} :
+    (m.map fun i => f i / g i).prod = (m.map f).prod / (m.map g).prod :=
+  m.prod_hom₂ (· / ·) mul_div_mul_comm (div_one _) f g
+
+attribute [simp] prod_map_div
 
 @[simp]
 theorem sum_map_singleton (s : Multiset M) : (s.map fun a => ({a} : Multiset M)).sum = s :=

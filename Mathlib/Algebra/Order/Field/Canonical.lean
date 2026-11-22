@@ -30,5 +30,6 @@ abbrev CanonicallyOrderedAdd.toLinearOrderedCommGroupWithZero :
 
 variable [IsStrictOrderedRing α] [Sub α] [OrderedSub α]
 
-theorem tsub_div (a b c : α) {hc : IsUnit c} : (a - b) / c = a / c - b / c := by
+theorem tsub_div (a b c : α) {hc : IsUnit c} :
+    Checked.div (a - b) c hc = Checked.div a c hc - Checked.div b c hc := by
   simp only [div_eq_mul_inv₀, tsub_mul]

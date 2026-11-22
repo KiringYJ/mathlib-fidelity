@@ -141,8 +141,8 @@ theorem card_le_mul_sum {x k : ℕ} :
         x * Checked.div (1 : ℝ) p (Nat.cast_ne_zero.mpr p.property.ne_zero).isUnit := by
       apply sum_le_sum
       intro p _
-      simp only [N, Nat.card_multiples, mul_one_div₀]
-      exact Nat.cast_div_le (hn := (Nat.cast_ne_zero.mpr p.property.ne_zero).isUnit)
+      simp only [N, Nat.card_multiples x p p.property.ne_zero, mul_one_div₀]
+      exact Nat.cast_div_le (α := ℝ) (hn := (Nat.cast_ne_zero.mpr p.property.ne_zero).isUnit)
     _ = _ := by rw [mul_sum]
 
 /--
@@ -243,19 +243,19 @@ theorem Real.tendsto_sum_one_div_prime_atTop :
       (#U' : ℝ) ≤ x * ∑ p ∈ (P x k).subtype Nat.Prime,
         Checked.div (1 : ℝ) p (Nat.cast_ne_zero.mpr p.property.ne_zero).isUnit := card_le_mul_sum
       _ < x * (1 / 2) := mul_lt_mul_of_pos_left (h1 x) (by simp [x])
-      _ = x / 2 := mul_one_div₀ (x : ℝ) 2
+      _ = (x : ℝ) / 2 := mul_one_div₀ (x : ℝ) 2
   have h4 :=
     calc
       (#M' : ℝ) ≤ 2 ^ k * x.sqrt := by exact mod_cast card_le_two_pow_mul_sqrt
       _ = 2 ^ k * (2 ^ (k + 1) : ℕ) := by rw [Nat.sqrt_eq]
-      _ = x / 2 := by
+      _ = (x : ℝ) / 2 := by
         apply eq_div_iff.mpr
         simp only [x, Nat.cast_mul, Nat.cast_pow, Nat.cast_ofNat, pow_succ (2 : ℝ) k]
         ring
   refine lt_irrefl (x : ℝ) ?_
   calc
     (x : ℝ) = (#U' : ℝ) + (#M' : ℝ) := by assumption_mod_cast
-    _ < x / 2 + x / 2 := add_lt_add_of_lt_of_le h3 h4
+    _ < (x : ℝ) / 2 + (x : ℝ) / 2 := add_lt_add_of_lt_of_le h3 h4
     _ = x := add_halves (x : ℝ)
 
 end Theorems100

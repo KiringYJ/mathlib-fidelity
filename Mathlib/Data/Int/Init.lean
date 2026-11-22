@@ -8,6 +8,7 @@ module
 public import Batteries.Logic
 public import Mathlib.Data.Int.Notation
 public import Mathlib.Data.Nat.Notation
+public import Mathlib.Lean.Elab.NativeDivision
 public import Mathlib.Tactic.DepRewrite
 
 /-!
@@ -17,8 +18,8 @@ This file contains some basic lemmas about integers.
 
 See note [foundational algebra order theory].
 
-This file should not depend on anything defined in Mathlib (except for notation), so that it can be
-upstreamed to Batteries easily.
+The integer lemmas use core arithmetic, the notation for natural numbers and integers, and the
+nonzero-divisor quotient interface.
 -/
 
 @[expose] public section
@@ -207,72 +208,94 @@ theorem sign_mul_self_eq_natAbs (a : Int) : sign a * a = natAbs a :=
 
 /-! ### `/` -/
 
-lemma natCast_div (m n : ℕ) : ((m / n : ℕ) : ℤ) = m / n := natCast_ediv m n
+lemma natCast_div (m n : ℕ) (hn : n ≠ 0) :
+    (Nat.euclideanDiv m n hn : ℤ) = Int.euclideanDiv m n (Int.ofNat_ne_zero.2 hn) := by
+  simpa only [Nat.euclideanDiv_eq_core, Int.euclideanDiv_eq_core] using natCast_ediv m n
 
-lemma ediv_of_neg_of_pos {a b : ℤ} (Ha : a < 0) (Hb : 0 < b) : ediv a b = -((-a - 1) / b + 1) :=
+lemma ediv_of_neg_of_pos {a b : ℤ} (Ha : a < 0) (Hb : 0 < b) :
+    Int.euclideanDiv a b (Int.ne_of_gt Hb) =
+      -(Int.euclideanDiv (-a - 1) b (Int.ne_of_gt Hb) + 1) := by
+  simp only [Int.euclideanDiv_eq_core]
   match a, b, eq_negSucc_of_lt_zero Ha, eq_succ_of_zero_lt Hb with
-  | _, _, ⟨m, rfl⟩, ⟨n, rfl⟩ => by
+  | _, _, ⟨m, rfl⟩, ⟨n, rfl⟩ =>
     rw [show (- -[m+1] : ℤ) = (m + 1 : ℤ) by rfl]; rw [Int.add_sub_cancel]; rfl
 
 /-! ### mod -/
 
 @[simp, norm_cast] lemma natCast_mod (m n : ℕ) : (↑(m % n) : ℤ) = ↑m % ↑n := rfl
 
-lemma div_le_iff_of_dvd_of_pos (hb : 0 < b) (hba : b ∣ a) : a / b ≤ c ↔ a ≤ b * c :=
-  ediv_le_iff_of_dvd_of_pos hb hba
+lemma div_le_iff_of_dvd_of_pos (hb : 0 < b) (hba : b ∣ a) :
+    Int.euclideanDiv a b (Int.ne_of_gt hb) ≤ c ↔ a ≤ b * c := by
+  simpa only [Int.euclideanDiv_eq_core] using ediv_le_iff_of_dvd_of_pos hb hba
 
-lemma div_le_iff_of_dvd_of_neg (hb : b < 0) (hba : b ∣ a) : a / b ≤ c ↔ b * c ≤ a :=
-  ediv_le_iff_of_dvd_of_neg hb hba
+lemma div_le_iff_of_dvd_of_neg (hb : b < 0) (hba : b ∣ a) :
+    Int.euclideanDiv a b (Int.ne_of_lt hb) ≤ c ↔ b * c ≤ a := by
+  simpa only [Int.euclideanDiv_eq_core] using ediv_le_iff_of_dvd_of_neg hb hba
 
-lemma div_lt_iff_of_dvd_of_pos (hb : 0 < b) (hba : b ∣ a) : a / b < c ↔ a < b * c :=
-  ediv_lt_iff_of_dvd_of_pos hb hba
+lemma div_lt_iff_of_dvd_of_pos (hb : 0 < b) (hba : b ∣ a) :
+    Int.euclideanDiv a b (Int.ne_of_gt hb) < c ↔ a < b * c := by
+  simpa only [Int.euclideanDiv_eq_core] using ediv_lt_iff_of_dvd_of_pos hb hba
 
-lemma div_lt_iff_of_dvd_of_neg (hb : b < 0) (hba : b ∣ a) : a / b < c ↔ b * c < a :=
-  ediv_lt_iff_of_dvd_of_neg hb hba
+lemma div_lt_iff_of_dvd_of_neg (hb : b < 0) (hba : b ∣ a) :
+    Int.euclideanDiv a b (Int.ne_of_lt hb) < c ↔ b * c < a := by
+  simpa only [Int.euclideanDiv_eq_core] using ediv_lt_iff_of_dvd_of_neg hb hba
 
-lemma le_div_iff_of_dvd_of_pos (hc : 0 < c) (hcb : c ∣ b) : a ≤ b / c ↔ c * a ≤ b :=
-  le_ediv_iff_of_dvd_of_pos hc hcb
+lemma le_div_iff_of_dvd_of_pos (hc : 0 < c) (hcb : c ∣ b) :
+    a ≤ Int.euclideanDiv b c (Int.ne_of_gt hc) ↔ c * a ≤ b := by
+  simpa only [Int.euclideanDiv_eq_core] using le_ediv_iff_of_dvd_of_pos hc hcb
 
-lemma le_div_iff_of_dvd_of_neg (hc : c < 0) (hcb : c ∣ b) : a ≤ b / c ↔ b ≤ c * a :=
-  le_ediv_iff_of_dvd_of_neg hc hcb
+lemma le_div_iff_of_dvd_of_neg (hc : c < 0) (hcb : c ∣ b) :
+    a ≤ Int.euclideanDiv b c (Int.ne_of_lt hc) ↔ b ≤ c * a := by
+  simpa only [Int.euclideanDiv_eq_core] using le_ediv_iff_of_dvd_of_neg hc hcb
 
-lemma lt_div_iff_of_dvd_of_pos (hc : 0 < c) (hcb : c ∣ b) : a < b / c ↔ c * a < b :=
-  lt_ediv_iff_of_dvd_of_pos hc hcb
+lemma lt_div_iff_of_dvd_of_pos (hc : 0 < c) (hcb : c ∣ b) :
+    a < Int.euclideanDiv b c (Int.ne_of_gt hc) ↔ c * a < b := by
+  simpa only [Int.euclideanDiv_eq_core] using lt_ediv_iff_of_dvd_of_pos hc hcb
 
-lemma lt_div_iff_of_dvd_of_neg (hc : c < 0) (hcb : c ∣ b) : a < b / c ↔ b < c * a :=
-  lt_ediv_iff_of_dvd_of_neg hc hcb
+lemma lt_div_iff_of_dvd_of_neg (hc : c < 0) (hcb : c ∣ b) :
+    a < Int.euclideanDiv b c (Int.ne_of_lt hc) ↔ b < c * a := by
+  simpa only [Int.euclideanDiv_eq_core] using lt_ediv_iff_of_dvd_of_neg hc hcb
 
 lemma div_le_div_iff_of_dvd_of_pos_of_pos (hb : 0 < b) (hd : 0 < d) (hba : b ∣ a)
-    (hdc : d ∣ c) : a / b ≤ c / d ↔ d * a ≤ c * b :=
-  ediv_le_ediv_iff_of_dvd_of_pos_of_pos hb hd hba hdc
+    (hdc : d ∣ c) :
+    Int.euclideanDiv a b (Int.ne_of_gt hb) ≤ Int.euclideanDiv c d (Int.ne_of_gt hd) ↔
+      d * a ≤ c * b := by
+  simpa only [Int.euclideanDiv_eq_core] using ediv_le_ediv_iff_of_dvd_of_pos_of_pos hb hd hba hdc
 
 lemma div_le_div_iff_of_dvd_of_pos_of_neg (hb : 0 < b) (hd : d < 0) (hba : b ∣ a) (hdc : d ∣ c) :
-    a / b ≤ c / d ↔ c * b ≤ d * a :=
-  ediv_le_ediv_iff_of_dvd_of_pos_of_neg hb hd hba hdc
+    Int.euclideanDiv a b (Int.ne_of_gt hb) ≤ Int.euclideanDiv c d (Int.ne_of_lt hd) ↔
+      c * b ≤ d * a := by
+  simpa only [Int.euclideanDiv_eq_core] using ediv_le_ediv_iff_of_dvd_of_pos_of_neg hb hd hba hdc
 
 lemma div_le_div_iff_of_dvd_of_neg_of_pos (hb : b < 0) (hd : 0 < d) (hba : b ∣ a) (hdc : d ∣ c) :
-    a / b ≤ c / d ↔ c * b ≤ d * a :=
-  ediv_le_ediv_iff_of_dvd_of_neg_of_pos hb hd hba hdc
+    Int.euclideanDiv a b (Int.ne_of_lt hb) ≤ Int.euclideanDiv c d (Int.ne_of_gt hd) ↔
+      c * b ≤ d * a := by
+  simpa only [Int.euclideanDiv_eq_core] using ediv_le_ediv_iff_of_dvd_of_neg_of_pos hb hd hba hdc
 
 lemma div_le_div_iff_of_dvd_of_neg_of_neg (hb : b < 0) (hd : d < 0) (hba : b ∣ a) (hdc : d ∣ c) :
-    a / b ≤ c / d ↔ d * a ≤ c * b :=
-  ediv_le_ediv_iff_of_dvd_of_neg_of_neg hb hd hba hdc
+    Int.euclideanDiv a b (Int.ne_of_lt hb) ≤ Int.euclideanDiv c d (Int.ne_of_lt hd) ↔
+      d * a ≤ c * b := by
+  simpa only [Int.euclideanDiv_eq_core] using ediv_le_ediv_iff_of_dvd_of_neg_of_neg hb hd hba hdc
 
 lemma div_lt_div_iff_of_dvd_of_pos (hb : 0 < b) (hd : 0 < d) (hba : b ∣ a) (hdc : d ∣ c) :
-    a / b < c / d ↔ d * a < c * b :=
-  ediv_lt_ediv_iff_of_dvd_of_pos hb hd hba hdc
+    Int.euclideanDiv a b (Int.ne_of_gt hb) < Int.euclideanDiv c d (Int.ne_of_gt hd) ↔
+      d * a < c * b := by
+  simpa only [Int.euclideanDiv_eq_core] using ediv_lt_ediv_iff_of_dvd_of_pos hb hd hba hdc
 
 lemma div_lt_div_iff_of_dvd_of_pos_of_neg (hb : 0 < b) (hd : d < 0) (hba : b ∣ a) (hdc : d ∣ c) :
-    a / b < c / d ↔ c * b < d * a :=
-  ediv_lt_ediv_iff_of_dvd_of_pos_of_neg hb hd hba hdc
+    Int.euclideanDiv a b (Int.ne_of_gt hb) < Int.euclideanDiv c d (Int.ne_of_lt hd) ↔
+      c * b < d * a := by
+  simpa only [Int.euclideanDiv_eq_core] using ediv_lt_ediv_iff_of_dvd_of_pos_of_neg hb hd hba hdc
 
 lemma div_lt_div_iff_of_dvd_of_neg_of_pos (hb : b < 0) (hd : 0 < d) (hba : b ∣ a) (hdc : d ∣ c) :
-    a / b < c / d ↔ c * b < d * a :=
-  ediv_lt_ediv_iff_of_dvd_of_neg_of_pos hb hd hba hdc
+    Int.euclideanDiv a b (Int.ne_of_lt hb) < Int.euclideanDiv c d (Int.ne_of_gt hd) ↔
+      c * b < d * a := by
+  simpa only [Int.euclideanDiv_eq_core] using ediv_lt_ediv_iff_of_dvd_of_neg_of_pos hb hd hba hdc
 
 lemma div_lt_div_iff_of_dvd_of_neg_of_neg (hb : b < 0) (hd : d < 0) (hba : b ∣ a) (hdc : d ∣ c) :
-    a / b < c / d ↔ d * a < c * b :=
-  ediv_lt_ediv_iff_of_dvd_of_neg_of_neg hb hd hba hdc
+    Int.euclideanDiv a b (Int.ne_of_lt hb) < Int.euclideanDiv c d (Int.ne_of_lt hd) ↔
+      d * a < c * b := by
+  simpa only [Int.euclideanDiv_eq_core] using ediv_lt_ediv_iff_of_dvd_of_neg_of_neg hb hd hba hdc
 
 /-! ### properties of `/` and `%` -/
 
@@ -281,20 +304,24 @@ lemma emod_two_eq_zero_or_one (n : ℤ) : n % 2 = 0 ∨ n % 2 = 1 :=
 
 /-! ### dvd -/
 
-lemma dvd_mul_of_div_dvd (h : b ∣ a) (hdiv : a / b ∣ c) : a ∣ b * c :=
-  dvd_mul_of_ediv_dvd h hdiv
+lemma dvd_mul_of_div_dvd (hb : b ≠ 0) (h : b ∣ a) (hdiv : Int.euclideanDiv a b hb ∣ c) :
+    a ∣ b * c :=
+  dvd_mul_of_ediv_dvd h (by simpa only [Int.euclideanDiv_eq_core] using hdiv)
 
-lemma div_dvd_iff_dvd_mul (h : b ∣ a) (hb : b ≠ 0) : a / b ∣ c ↔ a ∣ b * c :=
-  ediv_dvd_iff_dvd_mul h hb
+lemma div_dvd_iff_dvd_mul (h : b ∣ a) (hb : b ≠ 0) :
+    Int.euclideanDiv a b hb ∣ c ↔ a ∣ b * c := by
+  simpa only [Int.euclideanDiv_eq_core] using ediv_dvd_iff_dvd_mul (c := c) h hb
 
-lemma mul_dvd_of_dvd_div (hcb : c ∣ b) (h : a ∣ b / c) : c * a ∣ b :=
-  mul_dvd_of_dvd_ediv hcb h
+lemma mul_dvd_of_dvd_div (hc : c ≠ 0) (hcb : c ∣ b) (h : a ∣ Int.euclideanDiv b c hc) : c * a ∣ b :=
+  mul_dvd_of_dvd_ediv hcb (by simpa only [Int.euclideanDiv_eq_core] using h)
 
-lemma dvd_div_of_mul_dvd (h : a * b ∣ c) : b ∣ c / a :=
-  dvd_ediv_of_mul_dvd h
+lemma dvd_div_of_mul_dvd (ha : a ≠ 0) (h : a * b ∣ c) :
+    b ∣ Int.euclideanDiv c a ha := by
+  simpa only [Int.euclideanDiv_eq_core] using dvd_ediv_of_mul_dvd h
 
-lemma dvd_div_iff_mul_dvd (hbc : c ∣ b) : a ∣ b / c ↔ c * a ∣ b := by
-  simp [hbc]
+lemma dvd_div_iff_mul_dvd (hc : c ≠ 0) (hbc : c ∣ b) :
+    a ∣ Int.euclideanDiv b c hc ↔ c * a ∣ b := by
+  simpa only [Int.euclideanDiv_eq_core] using dvd_ediv_iff_mul_dvd (a := a) hbc
 
 /-- If `n > 0` then `m` is not divisible by `n` iff it is between `n * k` and `n * (k + 1)`
   for some `k`. -/
@@ -303,7 +330,8 @@ lemma exists_lt_and_lt_iff_not_dvd (m : ℤ) (hn : 0 < n) :
   (not_dvd_iff_lt_mul_succ m hn).symm
 
 lemma eq_mul_div_of_mul_eq_mul_of_dvd_left (hb : b ≠ 0) (hbc : b ∣ c) (h : b * a = c * d) :
-    a = c / b * d := by
+    a = Int.euclideanDiv c b hb * d := by
+  rw [Int.euclideanDiv_eq_core]
   obtain ⟨k, rfl⟩ := hbc
   rw [Int.mul_ediv_cancel_left _ hb]
   rwa [Int.mul_assoc, Int.mul_eq_mul_left_iff hb] at h

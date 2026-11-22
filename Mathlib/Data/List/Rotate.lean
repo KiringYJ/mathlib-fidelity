@@ -92,11 +92,15 @@ theorem rotate'_length_mul (l : List α) : ∀ n : ℕ, l.rotate' (l.length * n)
       _ = l := by rw [rotate'_length, rotate'_length_mul l n]
 
 @[simp]
-theorem rotate'_mod (l : List α) (n : ℕ) : l.rotate' (n % l.length) = l.rotate' n :=
+theorem rotate'_mod (l : List α) (n : ℕ) : l.rotate' (n % l.length) = l.rotate' n := by
+  by_cases hl : l.length = 0
+  · simp_all [length_eq_zero_iff]
   calc l.rotate' (n % l.length)
     _ = (l.rotate' (n % l.length)).rotate'
-        ((l.rotate' (n % l.length)).length * (n / l.length)) := by rw [rotate'_length_mul]
-    _ = l.rotate' n := by rw [rotate'_rotate', length_rotate', Nat.mod_add_div]
+        ((l.rotate' (n % l.length)).length * Nat.euclideanDiv n l.length hl) := by
+          rw [rotate'_length_mul]
+    _ = l.rotate' n := by
+      rw [rotate'_rotate', length_rotate', Nat.add_comm, Nat.euclideanDiv_mul_add_mod]
 
 theorem rotate_eq_rotate' (l : List α) (n : ℕ) : l.rotate n = l.rotate' n :=
   if h : l.length = 0 then by simp_all [length_eq_zero_iff]

@@ -646,7 +646,7 @@ theorem Convex.lipschitzWith_gauge {r : ℝ≥0} (hc : Convex ℝ s) (hr : 0 < r
     calc
       gauge s x = gauge s (y + (x - y)) := by simp
       _ ≤ gauge s y + gauge s (x - y) := gauge_add_le hc (this.mono hs) _ _
-      _ ≤ gauge s y + ‖x - y‖ / r := by
+      _ ≤ gauge s y + ‖x - y‖ / (r : ℝ) := by
         have h := (gauge_mono this hs (x - y)).trans_eq
           (gauge_ball r.2 (x - y) (hrUnit := hrUnit))
         convert! add_le_add (le_refl (gauge s y)) h using 1

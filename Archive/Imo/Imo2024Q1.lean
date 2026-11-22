@@ -102,8 +102,9 @@ lemma mem_Ico_one_of_mem_Ioo (h : α ∈ Set.Ioo 0 2) : α ∈ Set.Ico 1 2 := by
       _ = 1 := by simp
 
 lemma mem_Ico_n_of_mem_Ioo (h : α ∈ Set.Ioo 0 2) {n : ℕ} (hn : 0 < n) :
-    α ∈ Set.Ico ((2 * n - 1) / n : ℝ) 2 := by
-  suffices ∑ i ∈ Finset.Icc 1 n, ⌊i * α⌋ = n ^ 2 ∧ α ∈ Set.Ico ((2 * n - 1) / n : ℝ) 2 from this.2
+    α ∈ Set.Ico ((2 * (n : ℝ) - 1) / (n : ℝ)) 2 := by
+  suffices ∑ i ∈ Finset.Icc 1 n, ⌊i * α⌋ = n ^ 2 ∧
+      α ∈ Set.Ico ((2 * (n : ℝ) - 1) / (n : ℝ)) 2 from this.2
   induction n, hn using Nat.le_induction with
   | base =>
     obtain ⟨h1, h2⟩ := hc.mem_Ico_one_of_mem_Ioo h

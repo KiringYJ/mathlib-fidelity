@@ -30,11 +30,13 @@ attribute [local simp] factorial_ne_zero
 section DivisionSemiring
 variable [DivisionSemiring K] [CharZero K]
 
-theorem cast_choose {a b : ℕ} (h : a ≤ b) : (b.choose a : K) = b ! / (a ! * (b - a)!) := by
+theorem cast_choose {a b : ℕ} (h : a ≤ b) :
+    (b.choose a : K) = Checked.div (b ! : K) ((a ! : K) * ((b - a)! : K)) := by
   rw [eq_div_iff_mul_eq]
   rw_mod_cast [← mul_assoc, choose_mul_factorial_mul_factorial h]
 
-theorem cast_add_choose {a b : ℕ} : ((a + b).choose a : K) = (a + b)! / (a ! * b !) := by
+theorem cast_add_choose {a b : ℕ} :
+    ((a + b).choose a : K) = Checked.div ((a + b)! : K) ((a ! : K) * (b ! : K)) := by
   simpa only [Nat.add_sub_cancel_left] using cast_choose K (le_add_right a b)
 
 end DivisionSemiring
@@ -42,7 +44,8 @@ end DivisionSemiring
 section DivisionRing
 variable [DivisionRing K] [NeZero (2 : K)]
 
-theorem cast_choose_two (a : ℕ) : (a.choose 2 : K) = a * (a - 1) / 2 := by
+theorem cast_choose_two (a : ℕ) :
+    (a.choose 2 : K) = Checked.div ((a : K) * ((a : K) - 1)) 2 := by
   rw [← cast_descFactorial_two, descFactorial_eq_factorial_mul_choose, factorial_two, mul_comm,
     cast_mul, cast_two, eq_div_iff_mul_eq]
 

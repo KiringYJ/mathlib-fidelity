@@ -271,19 +271,19 @@ theorem encode_false : encode false = 0 :=
 
 @[simp]
 theorem decode_zero : (decode 0 : Option Bool) = some false :=
-  rfl
+  encodek false
 
 @[simp]
 theorem decode_one : (decode 1 : Option Bool) = some true :=
-  rfl
+  encodek true
 
 theorem decode_ge_two (n) (h : 2 ≤ n) : (decode n : Option Bool) = none := by
   suffices decodeSum n = none by
     change (decodeSum n).bind _ = none
     rw [this]
     rfl
-  have : 1 ≤ n / 2 := by
-    rw [Nat.le_div_iff_mul_le]
+  have : 1 ≤ Nat.euclideanDiv n 2 := by
+    rw [Nat.euclideanDiv_eq_core, Nat.le_div_iff_mul_le]
     exacts [h, by decide]
   obtain ⟨m, e⟩ := exists_eq_succ_of_ne_zero (_root_.ne_of_gt this)
   simp only [decodeSum, div2_val]; cases bodd n <;> simp [e]

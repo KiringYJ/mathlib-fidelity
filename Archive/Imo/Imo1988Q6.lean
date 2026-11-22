@@ -193,9 +193,9 @@ open Imo1988Q6
 /-- Question 6 of IMO1988. If a and b are two natural numbers
 such that a*b+1 divides a^2 + b^2, show that their quotient is a perfect square. -/
 theorem imo1988_q6 {a b : ℕ} (h : a * b + 1 ∣ a ^ 2 + b ^ 2) :
-    ∃ d, d ^ 2 = (a ^ 2 + b ^ 2) / (a * b + 1) := by
+    ∃ d, d ^ 2 = Nat.euclideanDiv (a ^ 2 + b ^ 2) (a * b + 1) := by
   rcases h with ⟨k, hk⟩
-  rw [hk, Nat.mul_div_cancel_left _ (Nat.succ_pos (a * b))]
+  rw [hk, Nat.euclideanDiv_mul_left_cancel]
   simp only [sq] at hk
   apply constant_descent_vieta_jumping a b (H := fun a b => a * a + b * b = (a * b + 1) * k)
       hk (fun x => k * x) (fun x => x * x - k) fun _ _ => False <;>

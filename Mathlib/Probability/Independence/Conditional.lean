@@ -1686,28 +1686,48 @@ lemma iCondIndepFun.indepFun_mul_mul (hf_indep : iCondIndepFun m' hm' f μ)
 
 end Mul
 
-section Div
-variable {m : SigmaAlgebra β} [Div β] [MeasurableDiv₂ β] {f : ι → Ω → β}
+section Sub
+variable {m : SigmaAlgebra β} [Sub β] [MeasurableSub₂ β] {f : ι → Ω → β}
 
-@[to_additive]
+lemma iCondIndepFun.indepFun_sub_left (hf_indep : iCondIndepFun m' hm' f μ)
+    (i j k : ι) (hik : i ≠ k) (hjk : j ≠ k) :
+    CondIndepFun m' hm' (f i - f j) (f k) μ := by
+  have : CondIndepFun m' hm' (fun ω ↦ (f i ω, f j ω)) (f k) μ :=
+    hf_indep.condIndepFun_prodMk i j k hik hjk
+  simpa using! this.comp measurable_sub measurable_id
+
+lemma iCondIndepFun.indepFun_sub_right (hf_indep : iCondIndepFun m' hm' f μ)
+    (i j k : ι) (hij : i ≠ j) (hik : i ≠ k) :
+    CondIndepFun m' hm' (f i) (f j - f k) μ :=
+  (hf_indep.indepFun_sub_left _ _ _ hij.symm hik.symm).symm
+
+lemma iCondIndepFun.indepFun_sub_sub (hf_indep : iCondIndepFun m' hm' f μ)
+    (i j k l : ι) (hik : i ≠ k) (hil : i ≠ l) (hjk : j ≠ k) (hjl : j ≠ l) :
+    CondIndepFun m' hm' (f i - f j) (f k - f l) μ :=
+  (hf_indep.condIndepFun_prodMk_prodMk i j k l hik hil hjk hjl).comp measurable_sub measurable_sub
+
+end Sub
+
+section Div
+variable {m : SigmaAlgebra β} [Group β] [MeasurableDiv₂ β] {f : ι → Ω → β}
+
 lemma iCondIndepFun.indepFun_div_left (hf_indep : iCondIndepFun m' hm' f μ)
     (i j k : ι) (hik : i ≠ k) (hjk : j ≠ k) :
     CondIndepFun m' hm' (f i / f j) (f k) μ := by
   have : CondIndepFun m' hm' (fun ω ↦ (f i ω, f j ω)) (f k) μ :=
     hf_indep.condIndepFun_prodMk i j k hik hjk
-  simpa using! this.comp (measurable_fst.div measurable_snd) measurable_id
+  simpa [Pi.div_def] using! this.comp measurable_div measurable_id
 
-@[to_additive]
 lemma iCondIndepFun.indepFun_div_right (hf_indep : iCondIndepFun m' hm' f μ)
     (i j k : ι) (hij : i ≠ j) (hik : i ≠ k) :
     CondIndepFun m' hm' (f i) (f j / f k) μ :=
   (hf_indep.indepFun_div_left _ _ _ hij.symm hik.symm).symm
 
-@[to_additive]
 lemma iCondIndepFun.indepFun_div_div (hf_indep : iCondIndepFun m' hm' f μ)
     (i j k l : ι) (hik : i ≠ k) (hil : i ≠ l) (hjk : j ≠ k) (hjl : j ≠ l) :
-    CondIndepFun m' hm' (f i / f j) (f k / f l) μ :=
-  (hf_indep.condIndepFun_prodMk_prodMk i j k l hik hil hjk hjl).comp measurable_div measurable_div
+    CondIndepFun m' hm' (f i / f j) (f k / f l) μ := by
+  simpa [Pi.div_def] using!
+    (hf_indep.condIndepFun_prodMk_prodMk i j k l hik hil hjk hjl).comp measurable_div measurable_div
 
 end Div
 

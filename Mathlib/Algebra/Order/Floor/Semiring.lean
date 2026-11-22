@@ -148,7 +148,9 @@ theorem preimage_floor_of_ne_zero {n : ℕ} (hn : n ≠ 0) :
     (floor : R → ℕ) ⁻¹' {n} = Ico (n : R) (n + 1) :=
   ext fun _ => floor_eq_iff' hn
 
-theorem mul_cast_floor_div_cancel {n : ℕ} (hn : n ≠ 0) (a : R) : ⌊a * n⌋₊ / n = ⌊a⌋₊ := by
+theorem mul_cast_floor_div_cancel {n : ℕ} (hn : n ≠ 0) (a : R) :
+    Nat.euclideanDiv ⌊a * n⌋₊ n hn = ⌊a⌋₊ := by
+  rw [Nat.euclideanDiv_eq_core]
   rcases le_total a 0 with ha | ha
   · rw [floor_of_nonpos, floor_of_nonpos ha]
     · simp
@@ -158,7 +160,7 @@ theorem mul_cast_floor_div_cancel {n : ℕ} (hn : n ≠ 0) (a : R) : ⌊a * n⌋
     le_floor_iff ha, cast_mul, mul_le_mul_iff_of_pos_right (cast_pos'.mpr (zero_lt_of_ne_zero hn))]
 
 theorem cast_mul_floor_div_cancel {n : ℕ} (hn : n ≠ 0) (a : R) :
-    ⌊n * a⌋₊ / n = ⌊a⌋₊ := by
+    Nat.euclideanDiv ⌊n * a⌋₊ n hn = ⌊a⌋₊ := by
   rw [Nat.cast_comm, mul_cast_floor_div_cancel hn]
 
 end floor

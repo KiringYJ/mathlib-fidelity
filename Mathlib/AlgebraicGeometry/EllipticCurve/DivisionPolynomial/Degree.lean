@@ -153,7 +153,7 @@ end preΨ₄
 section preΨ'
 
 private def expDegree (n : ℕ) : ℕ :=
-  (n ^ 2 - if Even n then 4 else 1) / 2
+  Nat.euclideanDiv (n ^ 2 - if Even n then 4 else 1) 2
 
 private lemma expDegree_cast {n : ℕ} (hn : n ≠ 0) :
     2 * (expDegree n : ℤ) = n ^ 2 - if Even n then 4 else 1 := by
@@ -161,10 +161,11 @@ private lemma expDegree_cast {n : ℕ} (hn : n ≠ 0) :
   · rcases n with _ | n
     · contradiction
     push_cast [expDegree, show (2 * (n + 1)) ^ 2 = 2 * (2 * n * (n + 2)) + 4 by ring1, even_two_mul,
-      Nat.add_sub_cancel, Nat.mul_div_cancel_left _ two_pos]
+      Nat.add_sub_cancel, Nat.euclideanDiv_mul_left_cancel _ two_ne_zero]
     ring1
   · push_cast [expDegree, show (2 * n + 1) ^ 2 = 2 * (2 * n * (n + 1)) + 1 by ring1,
-      n.not_even_two_mul_add_one, Nat.add_sub_cancel, Nat.mul_div_cancel_left _ two_pos]
+      n.not_even_two_mul_add_one, Nat.add_sub_cancel,
+      Nat.euclideanDiv_mul_left_cancel _ two_ne_zero]
     ring1
 
 private lemma expDegree_rec (m : ℕ) :
@@ -176,14 +177,14 @@ private lemma expDegree_rec (m : ℕ) :
       expDegree (m + 1) + 3 * expDegree (m + 3) + (if Even m then 0 else 2 * 3)) := by
   push_cast [← @Nat.cast_inj ℤ, ← mul_left_cancel_iff_of_pos (b := (expDegree _ : ℤ)) two_pos,
     mul_add, mul_left_comm (2 : ℤ)]
-  repeat rw [expDegree_cast <| by lia]
+  simp (disch := omega) only [expDegree_cast]
   push_cast [Nat.even_add_one, ite_not, even_two_mul]
   constructor <;> constructor <;> split_ifs <;> ring1
 
 private def expCoeff (n : ℕ) : ℤ :=
-  if Even n then n / 2 else n
+  if Even n then Nat.euclideanDiv n 2 else n
 
-private lemma expCoeff_cast (n : ℕ) : (expCoeff n : ℚ) = if Even n then (n / 2 : ℚ) else n := by
+private lemma expCoeff_cast (n : ℕ) : (expCoeff n : ℚ) = if Even n then (n : ℚ) / 2 else n := by
   rcases n.even_or_odd' with ⟨n, rfl | rfl⟩ <;> simp [expCoeff, n.not_even_two_mul_add_one]
 
 private lemma expCoeff_rec (m : ℕ) :
@@ -204,11 +205,11 @@ private lemma natDegree_coeff_preΨ' (n : ℕ) :
   let cm {m n p q} : _ → _ → (p * q : R[X]).coeff (m + n) = _ := coeff_mul_add_eq_of_natDegree_le
   let cp {m n p} : _ → (p ^ m : R[X]).coeff (m * n) = _ := coeff_pow_of_natDegree_le
   induction n using normEDSRec with
-  | zero => simpa only [preΨ'_zero] using ⟨natDegree_zero.le, Int.cast_zero.symm⟩
-  | one => simpa only [preΨ'_one] using ⟨natDegree_one.le, coeff_one_zero.trans Int.cast_one.symm⟩
-  | two => simpa only [preΨ'_two] using ⟨natDegree_one.le, coeff_one_zero.trans Int.cast_one.symm⟩
-  | three => simpa only [preΨ'_three] using ⟨W.natDegree_Ψ₃_le, W.coeff_Ψ₃ ▸ Int.cast_three.symm⟩
-  | four => simpa only [preΨ'_four] using ⟨W.natDegree_preΨ₄_le, W.coeff_preΨ₄ ▸ Int.cast_two.symm⟩
+  | zero => norm_num [expDegree, expCoeff, preΨ'_zero]
+  | one => norm_num [expDegree, expCoeff, preΨ'_one]
+  | two => norm_num [expDegree, expCoeff, preΨ'_two]
+  | three => norm_num [expDegree, expCoeff, show ¬Even 3 by decide, preΨ'_three, W.natDegree_Ψ₃_le]
+  | four => norm_num [expDegree, expCoeff, show Even 4 by decide, preΨ'_four, W.natDegree_preΨ₄_le]
   | even m h₁ h₂ h₃ h₄ h₅ =>
     constructor
     · nth_rw 1 [preΨ'_even, ← max_self <| expDegree _, (expDegree_rec m).1.1, (expDegree_rec m).1.2]
@@ -231,34 +232,43 @@ private lemma natDegree_coeff_preΨ' (n : ℕ) :
       · norm_cast
       all_goals split_ifs <;> simp only [natDegree_one.le, dp W.natDegree_Ψ₂Sq_le]
 
-lemma natDegree_preΨ'_le (n : ℕ) : (W.preΨ' n).natDegree ≤ (n ^ 2 - if Even n then 4 else 1) / 2 :=
+lemma natDegree_preΨ'_le (n : ℕ) :
+    (W.preΨ' n).natDegree ≤ Nat.euclideanDiv (n ^ 2 - if Even n then 4 else 1) 2 :=
   (W.natDegree_coeff_preΨ' n).left
 
 @[simp]
-lemma coeff_preΨ' (n : ℕ) : (W.preΨ' n).coeff ((n ^ 2 - if Even n then 4 else 1) / 2) =
-    if Even n then n / 2 else n := by
+lemma coeff_preΨ' (n : ℕ) :
+    (W.preΨ' n).coeff (Nat.euclideanDiv (n ^ 2 - if Even n then 4 else 1) 2) =
+      if Even n then Nat.euclideanDiv n 2 else n := by
   convert! (W.natDegree_coeff_preΨ' n).right using 1
   rcases n.even_or_odd' with ⟨n, rfl | rfl⟩ <;> simp [expCoeff, n.not_even_two_mul_add_one]
 
 lemma coeff_preΨ'_ne_zero {n : ℕ} (h : (n : R) ≠ 0) :
-    (W.preΨ' n).coeff ((n ^ 2 - if Even n then 4 else 1) / 2) ≠ 0 := by
+    (W.preΨ' n).coeff (Nat.euclideanDiv (n ^ 2 - if Even n then 4 else 1) 2) ≠ 0 := by
   rcases n.even_or_odd' with ⟨n, rfl | rfl⟩
-  · rw [coeff_preΨ', ite_eq_left <| even_two_mul n, n.mul_div_cancel_left two_pos]
+  · rw [coeff_preΨ', ite_eq_left <| even_two_mul n, Nat.euclideanDiv_mul_left_cancel _ two_ne_zero]
     exact right_ne_zero_of_mul <| by rwa [← Nat.cast_mul]
   · rwa [coeff_preΨ', ite_eq_right n.not_even_two_mul_add_one]
 
 @[simp]
 lemma natDegree_preΨ' {n : ℕ} (h : (n : R) ≠ 0) :
-    (W.preΨ' n).natDegree = (n ^ 2 - if Even n then 4 else 1) / 2 :=
+    (W.preΨ' n).natDegree = Nat.euclideanDiv (n ^ 2 - if Even n then 4 else 1) 2 :=
   natDegree_eq_of_le_of_coeff_ne_zero (W.natDegree_preΨ'_le n) <| W.coeff_preΨ'_ne_zero h
 
 lemma natDegree_preΨ'_pos {n : ℕ} (hn : 2 < n) (h : (n : R) ≠ 0) : 0 < (W.preΨ' n).natDegree := by
-  simp_rw [W.natDegree_preΨ' h, Nat.div_pos_iff, zero_lt_two, true_and]
-  split_ifs <;> exact Nat.AtLeastTwo.prop.trans <| Nat.sub_le_sub_right (Nat.pow_le_pow_left hn 2) _
+  rw [W.natDegree_preΨ' h]
+  have hdegree : 2 ≤ n ^ 2 - (if Even n then 4 else 1) := by
+    split_ifs <;>
+      exact Nat.AtLeastTwo.prop.trans <| Nat.sub_le_sub_right (Nat.pow_le_pow_left hn 2) _
+  apply Nat.pos_of_ne_zero
+  intro hz
+  have hr := Nat.euclideanDiv_mul_add_mod (n ^ 2 - (if Even n then 4 else 1)) 2 (by decide)
+  rw [hz, Nat.mul_zero, Nat.zero_add] at hr
+  exact (Nat.not_lt_of_ge hdegree) (hr ▸ Nat.mod_lt _ (by decide : 0 < 2))
 
 @[simp]
 lemma leadingCoeff_preΨ' {n : ℕ} (h : (n : R) ≠ 0) :
-    (W.preΨ' n).leadingCoeff = if Even n then n / 2 else n := by
+    (W.preΨ' n).leadingCoeff = if Even n then Nat.euclideanDiv n 2 else n := by
   rw [leadingCoeff, W.natDegree_preΨ' h, coeff_preΨ']
 
 lemma preΨ'_ne_zero [Nontrivial R] {n : ℕ} (h : (n : R) ≠ 0) : W.preΨ' n ≠ 0 := by
@@ -271,24 +281,36 @@ end preΨ'
 section preΨ
 
 lemma natDegree_preΨ_le (n : ℤ) : (W.preΨ n).natDegree ≤
-    (n.natAbs ^ 2 - if Even n then 4 else 1) / 2 := by
+    Nat.euclideanDiv (n.natAbs ^ 2 - if Even n then 4 else 1) 2 := by
   induction n using Int.negInduction with
   | nat n => exact_mod_cast W.preΨ_ofNat n ▸ W.natDegree_preΨ'_le n
   | neg ih => simp_rw [preΨ_neg, natDegree_neg, Int.natAbs_neg, even_neg, ih]
 
 @[simp]
-lemma coeff_preΨ (n : ℤ) : (W.preΨ n).coeff ((n.natAbs ^ 2 - if Even n then 4 else 1) / 2) =
-    if Even n then n / 2 else n := by
+lemma coeff_preΨ (n : ℤ) :
+    (W.preΨ n).coeff (Nat.euclideanDiv (n.natAbs ^ 2 - if Even n then 4 else 1) 2) =
+    if h : Even n then (Int.exactQuotient n 2 h.two_dvd : R) else n := by
   induction n using Int.negInduction with
-  | nat n => exact_mod_cast W.preΨ_ofNat n ▸ W.coeff_preΨ' n
+  | nat n =>
+    simp only [preΨ_ofNat, Int.natAbs_natCast, Int.even_coe_nat]
+    rw [W.coeff_preΨ']
+    rcases n.even_or_odd' with ⟨k, rfl | rfl⟩
+    · have half_double (hk : (2 : ℤ) ∣ 2 * k) : Int.exactQuotient (2 * k) 2 hk = k :=
+        (Int.exactQuotient_eq_iff hk (by decide)).2 rfl
+      simp [half_double]
+    · simp [k.not_even_two_mul_add_one]
   | neg ih n =>
     simp_rw [preΨ_neg, coeff_neg, Int.natAbs_neg, even_neg]
-    rcases ih n, n.even_or_odd' with ⟨ih, ⟨n, rfl | rfl⟩⟩ <;>
-      push_cast [even_two_mul, Int.not_even_two_mul_add_one, Int.neg_ediv_of_dvd ⟨n, rfl⟩] at * <;>
-      rw [ih]
+    rw [ih n]
+    by_cases h : Even (n : ℤ)
+    · have he : Int.exactQuotient (-(n : ℤ)) 2 (even_neg.mpr h).two_dvd =
+          -Int.exactQuotient (n : ℤ) 2 h.two_dvd :=
+        (Int.exactQuotient_eq_iff _ (by decide)).2 (by rw [mul_neg, Int.mul_exactQuotient])
+      simp [h, he]
+    · simp [h]
 
 lemma coeff_preΨ_ne_zero {n : ℤ} (h : (n : R) ≠ 0) :
-    (W.preΨ n).coeff ((n.natAbs ^ 2 - if Even n then 4 else 1) / 2) ≠ 0 := by
+    (W.preΨ n).coeff (Nat.euclideanDiv (n.natAbs ^ 2 - if Even n then 4 else 1) 2) ≠ 0 := by
   induction n using Int.negInduction with
   | nat n => simpa only [preΨ_ofNat, Int.even_coe_nat]
       using! W.coeff_preΨ'_ne_zero <| by exact_mod_cast h
@@ -297,7 +319,7 @@ lemma coeff_preΨ_ne_zero {n : ℤ} (h : (n : R) ≠ 0) :
 
 @[simp]
 lemma natDegree_preΨ {n : ℤ} (h : (n : R) ≠ 0) :
-    (W.preΨ n).natDegree = (n.natAbs ^ 2 - if Even n then 4 else 1) / 2 :=
+    (W.preΨ n).natDegree = Nat.euclideanDiv (n.natAbs ^ 2 - if Even n then 4 else 1) 2 :=
   natDegree_eq_of_le_of_coeff_ne_zero (W.natDegree_preΨ_le n) <| W.coeff_preΨ_ne_zero h
 
 lemma natDegree_preΨ_pos {n : ℤ} (hn : 2 < n.natAbs) (h : (n : R) ≠ 0) :
@@ -309,7 +331,7 @@ lemma natDegree_preΨ_pos {n : ℤ} (hn : 2 < n.natAbs) (h : (n : R) ≠ 0) :
 
 @[simp]
 lemma leadingCoeff_preΨ {n : ℤ} (h : (n : R) ≠ 0) :
-    (W.preΨ n).leadingCoeff = if Even n then n / 2 else n := by
+    (W.preΨ n).leadingCoeff = if h : Even n then (Int.exactQuotient n 2 h.two_dvd : R) else n := by
   rw [leadingCoeff, W.natDegree_preΨ h, coeff_preΨ]
 
 lemma preΨ_ne_zero [Nontrivial R] {n : ℤ} (h : (n : R) ≠ 0) : W.preΨ n ≠ 0 := by

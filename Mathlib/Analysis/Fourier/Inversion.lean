@@ -75,7 +75,7 @@ variable [CompleteSpace E]
 set_option backward.isDefEq.respectTransparency false in
 lemma tendsto_integral_gaussian_smul (hf : Integrable f) (h'f : Integrable (𝓕 f)) (v : V) :
     Tendsto (fun (c : ℝ) ↦
-      ∫ w : V, ((π * c) ^ (finrank ℝ V / 2 : ℂ) * cexp (-π ^ 2 * c * ‖v - w‖ ^ 2)) • f w)
+      ∫ w : V, ((π * c) ^ ((finrank ℝ V : ℂ) / 2) * cexp (-π ^ 2 * c * ‖v - w‖ ^ 2)) • f w)
     atTop (𝓝 (𝓕⁻ (𝓕 f) v)) := by
   let S : Set ℝ := {c | IsUnit c}
   let a (c : S) : ℝ := Checked.inv c.val c.2
@@ -118,9 +118,9 @@ lemma tendsto_integral_gaussian_smul (hf : Integrable f) (h'f : Integrable (𝓕
 
 lemma tendsto_integral_gaussian_smul' (hf : Integrable f) {v : V} (h'f : ContinuousAt f v) :
     Tendsto (fun (c : ℝ) ↦
-      ∫ w : V, ((π * c : ℂ) ^ (finrank ℝ V / 2 : ℂ) * cexp (-π ^ 2 * c * ‖v - w‖ ^ 2)) • f w)
+      ∫ w : V, ((π * c : ℂ) ^ ((finrank ℝ V : ℂ) / 2) * cexp (-π ^ 2 * c * ‖v - w‖ ^ 2)) • f w)
     atTop (𝓝 (f v)) := by
-  let φ : V → ℝ := fun w ↦ π ^ (finrank ℝ V / 2 : ℝ) * Real.exp (-π ^ 2 * ‖w‖ ^ 2)
+  let φ : V → ℝ := fun w ↦ π ^ ((finrank ℝ V : ℝ) / 2) * Real.exp (-π ^ 2 * ‖w‖ ^ 2)
   have A : Tendsto (fun (c : ℝ) ↦ ∫ w : V, (c ^ finrank ℝ V * φ (c • (v - w))) • f w)
       atTop (𝓝 (f v)) := by
     apply tendsto_integral_comp_smul_smul_of_integrable'
@@ -132,8 +132,8 @@ lemma tendsto_integral_gaussian_smul' (hf : Integrable f) {v : V} (h'f : Continu
     · have A : Tendsto (fun (w : V) ↦ π ^ 2 * ‖w‖ ^ 2) (cobounded V) atTop := by
         rw [tendsto_const_mul_atTop_of_pos (by positivity)]
         apply (tendsto_pow_atTop two_ne_zero).comp tendsto_norm_cobounded_atTop
-      have B := tendsto_rpow_mul_exp_neg_mul_atTop_nhds_zero (finrank ℝ V / 2) 1
-        zero_lt_one |>.comp A |>.const_mul (π ^ (-finrank ℝ V / 2 : ℝ))
+      have B := tendsto_rpow_mul_exp_neg_mul_atTop_nhds_zero ((finrank ℝ V : ℝ) / 2) 1
+        zero_lt_one |>.comp A |>.const_mul (π ^ (-(finrank ℝ V : ℝ) / 2))
       rw [mul_zero] at B
       convert! B using 2 with x
       simp only [neg_mul, one_mul, Function.comp_apply, ← mul_assoc, ← rpow_natCast, φ]

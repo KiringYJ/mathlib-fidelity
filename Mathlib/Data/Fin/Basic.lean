@@ -442,12 +442,23 @@ section DivMod
 
 theorem modNat_rev (i : Fin (m * n)) : i.rev.modNat = i.modNat.rev := by
   ext
+  have hn : n ≠ 0 := by
+    intro h
+    have hlt := i.is_lt
+    simp [h] at hlt
+  let q := Nat.euclideanDiv i.val n hn
   have H₁ : i % n + 1 ≤ n := i.modNat.is_lt
-  have H₂ : i / n < m := i.divNat.is_lt
+  have H₂ : q < m := by
+    change Nat.euclideanDiv i.val n hn < m
+    rw [Nat.euclideanDiv_eq_core]
+    exact (Nat.div_lt_iff_lt_mul (Nat.pos_of_ne_zero hn)).2 i.is_lt
+  have hq : q * n + i % n = (i : ℕ) := by
+    rw [Nat.mul_comm q n]
+    exact Nat.euclideanDiv_mul_add_mod i.val n hn
   simp only [val_rev]
   calc
-    (m * n - (i + 1)) % n = (m * n - ((i / n) * n + i % n + 1)) % n := by rw [Nat.div_add_mod']
-    _ = ((m - i / n - 1) * n + (n - (i % n + 1))) % n := by
+    (m * n - (i + 1)) % n = (m * n - (q * n + i % n + 1)) % n := by rw [hq]
+    _ = ((m - q - 1) * n + (n - (i % n + 1))) % n := by
       rw [Nat.mul_sub_right_distrib, Nat.one_mul, Nat.sub_add_sub_cancel _ H₁,
         Nat.mul_sub_right_distrib, Nat.sub_sub, Nat.add_assoc]
       exact Nat.le_mul_of_pos_left _ <| Nat.le_sub_of_add_le' H₂

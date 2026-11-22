@@ -114,7 +114,7 @@ theorem center_eq_top [Finite D] (hD : InductionHyp D) : Subring.center D = ⊤ 
   -- We therefore get that `|x| = (q ^ n - 1) / (q ^ d - 1)`, and as `d` is a strict divisor of `n`,
   -- we do have that `Φₙ(q) | (q ^ n - 1) / (q ^ d - 1)`; extending this over the whole sum
   -- gives us the desired contradiction..
-  rw [Set.toFinset_card, ConjClasses.card_carrier, ← card_congr
+  rw [Set.toFinset_card, ConjClasses.card_carrier, Nat.euclideanDiv_eq_core, ← card_congr
         (show Zxˣ ≃* _ from unitsCentralizerEquiv _ x).toEquiv, card_units, card_D]
   have hZx : Zx ≠ ⊤ := by
     by_contra! hZx
@@ -128,7 +128,10 @@ theorem center_eq_top [Finite D] (hD : InductionHyp D) : Subring.center D = ⊤ 
   have : IsScalarTower Z Zx D := ⟨fun x y z ↦ mul_assoc _ _ _⟩
   rw [card_units, card_Zx]
   push_cast [h1qd, h1qn]
-  apply Int.dvd_div_of_mul_dvd
+  have hZx_card : 1 < q ^ d := card_Zx ▸ Fintype.one_lt_card
+  have hden : (q : ℤ) ^ d - 1 ≠ 0 := sub_ne_zero.mpr (by exact_mod_cast hZx_card.ne')
+  rw [← Int.euclideanDiv_eq_core _ _ hden]
+  apply Int.dvd_div_of_mul_dvd hden
   have aux : ∀ {k : ℕ}, ((X : ℤ[X]) ^ k - 1).eval ↑q = (q : ℤ) ^ k - 1 := by
     simp only [eval_X, eval_one, eval_pow, eval_sub, forall_const]
   rw [← aux, ← aux, ← eval_mul]

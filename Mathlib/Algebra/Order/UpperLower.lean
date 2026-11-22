@@ -76,23 +76,38 @@ theorem IsUpperSet.inv {α : Type*} [CommGroup α] [PartialOrder α] [IsOrderedM
 theorem IsLowerSet.inv {α : Type*} [CommGroup α] [PartialOrder α] [IsOrderedMonoid α]
   {s : Set α} (hs : IsLowerSet s) : IsUpperSet s⁻¹ := fun _ _ h ↦ hs <| inv_le_inv' h
 
-@[to_additive]
 theorem IsUpperSet.div_left {α : Type*} [CommGroup α] [PartialOrder α] [IsOrderedMonoid α]
-    {s t : Set α} (ht : IsUpperSet t) : IsLowerSet (s / t) := by
-  rw [div_eq_mul_inv]
-  exact ht.inv.mul_left
+    {s t : Set α} (ht : IsUpperSet t) : IsLowerSet (s / t) :=
+  ht.inv.mul_left
 
-@[to_additive]
-theorem IsUpperSet.div_right (hs : IsUpperSet s) : IsUpperSet (s / t) := by
-  rw [div_eq_mul_inv]
-  exact hs.mul_right
+theorem IsUpperSet.div_right (hs : IsUpperSet s) : IsUpperSet (s / t) :=
+  hs.mul_right
 
-@[to_additive]
 theorem IsLowerSet.div_left {α : Type*} [CommGroup α] [PartialOrder α] [IsOrderedMonoid α]
   {s t : Set α} (ht : IsLowerSet t) : IsUpperSet (s / t) := ht.toDual.div_left
 
-@[to_additive]
 theorem IsLowerSet.div_right (hs : IsLowerSet s) : IsLowerSet (s / t) := hs.toDual.div_right
+
+section Additive
+variable {B : Type*} [AddCommGroup B]
+
+theorem IsUpperSet.sub_left [PartialOrder B] [IsOrderedAddMonoid B] {s t : Set B}
+    (ht : IsUpperSet t) : IsLowerSet (s - t) := by
+  rw [sub_eq_add_neg]
+  exact ht.neg.add_left
+
+theorem IsLowerSet.sub_left [PartialOrder B] [IsOrderedAddMonoid B] {s t : Set B}
+    (ht : IsLowerSet t) : IsUpperSet (s - t) := ht.toDual.sub_left
+
+variable [Preorder B] [IsOrderedAddMonoid B] {s t : Set B}
+
+theorem IsUpperSet.sub_right (hs : IsUpperSet s) : IsUpperSet (s - t) := by
+  rw [sub_eq_add_neg]
+  exact hs.add_right
+
+theorem IsLowerSet.sub_right (hs : IsLowerSet s) : IsLowerSet (s - t) := hs.toDual.sub_right
+
+end Additive
 
 namespace UpperSet
 
@@ -104,9 +119,12 @@ instance : One (UpperSet α) :=
 instance : Mul (UpperSet α) :=
   ⟨fun s t ↦ ⟨image2 (· * ·) s t, s.2.mul_right⟩⟩
 
-@[to_additive]
-instance : Div (UpperSet α) :=
-  ⟨fun s t ↦ ⟨image2 (· / ·) s t, s.2.div_right⟩⟩
+/-- The upper set formed by quotients of an element of each operand. -/
+@[expose] def div (s t : UpperSet α) : UpperSet α :=
+  ⟨(s : Set α) / (t : Set α), s.2.div_right⟩
+
+instance {B : Type*} [AddCommGroup B] [Preorder B] [IsOrderedAddMonoid B] : Sub (UpperSet B) :=
+  ⟨fun s t ↦ ⟨(s : Set B) - (t : Set B), s.2.sub_right⟩⟩
 
 @[to_additive]
 instance : SMul α (UpperSet α) :=
@@ -121,9 +139,11 @@ theorem coe_one : ((1 : UpperSet α) : Set α) = Set.Ici 1 :=
 theorem coe_mul (s t : UpperSet α) : (↑(s * t) : Set α) = s * t :=
   rfl
 
-@[to_additive (attr := simp, norm_cast)]
-theorem coe_div (s t : UpperSet α) : (↑(s / t) : Set α) = s / t :=
-  rfl
+@[simp, norm_cast] theorem coe_div (s t : UpperSet α) :
+    (↑(s.div t) : Set α) = (s : Set α) / (t : Set α) := rfl
+
+@[simp, norm_cast] theorem coe_sub {B : Type*} [AddCommGroup B] [Preorder B] [IsOrderedAddMonoid B]
+    (s t : UpperSet B) : (↑(s - t) : Set B) = (s : Set B) - (t : Set B) := rfl
 
 omit [IsOrderedMonoid α] in
 @[to_additive (attr := simp)]
@@ -165,9 +185,12 @@ instance : One (LowerSet α) :=
 instance : Mul (LowerSet α) :=
   ⟨fun s t ↦ ⟨image2 (· * ·) s t, s.2.mul_right⟩⟩
 
-@[to_additive]
-instance : Div (LowerSet α) :=
-  ⟨fun s t ↦ ⟨image2 (· / ·) s t, s.2.div_right⟩⟩
+/-- The lower set formed by quotients of an element of each operand. -/
+@[expose] def div (s t : LowerSet α) : LowerSet α :=
+  ⟨(s : Set α) / (t : Set α), s.2.div_right⟩
+
+instance {B : Type*} [AddCommGroup B] [Preorder B] [IsOrderedAddMonoid B] : Sub (LowerSet B) :=
+  ⟨fun s t ↦ ⟨(s : Set B) - (t : Set B), s.2.sub_right⟩⟩
 
 @[to_additive]
 instance : SMul α (LowerSet α) :=
@@ -177,9 +200,11 @@ instance : SMul α (LowerSet α) :=
 theorem coe_mul (s t : LowerSet α) : (↑(s * t) : Set α) = s * t :=
   rfl
 
-@[to_additive (attr := simp, norm_cast)]
-theorem coe_div (s t : LowerSet α) : (↑(s / t) : Set α) = s / t :=
-  rfl
+@[simp, norm_cast] theorem coe_div (s t : LowerSet α) :
+    (↑(s.div t) : Set α) = (s : Set α) / (t : Set α) := rfl
+
+@[simp, norm_cast] theorem coe_sub {B : Type*} [AddCommGroup B] [Preorder B] [IsOrderedAddMonoid B]
+    (s t : LowerSet B) : (↑(s - t) : Set B) = (s : Set B) - (t : Set B) := rfl
 
 omit [IsOrderedMonoid α] in
 @[to_additive (attr := simp)]

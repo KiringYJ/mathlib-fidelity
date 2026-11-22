@@ -179,7 +179,7 @@ lemma sum_le_preVariationFun_iUnion {s : ℕ → Set X} (hs : ∀ i, MeasurableS
   by_cases hn : n = 0
   · simp [hn]
   refine ENNReal.le_of_forall_pos_le_add fun ε' hε' hsnetop ↦ ?_
-  let ε := ε' / n
+  let ε := ε' / (n : ℝ≥0)
   have hε : 0 < ε := by positivity
   have hs'' i : preVariationFun f (s i) ≠ ⊤ := lt_top_iff_ne_top.mp <|
     (mono f (MeasurableSet.iUnion hs) (Set.subset_iUnion s i)).trans_lt hsnetop

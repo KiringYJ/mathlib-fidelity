@@ -588,7 +588,7 @@ theorem measurableSet_of_isOpen [OuterRegular μ] (H : InnerRegularWRT μ p IsOp
     obtain ⟨K, -, hK, -⟩ : ∃ K, K ⊆ univ ∧ p K ∧ 0 < μ K := H isOpen_univ _ this
     simpa using hd hK isOpen_univ
   obtain ⟨ε, hε, hεs, rfl⟩ : ∃ ε ≠ 0, ε + ε ≤ μ s ∧ r = μ s - (ε + ε) := by
-    use (μ s - r) / 2
+    use ENNReal.div (μ s - r) 2
     simp [*, hr.le, ENNReal.add_halves, ENNReal.sub_sub_cancel, tsub_eq_zero_iff_le]
   rcases hs.exists_isOpen_sdiff_lt hμs hε with ⟨U, hsU, hUo, hUt, hμU⟩
   rcases (U \ s).exists_isOpen_lt_of_lt _ hμU with ⟨U', hsU', hU'o, hμU'⟩
@@ -636,13 +636,14 @@ theorem weaklyRegular_of_finite [BorelSpace α] (μ : Measure α) [IsFiniteMeasu
     simp only [measure_compl_le_add_iff, *, hUo.measurableSet, hFc.measurableSet, true_and]
   -- check for disjoint unions
   · intro s hsd hsm H ε ε0
-    have ε0' : ε / 2 ≠ 0 := (ENNReal.half_pos ε0).ne'
+    have ε0' : ENNReal.div ε 2 ≠ 0 := (ENNReal.half_pos ε0).ne'
     rcases ENNReal.exists_pos_sum_of_countable' ε0' ℕ with ⟨δ, δ0, hδε⟩
     choose F hFs U hsU hFc hUo hF hU using fun n => H n (δ n) (δ0 n).ne'
     -- the approximating closed set is constructed by considering finitely many sets `s i`, which
     -- cover all the measure up to `ε/2`, approximating each of these by a closed set `F i`, and
     -- taking the union of these (finitely many) `F i`.
-    have : Tendsto (fun t => (∑ k ∈ t, μ (s k)) + ε / 2) atTop (𝓝 <| μ (⋃ n, s n) + ε / 2) := by
+    have : Tendsto (fun t => (∑ k ∈ t, μ (s k)) + ENNReal.div ε 2)
+        atTop (𝓝 <| μ (⋃ n, s n) + ENNReal.div ε 2) := by
       rw [measure_iUnion hsd hsm]
       exact Tendsto.add ENNReal.summable.hasSum tendsto_const_nhds
     rcases (this.eventually <| lt_mem_nhds <| ENNReal.lt_add_right hfin ε0').exists with ⟨t, ht⟩
@@ -652,11 +653,12 @@ theorem weaklyRegular_of_finite [BorelSpace α] (μ : Measure α) [IsFiniteMeasu
       ⟨⋃ k ∈ t, F k, iUnion_mono fun k => iUnion_subset fun _ => hFs _, ⋃ n, U n, iUnion_mono hsU,
         isClosed_biUnion_finset fun k _ => hFc k, isOpen_iUnion hUo, ht.le.trans ?_, ?_⟩
     · calc
-        (∑ k ∈ t, μ (s k)) + ε / 2 ≤ ((∑ k ∈ t, μ (F k)) + ∑ k ∈ t, δ k) + ε / 2 := by
+        (∑ k ∈ t, μ (s k)) + ENNReal.div ε 2 ≤
+          ((∑ k ∈ t, μ (F k)) + ∑ k ∈ t, δ k) + ENNReal.div ε 2 := by
           rw [← sum_add_distrib]
           gcongr
           apply hF
-        _ ≤ (∑ k ∈ t, μ (F k)) + ε / 2 + ε / 2 := by
+        _ ≤ (∑ k ∈ t, μ (F k)) + ENNReal.div ε 2 + ENNReal.div ε 2 := by
           gcongr
           exact (ENNReal.sum_le_tsum _).trans hδε.le
         _ = μ (⋃ k ∈ t, F k) + ε := by
@@ -947,7 +949,7 @@ protected theorem _root_.MeasurableSet.exists_isOpen_symmDiff_lt [InnerRegularCo
     [IsLocallyFiniteMeasure μ] [R1Space α] [BorelSpace α]
     {s : Set α} (hs : MeasurableSet s) (hμs : μ s ≠ ∞) {ε : ℝ≥0∞} (hε : ε ≠ 0) :
     ∃ U, IsOpen U ∧ μ U < ∞ ∧ μ (U ∆ s) < ε := by
-  have : ε / 2 ≠ 0 := (ENNReal.half_pos hε).ne'
+  have : ENNReal.div ε 2 ≠ 0 := (ENNReal.half_pos hε).ne'
   rcases hs.exists_isCompact_isClosed_sdiff_lt hμs this with ⟨K, hKs, hKco, hKcl, hμK⟩
   rcases hKco.exists_isOpen_lt_add (μ := μ) this with ⟨U, hKU, hUo, hμU⟩
   refine ⟨U, hUo, hμU.trans_le le_top, ?_⟩
@@ -955,7 +957,7 @@ protected theorem _root_.MeasurableSet.exists_isOpen_symmDiff_lt [InnerRegularCo
   gcongr
   · calc
       μ (U \ s) ≤ μ (U \ K) := by gcongr
-      _ < ε / 2 := by
+      _ < ENNReal.div ε 2 := by
         apply measure_sdiff_lt_of_lt_add hKcl.nullMeasurableSet hKU _ hμU
         exact ne_top_of_le_ne_top hμs (by gcongr)
   · exact lt_of_le_of_lt (by gcongr) hμK

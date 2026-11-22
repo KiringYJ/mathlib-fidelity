@@ -48,7 +48,8 @@ include hr
 
 lemma Ico_filter_dvd_eq :
     {x ∈ Ico a b | r ∣ x} =
-      (Ico ⌈a / (r : ℚ)⌉ ⌈b / (r : ℚ)⌉).map ⟨(· * r), mul_left_injective₀ hr.ne'⟩ := by
+      (Ico ⌈(a : ℚ) / (r : ℚ)⌉ ⌈(b : ℚ) / (r : ℚ)⌉).map
+        ⟨(· * r), mul_left_injective₀ hr.ne'⟩ := by
   ext x
   simp only [mem_map, mem_filter, mem_Ico, ceil_le, lt_ceil, div_le_iff₀, lt_div_iff₀,
     dvd_iff_exists_eq_mul_left, cast_pos.2 hr, ← cast_mul, cast_lt, cast_le]
@@ -56,30 +57,35 @@ lemma Ico_filter_dvd_eq :
 
 lemma Ioc_filter_dvd_eq :
     {x ∈ Ioc a b | r ∣ x} =
-      (Ioc ⌊a / (r : ℚ)⌋ ⌊b / (r : ℚ)⌋).map ⟨(· * r), mul_left_injective₀ hr.ne'⟩ := by
+      (Ioc ⌊(a : ℚ) / (r : ℚ)⌋ ⌊(b : ℚ) / (r : ℚ)⌋).map
+        ⟨(· * r), mul_left_injective₀ hr.ne'⟩ := by
   ext x
   simp only [mem_map, mem_filter, mem_Ioc, floor_lt, le_floor, div_lt_iff₀, le_div_iff₀,
     dvd_iff_exists_eq_mul_left, cast_pos.2 hr, ← cast_mul, cast_lt, cast_le]
   aesop
 
 /-- There are `⌈b / r⌉ - ⌈a / r⌉` multiples of `r` in `[a, b)`, if `a ≤ b`. -/
-theorem Ico_filter_dvd_card : #{x ∈ Ico a b | r ∣ x} = max (⌈b / (r : ℚ)⌉ - ⌈a / (r : ℚ)⌉) 0 := by
+theorem Ico_filter_dvd_card :
+    #{x ∈ Ico a b | r ∣ x} = max (⌈(b : ℚ) / (r : ℚ)⌉ - ⌈(a : ℚ) / (r : ℚ)⌉) 0 := by
   rw [Ico_filter_dvd_eq _ _ hr, card_map, card_Ico, toNat_eq_max]
 
 /-- There are `⌊b / r⌋ - ⌊a / r⌋` multiples of `r` in `(a, b]`, if `a ≤ b`. -/
-theorem Ioc_filter_dvd_card : #{x ∈ Ioc a b | r ∣ x} = max (⌊b / (r : ℚ)⌋ - ⌊a / (r : ℚ)⌋) 0 := by
+theorem Ioc_filter_dvd_card :
+    #{x ∈ Ioc a b | r ∣ x} = max (⌊(b : ℚ) / (r : ℚ)⌋ - ⌊(a : ℚ) / (r : ℚ)⌋) 0 := by
   rw [Ioc_filter_dvd_eq _ _ hr, card_map, card_Ioc, toNat_eq_max]
 
 /-- There are `⌈(b - v) / r⌉ - ⌈(a - v) / r⌉` numbers congruent to `v` mod `r` in `[a, b)`,
 if `a ≤ b`. -/
 theorem Ico_filter_modEq_card (v : ℤ) :
-    #{x ∈ Ico a b | x ≡ v [ZMOD r]} = max (⌈(b - v) / (r : ℚ)⌉ - ⌈(a - v) / (r : ℚ)⌉) 0 := by
+    #{x ∈ Ico a b | x ≡ v [ZMOD r]} =
+      max (⌈((b : ℚ) - v) / (r : ℚ)⌉ - ⌈((a : ℚ) - v) / (r : ℚ)⌉) 0 := by
   simp [Ico_filter_modEq_eq, Ico_filter_dvd_eq, hr]
 
 /-- There are `⌊(b - v) / r⌋ - ⌊(a - v) / r⌋` numbers congruent to `v` mod `r` in `(a, b]`,
 if `a ≤ b`. -/
 theorem Ioc_filter_modEq_card (v : ℤ) :
-    #{x ∈ Ioc a b | x ≡ v [ZMOD r]} = max (⌊(b - v) / (r : ℚ)⌋ - ⌊(a - v) / (r : ℚ)⌋) 0 := by
+    #{x ∈ Ioc a b | x ≡ v [ZMOD r]} =
+      max (⌊((b : ℚ) - v) / (r : ℚ)⌋ - ⌊((a : ℚ) - v) / (r : ℚ)⌋) 0 := by
   simp [Ioc_filter_modEq_eq, Ioc_filter_dvd_eq, hr]
 
 end Int
@@ -112,25 +118,27 @@ include hr
 /-- There are `⌈(b - v) / r⌉ - ⌈(a - v) / r⌉` numbers congruent to `v` mod `r` in `[a, b)`,
 if `a ≤ b`. `Nat` version of `Int.Ico_filter_modEq_card`. -/
 theorem Ico_filter_modEq_card (v : ℕ) :
-    #{x ∈ Ico a b | x ≡ v [MOD r]} = max (⌈(b - v) / (r : ℚ)⌉ - ⌈(a - v) / (r : ℚ)⌉) 0 := by
+    #{x ∈ Ico a b | x ≡ v [MOD r]} =
+      max (⌈((b : ℚ) - v) / (r : ℚ)⌉ - ⌈((a : ℚ) - v) / (r : ℚ)⌉) 0 := by
   simp_rw [← Ico_filter_modEq_cast _ _ ▸ card_map _,
     Int.Ico_filter_modEq_card _ _ (cast_lt.mpr hr), Int.cast_natCast]
 
 /-- There are `⌊(b - v) / r⌋ - ⌊(a - v) / r⌋` numbers congruent to `v` mod `r` in `(a, b]`,
 if `a ≤ b`. `Nat` version of `Int.Ioc_filter_modEq_card`. -/
 theorem Ioc_filter_modEq_card (v : ℕ) :
-    #{x ∈ Ioc a b | x ≡ v [MOD r]} = max (⌊(b - v) / (r : ℚ)⌋ - ⌊(a - v) / (r : ℚ)⌋) 0 := by
+    #{x ∈ Ioc a b | x ≡ v [MOD r]} =
+      max (⌊((b : ℚ) - v) / (r : ℚ)⌋ - ⌊((a : ℚ) - v) / (r : ℚ)⌋) 0 := by
   simp_rw [← Ioc_filter_modEq_cast _ _ ▸ card_map _,
     Int.Ioc_filter_modEq_card _ _ (cast_lt.mpr hr), Int.cast_natCast]
 
 /-- There are `⌈(b - v % r) / r⌉` numbers in `[0, b)` congruent to `v` mod `r`. -/
 theorem count_modEq_card_eq_ceil (v : ℕ) :
-    b.count (· ≡ v [MOD r]) = ⌈(b - (v % r : ℕ)) / (r : ℚ)⌉ := by
+    b.count (· ≡ v [MOD r]) = ⌈((b : ℚ) - ((v % r : ℕ) : ℚ)) / (r : ℚ)⌉ := by
   have hr' : 0 < (r : ℚ) := by positivity
   rw [count_eq_card_filter_range, ← Ico_zero_eq_range, Ico_filter_modEq_card _ _ hr,
     max_eq_left (sub_nonneg.mpr <| by gcongr; positivity)]
   conv_lhs =>
-    rw [← div_add_mod v r, cast_add, cast_mul, add_comm]
+    rw [← Nat.euclideanDiv_mul_add_mod v r hr.ne', cast_add, cast_mul, add_comm]
     tactic => simp_rw [← sub_sub, sub_div (_ - _), mul_div_cancel_left₀ _, Int.ceil_sub_natCast]
     rw [sub_sub_sub_cancel_right, cast_zero, zero_sub]
   rw [sub_eq_self, ceil_eq_zero_iff, Set.mem_Ioc, div_le_iff₀ hr', lt_div_iff₀ hr', neg_one_mul,
@@ -140,11 +148,12 @@ theorem count_modEq_card_eq_ceil (v : ℕ) :
 /-- There are `b / r + [v % r < b % r]` numbers in `[0, b)` congruent to `v` mod `r`,
 where `[·]` is the Iverson bracket. -/
 theorem count_modEq_card (v : ℕ) :
-    b.count (· ≡ v [MOD r]) = b / r + if v % r < b % r then 1 else 0 := by
+    b.count (· ≡ v [MOD r]) = b.euclideanDiv r hr.ne' + if v % r < b % r then 1 else 0 := by
   have hr' : 0 < (r : ℚ) := by positivity
   rw [← ofNat_inj, count_modEq_card_eq_ceil _ hr, cast_add]
-  conv_lhs => rw [← div_add_mod b r, cast_add, cast_mul, ← add_sub, _root_.add_div,
-    mul_div_cancel_left₀ _, add_comm, Int.ceil_add_natCast, add_comm]
+  conv_lhs =>
+    rw [← Nat.euclideanDiv_mul_add_mod b r hr.ne', cast_add, cast_mul, ← add_sub, _root_.add_div,
+      mul_div_cancel_left₀ _, add_comm, Int.ceil_add_natCast, add_comm]
   rw [add_right_inj]
   split_ifs with h
   · rw [← cast_sub h.le, Int.ceil_eq_iff, div_le_iff₀ hr', lt_div_iff₀ hr', cast_one, Int.cast_one,

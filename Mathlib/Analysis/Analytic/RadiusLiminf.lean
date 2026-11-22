@@ -36,10 +36,10 @@ $\liminf_{n\to\infty} \frac{1}{\sqrt[n]{‖p n‖}}$, indexed by positive degree
 is taken in `ℝ≥0∞`, so a zero coefficient contributes `∞`. -/
 theorem radius_eq_liminf :
     p.radius = liminf
-      (fun n : {n : ℕ // n ≠ 0} ↦ ((‖p (n : ℕ)‖₊ : ℝ≥0∞) ^ (1 / (n : ℕ) : ℝ))⁻¹)
+      (fun n : {n : ℕ // n ≠ 0} ↦ ((‖p (n : ℕ)‖₊ : ℝ≥0∞) ^ (1 / ((n : ℕ) : ℝ)))⁻¹)
       (comap Subtype.val atTop) := by
   have hroot (r : ℝ≥0) (n : {n : ℕ // n ≠ 0}) :
-      ((r : ℝ≥0∞) ≤ ((‖p (n : ℕ)‖₊ : ℝ≥0∞) ^ (1 / (n : ℕ) : ℝ))⁻¹ ↔
+      ((r : ℝ≥0∞) ≤ ((‖p (n : ℕ)‖₊ : ℝ≥0∞) ^ (1 / ((n : ℕ) : ℝ)))⁻¹ ↔
         ‖p (n : ℕ)‖₊ * r ^ (n : ℕ) ≤ 1) := by
     have hn : 0 < ((n : ℕ) : ℝ) := Nat.cast_pos.mpr (Nat.pos_iff_ne_zero.mpr n.2)
     conv_lhs =>
@@ -56,7 +56,7 @@ theorem radius_eq_liminf :
     apply le_liminf_of_le
     · infer_param
     · change ∀ᶠ n : {n : ℕ // n ≠ 0} in comap Subtype.val atTop,
-        (r : ℝ≥0∞) ≤ ((‖p (n : ℕ)‖₊ : ℝ≥0∞) ^ (1 / (n : ℕ) : ℝ))⁻¹
+        (r : ℝ≥0∞) ≤ ((‖p (n : ℕ)‖₊ : ℝ≥0∞) ^ (1 / ((n : ℕ) : ℝ)))⁻¹
       filter_upwards [tendsto_comap.eventually H] with n hn
       apply (hroot r n).2 (NNReal.coe_le_coe.mp ?_)
       push_cast
@@ -70,7 +70,7 @@ theorem radius_eq_liminf :
 is equal to $\limsup_{n\to\infty} \sqrt[n]{‖p n‖}$. -/
 theorem radius_inv_eq_limsup :
     p.radius⁻¹ = limsup
-      (fun n : {n : ℕ // n ≠ 0} ↦ (‖p (n : ℕ)‖₊ : ℝ≥0∞) ^ (1 / (n : ℕ) : ℝ))
+      (fun n : {n : ℕ // n ≠ 0} ↦ (‖p (n : ℕ)‖₊ : ℝ≥0∞) ^ (1 / ((n : ℕ) : ℝ)))
       (comap Subtype.val atTop) := by
   simpa [ENNReal.inv_liminf] using congr($(p.radius_eq_liminf)⁻¹)
 

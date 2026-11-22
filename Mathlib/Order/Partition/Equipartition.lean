@@ -40,7 +40,9 @@ def IsEquipartition : Prop :=
 
 theorem isEquipartition_iff_card_parts_eq_average :
     P.IsEquipartition ↔
-      ∀ a : Finset α, a ∈ P.parts → #a = #s / #P.parts ∨ #a = #s / #P.parts + 1 := by
+      ∀ (a : Finset α) (ht : a ∈ P.parts),
+        #a = Nat.euclideanDiv #s #P.parts (card_ne_zero_of_mem ht) ∨
+          #a = Nat.euclideanDiv #s #P.parts (card_ne_zero_of_mem ht) + 1 := by
   simp_rw [IsEquipartition, Finset.equitableOn_iff, P.sum_card_parts]
 
 variable {P}
@@ -53,73 +55,86 @@ theorem _root_.Set.Subsingleton.isEquipartition (h : (P.parts : Set (Finset α))
   Set.Subsingleton.equitableOn h _
 
 theorem IsEquipartition.card_parts_eq_average (hP : P.IsEquipartition) (ht : t ∈ P.parts) :
-    #t = #s / #P.parts ∨ #t = #s / #P.parts + 1 :=
+    #t = Nat.euclideanDiv #s #P.parts (card_ne_zero_of_mem ht) ∨
+      #t = Nat.euclideanDiv #s #P.parts (card_ne_zero_of_mem ht) + 1 :=
   P.isEquipartition_iff_card_parts_eq_average.1 hP _ ht
 
 theorem IsEquipartition.card_part_eq_average_iff (hP : P.IsEquipartition) (ht : t ∈ P.parts) :
-    #t = #s / #P.parts ↔ #t ≠ #s / #P.parts + 1 := by
+    #t = Nat.euclideanDiv #s #P.parts (card_ne_zero_of_mem ht) ↔
+      #t ≠ Nat.euclideanDiv #s #P.parts (card_ne_zero_of_mem ht) + 1 := by
   have a := hP.card_parts_eq_average ht
   lia
 
 theorem IsEquipartition.average_le_card_part (hP : P.IsEquipartition) (ht : t ∈ P.parts) :
-    #s / #P.parts ≤ #t := by
+    Nat.euclideanDiv #s #P.parts (card_ne_zero_of_mem ht) ≤ #t := by
   rw [← P.sum_card_parts]
   exact Finset.EquitableOn.le hP ht
 
 theorem IsEquipartition.card_part_le_average_add_one (hP : P.IsEquipartition) (ht : t ∈ P.parts) :
-    #t ≤ #s / #P.parts + 1 := by
+    #t ≤ Nat.euclideanDiv #s #P.parts (card_ne_zero_of_mem ht) + 1 := by
   rw [← P.sum_card_parts]
   exact Finset.EquitableOn.le_add_one hP ht
 
-theorem IsEquipartition.filter_ne_average_add_one_eq_average (hP : P.IsEquipartition) :
-    {p ∈ P.parts | ¬#p = #s / #P.parts + 1} = {p ∈ P.parts | #p = #s / #P.parts} := by
+theorem IsEquipartition.filter_ne_average_add_one_eq_average (hP : P.IsEquipartition)
+    (hk : #P.parts ≠ 0) :
+    {p ∈ P.parts | ¬#p = Nat.euclideanDiv #s #P.parts hk + 1} =
+      {p ∈ P.parts | #p = Nat.euclideanDiv #s #P.parts hk} := by
   ext p
   simp only [mem_filter, and_congr_right_iff]
   exact fun hp ↦ (hP.card_part_eq_average_iff hp).symm
 
 /-- An equipartition of a finset with `n` elements into `k` parts has
-`n % k` parts of size `n / k + 1`. -/
-theorem IsEquipartition.card_large_parts_eq_mod (hP : P.IsEquipartition) :
-    #{p ∈ P.parts | #p = #s / #P.parts + 1} = #s % #P.parts := by
+`n % k` parts of size `Nat.euclideanDiv n k + 1`. -/
+theorem IsEquipartition.card_large_parts_eq_mod (hP : P.IsEquipartition) (hk : #P.parts ≠ 0) :
+    #{p ∈ P.parts | #p = Nat.euclideanDiv #s #P.parts hk + 1} = #s % #P.parts := by
   have z := P.sum_card_parts
-  rw [← sum_filter_add_sum_filter_not (s := P.parts) (p := fun x ↦ #x = #s / #P.parts + 1),
-    hP.filter_ne_average_add_one_eq_average, sum_const_nat (m := #s / #P.parts + 1) (by simp),
-    sum_const_nat (m := #s / #P.parts) (by simp), ← hP.filter_ne_average_add_one_eq_average,
+  rw [← sum_filter_add_sum_filter_not (s := P.parts)
+      (p := fun x ↦ #x = Nat.euclideanDiv #s #P.parts hk + 1),
+    hP.filter_ne_average_add_one_eq_average hk,
+    sum_const_nat (m := Nat.euclideanDiv #s #P.parts hk + 1) (by simp),
+    sum_const_nat (m := Nat.euclideanDiv #s #P.parts hk) (by simp),
+    ← hP.filter_ne_average_add_one_eq_average hk,
     mul_add, add_comm, ← add_assoc, ← add_mul, mul_one, add_comm #_,
     card_filter_add_card_filter_not, add_comm] at z
-  rw [← add_left_inj, Nat.mod_add_div, z]
+  exact Nat.add_right_cancel <|
+    z.trans ((Nat.euclideanDiv_mul_add_mod _ _ hk).symm.trans (Nat.add_comm _ _))
 
 /-- An equipartition of a finset with `n` elements into `k` parts has
-`n - n % k` parts of size `n / k`. -/
-theorem IsEquipartition.card_small_parts_eq_mod (hP : P.IsEquipartition) :
-    #{p ∈ P.parts | #p = #s / #P.parts} = #P.parts - #s % #P.parts := by
+`k - n % k` parts of size `Nat.euclideanDiv n k`. -/
+theorem IsEquipartition.card_small_parts_eq_mod (hP : P.IsEquipartition) (hk : #P.parts ≠ 0) :
+    #{p ∈ P.parts | #p = Nat.euclideanDiv #s #P.parts hk} = #P.parts - #s % #P.parts := by
   conv_rhs =>
     arg 1
-    rw [← card_filter_add_card_filter_not (p := fun p ↦ #p = #s / #P.parts + 1)]
-  rw [hP.card_large_parts_eq_mod, add_tsub_cancel_left, hP.filter_ne_average_add_one_eq_average]
+    rw [← card_filter_add_card_filter_not (p := fun p ↦ #p = Nat.euclideanDiv #s #P.parts hk + 1)]
+  rw [hP.card_large_parts_eq_mod hk, add_tsub_cancel_left,
+    hP.filter_ne_average_add_one_eq_average hk]
 
 /-- There exists an enumeration of an equipartition's parts where
 larger parts map to smaller numbers and vice versa. -/
 theorem IsEquipartition.exists_partsEquiv (hP : P.IsEquipartition) :
-    ∃ f : P.parts ≃ Fin #P.parts, ∀ t, #t.1 = #s / #P.parts + 1 ↔ f t < #s % #P.parts := by
-  let el := {p ∈ P.parts | #p = #s / #P.parts + 1}.equivFin
-  let es := {p ∈ P.parts | #p = #s / #P.parts}.equivFin
-  simp_rw [mem_filter, hP.card_large_parts_eq_mod] at el
-  simp_rw [mem_filter, hP.card_small_parts_eq_mod] at es
+    ∃ f : P.parts ≃ Fin #P.parts, ∀ t,
+      #t.1 = Nat.euclideanDiv #s #P.parts (card_ne_zero_of_mem t.2) + 1 ↔ f t < #s % #P.parts := by
+  by_cases hk : #P.parts = 0
+  · exact ⟨P.parts.equivFin, fun t ↦ (card_ne_zero_of_mem t.2 hk).elim⟩
+  let el := {p ∈ P.parts | #p = Nat.euclideanDiv #s #P.parts hk + 1}.equivFin
+  let es := {p ∈ P.parts | #p = Nat.euclideanDiv #s #P.parts hk}.equivFin
+  simp_rw [mem_filter, hP.card_large_parts_eq_mod hk] at el
+  simp_rw [mem_filter, hP.card_small_parts_eq_mod hk] at es
   let sneg :
-      {x // x ∈ P.parts ∧ ¬#x = #s / #P.parts + 1} ≃ {x // x ∈ P.parts ∧ #x = #s / #P.parts} := by
+      {x // x ∈ P.parts ∧ ¬#x = Nat.euclideanDiv #s #P.parts hk + 1} ≃
+        {x // x ∈ P.parts ∧ #x = Nat.euclideanDiv #s #P.parts hk} := by
     apply (Equiv.refl _).subtypeEquiv
     simp only [Equiv.refl_apply, and_congr_right_iff]
     exact fun _ ha ↦ by rw [hP.card_part_eq_average_iff ha, ne_eq]
-  replace el : { x : P.parts // #x.1 = #s / #P.parts + 1 } ≃
+  replace el : { x : P.parts // #x.1 = Nat.euclideanDiv #s #P.parts hk + 1 } ≃
       Fin (#s % #P.parts) := (Equiv.Set.sep ..).symm.trans el
-  replace es : { x : P.parts // ¬#x.1 = #s / #P.parts + 1 } ≃
+  replace es : { x : P.parts // ¬#x.1 = Nat.euclideanDiv #s #P.parts hk + 1 } ≃
       Fin (#P.parts - #s % #P.parts) := (Equiv.Set.sep ..).symm.trans (sneg.trans es)
   let f := (Equiv.sumCompl _).symm.trans ((el.sumCongr es).trans finSumFinEquiv)
   use f.trans (finCongr (Nat.add_sub_of_le P.card_mod_card_parts_le))
   intro ⟨p, _⟩
   simp_rw [f, Equiv.trans_apply, Equiv.sumCongr_apply, finCongr_apply, Fin.val_cast]
-  by_cases hc : #p = #s / #P.parts + 1 <;> simp [hc]
+  by_cases hc : #p = Nat.euclideanDiv #s #P.parts hk + 1 <;> simp [hc]
 
 /-- Given a finset equipartitioned into `k` parts, its elements can be enumerated such that
 elements in the same part have congruent indices modulo `k`. -/
@@ -130,13 +145,14 @@ theorem IsEquipartition.exists_partPreservingEquiv (hP : P.IsEquipartition) : �
   let z := fun a ↦ #P.parts * (f a).2 + g (f a).1
   have gl := fun a ↦ (g (f a).1).2
   have less : ∀ a, z a < #s := fun a ↦ by
+    have hk := card_ne_zero_of_mem (f a).1.2
     rcases hP.card_parts_eq_average (f a).1.2 with (c | c)
     · calc
         _ < #P.parts * ((f a).2 + 1) := by simp only [z, mul_add_one]; gcongr; exact gl a
-        _ ≤ #P.parts * (#s / #P.parts) := by gcongr; exact c ▸ (f a).2.2
-        _ ≤ #P.parts * (#s / #P.parts) + #s % #P.parts := Nat.le_add_right ..
-        _ = _ := Nat.div_add_mod ..
-    · rw [← Nat.div_add_mod #s #P.parts]
+        _ ≤ #P.parts * Nat.euclideanDiv #s #P.parts hk := by gcongr; exact c ▸ (f a).2.2
+        _ ≤ #P.parts * Nat.euclideanDiv #s #P.parts hk + #s % #P.parts := Nat.le_add_right ..
+        _ = _ := Nat.euclideanDiv_mul_add_mod _ _ hk
+    · rw [← Nat.euclideanDiv_mul_add_mod #s #P.parts hk]
       exact add_lt_add_of_le_of_lt (mul_le_mul_right (by lia) _) ((hg (f a).1).mp c)
   let z' : s → Fin #s := fun a ↦ ⟨z a, less a⟩
   have bij : z'.Bijective := by

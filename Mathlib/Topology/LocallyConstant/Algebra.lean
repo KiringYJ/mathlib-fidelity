@@ -106,16 +106,13 @@ theorem charFn_inj [Nontrivial Y] (hU : IsClopen U) (hV : IsClopen V)
 
 end CharFn
 
-@[to_additive]
-instance [Div Y] : Div (LocallyConstant X Y) where
-  div f g := ⟨f / g, f.isLocallyConstant.div g.isLocallyConstant⟩
+instance [Sub Y] : Sub (LocallyConstant X Y) where
+  sub f g := ⟨f - g, f.isLocallyConstant.sub g.isLocallyConstant⟩
 
-@[to_additive]
-theorem coe_div [Div Y] (f g : LocallyConstant X Y) : ⇑(f / g) = f / g :=
+theorem coe_sub [Sub Y] (f g : LocallyConstant X Y) : ⇑(f - g) = f - g :=
   rfl
 
-@[to_additive]
-theorem div_apply [Div Y] (f g : LocallyConstant X Y) (x : X) : (f / g) x = f x / g x :=
+theorem sub_apply [Sub Y] (f g : LocallyConstant X Y) (x : X) : (f - g) x = f x - g x :=
   rfl
 
 @[to_additive]
@@ -167,14 +164,22 @@ instance [CommMonoid Y] : CommMonoid (LocallyConstant X Y) :=
     fun _ _ => rfl
 
 @[to_additive]
-instance [Group Y] : Group (LocallyConstant X Y) :=
-  Function.Injective.group DFunLike.coe DFunLike.coe_injective rfl (fun _ _ => rfl)
-    (fun _ => rfl) (fun _ _ => rfl) (fun _ _ => rfl) (fun _ _ => rfl)
+instance [Group Y] : Group (LocallyConstant X Y) := by
+  let _ : Div (LocallyConstant X Y) :=
+    ⟨fun f g => ⟨fun x => f x / g x, f.isLocallyConstant.comp₂ g.isLocallyConstant (· / ·)⟩⟩
+  exact Function.Injective.group DFunLike.coe DFunLike.coe_injective rfl (fun _ _ => rfl)
+    (fun _ => rfl) (fun f g => (Pi.div_def (⇑f) (⇑g)).symm) (fun _ _ => rfl) (fun _ _ => rfl)
+
+theorem coe_div [Group Y] (f g : LocallyConstant X Y) : ⇑(f / g) = (f : X → Y) / (g : X → Y) :=
+  (Pi.div_def _ _).symm
+
+theorem div_apply [Group Y] (f g : LocallyConstant X Y) (x : X) : (f / g) x = f x / g x :=
+  rfl
 
 @[to_additive]
 instance [CommGroup Y] : CommGroup (LocallyConstant X Y) :=
   Function.Injective.commGroup DFunLike.coe DFunLike.coe_injective rfl (fun _ _ => rfl)
-    (fun _ => rfl) (fun _ _ => rfl) (fun _ _ => rfl) (fun _ _ => rfl)
+    (fun _ => rfl) (fun f g => (Pi.div_def (⇑f) (⇑g)).symm) (fun _ _ => rfl) (fun _ _ => rfl)
 
 instance [Distrib Y] : Distrib (LocallyConstant X Y) :=
   Function.Injective.distrib DFunLike.coe DFunLike.coe_injective (fun _ _ => rfl) fun _ _ => rfl

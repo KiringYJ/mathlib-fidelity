@@ -7,6 +7,7 @@ module
 
 public import Mathlib.Data.Int.Range
 public import Mathlib.Data.ZMod.Basic
+public import Mathlib.Lean.Elab.NativeDivision
 public import Mathlib.NumberTheory.MulChar.Basic
 
 /-!
@@ -74,15 +75,19 @@ theorem χ₄_nat_eq_if_mod_four (n : ℕ) :
   mod_cast χ₄_int_eq_if_mod_four n
 
 /-- Alternative description of `χ₄ n` for odd `n : ℕ` in terms of powers of `-1` -/
-theorem χ₄_eq_neg_one_pow {n : ℕ} (hn : n % 2 = 1) : χ₄ n = (-1) ^ (n / 2) := by
-  rw [χ₄_nat_eq_if_mod_four]
+theorem χ₄_eq_neg_one_pow {n : ℕ} (hn : n % 2 = 1) : χ₄ n = (-1) ^ n.euclideanDiv 2 := by
+  rw [Nat.euclideanDiv_eq_core, χ₄_nat_eq_if_mod_four]
   simp only [hn, Nat.one_ne_zero, ite_false]
   nth_rewrite 3 [← Nat.div_add_mod n 4]
   nth_rewrite 3 [show 4 = 2 * 2 by lia]
   rw [mul_assoc, add_comm, Nat.add_mul_div_left _ _ zero_lt_two, pow_add, pow_mul,
     neg_one_sq, one_pow, mul_one]
-  have help : ∀ m : ℕ, m < 4 → m % 2 = 1 → ite (m = 1) (1 : ℤ) (-1) = (-1) ^ (m / 2) := by decide
-  exact help _ (Nat.mod_lt n (by lia)) <| (Nat.mod_mod_of_dvd n (by lia : 2 ∣ 4)).trans hn
+  have help : ∀ m : ℕ, m < 4 → m % 2 = 1 →
+      ite (m = 1) (1 : ℤ) (-1) = (-1) ^ m.euclideanDiv 2 := by
+    simp only [Nat.euclideanDiv_eq_core]
+    decide
+  simpa only [Nat.euclideanDiv_eq_core] using
+    help _ (Nat.mod_lt n (by lia)) ((Nat.mod_mod_of_dvd n (by lia : 2 ∣ 4)).trans hn)
 
 /-- If `n % 4 = 1`, then `χ₄ n = 1`. -/
 theorem χ₄_nat_one_mod_four {n : ℕ} (hn : n % 4 = 1) : χ₄ n = 1 := by
@@ -105,11 +110,13 @@ theorem χ₄_int_three_mod_four {n : ℤ} (hn : n % 4 = 3) : χ₄ n = -1 := by
   rfl
 
 /-- If `n % 4 = 1`, then `(-1)^(n/2) = 1`. -/
-theorem neg_one_pow_div_two_of_one_mod_four {n : ℕ} (hn : n % 4 = 1) : (-1 : ℤ) ^ (n / 2) = 1 :=
+theorem neg_one_pow_div_two_of_one_mod_four {n : ℕ} (hn : n % 4 = 1) :
+    (-1 : ℤ) ^ n.euclideanDiv 2 = 1 :=
   χ₄_eq_neg_one_pow (Nat.odd_of_mod_four_eq_one hn) ▸ χ₄_nat_one_mod_four hn
 
 /-- If `n % 4 = 3`, then `(-1)^(n/2) = -1`. -/
-theorem neg_one_pow_div_two_of_three_mod_four {n : ℕ} (hn : n % 4 = 3) : (-1 : ℤ) ^ (n / 2) = -1 :=
+theorem neg_one_pow_div_two_of_three_mod_four {n : ℕ} (hn : n % 4 = 3) :
+    (-1 : ℤ) ^ n.euclideanDiv 2 = -1 :=
   χ₄_eq_neg_one_pow (Nat.odd_of_mod_four_eq_three hn) ▸ χ₄_nat_three_mod_four hn
 
 /-- Define the first primitive quadratic character on `ZMod 8`, `χ₈`.

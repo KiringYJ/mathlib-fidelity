@@ -161,14 +161,15 @@ private theorem round_intCast_div_intCast (a n : ℤ) (hn : 0 < n) :
     round (Checked.div (a : ℚ) (n : ℚ) (Int.cast_ne_zero.mpr hn.ne').isUnit) =
       EuclideanDomain.quotient (2 * a + n) (2 * n) (mul_pos (by decide) hn).ne' := by
   have h₂n : 0 < 2 * n := mul_pos (by decide) hn
-  have hr : (a : ℚ) / n + 1 / 2 =
-      Checked.div ((2 * a + n : ℤ) : ℚ) ((2 * n : ℤ) : ℚ)
-        (Int.cast_ne_zero.mpr h₂n.ne').isUnit := by
+  have hn_unit : IsUnit (n : ℚ) := (Int.cast_ne_zero.mpr hn.ne').isUnit
+  have h₂n_unit : IsUnit ((2 * n : ℤ) : ℚ) := (Int.cast_ne_zero.mpr h₂n.ne').isUnit
+  have hr : (a : ℚ) / (n : ℚ) + 1 / 2 =
+      ((2 * a + n : ℤ) : ℚ) / ((2 * n : ℤ) : ℚ) := by
     rw [div_add_div]
     push_cast
     simp only [mul_one, mul_comm (a : ℚ) 2, mul_comm (n : ℚ) 2]
-  change _ = (2 * a + n) / (2 * n)
-  rw [round_eq, hr, Int.floor_div_cast_of_nonneg h₂n.le, Int.floor_intCast]
+  change _ = Int.euclideanDiv (2 * a + n) (2 * n) h₂n.ne'
+  rw [round_eq, hr, Int.floor_div_cast_of_nonneg (hnUnit := h₂n_unit) h₂n.le, Int.floor_intCast]
 
 /-- The Euclidean quotient of Gaussian integers rounds both coordinates of the complex quotient
 `x * star y / norm y` to the nearest integer. -/
@@ -187,9 +188,9 @@ theorem div_def (x y : ℤ[i]) (hy : y ≠ 0) :
 
 /-- The coordinates of the complex quotient of two Gaussian integers. -/
 private theorem toComplex_div_re_im {x y : ℤ[i]} (hy : (y : ℂ) ≠ 0) (hN : (norm y : ℝ) ≠ 0) :
-    (x / y : ℂ).re = ((x * star y).re : ℝ) / norm y ∧
-      (x / y : ℂ).im = ((x * star y).im : ℝ) / norm y := by
-  have hw : (x / y : ℂ) * y = x := div_mul_cancel₀ _
+    ((x : ℂ) / (y : ℂ)).re = ((x * star y).re : ℝ) / (norm y : ℝ) ∧
+      ((x : ℂ) / (y : ℂ)).im = ((x * star y).im : ℝ) / (norm y : ℝ) := by
+  have hw : ((x : ℂ) / (y : ℂ)) * (y : ℂ) = (x : ℂ) := div_mul_cancel₀ _
   have h1 := congrArg Complex.re hw
   have h2 := congrArg Complex.im hw
   simp only [Complex.mul_re, Complex.mul_im] at h1 h2
@@ -230,7 +231,7 @@ theorem normSq_div_sub_div_lt_one (x y : ℤ[i]) (hy : y ≠ 0) :
   have hy' : (y : ℂ) ≠ 0 := mt toComplex_eq_zero.mp hy
   have h2 : |(1 / 2 : ℝ)| = 1 / 2 := abs_of_nonneg (by norm_num)
   calc
-    Complex.normSq ((x / y : ℂ) - (quotient x y hy : ℂ))
+    Complex.normSq ((x : ℂ) / (y : ℂ) - (quotient x y hy : ℂ))
     _ ≤ Complex.normSq ⟨1 / 2, 1 / 2⟩ := by
       refine normSq_le_normSq_of_re_le_of_im_le ?_ ?_
       · rw [Complex.sub_re, toComplex_re_div x y hy]
@@ -251,7 +252,8 @@ theorem norm_mod_lt (x : ℤ[i]) {y : ℤ[i]} (hy : y ≠ 0) : (x % y).norm < y.
     calc
       ↑(Zsqrtd.norm (x % y)) = Complex.normSq (x - y * quotient x y hy : ℂ) := by
         simp [mod_def x y hy]
-      _ = Complex.normSq (y : ℂ) * Complex.normSq (x / y - quotient x y hy : ℂ) := by
+      _ = Complex.normSq (y : ℂ) *
+          Complex.normSq ((x : ℂ) / (y : ℂ) - (quotient x y hy : ℂ)) := by
         rw [← normSq_mul, mul_sub, mul_div_cancel₀ _]
       _ < Complex.normSq (y : ℂ) * 1 :=
         (mul_lt_mul_of_pos_left (normSq_div_sub_div_lt_one _ _ hy) (normSq_pos.2 this))

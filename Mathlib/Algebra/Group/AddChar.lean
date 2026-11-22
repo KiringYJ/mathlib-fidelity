@@ -387,11 +387,18 @@ lemma map_neg_eq_inv (ψ : AddChar A M) (a : A) : ψ (-a) = (ψ a)⁻¹ := by
   apply eq_inv_of_mul_eq_one_left
   simp only [← map_add_eq_mul, neg_add_cancel, map_zero_eq_one]
 
+lemma map_sub_eq_mul_inv (ψ : AddChar A M) (a b : A) : ψ (a - b) = ψ a * (ψ b)⁻¹ := by
+  rw [sub_eq_add_neg, map_add_eq_mul, map_neg_eq_inv]
+
 /-- An additive character maps integer scalar multiples to integer powers. -/
 lemma map_zsmul_eq_zpow (ψ : AddChar A M) (n : ℤ) (a : A) : ψ (n • a) = (ψ a) ^ n :=
   ψ.toMonoidHom.map_zpow a n
 
 end fromAddGrouptoDivisionMonoid
+
+lemma map_sub_eq_div {A M : Type*} [AddGroup A] [Group M] (ψ : AddChar A M) (a b : A) :
+    ψ (a - b) = ψ a / ψ b := by
+  rw [div_eq_mul_inv, map_sub_eq_mul_inv]
 
 section fromAddCommGrouptoDivisionCommMonoid
 variable {A M : Type*} [AddCommGroup A] [DivisionCommMonoid M]
@@ -399,19 +406,16 @@ variable {A M : Type*} [AddCommGroup A] [DivisionCommMonoid M]
 lemma inv_apply' (ψ : AddChar A M) (a : A) : ψ⁻¹ a = (ψ a)⁻¹ := by rw [inv_apply, map_neg_eq_inv]
 lemma neg_apply' (ψ : AddChar A M) (a : A) : (-ψ) a = (ψ a)⁻¹ := map_neg_eq_inv _ _
 
-lemma div_apply' (ψ χ : AddChar A M) (a : A) : (ψ / χ) a = ψ a / χ a := by
-  rw [div_apply, map_neg_eq_inv, div_eq_mul_inv]
+lemma div_apply' (ψ χ : AddChar A M) (a : A) : (ψ / χ) a = ψ a * (χ a)⁻¹ := by
+  rw [div_apply, map_neg_eq_inv]
 
-lemma sub_apply' (ψ χ : AddChar A M) (a : A) : (ψ - χ) a = ψ a / χ a := by
-  rw [sub_apply, map_neg_eq_inv, div_eq_mul_inv]
+lemma sub_apply' (ψ χ : AddChar A M) (a : A) : (ψ - χ) a = ψ a * (χ a)⁻¹ := by
+  rw [sub_apply, map_neg_eq_inv]
 
 @[simp] lemma zsmul_apply (n : ℤ) (ψ : AddChar A M) (a : A) : (n • ψ) a = ψ a ^ n := by
   cases n <;> simp [-neg_apply, neg_apply']
 
 @[simp] lemma zpow_apply (ψ : AddChar A M) (n : ℤ) (a : A) : (ψ ^ n) a = ψ a ^ n := zsmul_apply ..
-
-lemma map_sub_eq_div (ψ : AddChar A M) (a b : A) : ψ (a - b) = ψ a / ψ b :=
-  ψ.toMonoidHom.map_div _ _
 
 lemma injective_iff {ψ : AddChar A M} : Injective ψ ↔ ∀ ⦃x⦄, ψ x = 1 → x = 0 :=
   ψ.toMonoidHom.ker_eq_bot_iff.symm.trans eq_bot_iff

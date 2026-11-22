@@ -375,10 +375,10 @@ section Div
 
 variable [Preorder α] [CommGroup α] [MulLeftMono α]
 
-instance : Div (NonemptyInterval α) :=
+instance instDivNonemptyInterval : Div (NonemptyInterval α) :=
   ⟨fun s t => ⟨(s.fst / t.snd, s.snd / t.fst), div_le_div'' s.fst_le_snd t.fst_le_snd⟩⟩
 
-instance : Div (Interval α) :=
+instance instDivInterval : Div (Interval α) :=
   ⟨WithBot.map₂ (· / ·)⟩
 
 namespace NonemptyInterval
@@ -394,7 +394,8 @@ theorem snd_div : (s / t).snd = s.snd / t.fst :=
   rfl
 
 @[simp]
-theorem coe_div_interval : (↑(s / t) : Interval α) = s / t :=
+theorem coe_div_interval :
+    ((s / t : NonemptyInterval α) : Interval α) = (s : Interval α) / (t : Interval α) :=
   rfl
 
 theorem div_mem_div (ha : a ∈ s) (hb : b ∈ t) : a / b ∈ s / t :=

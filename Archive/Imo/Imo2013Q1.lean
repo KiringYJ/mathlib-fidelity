@@ -35,9 +35,8 @@ theorem arith_lemma (k n : ℕ) : 0 < 2 * n + 2 ^ k.succ := by positivity
 theorem prod_lemma (m : ℕ → ℕ+) (k : ℕ) (nm : ℕ+) :
     ∏ i ∈ Finset.range k, ((1 : ℚ) + 1 / ↑(if i < k then m i else nm)) =
       ∏ i ∈ Finset.range k, (1 + 1 / (m i : ℚ)) := by
-  suffices ∀ i, i ∈ Finset.range k → (1 : ℚ) + 1 / ↑(if i < k then m i else nm) = 1 + 1 / m i from
-    Finset.prod_congr rfl this
-  grind
+  refine Finset.prod_congr rfl fun i hi ↦ ?_
+  simp only [ite_eq_left (Finset.mem_range.1 hi)]
 
 private theorem step_eq (n s d : ℕ+) {a b : ℚ}
     (h : ((n : ℚ) + a) * (s : ℚ) * (d : ℚ) =
@@ -58,7 +57,8 @@ open Imo2013Q1
 
 set_option backward.isDefEq.respectTransparency.types false in
 theorem imo2013_q1 (n : ℕ+) (k : ℕ) :
-    ∃ m : ℕ → ℕ+, (1 : ℚ) + (2 ^ k - 1) / n = ∏ i ∈ Finset.range k, (1 + 1 / (m i : ℚ)) := by
+    ∃ m : ℕ → ℕ+, 1 + ((2 : ℚ) ^ k - 1) / (n : ℚ) =
+      ∏ i ∈ Finset.range k, (1 + 1 / (m i : ℚ)) := by
   induction k generalizing n with
   | zero => use fun (_ : ℕ) => (1 : ℕ+); simp -- For the base case, any m works.
   | succ pk hpk =>

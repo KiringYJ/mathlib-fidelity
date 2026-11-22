@@ -246,23 +246,20 @@ def completeEquipartiteGraph.turanGraph :
     conv_rhs =>
       rw [← Nat.sub_one_add_one_eq_of_pos v.2.pos, Nat.mul_add_one, mul_comm r (t - 1)]
     exact add_lt_add_of_le_of_lt (Nat.mul_le_mul_right r (Nat.le_pred_of_lt v.2.prop)) v.1.prop
-  invFun := by
-    refine fun v ↦ (⟨v % r, ?_⟩, ⟨v / r, ?_⟩)
-    · have ⟨hr, _⟩ := CanonicallyOrderedAdd.mul_pos.mp v.pos
-      exact Nat.mod_lt v hr
-    · exact Nat.div_lt_of_lt_mul v.prop
+  invFun v := by
+    have hr := (CanonicallyOrderedAdd.mul_pos.mp v.pos).1
+    refine (⟨v % r, Nat.mod_lt _ hr⟩, ⟨Nat.euclideanDiv v.val r hr.ne', ?_⟩)
+    rw [Nat.euclideanDiv_eq_core]
+    exact Nat.div_lt_of_lt_mul v.prop
   left_inv v := by
     refine Prod.ext (Fin.ext ?_) (Fin.ext ?_)
-    · conv =>
-        enter [1, 1, 1, 1, 1]
-        rw [Nat.mul_add_mod_self_right]
-      exact Nat.mod_eq_of_lt v.1.prop
-    · apply le_antisymm
-      · rw [Nat.div_le_iff_le_mul_add_pred v.1.pos, mul_comm r ↑v.2]
-        exact Nat.add_le_add_left (Nat.le_pred_of_lt v.1.prop) (↑v.2 * r)
-      · rw [Nat.le_div_iff_mul_le v.1.pos]
-        exact Nat.le_add_right (↑v.2 * r) ↑v.1
-  right_inv v := Fin.ext (Nat.div_add_mod' v r)
+    · change (v.2.val * r + v.1.val) % r = v.1.val
+      rw [Nat.mul_add_mod_self_right, Nat.mod_eq_of_lt v.1.is_lt]
+    · exact Nat.euclideanDiv_eq_of_remainder v.1.pos.ne'
+        (congrArg (· + v.1.val) (Nat.mul_comm v.2.val r)) v.1.is_lt
+  right_inv v := Fin.ext <| by
+    have hr := (CanonicallyOrderedAdd.mul_pos.mp v.pos).1
+    simpa only [Nat.mul_comm] using Nat.euclideanDiv_mul_add_mod v.val r hr.ne'
   map_rel_iff' {v w} := by
     rw [turanGraph_adj, Equiv.coe_fn_mk, Nat.mul_add_mod_self_right, Nat.mod_eq_of_lt v.1.prop,
       Nat.mul_add_mod_self_right, Nat.mod_eq_of_lt w.1.prop, ← Fin.ext_iff.ne,
@@ -314,7 +311,8 @@ theorem card_edgeFinset_completeEquipartiteGraph :
     rw [degree_completeEquipartiteGraph v]
   rw [sum_const, smul_eq_mul, card_univ, card_prod, Fintype.card_fin, Fintype.card_fin]
   conv_rhs =>
-    rw [← Nat.mul_assoc, Nat.choose_two_right, Nat.mul_div_cancel' r.even_mul_pred_self.two_dvd]
+    rw [← Nat.mul_assoc, Nat.choose_two_right, Nat.euclideanDiv_eq_core,
+      Nat.mul_div_cancel' r.even_mul_pred_self.two_dvd]
   rw [← mul_assoc, mul_comm r _, mul_assoc t _ _, mul_comm t, mul_assoc _ t, ← pow_two]
 
 variable [Fintype α]

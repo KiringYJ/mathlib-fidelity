@@ -67,8 +67,11 @@ protected theorem mul [∀ i, Mul (β i)] [∀ i, MeasurableMul₂ (β i)]
     (hu : Adapted f u) (hv : Adapted f v) :
     Adapted f (u * v) := fun i => (hu i).mul (hv i)
 
-@[to_additive]
-protected theorem div [∀ i, Div (β i)] [∀ i, MeasurableDiv₂ (β i)]
+protected theorem sub [∀ i, Sub (β i)] [∀ i, MeasurableSub₂ (β i)]
+    (hu : Adapted f u) (hv : Adapted f v) :
+    Adapted f (u - v) := fun i => (hu i).sub (hv i)
+
+protected theorem div [∀ i, Group (β i)] [∀ i, MeasurableDiv₂ (β i)]
     (hu : Adapted f u) (hv : Adapted f v) :
     Adapted f (u / v) := fun i => (hu i).div (hv i)
 
@@ -112,8 +115,11 @@ protected theorem mul [∀ i, Mul (β i)] [∀ i, ContinuousMul (β i)]
     (hu : StronglyAdapted f u) (hv : StronglyAdapted f v) :
     StronglyAdapted f (u * v) := fun i => (hu i).mul (hv i)
 
-@[to_additive sub]
-protected theorem div' [∀ i, Div (β i)] [∀ i, ContinuousDiv (β i)]
+protected theorem sub [∀ i, Sub (β i)] [∀ i, ContinuousSub (β i)]
+    (hu : StronglyAdapted f u) (hv : StronglyAdapted f v) :
+    StronglyAdapted f (u - v) := fun i => (hu i).sub (hv i)
+
+protected theorem div' [∀ i, Group (β i)] [∀ i, ContinuousDiv (β i)]
     (hu : StronglyAdapted f u) (hv : StronglyAdapted f v) :
     StronglyAdapted f (u / v) := fun i => (hu i).div' (hv i)
 
@@ -235,10 +241,13 @@ protected theorem finsetProd {γ} [CommMonoid β] [MeasurableMul₂ β] {U : γ 
 protected theorem inv [Group β] [MeasurableInv β] (hu : IsProgressive f u) :
     IsProgressive f fun i ω => (u i ω)⁻¹ := fun i ↦ (hu i).inv
 
-@[to_additive]
+protected theorem sub [AddGroup β] [MeasurableSub₂ β] (hu : IsProgressive f u)
+    (hv : IsProgressive f v) : IsProgressive f fun i ω ↦ u i ω - v i ω :=
+  fun i ↦ Measurable.sub (hu i) (hv i)
+
 protected theorem div [Group β] [MeasurableDiv₂ β] (hu : IsProgressive f u)
     (hv : IsProgressive f v) : IsProgressive f fun i ω ↦ u i ω / v i ω :=
-  fun i ↦ Measurable.div (hu i) (hv i)
+  fun i ↦ by simpa only [Pi.div_def] using Measurable.div (hu i) (hv i)
 
 /-- The norm of a progressive process is progressive. -/
 protected lemma norm [NormedAddCommGroup β] [OpensSigmaAlgebra β] (hu : IsProgressive f u) :
@@ -323,10 +332,13 @@ protected alias finset_prod := MeasureTheory.IsStronglyProgressive.finsetProd
 protected theorem inv [Group β] [ContinuousInv β] (hu : IsStronglyProgressive f u) :
     IsStronglyProgressive f fun i ω => (u i ω)⁻¹ := fun i => (hu i).inv
 
-@[to_additive sub]
+protected theorem sub [AddGroup β] [ContinuousSub β] (hu : IsStronglyProgressive f u)
+    (hv : IsStronglyProgressive f v) : IsStronglyProgressive f fun i ω => u i ω - v i ω := fun i =>
+  (hu i).sub (hv i)
+
 protected theorem div' [Group β] [ContinuousDiv β] (hu : IsStronglyProgressive f u)
     (hv : IsStronglyProgressive f v) : IsStronglyProgressive f fun i ω => u i ω / v i ω := fun i =>
-  (hu i).div' (hv i)
+  by simpa only [Pi.div_def] using (hu i).div' (hv i)
 
 /-- The norm of a strongly progressive process is strongly progressive. -/
 protected lemma norm {β : Type*} {u : ι → Ω → β} [SeminormedAddCommGroup β]
@@ -412,7 +424,7 @@ alias ProgMeasurable.inv := IsStronglyProgressive.inv
 
 @[deprecated (since := "2026-04-24")] alias ProgMeasurable.sub := IsStronglyProgressive.sub
 
-@[to_additive existing ProgMeasurable.sub, deprecated (since := "2026-04-24")]
+@[deprecated (since := "2026-04-24")]
 alias ProgMeasurable.div' := IsStronglyProgressive.div'
 
 @[deprecated (since := "2026-04-24")] alias ProgMeasurable.norm := IsStronglyProgressive.norm

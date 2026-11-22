@@ -951,7 +951,7 @@ divisors that have smaller degree.
 See also: `Polynomial.Monic.irreducible_iff_natDegree`.
 -/
 theorem Monic.irreducible_iff_degree_lt (p_monic : Monic p) (p_1 : p ≠ 1) :
-    Irreducible p ↔ ∀ q, degree q ≤ ↑(p.natDegree / 2) → q ∣ p → IsUnit q := by
+    Irreducible p ↔ ∀ q, degree q ≤ ↑(Nat.euclideanDiv p.natDegree 2) → q ∣ p → IsUnit q := by
   simp only [p_monic.irreducible_iff_lt_natDegree_lt p_1, Finset.mem_Ioc, and_imp,
     natDegree_pos_iff_degree_pos, natDegree_le_iff_degree_le]
   constructor

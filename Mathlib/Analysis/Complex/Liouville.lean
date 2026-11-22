@@ -57,11 +57,12 @@ theorem norm_iteratedDeriv_le_of_forall_mem_sphere_norm_le [CompleteSpace F] {c 
   have hconst₀ : IsUnit (2 * π * I : ℂ) :=
     (norm_ne_zero_iff.mp (hconst.symm ▸ Real.two_pi_pos.ne')).isUnit
   have hfac : (n.factorial : ℂ) ≠ 0 := Nat.cast_ne_zero.mpr n.factorial_ne_zero
-  have hCauchy : circleIntegralOn integrand c R = (2 * π * I / n.factorial) • iteratedDeriv n f c :=
+  have hCauchy : circleIntegralOn integrand c R =
+      (2 * π * I / (n.factorial : ℂ)) • iteratedDeriv n f c :=
     hf.circleIntegral_one_div_sub_center_pow_smul hR n
   have hq : iteratedDeriv n f c =
       n.factorial • (2 * π * I : ℂ)⁻¹ • circleIntegralOn integrand c R := by
-    have he : (n.factorial : ℂ) * (2 * π * I : ℂ)⁻¹ * (2 * π * I / n.factorial) = 1 := by
+    have he : (n.factorial : ℂ) * (2 * π * I : ℂ)⁻¹ * (2 * π * I / (n.factorial : ℂ)) = 1 := by
       field_simp
     rw [hCauchy, ← Nat.cast_smul_eq_nsmul ℂ, ← mul_smul, ← mul_smul, he, one_smul]
   have hbound : ‖circleIntegralOn integrand c R‖ ≤ 2 * π * R * (C / R ^ (n + 1)) := by

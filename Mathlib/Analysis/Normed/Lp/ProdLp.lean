@@ -429,7 +429,7 @@ private lemma prod_lipschitzWith_ofLp_aux [PseudoEMetricSpace α] [PseudoEMetric
   exact edist_proj_le_edist_aux p x y
 
 private lemma prod_antilipschitzWith_ofLp_aux [PseudoEMetricSpace α] [PseudoEMetricSpace β] :
-    AntilipschitzWith ((2 : ℝ≥0) ^ (1 / p).toReal) (@ofLp p (α × β)) := by
+    AntilipschitzWith ((2 : ℝ≥0) ^ (ENNReal.div 1 p).toReal) (@ofLp p (α × β)) := by
   intro x y
   rcases p.dichotomy with (rfl | h)
   · simp [edist]
@@ -659,11 +659,11 @@ lemma prod_antilipschitzWith_toLp [PseudoEMetricSpace α] [PseudoEMetricSpace β
   (prod_lipschitzWith_ofLp p α β).to_rightInverse (ofLp_toLp p)
 
 lemma prod_antilipschitzWith_ofLp [PseudoEMetricSpace α] [PseudoEMetricSpace β] :
-    AntilipschitzWith ((2 : ℝ≥0) ^ (1 / p).toReal) (@ofLp p (α × β)) :=
+    AntilipschitzWith ((2 : ℝ≥0) ^ (ENNReal.div 1 p).toReal) (@ofLp p (α × β)) :=
   prod_antilipschitzWith_ofLp_aux p α β
 
 lemma prod_lipschitzWith_toLp [PseudoEMetricSpace α] [PseudoEMetricSpace β] :
-    LipschitzWith ((2 : ℝ≥0) ^ (1 / p).toReal) (@toLp p (α × β)) :=
+    LipschitzWith ((2 : ℝ≥0) ^ (ENNReal.div 1 p).toReal) (@toLp p (α × β)) :=
   (prod_antilipschitzWith_ofLp p α β).to_rightInverse (ofLp_toLp p)
 
 lemma prod_isometry_ofLp_infty [PseudoEMetricSpace α] [PseudoEMetricSpace β] :
@@ -671,8 +671,8 @@ lemma prod_isometry_ofLp_infty [PseudoEMetricSpace α] [PseudoEMetricSpace β] :
   fun x y =>
   le_antisymm (by simpa only [ENNReal.coe_one, one_mul] using prod_lipschitzWith_ofLp ∞ α β x y)
     (by
-      simpa only [ENNReal.div_top, ENNReal.toReal_zero, NNReal.rpow_zero, ENNReal.coe_one,
-        one_mul] using prod_antilipschitzWith_ofLp ∞ α β x y)
+      simpa only [ENNReal.one_div, ENNReal.inv_top, ENNReal.toReal_zero, NNReal.rpow_zero,
+        ENNReal.coe_one, one_mul] using prod_antilipschitzWith_ofLp ∞ α β x y)
 
 /-- Seminormed group instance on the product of two normed groups, using the `L^p`
 norm. -/
@@ -745,10 +745,10 @@ section norm_of
 variable {p α β}
 
 theorem prod_norm_eq_of_nat [Norm α] [Norm β] (n : ℕ) (h : p = n) (f : WithLp p (α × β)) :
-    ‖f‖ = (‖f.fst‖ ^ n + ‖f.snd‖ ^ n) ^ (1 / (n : ℝ≥0∞)).toReal := by
+    ‖f‖ = (‖f.fst‖ ^ n + ‖f.snd‖ ^ n) ^ (ENNReal.div 1 (n : ℝ≥0∞)).toReal := by
   have := p.toReal_pos_iff_ne_top.mpr (ne_of_eq_of_ne h <| ENNReal.natCast_ne_top n)
   have hpUnit : IsUnit p.toReal := this.ne'.isUnit
-  rw [← h, show (1 / p).toReal = 1 / p.toReal by
+  rw [← h, show (ENNReal.div 1 p).toReal = 1 / p.toReal by
     simp [ENNReal.toReal_inv (ha := hpUnit)]]
   simp only [h, Real.rpow_natCast, ENNReal.toReal_natCast, prod_norm_eq_add this]
 

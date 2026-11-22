@@ -95,9 +95,13 @@ private theorem card_orderOf_eq_totient_aux₁ {d : ℕ} (hd : d ∣ Fintype.car
       ∑ m ∈ d.properDivisors, φ m := by
     refine Finset.sum_congr rfl fun m hm => ?_
     simp only [mem_properDivisors] at hm
-    refine IH m hm.2 (hm.1.trans hd) (Finset.card_pos.2 ⟨a ^ (d / m), ?_⟩)
-    rw [mem_filter_univ, orderOf_pow a, ha, Nat.gcd_eq_right (div_dvd_of_dvd hm.1),
-      Nat.div_div_self hm.1 hd0]
+    obtain ⟨k, hk⟩ := hm.1
+    have hk₀ : k ≠ 0 := fun h ↦ hd0 (by simpa [h] using hk)
+    have hkd : k ∣ orderOf a := ⟨m, ha.trans (hk.trans (Nat.mul_comm _ _))⟩
+    refine IH m hm.2 (hm.1.trans hd) (Finset.card_pos.2 ⟨a ^ k, ?_⟩)
+    rw [mem_filter_univ, orderOf_pow_of_dvd hk₀ hkd]
+    exact Nat.euclideanDiv_eq_of_remainder (r := 0) hk₀
+      (by simpa only [Nat.add_zero, Nat.mul_comm k m] using ha.trans hk) (Nat.pos_of_ne_zero hk₀)
   have h2 :
     (∑ m ∈ d.divisors, #{a : α | orderOf a = m}) =
       ∑ m ∈ d.divisors, φ m := by
@@ -619,7 +623,7 @@ theorem IsCyclic.infinite_of_ne_bot [Group G] [hG : IsCyclic G] {H : Subgroup G}
   obtain ⟨i, rfl⟩ := Subgroup.exists_zpowers_eq_of_zpowers_eq_top hg H
   have hi : i ≠ 0 := fun hi ↦ by simp [hi] at h
   refine infinite_zpowers.mpr ?_
-  rw [← orderOf_eq_zero_iff, orderOf_zpow' _ hi, hg₀, Nat.zero_div]
+  rw [← orderOf_eq_zero_iff, orderOf_zpow' _ hi, Nat.euclideanDiv_eq_core, hg₀, Nat.zero_div]
 
 @[to_additive]
 instance [Group G] [IsCyclic G] {H : Subgroup G} [h : Nontrivial H] : Infinite H :=
@@ -724,21 +728,27 @@ variable (G)
 
 @[to_additive]
 theorem IsCyclic.card_powMonoidHom_range [CommGroup G] [hG : IsCyclic G] [Finite G] (d : ℕ) :
-    Nat.card (powMonoidHom d : G →* G).range = Nat.card G / (Nat.card G).gcd d := by
+    Nat.card (powMonoidHom d : G →* G).range =
+      Nat.euclideanDiv (Nat.card G) ((Nat.card G).gcd d)
+        (Nat.gcd_pos_of_pos_left d Nat.card_pos).ne' := by
   obtain ⟨g, h⟩ := isCyclic_iff_exists_zpowers_eq_top.mp hG
-  rw [MonoidHom.range_eq_map, ← h, MonoidHom.map_zpowers, Nat.card_zpowers, powMonoidHom_apply,
-    orderOf_pow, orderOf_eq_card_of_zpowers_eq_top h]
+  rw [MonoidHom.range_eq_map, ← h, MonoidHom.map_zpowers, Nat.card_zpowers, powMonoidHom_apply]
+  simpa only [Nat.euclideanDiv_eq_core, orderOf_eq_card_of_zpowers_eq_top h] using
+    orderOf_pow (n := d) g
 
 @[to_additive]
 theorem IsCyclic.index_powMonoidHom_ker [CommGroup G] [IsCyclic G] [Finite G] (d : ℕ) :
-    (powMonoidHom d : G →* G).ker.index = Nat.card G / (Nat.card G).gcd d := by
+    (powMonoidHom d : G →* G).ker.index =
+      Nat.euclideanDiv (Nat.card G) ((Nat.card G).gcd d)
+        (Nat.gcd_pos_of_pos_left d Nat.card_pos).ne' := by
   rw [Subgroup.index_ker, card_powMonoidHom_range]
 
 @[to_additive]
 theorem IsCyclic.card_powMonoidHom_ker [CommGroup G] [IsCyclic G] [Finite G] (d : ℕ) :
     Nat.card (powMonoidHom d : G →* G).ker = (Nat.card G).gcd d := by
   have h : (powMonoidHom d : G →* G).ker.index ≠ 0 := Subgroup.index_ne_zero_of_finite
-  rw [← mul_left_inj' h, Subgroup.card_mul_index, index_powMonoidHom_ker, Nat.mul_div_cancel']
+  rw [← mul_left_inj' h, Subgroup.card_mul_index, index_powMonoidHom_ker, Nat.euclideanDiv_eq_core,
+    Nat.mul_div_cancel']
   exact Nat.gcd_dvd_left (Nat.card G) d
 
 @[to_additive]

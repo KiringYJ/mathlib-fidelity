@@ -43,15 +43,17 @@ theorem Nat.euler_four_squares (a b c d x y z w : ℕ) :
 namespace Int
 
 theorem sq_add_sq_of_two_mul_sq_add_sq {m x y : ℤ} (h : 2 * m = x ^ 2 + y ^ 2) :
-    m = ((x - y) / 2) ^ 2 + ((x + y) / 2) ^ 2 :=
+    m = (Int.euclideanDiv (x - y) 2) ^ 2 + (Int.euclideanDiv (x + y) 2) ^ 2 :=
   have : Even (x ^ 2 + y ^ 2) := by simp [← h]
   mul_right_injective₀ (show (2 * 2 : ℤ) ≠ 0 by decide) <|
     calc
       2 * 2 * m = (x - y) ^ 2 + (x + y) ^ 2 := by rw [mul_assoc, h]; ring
-      _ = (2 * ((x - y) / 2)) ^ 2 + (2 * ((x + y) / 2)) ^ 2 := by
+      _ = (2 * (Int.euclideanDiv (x - y) 2)) ^ 2 + (2 * (Int.euclideanDiv (x + y) 2)) ^ 2 := by
+        simp only [Int.euclideanDiv_eq_core]
         rw [Int.mul_ediv_cancel' _, Int.mul_ediv_cancel' _] <;>
           simpa [sq, parity_simps, ← even_iff_two_dvd]
-      _ = 2 * 2 * (((x - y) / 2) ^ 2 + ((x + y) / 2) ^ 2) := by nlinarith
+      _ = 2 * 2 * ((Int.euclideanDiv (x - y) 2) ^ 2 + (Int.euclideanDiv (x + y) 2) ^ 2) := by
+        nlinarith
 
 theorem lt_of_sum_four_squares_eq_mul {a b c d k m : ℕ}
     (h : a ^ 2 + b ^ 2 + c ^ 2 + d ^ 2 = k * m)
@@ -73,8 +75,10 @@ theorem exists_sq_add_sq_add_one_eq_mul (p : ℕ) [hp : Fact p.Prime] :
   refine ⟨a, b, k, Nat.cast_pos.1 hk₀, ?_, mod_cast hk⟩
   replace hk : a ^ 2 + b ^ 2 + 1 ^ 2 + 0 ^ 2 = k * p := mod_cast hk
   refine lt_of_sum_four_squares_eq_mul hk ?_ ?_ ?_ ?_
-  · exact (mul_le_mul' le_rfl ha).trans_lt (Nat.mul_div_lt_iff_not_dvd.2 hodd.not_two_dvd_nat)
-  · exact (mul_le_mul' le_rfl hb).trans_lt (Nat.mul_div_lt_iff_not_dvd.2 hodd.not_two_dvd_nat)
+  · simp only [Nat.euclideanDiv_eq_core] at ha
+    exact (mul_le_mul' le_rfl ha).trans_lt (Nat.mul_div_lt_iff_not_dvd.2 hodd.not_two_dvd_nat)
+  · simp only [Nat.euclideanDiv_eq_core] at hb
+    exact (mul_le_mul' le_rfl hb).trans_lt (Nat.mul_div_lt_iff_not_dvd.2 hodd.not_two_dvd_nat)
   · exact lt_of_le_of_ne hp.1.two_le (hodd.ne_two_of_dvd_nat (dvd_refl _)).symm
   · exact hp.1.pos
 
@@ -102,8 +106,8 @@ private theorem sum_four_squares_of_two_mul_sum_four_squares {m a b c d : ℤ}
   obtain ⟨y, hy⟩ : (2 : ℤ) ∣ f (σ 2) ^ 2 + f (σ 3) ^ 2 :=
     (CharP.intCast_eq_zero_iff (ZMod 2) 2 _).1 <| by
       simpa only [Int.cast_pow, Int.cast_add, ZMod.pow_card] using! hσ.2
-  refine ⟨(f (σ 0) - f (σ 1)) / 2, (f (σ 0) + f (σ 1)) / 2, (f (σ 2) - f (σ 3)) / 2,
-    (f (σ 2) + f (σ 3)) / 2, ?_⟩
+  refine ⟨Int.euclideanDiv (f (σ 0) - f (σ 1)) 2, Int.euclideanDiv (f (σ 0) + f (σ 1)) 2,
+    Int.euclideanDiv (f (σ 2) - f (σ 3)) 2, Int.euclideanDiv (f (σ 2) + f (σ 3)) 2, ?_⟩
   rw [← Int.sq_add_sq_of_two_mul_sq_add_sq hx.symm, add_assoc,
     ← Int.sq_add_sq_of_two_mul_sq_add_sq hy.symm, ← mul_right_inj' two_ne_zero, ← h, mul_add]
   have : (∑ x, f (σ x) ^ 2) = ∑ x, f x ^ 2 := Equiv.sum_comp σ (f · ^ 2)
@@ -145,7 +149,9 @@ protected theorem Prime.sum_four_squares {p : ℕ} (hp : p.Prime) :
     obtain ⟨f, hf_lt, hf_mod⟩ :
         ∃ f : ℕ → ℤ, (∀ x, 2 * (f x).natAbs < m) ∧ ∀ x, (f x : ZMod m) = x := by
       refine ⟨fun x ↦ (x : ZMod m).valMinAbs, fun x ↦ ?_, fun x ↦ (x : ZMod m).coe_valMinAbs⟩
-      exact (mul_le_mul' le_rfl (x : ZMod m).natAbs_valMinAbs_le).trans_lt
+      have hle := (x : ZMod m).natAbs_valMinAbs_le
+      simp only [Nat.euclideanDiv_eq_core] at hle
+      exact (mul_le_mul' le_rfl hle).trans_lt
         (Nat.mul_div_lt_iff_not_dvd.2 hm)
     -- Since `|f x| ^ 2 = (f x) ^ 2 ≡ x ^ 2 [ZMOD m]`, we have
     -- `m ∣ |f a| ^ 2 + |f b| ^ 2 + |f c| ^ 2 + |f d| ^ 2`
@@ -173,10 +179,14 @@ protected theorem Prime.sum_four_squares {p : ℕ} (hp : p.Prime) :
     -- each of them is divisible by `m`
     rsuffices ⟨w, x, y, z, hw, hx, hy, hz, h⟩ : ∃ w x y z : ℤ, ↑m ∣ w ∧ ↑m ∣ x ∧ ↑m ∣ y ∧ ↑m ∣ z ∧
       w ^ 2 + x ^ 2 + y ^ 2 + z ^ 2 = ↑(m * r) * ↑(m * p)
-    · have : (w / m) ^ 2 + (x / m) ^ 2 + (y / m) ^ 2 + (z / m) ^ 2 = ↑(r * p) := by
+    · obtain ⟨w', rfl⟩ := hw
+      obtain ⟨x', rfl⟩ := hx
+      obtain ⟨y', rfl⟩ := hy
+      obtain ⟨z', rfl⟩ := hz
+      have : w' ^ 2 + x' ^ 2 + y' ^ 2 + z' ^ 2 = ↑(r * p) := by
         refine mul_left_cancel₀ (pow_ne_zero 2 (Nat.cast_ne_zero.2 hm₀.ne')) ?_
         conv_rhs => rw [← Nat.cast_pow, ← Nat.cast_mul, sq m, mul_mul_mul_comm, Nat.cast_mul, ← h]
-        simp only [mul_add, ← mul_pow, Int.mul_ediv_cancel', *]
+        simp only [mul_add, ← mul_pow]
       rw [← natAbs_iff] at this
       exact hmin r hrm ⟨hrm.trans hmp, hr₀, _, _, _, _, this⟩
     -- To do the last step, we apply the Euler's four square identity once more

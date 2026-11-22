@@ -37,7 +37,7 @@ alias prod_fst_snd := Function.prod_fst_snd
 @[deprecated (since := "2026-04-21")]
 alias prod_snd_fst := Function.prod_snd_fst
 
-/-! `1`, `0`, `+`, `*`, `+ᵥ`, `•`, `^`, `-`, `⁻¹`, and `/` are defined pointwise. -/
+/-! `1`, `0`, `+`, `*`, `+ᵥ`, `•`, `^`, `-`, and `⁻¹` are defined pointwise. -/
 
 section One
 variable [∀ i, One (M i)]
@@ -103,27 +103,25 @@ lemma _root_.Function.const_inv (a : G) : (const ι a)⁻¹ = const ι a⁻¹ :=
 lemma inv_comp (f : β → G) (g : α → β) : f⁻¹ ∘ g = (f ∘ g)⁻¹ := rfl
 end Inv
 
-section Div
-variable [∀ i, Div (G i)]
+section Sub
+variable [∀ i, Sub (G i)]
 
-@[to_additive]
-instance instDiv : Div (∀ i, G i) where div f g i := f i / g i
+instance instSub : Sub (∀ i, G i) where sub f g i := f i - g i
 
-@[to_additive (attr := simp)]
-lemma div_apply (f g : ∀ i, G i) (i : ι) : (f / g) i = f i / g i := rfl
+@[simp]
+lemma sub_apply (f g : ∀ i, G i) (i : ι) : (f - g) i = f i - g i := rfl
 
-@[to_additive (attr := push ←)]
-lemma div_def (f g : ∀ i, G i) : f / g = fun i ↦ f i / g i := rfl
+@[push ←]
+lemma sub_def (f g : ∀ i, G i) : f - g = fun i ↦ f i - g i := rfl
 
-variable {G : Type*} [Div G]
+variable {G : Type*} [Sub G]
 
-@[to_additive]
-lemma div_comp (f g : β → G) (z : α → β) : (f / g) ∘ z = f ∘ z / g ∘ z := rfl
+lemma sub_comp (f g : β → G) (z : α → β) : (f - g) ∘ z = f ∘ z - g ∘ z := rfl
 
-@[to_additive (attr := simp)]
-lemma _root_.Function.const_div (a b : G) : const ι a / const ι b = const ι (a / b) := rfl
+@[simp]
+lemma _root_.Function.const_sub (a b : G) : const ι a - const ι b = const ι (a - b) := rfl
 
-end Div
+end Sub
 
 section Pow
 

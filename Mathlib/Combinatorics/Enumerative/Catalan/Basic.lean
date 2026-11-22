@@ -73,12 +73,13 @@ theorem catalan_one : catalan 1 = 1 := by simp [catalan_succ]
 definition using a telescoping sum argument. It is defined for `n ≠ 0`, where its denominator
 `2 * n * (n + 1)` does not vanish. -/
 private noncomputable def gosperCatalan (n : ℕ) [NeZero n] (j : ℕ) : ℚ :=
-  Nat.centralBinom j * Nat.centralBinom (n - j) * (2 * j - n) / (2 * n * (n + 1))
+  (Nat.centralBinom j : ℚ) * Nat.centralBinom (n - j) * (2 * (j : ℚ) - n) /
+    (2 * (n : ℚ) * (n + 1))
 
 private theorem gosper_trick {n i : ℕ} (h : i ≤ n) :
     gosperCatalan (n + 1) (i + 1) - gosperCatalan (n + 1) i =
-      Checked.div (Nat.centralBinom i / (i + 1) * Nat.centralBinom (n - i) : ℚ) (n - i + 1)
-        (Ne.isUnit (by norm_cast)) := by
+      Checked.div ((Nat.centralBinom i : ℚ) / ((i : ℚ) + 1) * Nat.centralBinom (n - i) : ℚ)
+        (n - i + 1) (Ne.isUnit (by norm_cast)) := by
   have l₁ : (i : ℚ) + 1 ≠ 0 := by norm_cast
   have l₂ : (n : ℚ) - i + 1 ≠ 0 := by norm_cast
   have h₁ := (mul_div_cancel_left₀ ((i + 1).centralBinom : ℚ) (ha := l₁.isUnit)).symm
@@ -102,16 +103,18 @@ private theorem gosper_catalan_sub_eq_central_binom_div (n : ℕ) : gosperCatala
     Nat.sub_zero, one_mul, Nat.cast_zero, mul_zero, zero_sub, neg_add_rev]
   field
 
-theorem catalan_eq_centralBinom_div (n : ℕ) : catalan n = n.centralBinom / (n + 1) := by
-  suffices (catalan n : ℚ) = Nat.centralBinom n / (n + 1) by
+theorem catalan_eq_centralBinom_div (n : ℕ) :
+    catalan n = Nat.euclideanDiv n.centralBinom (n + 1) := by
+  rw [Nat.euclideanDiv_eq_core]
+  suffices (catalan n : ℚ) = (Nat.centralBinom n : ℚ) / ((n : ℚ) + 1) by
     rw [eq_div_iff] at this
     exact (Nat.div_eq_of_eq_mul_left n.succ_pos (mod_cast this.symm)).symm
   induction n using Nat.caseStrongRecOn with
   | zero => simp
   | ind d hd =>
     simp_rw [catalan_succ, Nat.cast_sum, Nat.cast_mul]
-    trans (∑ i : Fin d.succ, Nat.centralBinom i / (i + 1) *
-                            (Nat.centralBinom (d - i) / ((d - i : ℕ) + 1)) : ℚ)
+    trans (∑ i : Fin d.succ, (Nat.centralBinom i : ℚ) / ((i : ℚ) + 1) *
+                            ((Nat.centralBinom (d - i) : ℚ) / ((↑(d - i : ℕ) : ℚ) + 1)) : ℚ)
     · congr
       ext1 x
       have m_le_d : x.val ≤ d := by lia
@@ -127,10 +130,11 @@ theorem catalan_eq_centralBinom_div (n : ℕ) : catalan n = n.centralBinom / (n 
         norm_cast
 
 theorem succ_mul_catalan_eq_centralBinom (n : ℕ) : (n + 1) * catalan n = n.centralBinom :=
-  (Nat.eq_mul_of_div_eq_right n.succ_dvd_centralBinom (catalan_eq_centralBinom_div n).symm).symm
+  (Nat.eq_mul_of_div_eq_right n.succ_dvd_centralBinom (by
+    simpa only [Nat.euclideanDiv_eq_core] using (catalan_eq_centralBinom_div n).symm)).symm
 
 theorem catalan_two : catalan 2 = 2 := by
-  norm_num [catalan_eq_centralBinom_div, Nat.centralBinom, Nat.choose]
+  norm_num [catalan_eq_centralBinom_div, Nat.euclideanDiv_eq_core, Nat.centralBinom, Nat.choose]
 
 theorem catalan_three : catalan 3 = 5 := by
-  norm_num [catalan_eq_centralBinom_div, Nat.centralBinom, Nat.choose]
+  norm_num [catalan_eq_centralBinom_div, Nat.euclideanDiv_eq_core, Nat.centralBinom, Nat.choose]

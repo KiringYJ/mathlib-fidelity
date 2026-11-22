@@ -131,14 +131,14 @@ example (a b : ℕ) (h2 : ((a + b + 0 : ℕ) : ℤ) = 10) :
 -- example {x : ℚ} : ((x + 42 : ℚ) : ℝ) = x + 42 := by push_cast
 
 namespace ENNReal
-lemma half_lt_self_bis {a : ℝ≥0∞} (hz : a ≠ 0) (ht : a ≠ ⊤) : a / 2 < a := by
+lemma half_lt_self_bis {a : ℝ≥0∞} (hz : a ≠ 0) (ht : a ≠ ⊤) : ENNReal.div a 2 < a := by
   lift a to NNReal using ht
   norm_cast at hz
   calc
-    (a : ℝ≥0∞) / 2 = ↑(a / (2 : NNReal)) := ENNReal.coe_div.symm
+    ENNReal.div (a : ℝ≥0∞) 2 = ↑(a / (2 : NNReal)) := ENNReal.coe_div.symm
     _ < (a : ℝ≥0∞) := coe_lt_coe.mpr (NNReal.half_lt_self hz)
 
-example (x : NNReal) : (x : ENNReal) / 3 = ↑(x / 3) := by
+example (x : NNReal) : ENNReal.div (x : ENNReal) 3 = ↑(x / 3) := by
   have h₃ : IsUnit (3 : NNReal) := (by norm_num : (3 : NNReal) ≠ 0).isUnit
   exact_mod_cast (ENNReal.coe_div (p := x) (hr := h₃)).symm
 

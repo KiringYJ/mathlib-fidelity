@@ -346,8 +346,8 @@ theorem exists_disjoint_covering_ae
       _ < ∞ := μK
   -- we can obtain a finite subfamily of `v`, such that the measures of the remaining elements
   -- add up to an arbitrarily small number, say `ε / C`.
-  obtain ⟨w, hw⟩ : ∃ w : Finset v, (∑' a : { a // a ∉ w }, μ (B a)) < ε / C :=
-    haveI : 0 < ε / C := by
+  obtain ⟨w, hw⟩ : ∃ w : Finset v, (∑' a : { a // a ∉ w }, μ (B a)) < ENNReal.div ε (C : ℝ≥0∞) :=
+    haveI : 0 < ENNReal.div ε (C : ℝ≥0∞) := by
       simp only [ENNReal.div_pos_iff, εpos.ne', ENNReal.coe_ne_top, Ne, not_false_iff,
         and_self_iff]
     ((tendsto_order.1 (ENNReal.tendsto_tsum_compl_atTop_zero I.ne)).2 _ this).exists
@@ -420,7 +420,7 @@ theorem exists_disjoint_covering_ae
     _ ≤ ∑' a : { a // a ∉ w }, μ (closedBall (c a) (3 * r a)) := measure_iUnion_le _
     _ ≤ ∑' a : { a // a ∉ w }, C * μ (B a) := (ENNReal.tsum_le_tsum fun a => μB a (ut (vu a.1.2)))
     _ = C * ∑' a : { a // a ∉ w }, μ (B a) := ENNReal.tsum_mul_left
-    _ ≤ C * (ε / C) := by gcongr
+    _ ≤ C * (ENNReal.div ε (C : ℝ≥0∞)) := by gcongr
     _ ≤ ε := ENNReal.mul_div_le
 
 /-- The measurable **Vitali covering theorem**, filter version.

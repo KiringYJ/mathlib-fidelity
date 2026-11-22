@@ -194,7 +194,7 @@ in degree `n + 1` is `(-1)^n / (n + 1)`. -/
 noncomputable def logSeriesCoefficient {𝕜 : Type*} [Field 𝕜] [CharZero 𝕜] (n : ℕ) : 𝕜 :=
   match n with
   | 0 => 0
-  | k + 1 => (-1) ^ k / (k + 1)
+  | k + 1 => (-1 : 𝕜) ^ k / ((k + 1 : ℕ) : 𝕜)
 
 theorem hasFPowerSeriesAt_clog_one :
     HasFPowerSeriesAt log (.ofScalars (𝕜 := ℂ) ℂ logSeriesCoefficient) 1 := by
@@ -210,7 +210,7 @@ theorem hasFPowerSeriesAt_clog_one :
         have h := hj.unique (iteratedDeriv_succ_log (n := n) x)
           isOpen_slitPlane.isOpenEmbedding_subtypeVal
         have hn : (n ! : ℂ) ≠ 0 := Nat.cast_ne_zero.mpr (Nat.factorial_ne_zero n)
-        change p.coeff (n + 1) = (-1 : ℂ) ^ n / (n + 1)
+        change p.coeff (n + 1) = (-1 : ℂ) ^ n / ((n + 1 : ℕ) : ℂ)
         apply eq_div_iff.mpr
         apply mul_right_cancel₀ hn
         simpa only [x, Subtype.coe_mk, one_zpow₀, mul_one, one_mul, ← Nat.cast_smul_eq_nsmul ℂ,

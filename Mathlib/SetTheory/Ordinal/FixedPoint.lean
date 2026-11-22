@@ -470,12 +470,12 @@ theorem mul_eq_right_iff_opow_omega0_dvd {a b : Ordinal} : a * b = b ↔ a ^ ω 
     exact eq_comm
   refine ⟨fun hab => ?_, fun h => ?_⟩
   · rw [dvd_iff_mod_eq_zero]
-    rw [← div_add_mod b (a ^ ω), mul_add, ← mul_assoc, ← opow_one_add, one_add_omega0,
+    have haω : a ^ ω ≠ 0 := opow_ne_zero ω ha.ne'
+    rw [← div_add_mod b (a ^ ω) haω, mul_add, ← mul_assoc, ← opow_one_add, one_add_omega0,
       add_left_cancel_iff] at hab
     rcases eq_zero_or_opow_omega0_le_of_mul_eq_right hab with hab | hab
     · exact hab
-    refine (not_lt_of_ge hab (mod_lt b (opow_ne_zero ω ?_))).elim
-    rwa [← pos_iff_ne_zero]
+    exact (not_lt_of_ge hab (mod_lt b haω)).elim
   obtain ⟨c, hc⟩ := h
   rw [hc, ← mul_assoc, ← opow_one_add, one_add_omega0]
 

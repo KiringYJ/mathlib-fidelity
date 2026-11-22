@@ -92,7 +92,7 @@ theorem qParam_right_inv (hh : h ≠ 0) {q : ℂ} (hq : q ≠ 0) :
     𝕢 h (invQParam h q hh hq) hh = q := by
   have hu := (ofReal_ne_zero.mpr hh).isUnit
   unfold qParam invQParam
-  rw [show (2 * π * I * ((h : ℂ) / (2 * π * I) * log q)) / h = log q by
+  rw [show (2 * π * I * ((h : ℂ) / (2 * π * I) * log q)) / (h : ℂ) = log q by
     field_simp, exp_log hq]
 
 theorem qParam_left_inv_mod_period (hh : h ≠ 0) (z : ℂ) :
@@ -207,8 +207,8 @@ theorem differentiableAt_cuspFunction (hh : h ≠ 0) (hf : Periodic f h)
   let Q := fun w ↦ 𝕢 h w hh
   let q := Q z
   have hu := (ofReal_ne_zero.mpr hh).isUnit
-  have qdiff : HasStrictDerivAt Q (q * (2 * π * I / h)) z := hasStrictDerivAt_qParam hh z
-  have diff_ne : q * (2 * π * I / h) ≠ 0 :=
+  have qdiff : HasStrictDerivAt Q (q * (2 * π * I / (h : ℂ))) z := hasStrictDerivAt_qParam hh z
+  have diff_ne : q * (2 * π * I / (h : ℂ)) ≠ 0 :=
     mul_ne_zero (qParam_ne_zero z hh) (two_pi_I_ne_zero.isUnit.div₀ hu).ne_zero
   let L := (qdiff.localInverse Q _ z) diff_ne
   have diff_L : DifferentiableAt ℂ L q :=

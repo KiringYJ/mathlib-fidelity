@@ -43,6 +43,9 @@ def Nat.nthRoot : Nat → Nat → Nat
       -/
       go (n a : Nat)
       | 0, guess => guess
-      | fuel + 1, guess =>
-        let next := (a / guess ^ (n + 1) + (n + 1) * guess) / (n + 2)
+      | _ + 1, 0 => 0
+      | fuel + 1, guessPred + 1 =>
+        let guess := guessPred + 1
+        let q := Nat.euclideanDiv a (guess ^ (n + 1)) (Nat.ne_of_gt (Nat.pow_pos (by omega)))
+        let next := Nat.euclideanDiv (q + (n + 1) * guess) (n + 2)
         if next < guess then go n a fuel next else guess

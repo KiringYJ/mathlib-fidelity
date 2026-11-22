@@ -823,6 +823,10 @@ theorem stoppedValue_const (u : ι → Ω → β) (i : ι) : (stoppedValue u fun
 @[simp] lemma stoppedValue_comp {γ : Type*} (f : β → γ) :
     stoppedValue (fun t ω ↦ f (u t ω)) τ = fun ω ↦ f (stoppedValue u τ ω) := rfl
 
+lemma stoppedValue_comp₂ {γ δ : Type*} {w : ι → Ω → γ} (op : β → γ → δ) :
+    stoppedValue (fun i ω ↦ op (u i ω) (w i ω)) τ = fun ω ↦
+      op (stoppedValue u τ ω) (stoppedValue w τ ω) := rfl
+
 lemma stoppedValue_norm [SeminormedAddCommGroup β] :
     stoppedValue (fun t ω ↦ ‖u t ω‖) τ = fun ω ↦ ‖stoppedValue u τ ω‖ := rfl
 
@@ -833,9 +837,12 @@ lemma stoppedValue_inv [Inv β] : stoppedValue (u⁻¹) τ = (stoppedValue u τ)
 lemma stoppedValue_mul [Mul β] :
     stoppedValue (u * v) τ = stoppedValue u τ * stoppedValue v τ := rfl
 
-@[to_additive (attr := simp)]
-lemma stoppedValue_div [Div β] :
-    stoppedValue (u / v) τ = stoppedValue u τ / stoppedValue v τ := rfl
+@[simp] lemma stoppedValue_sub [Sub β] :
+    stoppedValue (u - v) τ = stoppedValue u τ - stoppedValue v τ := rfl
+
+@[to_additive (attr := simp) stoppedValue_sub_of_addGroup] lemma stoppedValue_div [Group β] :
+    stoppedValue (u / v) τ = stoppedValue u τ / stoppedValue v τ := by
+  funext ω; simp only [stoppedValue, Pi.div_apply]
 
 @[simp] lemma stoppedValue_const_smul {𝕜 : Type*} [SMul 𝕜 β] (c : 𝕜) :
     stoppedValue (c • u) τ = c • stoppedValue u τ := rfl
@@ -869,6 +876,10 @@ theorem stoppedProcess_eq_stoppedValue_apply (i : ι) (ω : Ω) :
 lemma stoppedProcess_norm [SeminormedAddCommGroup β] :
     stoppedProcess (fun t ω ↦ ‖u t ω‖) τ = fun i ω ↦ ‖stoppedProcess u τ i ω‖ := rfl
 
+lemma stoppedProcess_comp₂ {γ δ : Type*} {w : ι → Ω → γ} (op : β → γ → δ) :
+    stoppedProcess (fun i ω ↦ op (u i ω) (w i ω)) τ = fun i ω ↦
+      op (stoppedProcess u τ i ω) (stoppedProcess w τ i ω) := rfl
+
 @[to_additive (attr := simp)]
 lemma stoppedProcess_inv [Inv β] : stoppedProcess (u⁻¹) τ = (stoppedProcess u τ)⁻¹ := rfl
 
@@ -876,9 +887,12 @@ lemma stoppedProcess_inv [Inv β] : stoppedProcess (u⁻¹) τ = (stoppedProcess
 lemma stoppedProcess_mul [Mul β] :
     stoppedProcess (u * v) τ = stoppedProcess u τ * stoppedProcess v τ := rfl
 
-@[to_additive (attr := simp)]
-lemma stoppedProcess_div [Div β] :
-    stoppedProcess (u / v) τ = stoppedProcess u τ / stoppedProcess v τ := rfl
+@[simp] lemma stoppedProcess_sub [Sub β] :
+    stoppedProcess (u - v) τ = stoppedProcess u τ - stoppedProcess v τ := rfl
+
+@[to_additive (attr := simp) stoppedProcess_sub_of_addGroup] lemma stoppedProcess_div [Group β] :
+    stoppedProcess (u / v) τ = stoppedProcess u τ / stoppedProcess v τ := by
+  funext i ω; simp only [stoppedProcess, Pi.div_apply]
 
 @[simp] lemma stoppedProcess_const_smul {𝕜 : Type*} [SMul 𝕜 β] (c : 𝕜) :
     stoppedProcess (c • u) τ = c • stoppedProcess u τ := rfl

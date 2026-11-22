@@ -49,7 +49,8 @@ number `C` such that for infinitely many denominators `n` there exists a numerat
 A number is a Liouville number in the sense of `Liouville` if it is `LiouvilleWith` any real
 exponent. -/
 def LiouvilleWith (p x : ℝ) : Prop :=
-  ∃ C, ∃ᶠ n : ℕ in atTop, ∃ (_ : 0 < n) (m : ℤ), x ≠ m / n ∧ |x - m / n| < C / n ^ p
+  ∃ C, ∃ᶠ n : ℕ in atTop, ∃ (_ : 0 < n) (m : ℤ),
+        x ≠ (m : ℝ) / (n : ℝ) ∧ |x - (m : ℝ) / (n : ℝ)| < C / (n : ℝ) ^ p
 
 /-- For `p = 1` (hence, for any `p ≤ 1`), the condition `LiouvilleWith p x` is trivial. -/
 theorem liouvilleWith_one (x : ℝ) : LiouvilleWith 1 x := by
@@ -75,7 +76,8 @@ variable {p q x : ℝ} {r : ℚ} {m : ℤ} {n : ℕ}
 The denominators satisfy `1 ≤ n`. -/
 theorem exists_pos (h : LiouvilleWith p x) :
     ∃ (C : ℝ) (_h₀ : 0 < C),
-      ∃ᶠ n : ℕ in atTop, ∃ (_ : 1 ≤ n) (m : ℤ), x ≠ m / n ∧ |x - m / n| < C / n ^ p := by
+      ∃ᶠ n : ℕ in atTop, ∃ (_ : 1 ≤ n) (m : ℤ),
+        x ≠ (m : ℝ) / (n : ℝ) ∧ |x - (m : ℝ) / (n : ℝ)| < C / (n : ℝ) ^ p := by
   rcases h with ⟨C, hC⟩
   refine ⟨max C 1, zero_lt_one.trans_le <| le_max_right _ _, ?_⟩
   refine hC.mono ?_
@@ -95,7 +97,8 @@ theorem mono (h : LiouvilleWith p x) (hle : q ≤ p) : LiouvilleWith q x := by
 /-- If `x` satisfies Liouville condition with exponent `p` and `q < p`, then `x`
 satisfies Liouville condition with exponent `q` and constant `1`. -/
 theorem frequently_lt_rpow_neg (h : LiouvilleWith p x) (hlt : q < p) :
-    ∃ᶠ n : ℕ in atTop, ∃ (_ : 0 < n) (m : ℤ), x ≠ m / n ∧ |x - m / n| < n ^ (-q) := by
+    ∃ᶠ n : ℕ in atTop, ∃ (_ : 0 < n) (m : ℤ),
+        x ≠ (m : ℝ) / (n : ℝ) ∧ |x - (m : ℝ) / (n : ℝ)| < (n : ℝ) ^ (-q) := by
   rcases h.exists_pos with ⟨C, _hC₀, hC⟩
   have : ∀ᶠ n : ℕ in atTop, C < n ^ (p - q) := by
     simpa only [(· ∘ ·), neg_sub, one_div] using
@@ -113,7 +116,7 @@ theorem mul_rat (h : LiouvilleWith p x) (hr : r ≠ 0) : LiouvilleWith p (x * r)
   refine ⟨r.den ^ p * (|r| * C), (tendsto_id.nsmul_atTop r.pos).frequently (hC.mono ?_)⟩
   rintro n ⟨hn, m, hne, hlt⟩
   have hn' : 0 < r.den • id n := Nat.mul_pos r.pos hn
-  have A : (↑(r.num * m) : ℝ) / ↑(r.den • id n) = m / n * r := by
+  have A : (↑(r.num * m) : ℝ) / ↑(r.den • id n) = (m : ℝ) / (n : ℝ) * r := by
     rw [Rat.cast_def r, div_mul_div_comm₀]
     simp [mul_comm]
   refine ⟨hn', r.num * m, ?_, ?_⟩
@@ -175,7 +178,7 @@ theorem add_rat (h : LiouvilleWith p x) (r : ℚ) : LiouvilleWith p (x + r) := b
   refine ⟨r.den ^ p * C, (tendsto_id.nsmul_atTop r.pos).frequently (hC.mono ?_)⟩
   rintro n ⟨hn, m, hne, hlt⟩
   have hn' : 0 < r.den • id n := Nat.mul_pos r.pos hn
-  have : (↑(r.den * m + r.num * n : ℤ) / ↑(r.den • id n) : ℝ) = m / n + r := by
+  have : (↑(r.den * m + r.num * n : ℤ) / ↑(r.den • id n) : ℝ) = (m : ℝ) / (n : ℝ) + r := by
     rw [Rat.cast_def r]
     simp only [smul_eq_mul, id_eq, Nat.cast_mul, Int.cast_add, Int.cast_mul, Int.cast_natCast]
     rw [add_div, mul_div_mul_left, mul_div_mul_right]
@@ -275,7 +278,8 @@ theorem nat_sub (h : LiouvilleWith p x) (n : ℕ) : LiouvilleWith p (n - x) :=
 theorem ne_cast_int (h : LiouvilleWith p x) (hp : 1 < p) (m : ℤ) : x ≠ m := by
   rintro rfl; rename' m => M
   rcases (h.frequently_lt_rpow_neg hp).exists with
-    ⟨n : ℕ, hn : 0 < n, m : ℤ, hne : (M : ℝ) ≠ m / n, hlt : |(M - m / n : ℝ)| < n ^ (-1 : ℝ)⟩
+    ⟨n : ℕ, hn : 0 < n, m : ℤ, hne : (M : ℝ) ≠ (m : ℝ) / (n : ℝ),
+      hlt : |(M - (m : ℝ) / (n : ℝ) : ℝ)| < (n : ℝ) ^ (-1 : ℝ)⟩
   refine hlt.not_ge ?_
   have hn' : (0 : ℝ) < n := by simpa
   rw [rpow_neg_one _ (hx := hn'.ne'.isUnit), ← one_div₀, sub_div', abs_div]
@@ -305,11 +309,12 @@ variable {x : ℝ}
 exists a numerator `a` such that `x ≠ a / b` and `|x - a / b| < 1 / b ^ n`. -/
 theorem frequently_exists_num (hx : Liouville x) (n : ℕ) :
     ∃ᶠ b : ℕ in atTop, ∃ (_ : 0 < b) (a : ℤ),
-      x ≠ a / b ∧ |x - a / b| < 1 / (b : ℝ) ^ n := by
+      x ≠ (a : ℝ) / (b : ℝ) ∧ |x - (a : ℝ) / (b : ℝ)| < 1 / (b : ℝ) ^ n := by
   by_contra! H
   simp only [eventually_atTop] at H
   rcases H with ⟨N, hN⟩
-  have : ∀ (b : ℕ) (_ : 1 < b), ∀ᶠ m : ℕ in atTop, ∀ a : ℤ, 1 / (b : ℝ) ^ m ≤ |x - a / b| := by
+  have : ∀ (b : ℕ) (_ : 1 < b), ∀ᶠ m : ℕ in atTop, ∀ a : ℤ,
+      1 / (b : ℝ) ^ m ≤ |x - (a : ℝ) / (b : ℝ)| := by
     intro b hb
     replace hb : (1 : ℝ) < b := Nat.one_lt_cast.2 hb
     have H : Tendsto (fun m => 1 / (b : ℝ) ^ m : ℕ → ℝ) atTop (𝓝 0) := by
@@ -318,7 +323,8 @@ theorem frequently_exists_num (hx : Liouville x) (n : ℕ) :
     refine (H.eventually (hx.irrational.eventually_forall_le_dist_cast_div b
       (Nat.cast_ne_zero.1 (zero_lt_one.trans hb).ne'))).mono ?_
     exact fun m hm a => hm a
-  have : ∀ᶠ m : ℕ in atTop, ∀ b < N, ∀ (_ : 1 < b) (a : ℤ), 1 / (b : ℝ) ^ m ≤ |x - a / b| :=
+  have : ∀ᶠ m : ℕ in atTop, ∀ b < N, ∀ (_ : 1 < b) (a : ℤ),
+      1 / (b : ℝ) ^ m ≤ |x - (a : ℝ) / (b : ℝ)| :=
     (finite_lt_nat N).eventually_all.2 fun b _hb => by
       by_cases h : 1 < b
       · exact (this b h).mono fun _ hm _ a => hm a

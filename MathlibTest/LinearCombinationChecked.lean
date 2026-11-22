@@ -45,5 +45,5 @@ example (h : a ≤ b) : a ≤ b := by
 end Field
 
 -- Genuine integer quotients keep their existing contract.
-example (a b : Int) (h : a = b) : a / 2 = b / 2 := by
-  linear_combination h / 2
+example (a b : Int) (h : a = b) : Int.euclideanDiv a 2 = Int.euclideanDiv b 2 := by
+  linear_combination (congrArg (fun x : Int ↦ Int.euclideanDiv x 2) h)

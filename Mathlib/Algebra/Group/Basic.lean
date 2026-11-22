@@ -167,8 +167,11 @@ lemma pow_sub_one_mul (hn : n ≠ 0) (a : M) : a ^ (n - 1) * a = a ^ n := by
 /-- If `x ^ n = 1`, then `x ^ m` is the same as `x ^ (m % n)` -/
 @[to_additive nsmul_eq_mod_nsmul /-- If `n • x = 0`, then `m • x` is the same as `(m % n) • x` -/]
 lemma pow_eq_pow_mod (m : ℕ) (ha : a ^ n = 1) : a ^ m = a ^ (m % n) := by
+  by_cases hn : n = 0
+  · simp [hn]
   calc
-    a ^ m = a ^ (m % n + n * (m / n)) := by rw [Nat.mod_add_div]
+    a ^ m = a ^ (m % n + n * Nat.euclideanDiv m n hn) := by
+      rw [Nat.euclideanDiv_eq_core, Nat.mod_add_div]
     _ = a ^ (m % n) := by simp [pow_add, pow_mul, ha]
 
 @[to_additive] lemma pow_mul_pow_eq_one : ∀ n, a * b = 1 → a ^ n * b ^ n = 1
@@ -330,18 +333,18 @@ section DivInvMonoid
 variable [DivInvMonoid G]
 
 @[to_additive]
-theorem mul_one_div (x y : G) : x * (1 / y) = x / y := by
-  rw [div_eq_mul_inv, one_mul, div_eq_mul_inv]
+theorem mul_one_div (x y : G) : x * DivInvMonoid.div' 1 y = DivInvMonoid.div' x y := by
+  simp only [DivInvMonoid.div', one_mul]
 
 @[to_additive]
-theorem mul_div_assoc' (a b c : G) : a * (b / c) = a * b / c :=
-  (mul_div_assoc _ _ _).symm
+theorem mul_div_assoc' (a b c : G) :
+    a * DivInvMonoid.div' b c = DivInvMonoid.div' (a * b) c :=
+  (mul_assoc a b c⁻¹).symm
 
 @[to_additive]
-theorem mul_div (a b c : G) : a * (b / c) = a * b / c := by simp only [mul_assoc, div_eq_mul_inv]
-
-@[to_additive]
-theorem div_eq_mul_one_div (a b : G) : a / b = a * (1 / b) := by rw [div_eq_mul_inv, one_div]
+theorem div_eq_mul_one_div (a b : G) :
+    DivInvMonoid.div' a b = a * DivInvMonoid.div' 1 b :=
+  (mul_one_div a b).symm
 
 end DivInvMonoid
 
@@ -349,36 +352,39 @@ section DivInvOneMonoid
 
 variable [DivInvOneMonoid G]
 
-@[to_additive (attr := simp)]
-theorem div_one (a : G) : a / 1 = a := by simp [div_eq_mul_inv]
-
 @[to_additive]
-theorem one_div_one : (1 : G) / 1 = 1 :=
-  div_one _
+theorem one_div_one : DivInvMonoid.div' (1 : G) 1 = 1 := by
+  simp only [DivInvMonoid.div', inv_one, mul_one]
 
 end DivInvOneMonoid
+
+theorem add_sub [SubNegMonoid G] (a b c : G) : a + (b - c) = (a + b) - c := by
+  rw [sub_eq_add_neg, sub_eq_add_neg, add_assoc]
+
+@[simp] theorem sub_zero [SubNegZeroMonoid G] (a : G) : a - 0 = a := by
+  rw [sub_eq_add_neg, neg_zero, add_zero]
 
 section DivisionMonoid
 
 variable [DivisionMonoid α] {a b c d : α}
 
-attribute [local simp] mul_assoc div_eq_mul_inv
+attribute [local simp] mul_assoc
 
 @[to_additive]
 theorem eq_inv_of_mul_eq_one_right (h : a * b = 1) : b = a⁻¹ :=
   (inv_eq_of_mul_eq_one_right h).symm
 
-@[to_additive]
-theorem eq_one_div_of_mul_eq_one_left (h : b * a = 1) : b = 1 / a := by
-  rw [eq_inv_of_mul_eq_one_left h, one_div]
+@[to_additive SubtractionMonoid.eq_zero_sub_of_add_eq_zero_left]
+theorem eq_one_div_of_mul_eq_one_left (h : b * a = 1) : b = DivInvMonoid.div' 1 a := by
+  simpa only [DivInvMonoid.div', one_mul] using eq_inv_of_mul_eq_one_left h
 
-@[to_additive]
-theorem eq_one_div_of_mul_eq_one_right (h : a * b = 1) : b = 1 / a := by
-  rw [eq_inv_of_mul_eq_one_right h, one_div]
+@[to_additive SubtractionMonoid.eq_zero_sub_of_add_eq_zero_right]
+theorem eq_one_div_of_mul_eq_one_right (h : a * b = 1) : b = DivInvMonoid.div' 1 a := by
+  simpa only [DivInvMonoid.div', one_mul] using eq_inv_of_mul_eq_one_right h
 
-@[to_additive]
-theorem eq_of_div_eq_one (h : a / b = 1) : a = b :=
-  inv_injective <| inv_eq_of_mul_eq_one_right <| by rwa [← div_eq_mul_inv]
+@[to_additive SubtractionMonoid.eq_of_sub_eq_zero]
+theorem eq_of_div_eq_one (h : DivInvMonoid.div' a b = 1) : a = b :=
+  inv_injective (inv_eq_of_mul_eq_one_right h)
 
 @[to_additive]
 lemma eq_of_inv_mul_eq_one (h : a⁻¹ * b = 1) : a = b := by simpa using eq_inv_of_mul_eq_one_left h
@@ -386,35 +392,35 @@ lemma eq_of_inv_mul_eq_one (h : a⁻¹ * b = 1) : a = b := by simpa using eq_inv
 @[to_additive]
 lemma eq_of_mul_inv_eq_one (h : a * b⁻¹ = 1) : a = b := by simpa using eq_inv_of_mul_eq_one_left h
 
-@[to_additive]
-theorem div_ne_one_of_ne : a ≠ b → a / b ≠ 1 :=
-  mt eq_of_div_eq_one
-
 variable (a b c)
 
-@[to_additive]
-theorem one_div_mul_one_div_rev : 1 / a * (1 / b) = 1 / (b * a) := by simp
+@[to_additive SubtractionMonoid.zero_sub_add_zero_sub_rev]
+theorem one_div_mul_one_div_rev :
+    DivInvMonoid.div' 1 a * DivInvMonoid.div' 1 b = DivInvMonoid.div' 1 (b * a) := by
+  simp [DivInvMonoid.div']
 
-@[to_additive]
-theorem inv_div_left : a⁻¹ / b = (b * a)⁻¹ := by simp
+@[to_additive SubtractionMonoid.neg_sub_left]
+theorem inv_div_left : DivInvMonoid.div' a⁻¹ b = (b * a)⁻¹ := by
+  simp [DivInvMonoid.div']
 
-@[to_additive (attr := simp)]
-theorem inv_div : (a / b)⁻¹ = b / a := by simp
+@[to_additive SubtractionMonoid.zero_sub_sub]
+theorem one_div_div :
+    DivInvMonoid.div' 1 (DivInvMonoid.div' a b) = DivInvMonoid.div' b a := by
+  simp [DivInvMonoid.div']
 
-@[to_additive]
-theorem one_div_div : 1 / (a / b) = b / a := by simp
+@[to_additive SubtractionMonoid.zero_sub_zero_sub]
+theorem one_div_one_div : DivInvMonoid.div' 1 (DivInvMonoid.div' 1 a) = a := by
+  simp [DivInvMonoid.div']
 
-@[to_additive]
-theorem one_div_one_div : 1 / (1 / a) = a := by simp
-
-@[to_additive]
-theorem div_eq_div_iff_comm : a / b = c / d ↔ b / a = d / c :=
-  inv_inj.symm.trans <| by simp only [inv_div]
+@[to_additive SubtractionMonoid.sub_eq_sub_iff_comm]
+theorem div_eq_div_iff_comm :
+    DivInvMonoid.div' a b = DivInvMonoid.div' c d ↔ DivInvMonoid.div' b a = DivInvMonoid.div' d c :=
+  inv_inj.symm.trans <| by simp [DivInvMonoid.div']
 
 @[to_additive]
 instance (priority := 100) DivisionMonoid.toDivInvOneMonoid : DivInvOneMonoid α :=
   { DivisionMonoid.toDivInvMonoid with
-    inv_one := by simpa only [one_div, inv_inv] using (inv_div (1 : α) 1).symm }
+    inv_one := inv_eq_of_mul_eq_one_right (one_mul (1 : α)) }
 
 @[to_additive (attr := simp)]
 lemma inv_pow (a : α) : ∀ n : ℕ, a⁻¹ ^ n = (a ^ n)⁻¹
@@ -447,11 +453,15 @@ lemma inv_zpow (a : α) : ∀ n : ℤ, a⁻¹ ^ n = (a ^ n)⁻¹
 @[to_additive (attr := simp) zsmul_neg']
 lemma inv_zpow' (a : α) (n : ℤ) : a⁻¹ ^ n = a ^ (-n) := by rw [inv_zpow, zpow_neg]
 
-@[to_additive nsmul_zero_sub]
-lemma one_div_pow (a : α) (n : ℕ) : (1 / a) ^ n = 1 / a ^ n := by simp only [one_div, inv_pow]
+@[to_additive SubtractionMonoid.nsmul_zero_sub]
+lemma one_div_pow (a : α) (n : ℕ) :
+    (DivInvMonoid.div' 1 a) ^ n = DivInvMonoid.div' 1 (a ^ n) := by
+  simp only [DivInvMonoid.div', one_mul, inv_pow]
 
-@[to_additive zsmul_zero_sub]
-lemma one_div_zpow (a : α) (n : ℤ) : (1 / a) ^ n = 1 / a ^ n := by simp only [one_div, inv_zpow]
+@[to_additive SubtractionMonoid.zsmul_zero_sub]
+lemma one_div_zpow (a : α) (n : ℤ) :
+    (DivInvMonoid.div' 1 a) ^ n = DivInvMonoid.div' 1 (a ^ n) := by
+  simp only [DivInvMonoid.div', one_mul, inv_zpow]
 
 @[to_additive]
 theorem zpow_eq_inv_pow_natAbs (a : α) {n : ℤ} (hn : n ≤ 0) : a ^ n = a⁻¹ ^ n.natAbs := by
@@ -471,9 +481,9 @@ theorem one_eq_inv : 1 = a⁻¹ ↔ a = 1 :=
 theorem inv_ne_one : a⁻¹ ≠ 1 ↔ a ≠ 1 :=
   inv_eq_one.not
 
-@[to_additive]
-theorem eq_of_one_div_eq_one_div (h : 1 / a = 1 / b) : a = b := by
-  rw [← one_div_one_div a, h, one_div_one_div]
+@[to_additive SubtractionMonoid.eq_of_zero_sub_eq_zero_sub]
+theorem eq_of_one_div_eq_one_div (h : DivInvMonoid.div' 1 a = DivInvMonoid.div' 1 b) : a = b :=
+  inv_injective (by simpa only [DivInvMonoid.div', one_mul] using h)
 
 -- Note that `mul_zsmul` and `zpow_mul` have the primes swapped
 -- when additivised since their argument order,
@@ -499,114 +509,205 @@ lemma zpow_mul' (a : α) (m n : ℤ) : a ^ (m * n) = (a ^ n) ^ m := by rw [Int.m
 @[to_additive]
 theorem zpow_comm (a : α) (m n : ℤ) : (a ^ m) ^ n = (a ^ n) ^ m := by rw [← zpow_mul, zpow_mul']
 
+end DivisionMonoid
+
+section SubtractionMonoid
+
+variable [SubtractionMonoid α] {a b c d : α}
+
+theorem eq_zero_sub_of_add_eq_zero_left (h : b + a = 0) : b = 0 - a := by
+  rw [zero_sub, eq_neg_of_add_eq_zero_left h]
+
+theorem eq_zero_sub_of_add_eq_zero_right (h : a + b = 0) : b = 0 - a := by
+  rw [zero_sub, eq_neg_of_add_eq_zero_right h]
+
+theorem eq_of_sub_eq_zero (h : a - b = 0) : a = b :=
+  eq_of_add_neg_eq_zero (by rwa [← sub_eq_add_neg])
+
+theorem sub_ne_zero_of_ne : a ≠ b → a - b ≠ 0 := mt eq_of_sub_eq_zero
+
 variable (a b c)
 
-@[to_additive]
-theorem div_div_eq_mul_div : a / (b / c) = a * c / b := by simp
+theorem zero_sub_add_zero_sub_rev : (0 - a) + (0 - b) = 0 - (b + a) := by
+  simp only [zero_sub, neg_add_rev]
 
-@[to_additive (attr := simp)]
-theorem div_inv_eq_mul : a / b⁻¹ = a * b := by simp
+theorem neg_sub_left : -a - b = -(b + a) := by rw [sub_eq_add_neg, neg_add_rev]
 
-@[to_additive]
-theorem div_mul_eq_div_div_swap : a / (b * c) = a / c / b := by
-  simp only [mul_assoc, mul_inv_rev, div_eq_mul_inv]
+@[simp] theorem neg_sub : -(a - b) = b - a := by simp only [sub_eq_add_neg, neg_add_rev, neg_neg]
 
-end DivisionMonoid
+theorem zero_sub_sub : 0 - (a - b) = b - a := by rw [zero_sub, neg_sub]
+
+theorem zero_sub_zero_sub : 0 - (0 - a) = a := by rw [zero_sub, zero_sub, neg_neg]
+
+theorem sub_eq_sub_iff_comm : a - b = c - d ↔ b - a = d - c :=
+  neg_inj.symm.trans <| by simp only [neg_sub]
+
+lemma nsmul_zero_sub (a : α) (n : ℕ) : n • (0 - a) = 0 - n • a := by
+  simpa only [zero_sub, SubNegMonoid.sub', zero_add] using SubtractionMonoid.nsmul_zero_sub a n
+
+lemma zsmul_zero_sub (a : α) (n : ℤ) : n • (0 - a) = 0 - n • a := by
+  simp only [zero_sub, zsmul_neg]
+
+theorem eq_of_zero_sub_eq_zero_sub {a b : α} (h : 0 - a = 0 - b) : a = b :=
+  neg_injective (by simpa only [zero_sub] using h)
+
+theorem sub_sub_eq_add_sub : a - (b - c) = (a + c) - b := by
+  simp only [sub_eq_add_neg, neg_add_rev, neg_neg, add_assoc]
+
+@[simp] theorem sub_neg_eq_add : a - -b = a + b := by rw [sub_eq_add_neg, neg_neg]
+
+theorem sub_add_eq_sub_sub_swap : a - (b + c) = a - c - b := by
+  simp only [sub_eq_add_neg, neg_add_rev, add_assoc]
+
+end SubtractionMonoid
 
 section DivisionCommMonoid
 
 variable [DivisionCommMonoid α] (a b c d : α)
 
-attribute [local simp] mul_assoc mul_comm mul_left_comm div_eq_mul_inv
+attribute [local simp] mul_assoc mul_comm mul_left_comm DivInvMonoid.div'
 
 @[to_additive neg_add]
 theorem mul_inv : (a * b)⁻¹ = a⁻¹ * b⁻¹ := by simp
 
-@[to_additive]
-theorem inv_div' : (a / b)⁻¹ = a⁻¹ / b⁻¹ := by simp
+@[to_additive SubtractionCommMonoid.neg_sub_comm]
+lemma inv_div_comm (a b : α) : DivInvMonoid.div' (a⁻¹) b = DivInvMonoid.div' (b⁻¹) a := by simp
 
-@[to_additive]
-theorem div_eq_inv_mul : a / b = b⁻¹ * a := by simp
+@[to_additive SubtractionCommMonoid.neg_neg_sub_neg]
+theorem inv_inv_div_inv :
+    (DivInvMonoid.div' (a⁻¹) (b⁻¹))⁻¹ = DivInvMonoid.div' a b := by simp
 
-@[to_additive]
-theorem inv_mul_eq_div : a⁻¹ * b = b / a := by simp
+@[to_additive SubtractionCommMonoid.zero_sub_add_zero_sub]
+theorem one_div_mul_one_div :
+    DivInvMonoid.div' 1 a * DivInvMonoid.div' 1 b = DivInvMonoid.div' 1 (a * b) := by simp
 
-@[to_additive] lemma inv_div_comm (a b : α) : a⁻¹ / b = b⁻¹ / a := by simp
+@[to_additive SubtractionCommMonoid.add_sub_left_comm]
+theorem mul_div_left_comm : a * DivInvMonoid.div' b c = b * DivInvMonoid.div' a c := by simp
 
-@[to_additive]
-theorem inv_mul' : (a * b)⁻¹ = a⁻¹ / b := by simp
+@[to_additive SubtractionCommMonoid.sub_add_eq_sub_sub]
+theorem div_mul_eq_div_div :
+    DivInvMonoid.div' a (b * c) = DivInvMonoid.div' (DivInvMonoid.div' a b) c := by simp
 
-@[to_additive]
-theorem inv_div_inv : a⁻¹ / b⁻¹ = b / a := by simp
+@[to_additive SubtractionCommMonoid.zero_sub_add_eq_sub]
+theorem one_div_mul_eq_div : DivInvMonoid.div' 1 a * b = DivInvMonoid.div' b a := by simp
 
-@[to_additive]
-theorem inv_inv_div_inv : (a⁻¹ / b⁻¹)⁻¹ = a / b := by simp
+@[to_additive SubtractionCommMonoid.sub_add_comm]
+theorem div_mul_comm : DivInvMonoid.div' a b * c = DivInvMonoid.div' c b * a := by simp
 
-@[to_additive]
-theorem one_div_mul_one_div : 1 / a * (1 / b) = 1 / (a * b) := by simp
+@[to_additive SubtractionCommMonoid.sub_add_eq_sub_add_zero_sub]
+theorem div_mul_eq_div_mul_one_div :
+    DivInvMonoid.div' a (b * c) = DivInvMonoid.div' a b * DivInvMonoid.div' 1 c := by
+  simp
 
-@[to_additive]
-theorem div_right_comm : a / b / c = a / c / b := by simp
-
-@[to_additive]
-theorem div_div : a / b / c = a / (b * c) := by simp
-
-@[to_additive]
-theorem div_mul : a / b * c = a / (b / c) := by simp
-
-@[to_additive]
-theorem mul_div_left_comm : a * (b / c) = b * (a / c) := by simp
-
-@[to_additive]
-theorem mul_div_right_comm : a * b / c = a / c * b := by simp
-
-@[to_additive]
-theorem div_mul_eq_div_div : a / (b * c) = a / b / c := by simp
-
-@[to_additive]
-theorem div_mul_eq_mul_div : a / b * c = a * c / b := by simp
-
-@[to_additive]
-theorem one_div_mul_eq_div : 1 / a * b = b / a := by simp
-
-@[to_additive]
-theorem mul_comm_div : a / b * c = a * (c / b) := by simp
-
-@[to_additive]
-theorem div_mul_comm : a / b * c = c / b * a := by simp
-
-@[to_additive]
-theorem div_mul_eq_div_mul_one_div : a / (b * c) = a / b * (1 / c) := by simp
-
-@[to_additive]
-theorem div_div_div_eq : a / b / (c / d) = a * d / (b * c) := by simp
-
-@[to_additive]
-theorem div_div_div_comm : a / b / (c / d) = a / c / (b / d) := by simp
-
-@[to_additive]
-theorem div_mul_div_comm : a / b * (c / d) = a * c / (b * d) := by simp
-
-@[to_additive]
-theorem mul_div_mul_comm : a * b / (c * d) = a / c * (b / d) := by simp
+@[to_additive SubtractionCommMonoid.sub_sub_sub_eq]
+theorem div_div_div_eq :
+    DivInvMonoid.div' (DivInvMonoid.div' a b) (DivInvMonoid.div' c d) =
+      DivInvMonoid.div' (a * d) (b * c) := by
+  simp
 
 @[to_additive zsmul_add] lemma mul_zpow : ∀ n : ℤ, (a * b) ^ n = a ^ n * b ^ n
   | (n : ℕ) => by simp_rw [zpow_natCast, mul_pow]
   | .negSucc n => by simp_rw [zpow_negSucc, ← inv_pow, mul_inv, mul_pow]
 
-@[to_additive nsmul_sub]
-lemma div_pow (a b : α) (n : ℕ) : (a / b) ^ n = a ^ n / b ^ n := by
-  simp only [div_eq_mul_inv, mul_pow, inv_pow]
-
-@[to_additive zsmul_sub]
-lemma div_zpow (a b : α) (n : ℤ) : (a / b) ^ n = a ^ n / b ^ n := by
-  simp only [div_eq_mul_inv, mul_zpow, inv_zpow]
-
 end DivisionCommMonoid
+
+section SubtractionCommMonoid
+
+variable [SubtractionCommMonoid α] (a b c d : α)
+
+attribute [local simp] add_assoc add_comm add_left_comm sub_eq_add_neg
+
+theorem neg_sub' : -(a - b) = -a - -b := by simp
+
+theorem sub_eq_neg_add : a - b = -b + a := by simp
+
+theorem neg_add_eq_sub : -a + b = b - a := by simp
+
+theorem neg_sub_comm : -a - b = -b - a := by simp
+
+theorem neg_add' : -(a + b) = -a - b := by simp
+
+theorem neg_sub_neg : -a - -b = b - a := by simp
+
+theorem neg_neg_sub_neg : -(-a - -b) = a - b := by simp
+
+theorem zero_sub_add_zero_sub : (0 - a) + (0 - b) = 0 - (a + b) := by simp
+
+theorem sub_right_comm : a - b - c = a - c - b := by simp
+
+theorem sub_sub : a - b - c = a - (b + c) := by simp
+
+theorem sub_add : a - b + c = a - (b - c) := by simp
+
+theorem add_sub_left_comm : a + (b - c) = b + (a - c) := by simp
+
+theorem add_sub_right_comm : (a + b) - c = (a - c) + b := by simp
+
+theorem sub_add_eq_sub_sub : a - (b + c) = a - b - c := by simp
+
+theorem sub_add_eq_add_sub : a - b + c = (a + c) - b := by simp
+
+theorem zero_sub_add_eq_sub : (0 - a) + b = b - a := by simp
+
+theorem add_comm_sub : (a - b) + c = a + (c - b) := by simp
+
+theorem sub_add_comm : a - b + c = c - b + a := by simp
+
+theorem sub_add_eq_sub_add_zero_sub : a - (b + c) = (a - b) + (0 - c) := by simp
+
+theorem sub_sub_sub_eq : a - b - (c - d) = (a + d) - (b + c) := by simp
+
+theorem sub_sub_sub_comm : a - b - (c - d) = a - c - (b - d) := by simp
+
+theorem sub_add_sub_comm : (a - b) + (c - d) = (a + c) - (b + d) := by simp
+
+theorem add_sub_add_comm : (a + b) - (c + d) = (a - c) + (b - d) := by simp
+
+lemma nsmul_sub (a b : α) (n : ℕ) : n • (a - b) = n • a - n • b := by
+  simp only [sub_eq_add_neg, nsmul_add, ← neg_nsmul]
+
+lemma zsmul_sub (a b : α) (n : ℤ) : n • (a - b) = n • a - n • b := by
+  simp only [sub_eq_add_neg, zsmul_add, zsmul_neg]
+
+end SubtractionCommMonoid
 
 section Group
 
 variable [Group G] {a b c d : G} {n : ℤ}
+
+@[to_additive AddGroup.add_sub]
+theorem mul_div (a b c : G) : a * (b / c) = (a * b) / c := by
+  rw [div_eq_mul_inv, div_eq_mul_inv, mul_assoc]
+
+@[to_additive AddGroup.sub_zero]
+theorem div_one (a : G) : a / 1 = a := by
+  rw [div_eq_mul_inv, inv_one, mul_one]
+
+attribute [simp] div_one
+
+@[to_additive AddGroup.sub_ne_zero_of_ne]
+theorem div_ne_one_of_ne : a ≠ b → a / b ≠ 1 := by
+  simpa only [div_eq_mul_inv] using (mt (eq_of_mul_inv_eq_one (a := a) (b := b)))
+
+@[to_additive AddGroup.neg_sub]
+theorem inv_div (a b : G) : (a / b)⁻¹ = b / a := by
+  simp only [div_eq_mul_inv, mul_inv_rev, inv_inv]
+
+attribute [simp] inv_div
+
+@[to_additive AddGroup.sub_sub_eq_add_sub]
+theorem div_div_eq_mul_div (a b c : G) : a / (b / c) = (a * c) / b := by
+  simp only [div_eq_mul_inv, mul_inv_rev, inv_inv, mul_assoc]
+
+@[to_additive AddGroup.sub_neg_eq_add]
+theorem div_inv_eq_mul (a b : G) : a / b⁻¹ = a * b := by
+  rw [div_eq_mul_inv, inv_inv]
+
+attribute [simp] div_inv_eq_mul
+
+@[to_additive AddGroup.sub_add_eq_sub_sub_swap]
+theorem div_mul_eq_div_div_swap (a b c : G) : a / (b * c) = a / c / b := by
+  simp only [div_eq_mul_inv, mul_inv_rev, mul_assoc]
 
 @[to_additive (attr := simp)]
 theorem div_eq_inv_self : a / b = b⁻¹ ↔ a = 1 := by rw [div_eq_mul_inv, mul_eq_right]
@@ -753,7 +854,7 @@ theorem div_div_div_cancel_right (a b c : G) : a / c / (b / c) = a / b := by
 
 @[to_additive]
 theorem div_eq_one : a / b = 1 ↔ a = b :=
-  ⟨eq_of_div_eq_one, fun h ↦ by rw [h, div_self']⟩
+  ⟨fun h ↦ eq_of_mul_inv_eq_one (by rwa [← div_eq_mul_inv]), fun h ↦ by rw [h, div_self']⟩
 
 alias ⟨_, div_eq_one_of_eq⟩ := div_eq_one
 
@@ -860,9 +961,12 @@ lemma zpow_one_sub_natCast (a : G) (n : ℕ) : a ^ (1 - n : ℤ) = a / a ^ n := 
   | .negSucc n => by simp [inv_mul_eq_iff_eq_mul, eq_mul_inv_iff_mul_eq, mul_assoc, mul_pow_mul]
 
 theorem zpow_eq_zpow_emod {x : G} (m : ℤ) {n : ℤ} (h : x ^ n = 1) :
-    x ^ m = x ^ (m % n) :=
+    x ^ m = x ^ (m % n) := by
+  by_cases hn : n = 0
+  · simp [hn]
   calc
-    x ^ m = x ^ (m % n + n * (m / n)) := by rw [Int.emod_add_mul_ediv]
+    x ^ m = x ^ (m % n + n * Int.euclideanDiv m n hn) := by
+      rw [Int.euclideanDiv_eq_core, Int.emod_add_mul_ediv]
     _ = x ^ (m % n) := by simp [zpow_add, zpow_mul, h]
 
 theorem zpow_eq_zpow_emod' {x : G} (m : ℤ) {n : ℕ} (h : x ^ n = 1) :
@@ -912,6 +1016,64 @@ end Group
 section CommGroup
 
 variable [CommGroup G] {a b c d : G}
+
+section
+
+variable (a b c d)
+
+attribute [local simp] mul_assoc mul_comm mul_left_comm div_eq_mul_inv
+
+@[to_additive AddCommGroup.neg_sub']
+theorem inv_div' : (a / b)⁻¹ = a⁻¹ / b⁻¹ := by simp
+
+@[to_additive AddCommGroup.sub_eq_neg_add]
+theorem div_eq_inv_mul : a / b = b⁻¹ * a := by simp
+
+@[to_additive AddCommGroup.neg_add_eq_sub]
+theorem inv_mul_eq_div : a⁻¹ * b = b / a := by simp
+
+@[to_additive AddCommGroup.neg_add']
+theorem inv_mul' : (a * b)⁻¹ = a⁻¹ / b := by simp
+
+@[to_additive AddCommGroup.neg_sub_neg]
+theorem inv_div_inv : a⁻¹ / b⁻¹ = b / a := by simp
+
+@[to_additive AddCommGroup.sub_right_comm]
+theorem div_right_comm : a / b / c = a / c / b := by simp
+
+@[to_additive AddCommGroup.sub_sub]
+theorem div_div : a / b / c = a / (b * c) := by simp
+
+@[to_additive AddCommGroup.sub_add]
+theorem div_mul : a / b * c = a / (b / c) := by simp
+
+@[to_additive AddCommGroup.add_sub_right_comm]
+theorem mul_div_right_comm : a * b / c = a / c * b := by simp
+
+@[to_additive AddCommGroup.sub_add_eq_add_sub]
+theorem div_mul_eq_mul_div : a / b * c = a * c / b := by simp
+
+@[to_additive AddCommGroup.add_comm_sub]
+theorem mul_comm_div : a / b * c = a * (c / b) := by simp
+
+@[to_additive AddCommGroup.sub_sub_sub_comm]
+theorem div_div_div_comm : a / b / (c / d) = a / c / (b / d) := by simp
+
+@[to_additive AddCommGroup.sub_add_sub_comm]
+theorem div_mul_div_comm : a / b * (c / d) = a * c / (b * d) := by simp
+
+@[to_additive AddCommGroup.add_sub_add_comm]
+theorem mul_div_mul_comm : a * b / (c * d) = a / c * (b / d) := by simp
+
+@[to_additive AddCommGroup.nsmul_sub]
+lemma div_pow (a b : G) (n : ℕ) : (a / b) ^ n = a ^ n / b ^ n := by
+  simp only [div_eq_mul_inv, mul_pow, inv_pow]
+
+@[to_additive AddCommGroup.zsmul_sub]
+lemma div_zpow (a b : G) (n : ℤ) : (a / b) ^ n = a ^ n / b ^ n := by
+  simp only [div_eq_mul_inv, mul_zpow, inv_zpow]
+
+end
 
 attribute [local simp] mul_assoc mul_comm mul_left_comm div_eq_mul_inv
 

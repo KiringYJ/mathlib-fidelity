@@ -5,6 +5,7 @@ Authors: Michael Stoll, Thomas Zhu, Mario Carneiro
 -/
 module
 
+public import Mathlib.Lean.Elab.NativeDivision
 public import Mathlib.NumberTheory.LegendreSymbol.QuadraticReciprocity
 
 /-!
@@ -328,24 +329,28 @@ theorem at_neg_two {b : ℕ} (hb : Odd b) : J(-2 | b) = χ₈' b :=
   value_at (-2) χ₈'.toMonoidHom (fun p pp => @legendreSym.at_neg_two p ⟨pp⟩) hb
 
 theorem div_four_left {a : ℤ} {b : ℕ} (ha4 : a % 4 = 0) (hb2 : b % 2 = 1) :
-    J(a / 4 | b) = J(a | b) := by
+    J(Int.euclideanDiv a 4 (by decide) | b) = J(a | b) := by
   obtain ⟨a, rfl⟩ := Int.dvd_of_emod_eq_zero ha4
   have : Int.gcd (2 : ℕ) b = 1 := by
-    rw [Int.gcd_natCast_natCast, ← b.mod_add_div 2, hb2, Nat.gcd_add_mul_left_right,
-      Nat.gcd_one_right]
-  rw [Int.mul_ediv_cancel_left _ (by decide), jacobiSym.mul_left,
+    rw [Int.gcd_natCast_natCast, Nat.gcd_rec, hb2, Nat.gcd_one_left]
+  have hq : Int.euclideanDiv (4 * a) 4 (by decide) = a :=
+    Int.euclideanDiv_eq_of_remainder (r := 0) (by decide) (by simp) (by decide) (by decide)
+  rw [hq, jacobiSym.mul_left,
     (by decide : (4 : ℤ) = (2 : ℕ) ^ 2), jacobiSym.sq_one' this, one_mul]
 
 /-- If `b` is odd, then `J(4 | b) = 1`. -/
 theorem at_four {b : ℕ} (hb : Odd b) : J(4 | b) = 1 := by
-  have : J((4 : ℤ) | b) = J((4 : ℤ) / 4 | b) :=
-    (div_four_left (by decide) (Nat.odd_iff.mp hb)).symm
-  simpa [one_left]
+  have hq : Int.euclideanDiv 4 4 (by decide) = 1 :=
+    Int.euclideanDiv_eq_of_remainder (r := 0) (by decide) (by decide) (by decide) (by decide)
+  rw [← div_four_left (a := 4) (by decide) (Nat.odd_iff.mp hb), hq, one_left]
 
 theorem even_odd {a : ℤ} {b : ℕ} (ha2 : a % 2 = 0) (hb2 : b % 2 = 1) :
-    (if b % 8 = 3 ∨ b % 8 = 5 then -J(a / 2 | b) else J(a / 2 | b)) = J(a | b) := by
+    (if b % 8 = 3 ∨ b % 8 = 5 then -J(Int.euclideanDiv a 2 (by decide) | b)
+      else J(Int.euclideanDiv a 2 (by decide) | b)) = J(a | b) := by
   obtain ⟨a, rfl⟩ := Int.dvd_of_emod_eq_zero ha2
-  rw [Int.mul_ediv_cancel_left _ (by decide), jacobiSym.mul_left,
+  have hq : Int.euclideanDiv (2 * a) 2 (by decide) = a :=
+    Int.euclideanDiv_eq_of_remainder (r := 0) (by decide) (by simp) (by decide) (by decide)
+  rw [hq, jacobiSym.mul_left,
     jacobiSym.at_two (Nat.odd_iff.mpr hb2), ZMod.χ₈_nat_eq_if_mod_eight,
     ite_eq_right (Nat.mod_two_ne_zero.mpr hb2)]
   grind
@@ -365,7 +370,7 @@ namespace qrSign
 
 /-- We can express `qrSign m n` as a power of `-1` when `m` and `n` are odd. -/
 theorem neg_one_pow {m n : ℕ} (hm : Odd m) (hn : Odd n) :
-    qrSign m n = (-1) ^ (m / 2 * (n / 2)) := by
+    qrSign m n = (-1) ^ (Nat.euclideanDiv m 2 (by decide) * Nat.euclideanDiv n 2 (by decide)) := by
   rw [qrSign, pow_mul, ← χ₄_eq_neg_one_pow (odd_iff.mp hm)]
   rcases odd_mod_four_iff.mp (odd_iff.mp hm) with h | h
   · rw [χ₄_nat_one_mod_four h, jacobiSym.one_left, one_pow]
@@ -386,7 +391,7 @@ theorem mul_right (m n₁ n₂ : ℕ) [NeZero n₁] [NeZero n₂] :
 
 /-- `qrSign` is symmetric when both arguments are odd. -/
 protected theorem symm {m n : ℕ} (hm : Odd m) (hn : Odd n) : qrSign m n = qrSign n m := by
-  rw [neg_one_pow hm hn, neg_one_pow hn hm, mul_comm (m / 2)]
+  rw [neg_one_pow hm hn, neg_one_pow hn hm, mul_comm (Nat.euclideanDiv m 2 (by decide))]
 
 /-- We can move `qrSign m n` from one side of an equality to the other when `m` and `n` are odd. -/
 theorem eq_iff_eq {m n : ℕ} (hm : Odd m) (hn : Odd n) (x y : ℤ) :
@@ -423,7 +428,8 @@ theorem quadratic_reciprocity' {a b : ℕ} (ha : Odd a) (hb : Odd b) :
 
 /-- The Law of Quadratic Reciprocity for the Jacobi symbol -/
 theorem quadratic_reciprocity {a b : ℕ} (ha : Odd a) (hb : Odd b) :
-    J(a | b) = (-1) ^ (a / 2 * (b / 2)) * J(b | a) := by
+    J(a | b) =
+      (-1) ^ (Nat.euclideanDiv a 2 (by decide) * Nat.euclideanDiv b 2 (by decide)) * J(b | a) := by
   rw [← qrSign.neg_one_pow ha hb, qrSign.symm ha hb, quadratic_reciprocity' ha hb]
 
 /-- The Law of Quadratic Reciprocity for the Jacobi symbol: if `a` and `b` are natural numbers
@@ -505,15 +511,31 @@ open jacobiSym
 
 open scoped NumberTheorySymbols
 
+private theorem euclideanDiv_pos_of_mod_zero {a d : ℕ} (ha : 0 < a) (hd : d ≠ 0)
+    (h : a % d = 0) : 0 < Nat.euclideanDiv a d hd := by
+  have he := Nat.euclideanDiv_mul_add_mod a d hd
+  rw [h, Nat.add_zero] at he
+  apply Nat.pos_of_ne_zero
+  intro hq
+  rw [hq, Nat.mul_zero] at he
+  exact (Nat.ne_of_gt ha) he.symm
+
+private theorem euclideanDiv_lt_self {a d : ℕ} (ha : 0 < a) (hd : 1 < d) :
+    Nat.euclideanDiv a d (by omega) < a := by
+  have hd₀ : d ≠ 0 := by omega
+  have he := Nat.euclideanDiv_mul_add_mod a d hd₀
+  have hm := Nat.mul_le_mul_right (Nat.euclideanDiv a d hd₀) (show 2 ≤ d from hd)
+  omega
+
 /-- Computes `J(a | b)` (or `-J(a | b)` if `flip` is set to `true`) given assumptions, by reducing
 `a` to odd by repeated division and then using quadratic reciprocity to swap `a`, `b`. -/
 private def fastJacobiSymAux (a b : ℕ) (flip : Bool) (ha0 : a > 0) : ℤ :=
   if ha4 : a % 4 = 0 then
-    fastJacobiSymAux (a / 4) b flip
-      (Nat.div_pos (Nat.le_of_dvd ha0 (Nat.dvd_of_mod_eq_zero ha4)) (by decide))
+    fastJacobiSymAux (Nat.euclideanDiv a 4 (by decide)) b flip
+      (euclideanDiv_pos_of_mod_zero ha0 (by decide) ha4)
   else if ha2 : a % 2 = 0 then
-    fastJacobiSymAux (a / 2) b (xor (b % 8 = 3 ∨ b % 8 = 5) flip)
-      (Nat.div_pos (Nat.le_of_dvd ha0 (Nat.dvd_of_mod_eq_zero ha2)) (by decide))
+    fastJacobiSymAux (Nat.euclideanDiv a 2 (by decide)) b (xor (b % 8 = 3 ∨ b % 8 = 5) flip)
+      (euclideanDiv_pos_of_mod_zero ha0 (by decide) ha2)
   else if ha1 : a = 1 then
     if flip then -1 else 1
   else if hba : b % a = 0 then
@@ -522,8 +544,8 @@ private def fastJacobiSymAux (a b : ℕ) (flip : Bool) (ha0 : a > 0) : ℤ :=
     fastJacobiSymAux (b % a) a (xor (a % 4 = 3 ∧ b % 4 = 3) flip) (Nat.pos_of_ne_zero hba)
 termination_by a
 decreasing_by
-  · exact a.div_lt_self ha0 (by decide)
-  · exact a.div_lt_self ha0 (by decide)
+  · exact euclideanDiv_lt_self ha0 (by decide)
+  · exact euclideanDiv_lt_self ha0 (by decide)
   · exact b.mod_lt ha0
 
 private theorem fastJacobiSymAux.eq_jacobiSym {a b : ℕ} {flip : Bool} {ha0 : a > 0}
@@ -532,11 +554,11 @@ private theorem fastJacobiSymAux.eq_jacobiSym {a b : ℕ} {flip : Bool} {ha0 : a
   induction a using Nat.strongRecOn generalizing b flip with | ind a IH =>
   unfold fastJacobiSymAux
   split <;> rename_i ha4
-  · rw [IH (a / 4) (a.div_lt_self ha0 (by decide)) hb2 hb1]
-    simp only [Int.natCast_ediv, Nat.cast_ofNat, div_four_left (a := a) (mod_cast ha4) hb2]
+  · rw [IH (Nat.euclideanDiv a 4 (by decide)) (euclideanDiv_lt_self ha0 (by decide)) hb2 hb1]
+    simp only [Int.natCast_div, Nat.cast_ofNat, div_four_left (a := a) (mod_cast ha4) hb2]
   split <;> rename_i ha2
-  · rw [IH (a / 2) (a.div_lt_self ha0 (by decide)) hb2 hb1]
-    simp only [Int.natCast_ediv, Nat.cast_ofNat, ← even_odd (a := a) (mod_cast ha2) hb2]
+  · rw [IH (Nat.euclideanDiv a 2 (by decide)) (euclideanDiv_lt_self ha0 (by decide)) hb2 hb1]
+    simp only [Int.natCast_div, Nat.cast_ofNat, ← even_odd (a := a) (mod_cast ha2) hb2]
     by_cases h : b % 8 = 3 ∨ b % 8 = 5 <;> simp [h]; cases flip <;> simp
   split <;> rename_i ha1
   · subst ha1; simp
@@ -558,14 +580,15 @@ private def fastJacobiSym (a : ℤ) (b : ℕ) : ℤ :=
     if a % 2 = 0 then
       0
     else
-      have : b / 2 < b := b.div_lt_self (Nat.pos_of_ne_zero hb0) one_lt_two
-      fastJacobiSym a (b / 2)
+      fastJacobiSym a (Nat.euclideanDiv b 2 (by decide))
   else if b = 1 then
     1
   else if hab : a % b = 0 then
     0
   else
     fastJacobiSymAux (a % b).natAbs b false (Int.natAbs_pos.mpr hab)
+termination_by b
+decreasing_by exact euclideanDiv_lt_self (Nat.pos_of_ne_zero hb0) one_lt_two
 
 set_option backward.privateInPublic.warn false in
 @[csimp] private theorem fastJacobiSym.eq : jacobiSym = fastJacobiSym := by
@@ -578,11 +601,11 @@ set_option backward.privateInPublic.warn false in
     refine Nat.le_of_dvd (Int.gcd_pos_iff.mpr (mod_cast .inr hb0)) ?_
     refine Nat.dvd_gcd (Int.ofNat_dvd_left.mp (Int.dvd_of_emod_eq_zero ha2)) ?_
     exact Int.ofNat_dvd_left.mp (Int.dvd_of_emod_eq_zero (mod_cast hb2))
-  · dsimp only
-    rw [← IH (b / 2) (b.div_lt_self (Nat.pos_of_ne_zero hb0) one_lt_two)]
+  · rw [← IH (Nat.euclideanDiv b 2 (by decide))
+      (euclideanDiv_lt_self (Nat.pos_of_ne_zero hb0) one_lt_two)]
     obtain ⟨b, rfl⟩ := Nat.dvd_of_mod_eq_zero hb2
     rw [mul_right' a (by decide) fun h ↦ hb0 (mul_eq_zero_of_right 2 h),
-      b.mul_div_cancel_left (by decide), mod_left a 2, Nat.cast_ofNat,
+      Nat.euclideanDiv_mul_left_cancel b (by decide), mod_left a 2, Nat.cast_ofNat,
       Int.emod_two_ne_zero.mp ha2, one_left, one_mul]
   · rw [hb1, one_right]
   · rw [mod_left, hab, zero_left (lt_of_le_of_ne (Nat.pos_of_ne_zero hb0) (Ne.symm hb1))]

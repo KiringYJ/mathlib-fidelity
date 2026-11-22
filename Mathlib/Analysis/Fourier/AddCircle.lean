@@ -139,7 +139,7 @@ theorem fourier_apply {n : ℤ} {x : AddCircle T} :
 
 -- simp normal form is `fourier_coe_apply'`
 theorem fourier_coe_apply {n : ℤ} {x : ℝ} :
-    fourier n (x : AddCircle T) = Complex.exp (2 * π * Complex.I * n * x / T) := by
+    fourier n (x : AddCircle T) = Complex.exp (2 * π * Complex.I * n * x / (T : ℂ)) := by
   rw [fourier_apply, ← QuotientAddGroup.mk_zsmul, toCircle, Function.Periodic.lift_coe,
     Circle.coe_exp, Complex.ofReal_mul, Complex.ofReal_div, Complex.ofReal_mul, zsmul_eq_mul,
     Complex.ofReal_mul, Complex.ofReal_intCast]
@@ -148,7 +148,7 @@ theorem fourier_coe_apply {n : ℤ} {x : ℝ} :
 
 @[simp]
 theorem fourier_coe_apply' {n : ℤ} {x : ℝ} :
-    toCircle (n • (x : AddCircle T) :) = Complex.exp (2 * π * Complex.I * n * x / T) := by
+    toCircle (n • (x : AddCircle T) :) = Complex.exp (2 * π * Complex.I * n * x / (T : ℂ)) := by
   rw [← fourier_apply]; exact fourier_coe_apply
 
 -- simp normal form is `fourier_zero'`
@@ -198,10 +198,10 @@ theorem fourier_norm [Fact (0 < T)] (n : ℤ) : ‖fourier (T := T) n‖ = 1 := 
 set_option backward.isDefEq.respectTransparency false in
 /-- For `n ≠ 0`, a translation by `T / 2 / n` negates the function `fourier n`. -/
 theorem fourier_add_half_inv_index {n : ℤ} (hn : n ≠ 0) (x : AddCircle T) :
-    fourier (T := T) n (x + ↑(T / 2 / n)) = -fourier n x := by
+    fourier (T := T) n (x + ↑(T / 2 / (n : ℝ))) = -fourier n x := by
   rw [fourier_apply, zsmul_add, ← QuotientAddGroup.mk_zsmul, toCircle_add,
     Metric.unitSphere.coe_mul]
-  have : (toCircle ((n • (T / 2 / n) : ℝ) : AddCircle T) : ℂ) = -1 := by
+  have : (toCircle ((n • (T / 2 / (n : ℝ)) : ℝ) : AddCircle T) : ℂ) = -1 := by
     rw [zsmul_eq_mul, toCircle, Function.Periodic.lift_coe, Circle.coe_exp]
     convert Complex.exp_pi_mul_I
     field_simp
@@ -557,19 +557,19 @@ variable (T) [NeZero T]
 
 theorem hasDerivAt_fourier (n : ℤ) (x : ℝ) :
     HasDerivAt (fun y : ℝ => fourier n (y : AddCircle T))
-      (2 * π * I * n / T * fourier n (x : AddCircle T)) x := by
+      (2 * π * I * n / (T : ℂ) * fourier n (x : AddCircle T)) x := by
   simp_rw [fourier_coe_apply]
-  refine (?_ : HasDerivAt (fun y => exp (2 * π * I * n * y / T)) _ _).comp_ofReal
+  refine (?_ : HasDerivAt (fun y => exp (2 * π * I * n * y / (T : ℂ))) _ _).comp_ofReal
   rw [(fun α β => by ring : ∀ α β : ℂ, α * exp β = exp β * α)]
   refine (hasDerivAt_exp _).comp (x : ℂ) ?_
-  convert! hasDerivAt_mul_const (2 * ↑π * I * ↑n / T) using 1
+  convert! hasDerivAt_mul_const (2 * ↑π * I * ↑n / (T : ℂ)) using 1
   ext1 y
   simp only [Function.comp_apply, id_eq]
   ring
 
 theorem hasDerivAt_fourier_neg (n : ℤ) (x : ℝ) :
     HasDerivAt (fun y : ℝ => fourier (-n) (y : AddCircle T))
-      (-2 * π * I * n / T * fourier (-n) (x : AddCircle T)) x := by
+      (-2 * π * I * n / (T : ℂ) * fourier (-n) (x : AddCircle T)) x := by
   simpa using hasDerivAt_fourier T (-n) x
 
 end NonzeroPeriod

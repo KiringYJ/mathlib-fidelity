@@ -77,7 +77,7 @@ theorem tendsto_norm_tan_of_cos_eq_zero {x : ℂ} (hx : cos x = 0) :
 
 theorem tendsto_norm_tan_atTop (k : ℤ) :
     Tendsto (fun y : {y : ℂ // cos y ≠ 0} ↦ ‖tan y y.2‖)
-      (comap Subtype.val (𝓝[≠] ((2 * k + 1) * π / 2 : ℂ))) atTop :=
+      (comap Subtype.val (𝓝[≠] ((2 * k + 1) * (π : ℂ) / 2))) atTop :=
   tendsto_norm_tan_of_cos_eq_zero <| cos_eq_zero_iff.2 ⟨k, rfl⟩
 
 theorem continuousAt_tan {x : ℂ} (hx : cos x ≠ 0) :

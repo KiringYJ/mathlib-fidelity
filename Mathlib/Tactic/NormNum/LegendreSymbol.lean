@@ -6,6 +6,7 @@ Authors: Michael Stoll
 module
 
 public import Mathlib.NumberTheory.LegendreSymbol.JacobiSymbol
+public meta import Mathlib.Lean.Elab.NativeDivision
 
 /-!
 # A `norm_num` extension for Jacobi and Legendre symbols
@@ -42,8 +43,8 @@ of the gcd of `a` and `b`. More precisely, the computation is done in the follow
 
 We provide customized versions of these results for the various reduction steps,
 where we encode the residue classes mod 2, mod 4, or mod 8 by using hypotheses like
-`a % n = b`. In this way, the only divisions we have to compute and prove
-are the ones occurring in the use of QR above.
+`a % n = b`. We certify each removed factor of `2` or `4` with a multiplication equation.
+The quadratic reciprocity steps use numeral remainders.
 -/
 
 public section
@@ -72,13 +73,9 @@ theorem jacobiSymNat.zero_right (a : ℕ) : jacobiSymNat a 0 = 1 := by
 theorem jacobiSymNat.one_right (a : ℕ) : jacobiSymNat a 1 = 1 := by
   rw [jacobiSymNat, jacobiSym.one_right]
 
-theorem jacobiSymNat.zero_left (b : ℕ) (hb : Nat.beq (b / 2) 0 = false) : jacobiSymNat 0 b = 0 := by
+theorem jacobiSymNat.zero_left (b : ℕ) (hb : Nat.ble 2 b = true) : jacobiSymNat 0 b = 0 := by
   rw [jacobiSymNat, Nat.cast_zero, jacobiSym.zero_left ?_]
-  calc
-    1 < 2 * 1       := by decide
-    _ ≤ 2 * (b / 2) :=
-      Nat.mul_le_mul_left _ (Nat.succ_le_of_lt (Nat.pos_of_ne_zero (Nat.ne_of_beq_eq_false hb)))
-    _ ≤ b           := Nat.mul_div_le b 2
+  exact lt_of_lt_of_le (by decide : 1 < 2) (Nat.le_of_ble_eq_true hb)
 
 theorem jacobiSymNat.one_left (b : ℕ) : jacobiSymNat 1 b = 1 := by
   rw [jacobiSymNat, Nat.cast_one, jacobiSym.one_left]
@@ -97,60 +94,67 @@ theorem jacobiSymNat.mod_left (a b ab : ℕ) (r : ℤ) (hab : a % b = ab) (hr : 
     jacobiSymNat a b = r := by
   rw [← hr, jacobiSymNat, jacobiSymNat, _root_.jacobiSym.mod_left a b, ← hab]; rfl
 
-/-- The symbol vanishes when both entries are even (and `b / 2 ≠ 0`). -/
-theorem jacobiSymNat.even_even (a b : ℕ) (hb₀ : Nat.beq (b / 2) 0 = false) (ha : a % 2 = 0)
+/-- The symbol vanishes when both entries are even and `2 ≤ b`. -/
+theorem jacobiSymNat.even_even (a b : ℕ) (hb₀ : Nat.ble 2 b = true) (ha : a % 2 = 0)
     (hb₁ : b % 2 = 0) : jacobiSymNat a b = 0 := by
-  refine jacobiSym.eq_zero_iff.mpr
-    ⟨ne_of_gt ((Nat.pos_of_ne_zero (Nat.ne_of_beq_eq_false hb₀)).trans_le (Nat.div_le_self b 2)),
-      fun hf => ?_⟩
+  have hb : b ≠ 0 := Nat.ne_of_gt (Nat.zero_lt_two.trans_le (Nat.le_of_ble_eq_true hb₀))
+  refine jacobiSym.eq_zero_iff.mpr ⟨hb, fun hf => ?_⟩
   have h : 2 ∣ a.gcd b := Nat.dvd_gcd (Nat.dvd_of_mod_eq_zero ha) (Nat.dvd_of_mod_eq_zero hb₁)
   change 2 ∣ (a : ℤ).gcd b at h
   rw [hf, ← even_iff_two_dvd] at h
   exact Nat.not_even_one h
 
-/-- When `a` is odd and `b` is even, we can replace `b` by `b / 2`. -/
-theorem jacobiSymNat.odd_even (a b c : ℕ) (r : ℤ) (ha : a % 2 = 1) (hb : b % 2 = 0) (hc : b / 2 = c)
-    (hr : jacobiSymNat a c = r) : jacobiSymNat a b = r := by
+/-- When `a` is odd and `b` is even, we can replace `b` by its quotient by `2`. -/
+theorem jacobiSymNat.odd_even (a b c : ℕ) (r : ℤ) (ha : a % 2 = 1) (hb : b % 2 = 0)
+    (hc : Nat.euclideanDiv b 2 (by decide) = c) (hr : jacobiSymNat a c = r) :
+    jacobiSymNat a b = r := by
   have ha' : legendreSym 2 a = 1 := by
     simp only [legendreSym.mod 2 a, Int.ofNat_mod_ofNat, ha]
     decide
+  have hbc : 2 * c = b := by
+    simpa only [hc, hb, Nat.add_zero] using Nat.euclideanDiv_mul_add_mod b 2 (by decide)
   rcases eq_or_ne c 0 with (rfl | hc')
-  · rw [← hr, Nat.eq_zero_of_dvd_of_div_eq_zero (Nat.dvd_of_mod_eq_zero hb) hc]
+  · rwa [← hbc, Nat.mul_zero]
   · have : NeZero c := ⟨hc'⟩
     -- for `jacobiSym.mul_right`
-    rwa [← Nat.mod_add_div b 2, hb, hc, Nat.zero_add, jacobiSymNat, jacobiSym.mul_right,
+    rwa [← hbc, jacobiSymNat, jacobiSym.mul_right,
       ← jacobiSym.legendreSym.to_jacobiSym, ha', one_mul]
 
 /-- If `a` is divisible by `4` and `b` is odd, then we can remove the factor `4` from `a`. -/
 theorem jacobiSymNat.double_even (a b c : ℕ) (r : ℤ) (ha : a % 4 = 0) (hb : b % 2 = 1)
-    (hc : a / 4 = c) (hr : jacobiSymNat c b = r) : jacobiSymNat a b = r := by
-  simp only [jacobiSymNat, ← hr, ← hc, Int.natCast_ediv, Nat.cast_ofNat]
+    (hc : Nat.euclideanDiv a 4 (by decide) = c) (hr : jacobiSymNat c b = r) :
+    jacobiSymNat a b = r := by
+  simp only [jacobiSymNat, ← hr, ← hc, Int.natCast_div, Nat.cast_ofNat]
   exact (jacobiSym.div_four_left (mod_cast ha) hb).symm
 
 /-- If `a` is even and `b` is odd, then we can remove a factor `2` from `a`,
 but we may have to change the sign, depending on `b % 8`.
 We give one version for each of the four odd residue classes mod `8`. -/
 theorem jacobiSymNat.even_odd₁ (a b c : ℕ) (r : ℤ) (ha : a % 2 = 0) (hb : b % 8 = 1)
-    (hc : a / 2 = c) (hr : jacobiSymNat c b = r) : jacobiSymNat a b = r := by
-  simp only [jacobiSymNat, ← hr, ← hc, Int.natCast_ediv, Nat.cast_ofNat]
+    (hc : Nat.euclideanDiv a 2 (by decide) = c) (hr : jacobiSymNat c b = r) :
+    jacobiSymNat a b = r := by
+  simp only [jacobiSymNat, ← hr, ← hc, Int.natCast_div, Nat.cast_ofNat]
   rw [← jacobiSym.even_odd (mod_cast ha), ite_eq_right (by simp [hb])]
   rw [← Nat.mod_mod_of_dvd, hb]; simp
 
 theorem jacobiSymNat.even_odd₇ (a b c : ℕ) (r : ℤ) (ha : a % 2 = 0) (hb : b % 8 = 7)
-    (hc : a / 2 = c) (hr : jacobiSymNat c b = r) : jacobiSymNat a b = r := by
-  simp only [jacobiSymNat, ← hr, ← hc, Int.natCast_ediv, Nat.cast_ofNat]
+    (hc : Nat.euclideanDiv a 2 (by decide) = c) (hr : jacobiSymNat c b = r) :
+    jacobiSymNat a b = r := by
+  simp only [jacobiSymNat, ← hr, ← hc, Int.natCast_div, Nat.cast_ofNat]
   rw [← jacobiSym.even_odd (mod_cast ha), ite_eq_right (by simp [hb])]
   rw [← Nat.mod_mod_of_dvd, hb]; simp
 
 theorem jacobiSymNat.even_odd₃ (a b c : ℕ) (r : ℤ) (ha : a % 2 = 0) (hb : b % 8 = 3)
-    (hc : a / 2 = c) (hr : jacobiSymNat c b = r) : jacobiSymNat a b = -r := by
-  simp only [jacobiSymNat, ← hr, ← hc, Int.natCast_ediv, Nat.cast_ofNat]
+    (hc : Nat.euclideanDiv a 2 (by decide) = c) (hr : jacobiSymNat c b = r) :
+    jacobiSymNat a b = -r := by
+  simp only [jacobiSymNat, ← hr, ← hc, Int.natCast_div, Nat.cast_ofNat]
   rw [← jacobiSym.even_odd (mod_cast ha), ite_eq_left (by simp [hb])]
   rw [← Nat.mod_mod_of_dvd, hb]; simp
 
 theorem jacobiSymNat.even_odd₅ (a b c : ℕ) (r : ℤ) (ha : a % 2 = 0) (hb : b % 8 = 5)
-    (hc : a / 2 = c) (hr : jacobiSymNat c b = r) : jacobiSymNat a b = -r := by
-  simp only [jacobiSymNat, ← hr, ← hc, Int.natCast_ediv, Nat.cast_ofNat]
+    (hc : Nat.euclideanDiv a 2 (by decide) = c) (hr : jacobiSymNat c b = r) :
+    jacobiSymNat a b = -r := by
+  simp only [jacobiSymNat, ← hr, ← hc, Int.natCast_div, Nat.cast_ofNat]
   rw [← jacobiSym.even_odd (mod_cast ha), ite_eq_left (by simp [hb])]
   rw [← Nat.mod_mod_of_dvd, hb]; simp
 
@@ -213,6 +217,12 @@ private def mkRawIntLit' (n : ℤ) : Q(ℤ) :=
   let lit : Q(ℕ) := .lit <| .natVal n.natAbs
   if 0 ≤ n then q(.ofNat $lit) else q(.negOfNat $lit)
 
+/-- Certify an exact quotient of raw literals by checking multiplication in the kernel. -/
+private def proveExactQuotient (a b c : Q(ℕ)) (hb : Q($b ≠ 0)) :
+    Q(Nat.euclideanDiv $a $b $hb = $c) :=
+  have h : Q($a = $b * $c + 0) := (q(Eq.refl $a) : Expr)
+  q(Nat.euclideanDiv_eq_of_remainder $hb $h (Nat.pos_of_ne_zero $hb))
+
 /-- This evaluates `r := jacobiSymNat a b` recursively using quadratic reciprocity
 and produces a proof term for the equality, assuming that `a < b` and `b` is odd. -/
 partial def proveJacobiSymOdd (ea eb : Q(ℕ)) : (er : Q(ℤ)) × Q(jacobiSymNat $ea $eb = $er) :=
@@ -224,7 +234,7 @@ partial def proveJacobiSymOdd (ea eb : Q(ℕ)) : (er : Q(ℤ)) × Q(jacobiSymNat
     match ea.natLit! with
     | 0 =>
       haveI : $ea =Q 0 := ⟨⟩
-      have hb : Q(Nat.beq ($eb / 2) 0 = false) := (q(Eq.refl false) : Expr)
+      have hb : Q(Nat.ble 2 $eb = true) := (q(Eq.refl true) : Expr)
       ⟨mkRawIntLit' 0, q(jacobiSymNat.zero_left $eb $hb)⟩
     | 1 =>
       haveI : $ea =Q 1 := ⟨⟩
@@ -236,14 +246,14 @@ partial def proveJacobiSymOdd (ea eb : Q(ℕ)) : (er : Q(ℤ)) × Q(jacobiSymNat
         | 0 =>
           have ha : Q(Nat.mod $ea 4 = 0) := (q(Eq.refl 0) : Expr)
           have hb : Q(Nat.mod $eb 2 = 1) := (q(Eq.refl 1) : Expr)
-          have ec : Q(ℕ) := mkRawNatLit (a / 4)
-          have hc : Q(Nat.div $ea 4 = $ec) := (q(Eq.refl $ec) : Expr)
+          have ec : Q(ℕ) := mkRawNatLit (Nat.euclideanDiv a 4 (by decide))
+          have hc := proveExactQuotient ea q(4) ec q(show (4 : ℕ) ≠ 0 from by decide)
           have ⟨er, p⟩ := proveJacobiSymOdd ec eb
           ⟨er, q(jacobiSymNat.double_even $ea $eb $ec $er $ha $hb $hc $p)⟩
         | _ =>
           have ha : Q(Nat.mod $ea 2 = 0) := (q(Eq.refl 0) : Expr)
-          have ec : Q(ℕ) := mkRawNatLit (a / 2)
-          have hc : Q(Nat.div $ea 2 = $ec) := (q(Eq.refl $ec) : Expr)
+          have ec : Q(ℕ) := mkRawNatLit (Nat.euclideanDiv a 2 (by decide))
+          have hc := proveExactQuotient ea q(2) ec q(show (2 : ℕ) ≠ 0 from by decide)
           have ⟨er, p⟩ := proveJacobiSymOdd ec eb
           match b % 8 with
           | 1 =>
@@ -299,7 +309,7 @@ partial def proveJacobiSymNat (ea eb : Q(ℕ)) : (er : Q(ℤ)) × Q(jacobiSymNat
     | 0 =>
       match ea.natLit! with
       | 0 =>
-        have hb : Q(Nat.beq ($eb / 2) 0 = false) := (q(Eq.refl false) : Expr)
+        have hb : Q(Nat.ble 2 $eb = true) := (q(Eq.refl true) : Expr)
         show (er : Q(ℤ)) × Q(jacobiSymNat 0 $eb = $er) from
           ⟨mkRawIntLit' 0, q(jacobiSymNat.zero_left $eb $hb)⟩
       | 1 =>
@@ -308,16 +318,16 @@ partial def proveJacobiSymNat (ea eb : Q(ℕ)) : (er : Q(ℤ)) × Q(jacobiSymNat
       | a =>
         match a % 2 with
         | 0 =>
-          have hb₀ : Q(Nat.beq ($eb / 2) 0 = false) := (q(Eq.refl false) : Expr)
+          have hb₀ : Q(Nat.ble 2 $eb = true) := (q(Eq.refl true) : Expr)
           have ha : Q(Nat.mod $ea 2 = 0) := (q(Eq.refl 0) : Expr)
           have hb₁ : Q(Nat.mod $eb 2 = 0) := (q(Eq.refl 0) : Expr)
           ⟨mkRawIntLit' 0, q(jacobiSymNat.even_even $ea $eb $hb₀ $ha $hb₁)⟩
         | _ =>
           have ha : Q(Nat.mod $ea 2 = 1) := (q(Eq.refl 1) : Expr)
           have hb : Q(Nat.mod $eb 2 = 0) := (q(Eq.refl 0) : Expr)
-          have ec : Q(ℕ) := mkRawNatLit (b / 2)
-          have hc : Q(Nat.div $eb 2 = $ec) := (q(Eq.refl $ec) : Expr)
-          have ⟨er, p⟩ := proveJacobiSymOdd ea ec
+          have ec : Q(ℕ) := mkRawNatLit (Nat.euclideanDiv b 2 (by decide))
+          have hc := proveExactQuotient eb q(2) ec q(show (2 : ℕ) ≠ 0 from by decide)
+          have ⟨er, p⟩ := proveJacobiSymNat ea ec
           ⟨er, q(jacobiSymNat.odd_even $ea $eb $ec $er $ha $hb $hc $p)⟩
     | _ =>
       have a := ea.natLit!

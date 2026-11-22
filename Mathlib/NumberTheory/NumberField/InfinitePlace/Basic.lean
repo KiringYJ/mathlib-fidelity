@@ -489,7 +489,7 @@ theorem ComplexEmbedding.conjugate_sign :
     (ComplexEmbedding.involutive_conjugate K).toPerm.sign = (-1) ^ nrComplexPlaces K := by
   rw [Equiv.Perm.sign_of_pow_two_eq_one, Embeddings.card, ← card_add_two_mul_card_eq_rank,
     ← card_real_embeddings, Fintype.card, Fintype.card, Nat.add_sub_cancel_left,
-    Nat.mul_div_cancel_left _ zero_lt_two]
+    Nat.euclideanDiv_mul_left_cancel _ two_ne_zero]
   exact Equiv.ext (ComplexEmbedding.involutive_conjugate K).toPerm_involutive
 
 variable {K}

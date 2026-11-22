@@ -524,7 +524,8 @@ end ZMod
 `a ≤ p / 2` and `b ≤ p / 2` such that `a ^ 2 + b ^ 2 ≡ x [ZMOD p]`. This is a version of
 `ZMod.sq_add_sq` with estimates on `a` and `b`. -/
 theorem Nat.sq_add_sq_zmodEq (p : ℕ) [Fact p.Prime] (x : ℤ) :
-    ∃ a b : ℕ, a ≤ p / 2 ∧ b ≤ p / 2 ∧ (a : ℤ) ^ 2 + (b : ℤ) ^ 2 ≡ x [ZMOD p] := by
+    ∃ a b : ℕ, a ≤ p.euclideanDiv 2 ∧ b ≤ p.euclideanDiv 2 ∧
+      (a : ℤ) ^ 2 + (b : ℤ) ^ 2 ≡ x [ZMOD p] := by
   rcases ZMod.sq_add_sq p x with ⟨a, b, hx⟩
   refine ⟨a.valMinAbs.natAbs, b.valMinAbs.natAbs, ZMod.natAbs_valMinAbs_le _,
     ZMod.natAbs_valMinAbs_le _, ?_⟩
@@ -537,7 +538,7 @@ theorem Nat.sq_add_sq_zmodEq (p : ℕ) [Fact p.Prime] (x : ℤ) :
 `a ≤ p / 2` and `b ≤ p / 2` such that `a ^ 2 + b ^ 2 ≡ x [MOD p]`. This is a version of
 `ZMod.sq_add_sq` with estimates on `a` and `b`. -/
 theorem Nat.sq_add_sq_modEq (p : ℕ) [Fact p.Prime] (x : ℕ) :
-    ∃ a b : ℕ, a ≤ p / 2 ∧ b ≤ p / 2 ∧ a ^ 2 + b ^ 2 ≡ x [MOD p] := by
+    ∃ a b : ℕ, a ≤ p.euclideanDiv 2 ∧ b ≤ p.euclideanDiv 2 ∧ a ^ 2 + b ^ 2 ≡ x [MOD p] := by
   simpa only [← Int.natCast_modEq_iff] using! Nat.sq_add_sq_zmodEq p x
 
 namespace CharP
@@ -808,7 +809,8 @@ theorem odd_card_of_char_ne_two (hF : ringChar F ≠ 2) : Fintype.card F % 2 = 1
 
 /-- If `F` has odd characteristic, then for nonzero `a : F`, we have that `a ^ (#F / 2) = ±1`. -/
 theorem pow_dichotomy (hF : ringChar F ≠ 2) {a : F} (ha : a ≠ 0) :
-    a ^ (Fintype.card F / 2) = 1 ∨ a ^ (Fintype.card F / 2) = -1 := by
+    a ^ (Nat.euclideanDiv (Fintype.card F) 2) = 1 ∨
+      a ^ (Nat.euclideanDiv (Fintype.card F) 2) = -1 := by
   have h₁ := FiniteField.pow_card_sub_one_eq_one a ha
   rw [← Nat.two_mul_odd_div_two (FiniteField.odd_card_of_char_ne_two hF), mul_comm, pow_mul,
     pow_two] at h₁
@@ -817,7 +819,7 @@ theorem pow_dichotomy (hF : ringChar F ≠ 2) {a : F} (ha : a ≠ 0) :
 /-- A unit `a` of a finite field `F` of odd characteristic is a square
 if and only if `a ^ (#F / 2) = 1`. -/
 theorem unit_isSquare_iff (hF : ringChar F ≠ 2) (a : Fˣ) :
-    IsSquare a ↔ a ^ (Fintype.card F / 2) = 1 := by
+    IsSquare a ↔ a ^ (Nat.euclideanDiv (Fintype.card F) 2) = 1 := by
   obtain ⟨g, hg⟩ := IsCyclic.exists_generator (α := Fˣ)
   obtain ⟨n, hn⟩ : a ∈ Submonoid.powers g := by rw [mem_powers_iff_mem_zpowers]; apply hg
   have hodd := Nat.two_mul_odd_div_two (FiniteField.odd_card_of_char_ne_two hF)
@@ -829,11 +831,13 @@ theorem unit_isSquare_iff (hF : ringChar F ≠ 2) (a : Fˣ) :
     exact FiniteField.pow_card_sub_one_eq_one (y : F) (Units.ne_zero y)
   · subst a; intro h
     rw [← Nat.card_eq_fintype_card] at hodd h
-    have key : 2 * (Nat.card F / 2) ∣ n * (Nat.card F / 2) := by
+    have key : 2 * (Nat.euclideanDiv (Nat.card F) 2) ∣ n * (Nat.euclideanDiv (Nat.card F) 2) := by
       rw [← pow_mul] at h
       rw [hodd, ← Nat.card_units, ← orderOf_eq_card_of_forall_mem_zpowers hg]
       apply orderOf_dvd_of_pow_eq_one h
-    have : 0 < Nat.card F / 2 := Nat.div_pos Finite.one_lt_card (by simp)
+    have : 0 < Nat.euclideanDiv (Nat.card F) 2 := by
+      have hcard : 1 < Nat.card F := Finite.one_lt_card
+      omega
     obtain ⟨m, rfl⟩ := Nat.dvd_of_mul_dvd_mul_right this key
     refine ⟨g ^ m, ?_⟩
     dsimp
@@ -841,7 +845,7 @@ theorem unit_isSquare_iff (hF : ringChar F ≠ 2) (a : Fˣ) :
 
 /-- A non-zero `a : F` is a square if and only if `a ^ (#F / 2) = 1`. -/
 theorem isSquare_iff (hF : ringChar F ≠ 2) {a : F} (ha : a ≠ 0) :
-    IsSquare a ↔ a ^ (Fintype.card F / 2) = 1 := by
+    IsSquare a ↔ a ^ (Nat.euclideanDiv (Fintype.card F) 2) = 1 := by
   apply
     (iff_congr _ (by simp [Units.ext_iff])).mp (FiniteField.unit_isSquare_iff hF (Units.mk0 a ha))
   simp only [IsSquare, Units.ext_iff, Units.val_mk0, Units.val_mul]

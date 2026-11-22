@@ -109,9 +109,17 @@ instance instIsMulTorsionFree [Monoid M] [Monoid N] [IsMulTorsionFree M] [IsMulT
   pow_left_injective n hn a b hab := by
     ext <;> apply pow_left_injective hn; exacts [congr(($hab).1), congr(($hab).2)]
 
-@[to_additive Prod.subNegMonoid]
+instance subNegMonoid [SubNegMonoid G] [SubNegMonoid H] : SubNegMonoid (G × H) where
+  sub_eq_add_neg _ _ := by ext <;> exact sub_eq_add_neg ..
+  zsmul z a := ⟨SMul.smul z a.1, SMul.smul z a.2⟩
+  zsmul_zero' _ := by ext <;> exact SubNegMonoid.zsmul_zero' _
+  zsmul_succ' _ _ := by ext <;> exact SubNegMonoid.zsmul_succ' ..
+  zsmul_neg' _ _ := by ext <;> exact SubNegMonoid.zsmul_neg' ..
+
+@[to_additive existing subNegMonoid]
 instance [DivInvMonoid G] [DivInvMonoid H] : DivInvMonoid (G × H) where
-  div_eq_mul_inv _ _ := by ext <;> exact div_eq_mul_inv ..
+  div := DivInvMonoid.div'
+  div_eq_mul_inv _ _ := rfl
   zpow z a := ⟨ZPow.zpow z a.1, ZPow.zpow z a.2⟩
   zpow_zero' _ := by ext <;> exact DivInvMonoid.zpow_zero' _
   zpow_succ' _ _ := by ext <;> exact DivInvMonoid.zpow_succ' ..
@@ -132,6 +140,33 @@ instance [DivisionCommMonoid G] [DivisionCommMonoid H] : DivisionCommMonoid (G �
 @[to_additive]
 instance instGroup [Group G] [Group H] : Group (G × H) where
   inv_mul_cancel _ := by ext <;> exact inv_mul_cancel _
+
+section Group
+variable [Group G] [Group H]
+
+@[to_additive fst_groupSub, simp]
+theorem fst_div (a b : G × H) : (a / b).1 = a.1 / b.1 := by
+  rw [div_eq_mul_inv, div_eq_mul_inv]
+  rfl
+
+@[to_additive snd_groupSub, simp]
+theorem snd_div (a b : G × H) : (a / b).2 = a.2 / b.2 := by
+  rw [div_eq_mul_inv, div_eq_mul_inv]
+  rfl
+
+@[to_additive mk_groupSub_mk, simp]
+theorem mk_div_mk (a b : G) (c d : H) : (a, c) / (b, d) = (a / b, c / d) :=
+  Prod.ext (fst_div ..) (snd_div ..)
+
+@[to_additive swap_groupSub, simp]
+theorem swap_div (a b : G × H) : (a / b).swap = a.swap / b.swap := by
+  ext <;> simp
+
+@[to_additive groupSub_def]
+lemma div_def (a b : G × H) : a / b = (a.1 / b.1, a.2 / b.2) :=
+  Prod.ext (fst_div ..) (snd_div ..)
+
+end Group
 
 @[to_additive]
 instance [Mul G] [Mul H] [IsLeftCancelMul G] [IsLeftCancelMul H] : IsLeftCancelMul (G × H) where
@@ -670,9 +705,16 @@ def mulMulHom [CommSemigroup α] :
 def mulMonoidHom [CommMonoid α] : α × α →* α :=
   { mulMulHom with map_one' := mul_one _ }
 
-/-- Division as a monoid homomorphism. -/
-@[to_additive (attr := simps) /-- Subtraction as an additive monoid homomorphism. -/]
-def divMonoidHom [DivisionCommMonoid α] : α × α →* α where
+/-- Subtraction as an additive monoid homomorphism. -/
+@[simps] def subMonoidHom [SubtractionCommMonoid α] : α × α →+ α where
+  toFun a := a.1 - a.2
+  map_zero' := sub_zero _
+  map_add' _ _ := add_sub_add_comm _ _ _ _
+
+/-- Division on a commutative group as a monoid homomorphism. -/
+@[to_additive (attr := simps) AddCommGroup.subMonoidHom
+  /-- Subtraction on an additive commutative group as an additive monoid homomorphism. -/]
+def divMonoidHom [CommGroup α] : α × α →* α where
   toFun a := a.1 / a.2
   map_one' := div_one _
   map_mul' _ _ := mul_div_mul_comm _ _ _ _

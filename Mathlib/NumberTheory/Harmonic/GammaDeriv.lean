@@ -195,16 +195,16 @@ lemma hasDerivAt_Gamma_one_half : HasDerivAt Gamma (-√π * (γ + 2 * log 2)) (
     rw [← ofReal_natCast, ← ofReal_neg, ne_eq, ofReal_inj]
     exact ((neg_nonpos.mpr m.cast_nonneg).trans_lt one_half_pos).ne'
 
-lemma hasDerivAt_Gammaℂ_one : HasDerivAt Gammaℂ (-(γ + log (2 * π)) / π) 1 := by
+lemma hasDerivAt_Gammaℂ_one : HasDerivAt Gammaℂ (-(γ + log (2 * π)) / (π : ℂ)) 1 := by
   have hp : IsUnit (2 * π : ℂ) :=
     (mul_ne_zero two_ne_zero (ofReal_ne_zero.mpr Real.pi_ne_zero)).isUnit
-  have hf : HasDerivAt (fun s : ℂ ↦ 2 * (2 * π : ℂ) ^ (-s)) (-log (2 * π) / π) 1 := by
+  have hf : HasDerivAt (fun s : ℂ ↦ 2 * (2 * π : ℂ) ^ (-s)) (-log (2 * π) / (π : ℂ)) 1 := by
     have := (hasDerivAt_neg' (1 : ℂ)).const_cpow (c := 2 * π)
       (Or.inl hp.ne_zero)
     refine (this.const_mul 2).congr_deriv ?_
     rw [mul_neg_one, mul_neg, cpow_neg_one _ (hx := hp), ← div_eq_inv_mul₀, ← mul_div_assoc₀,
       mul_div_mul_left _ _, neg_div₀]
-  have hfactor : (2 : ℂ) * (2 * π : ℂ) ^ (-1 : ℂ) = 1 / π := by
+  have hfactor : (2 : ℂ) * (2 * π : ℂ) ^ (-1 : ℂ) = 1 / (π : ℂ) := by
     simpa only [Gammaℂ_def, Gamma_one, mul_one] using Gammaℂ_one
   refine (hf.mul hasDerivAt_Gamma_one).congr_deriv ?_
   simp only [Gamma_one, mul_one, hfactor, div_eq_mul_inv₀]
@@ -225,11 +225,11 @@ lemma hasDerivAt_Gammaℝ_one : HasDerivAt Gammaℝ (-(γ + log (4 * π)) / 2) 1
     change (π : ℂ) ^ (-1 / 2 : ℂ) = _
     rw [neg_div₀, cpow_neg _ _ (hxy := hp)]
     exact inv_inj₀.mpr aux
-  have hf : HasDerivAt f (-log π / 2 / √π) 1 := by
+  have hf : HasDerivAt f (-log π / 2 / (√π : ℂ)) 1 := by
     have hd := ((hasDerivAt_neg (1 : ℂ)).div_const 2 (hd := two_ne_zero.isUnit)).const_cpow (c := π)
       (Or.inl (ofReal_ne_zero.mpr Real.pi_ne_zero))
     refine hd.congr_deriv ?_
-    change f 1 * log π * (-1 / 2) = -log π / 2 / √π
+    change f 1 * log π * (-1 / 2) = -log π / 2 / (√π : ℂ)
     rw [hrec]
     simp only [div_eq_mul_inv₀]
     ring

@@ -95,12 +95,10 @@ end
 
 variable (k V : Type*) [Field k] [AddCommGroup V] [Module k V]
 
-/-- Cardinality formula for the points of `ℙ k V` if `k` and `V` are finite expressed
-as a fraction. -/
-lemma card'' [Finite k] : Nat.card (ℙ k V) = (Nat.card V - 1) / (Nat.card k - 1) := by
-  have : 1 < Nat.card k := Finite.one_lt_card
-  rw [card k, Nat.mul_div_cancel]
-  lia
+/-- The natural cardinality of projective space over a finite field, expressed as a quotient. -/
+lemma card'' [Finite k] : Nat.card (ℙ k V) = Nat.euclideanDiv (Nat.card V - 1) (Nat.card k - 1)
+    (Nat.sub_pos_of_lt Finite.one_lt_card).ne' := by
+  rw [card k, Nat.euclideanDiv_mul_right_cancel]
 
 lemma card_of_finrank [Finite k] {n : ℕ} (h : Module.finrank k V = n) :
     Nat.card (ℙ k V) = ∑ i ∈ Finset.range n, Nat.card k ^ i := by

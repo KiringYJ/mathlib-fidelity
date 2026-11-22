@@ -39,14 +39,14 @@ abbrev ProblemPredicate' (c n : ℕ) : Prop :=
   n = 10 * c + 6 ∧ 6 * 10 ^ (digits 10 c).length + c = 4 * n
 
 lemma without_digits {n : ℕ} (hn : ProblemPredicate n) : ∃ c : ℕ, ProblemPredicate' c n := by
-  use n / 10
+  use Nat.euclideanDiv n 10
   rcases n with - | n
   · have hpp : ¬ProblemPredicate 0 := by simp [ProblemPredicate]
     contradiction
   · rw [ProblemPredicate, digits_def' (by decide : 2 ≤ 10) n.succ_pos, List.headI, List.tail_cons,
       List.concat_eq_append] at hn
     constructor
-    · rw [← hn.left, div_add_mod (n + 1) 10]
+    · rw [← hn.left, Nat.euclideanDiv_mul_add_mod]
     · rw [← hn.right, ofDigits_append, ofDigits_digits, ofDigits_singleton, add_comm, mul_comm]
 
 /-!
@@ -108,7 +108,12 @@ lemma case_more_digits {c n : ℕ} (hc : (digits 10 c).length ≥ 6) (hpp : Prob
 Now we combine these cases to show that 153846 is the smallest solution.
 -/
 
-lemma satisfied_by_153846 : ProblemPredicate 153846 := by simp +decide [ProblemPredicate]
+lemma satisfied_by_153846 : ProblemPredicate 153846 := by
+  have hv : ofDigits 10 [6, 4, 8, 3, 5, 1] = 153846 := by decide
+  have hd := digits_ofDigits 10 (by decide) [6, 4, 8, 3, 5, 1] (by decide) (fun _ ↦ one_ne_zero)
+  rw [hv] at hd
+  rw [ProblemPredicate, hd]
+  decide
 
 lemma no_smaller_solutions (n : ℕ) (hn : ProblemPredicate n) : n ≥ 153846 := by
   have ⟨c, hcn⟩ := without_digits hn

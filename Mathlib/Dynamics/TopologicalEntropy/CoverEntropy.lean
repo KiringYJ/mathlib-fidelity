@@ -148,10 +148,16 @@ lemma IsDynCoverOf.iterate_le_pow (F_inv : MapsTo T F F) [U.IsSymm] (n : ℕ) {s
       simp only [ball, dynEntourage, Prod.map_iterate, mem_iInter, Set.mem_preimage, Prod.map_apply,
         mem_comp] at y_int z_int ⊢
       intro k k_mn
-      replace k_mn := Nat.div_lt_of_lt_mul k_mn
-      specialize z_int ⟨(k / m), k_mn⟩ (k % m) (Nat.mod_lt k m_pos)
-      specialize y_int ⟨(k / m), k_mn⟩ (k % m) (Nat.mod_lt k m_pos)
-      rw [← Function.iterate_add_apply T (k % m) (m * (k / m)), Nat.mod_add_div k m] at y_int z_int
+      let q := Nat.euclideanDiv k m m_pos.ne'
+      have hq : k % m + m * q = k :=
+        (Nat.add_comm ..).trans (Nat.euclideanDiv_mul_add_mod k m m_pos.ne')
+      have hqn : q < n := by
+        by_contra! hnq
+        have := Nat.mul_le_mul_left m hnq
+        omega
+      specialize z_int ⟨q, hqn⟩ (k % m) (Nat.mod_lt k m_pos)
+      specialize y_int ⟨q, hqn⟩ (k % m) (Nat.mod_lt k m_pos)
+      rw [← Function.iterate_add_apply T (k % m) (m * q), hq] at y_int z_int
       exact mem_comp_of_mem_ball y_int z_int
   choose! dyncover h_dyncover using this
   -- The cover we want is the set of all `dyncover t`, that is, `range dyncover`. We need to check
@@ -284,9 +290,14 @@ lemma coverMincard_mul_le_pow (F_inv : MapsTo T F F) [U.IsSymm] (m n : ℕ) :
     exact t_cover.coverMincard_le_card.trans (WithTop.coe_le_coe.2 t_sn)
 
 lemma coverMincard_le_pow (F_inv : MapsTo T F F) [U.IsSymm] (m_pos : 0 < m) (n : ℕ) :
-    coverMincard T F (U ○ U) n ≤ coverMincard T F U m ^ (n / m + 1) :=
-  (coverMincard_monotone_time T F (U ○ U) (Nat.lt_mul_div_succ n m_pos).le).trans
-    (coverMincard_mul_le_pow F_inv m (n / m + 1))
+    coverMincard T F (U ○ U) n ≤ coverMincard T F U m ^ (Nat.euclideanDiv n m m_pos.ne' + 1) := by
+  let q := Nat.euclideanDiv n m m_pos.ne'
+  have hq : m * q + n % m = n := Nat.euclideanDiv_mul_add_mod n m m_pos.ne'
+  have hbound : n < m * (q + 1) := by
+    rw [Nat.mul_succ]
+    have := Nat.mod_lt n m_pos
+    omega
+  exact (coverMincard_monotone_time T F (U ○ U) hbound.le).trans (coverMincard_mul_le_pow F_inv m _)
 
 lemma coverMincard_finite_of_isCompact_uniformContinuous [UniformSpace X] (F_comp : IsCompact F)
     (h : UniformContinuous T) (U_uni : U ∈ 𝓤 X) (n : ℕ) :
@@ -386,11 +397,11 @@ lemma coverEntropyInfEntourage_univ (T : X → X) (h : F.Nonempty) :
 
 lemma coverEntropyEntourage_le_log_coverMincard_div (F_inv : MapsTo T F F) [U.IsSymm]
     (n_pos : n ≠ 0) :
-    coverEntropyEntourage T F (U ○ U) ≤ log (coverMincard T F U n) / n := by
+    coverEntropyEntourage T F (U ○ U) ≤ log (coverMincard T F U n) / (n : EReal) := by
   have cv_mono : Monotone fun m ↦ (coverMincard T F (U ○ U) m).toENNReal :=
     fun _ _ k_m ↦ ENat.toENNReal_mono (coverMincard_monotone_time T F (U ○ U) k_m)
   have h := cv_mono.expGrowthSup_comp_mul n_pos
-  have hdiv : (expGrowthSup fun m ↦ (coverMincard T F (U ○ U) (n * m)).toENNReal) / n =
+  have hdiv : (expGrowthSup fun m ↦ (coverMincard T F (U ○ U) (n * m)).toENNReal) / (n : EReal) =
       coverEntropyEntourage T F (U ○ U) := by
     apply div_eq_iff.mpr
     rw [coverEntropyEntourage, mul_comm]
@@ -404,7 +415,7 @@ lemma coverEntropyEntourage_le_log_coverMincard_div (F_inv : MapsTo T F F) [U.Is
 
 lemma IsDynCoverOf.coverEntropyEntourage_le_log_card_div (F_inv : MapsTo T F F) [U.IsSymm]
     (n_pos : n ≠ 0) {s : Finset X} (h : IsDynCoverOf T F U n s) :
-    coverEntropyEntourage T F (U ○ U) ≤ log s.card / n := by
+    coverEntropyEntourage T F (U ○ U) ≤ log s.card / (n : EReal) := by
   apply (coverEntropyEntourage_le_log_coverMincard_div F_inv n_pos).trans
   apply monotone_div_right_of_nonneg n.cast_nonneg' (log_monotone _)
   exact_mod_cast coverMincard_le_card h

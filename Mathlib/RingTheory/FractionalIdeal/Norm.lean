@@ -44,8 +44,8 @@ local instance : Infinite R := Module.Free.infinite ℤ R
 
 theorem absNorm_div_norm_eq_absNorm_div_norm {I : FractionalIdeal R⁰ K} (a : R⁰) (I₀ : Ideal R)
     (h : a • (I : Submodule R K) = Submodule.map (Algebra.linearMap R K) I₀) :
-    (Ideal.absNorm I.num : ℚ) / |Algebra.norm ℤ (I.den : R)| =
-      (Ideal.absNorm I₀ : ℚ) / |Algebra.norm ℤ (a : R)| := by
+    (Ideal.absNorm I.num : ℚ) / (↑|Algebra.norm ℤ (I.den : R)| : ℚ) =
+      (Ideal.absNorm I₀ : ℚ) / (↑|Algebra.norm ℤ (a : R)| : ℚ) := by
   rw [div_eq_div_iff]
   · replace h := congr_arg (I.den • ·) h
     have h' := congr_arg (a • ·) (den_mul_self_eq_num I)
@@ -60,7 +60,7 @@ theorem absNorm_div_norm_eq_absNorm_div_norm {I : FractionalIdeal R⁰ K} (a : R
 /-- The absolute norm of the fractional ideal `I` extending by multiplicativity the absolute norm
 on (integral) ideals. -/
 noncomputable def absNorm : FractionalIdeal R⁰ K →*₀ ℚ where
-  toFun I := (Ideal.absNorm I.num : ℚ) / |Algebra.norm ℤ (I.den : R)|
+  toFun I := (Ideal.absNorm I.num : ℚ) / (↑|Algebra.norm ℤ (I.den : R)| : ℚ)
   map_zero' := by
     rw [num_zero_eq, Submodule.zero_eq_bot, Ideal.absNorm_bot, Nat.cast_zero, zero_div]
     exact IsFractionRing.injective R K
@@ -76,11 +76,11 @@ noncomputable def absNorm : FractionalIdeal R⁰ K →*₀ ℚ where
     exact div_mul_div_comm₀.symm
 
 theorem absNorm_eq (I : FractionalIdeal R⁰ K) :
-    absNorm I = (Ideal.absNorm I.num : ℚ) / |Algebra.norm ℤ (I.den : R)| := rfl
+    absNorm I = (Ideal.absNorm I.num : ℚ) / (↑|Algebra.norm ℤ (I.den : R)| : ℚ) := rfl
 
 theorem absNorm_eq' {I : FractionalIdeal R⁰ K} (a : R⁰) (I₀ : Ideal R)
     (h : a • (I : Submodule R K) = Submodule.map (Algebra.linearMap R K) I₀) :
-    absNorm I = (Ideal.absNorm I₀ : ℚ) / |Algebra.norm ℤ (a : R)| := by
+    absNorm I = (Ideal.absNorm I₀ : ℚ) / (↑|Algebra.norm ℤ (a : R)| : ℚ) := by
   rw [absNorm, ← absNorm_div_norm_eq_absNorm_div_norm a I₀ h, MonoidWithZeroHom.coe_mk,
     ZeroHom.coe_mk]
 

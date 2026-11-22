@@ -126,7 +126,7 @@ theorem Units.mk0_mul (x y : G₀) (hxy) :
       Units.mk0 x (mul_ne_zero_iff.mp hxy).1 * Units.mk0 y (mul_ne_zero_iff.mp hxy).2 := by
   ext; rfl
 
-@[simp] lemma divp_mk0 (a : G₀) (hb : b ≠ 0) : a /ₚ Units.mk0 b hb = a / b :=
+@[simp] lemma divp_mk0 (a : G₀) (hb : b ≠ 0) : a /ₚ Units.mk0 b hb = Checked.div a b hb.isUnit :=
   congrArg (a /ₚ ·) (Units.ext rfl)
 
 end GroupWithZero
@@ -209,16 +209,17 @@ lemma zpow_neg₀ (ha : a ≠ 0) (n : ℤ) : a ^ (-n) = (a ^ n)⁻¹ := by
 lemma zpow_sub_one₀ (ha : a ≠ 0) (n : ℤ) : a ^ (n - 1) = a ^ n * a⁻¹ := by
   simp only [Int.sub_eq_add_neg, zpow_add₀ ha, zpow_neg₀ ha, zpow_one₀]
 
-lemma zpow_sub₀ (ha : a ≠ 0) (m n : ℤ) : a ^ (m - n) = a ^ m / a ^ n := by
+lemma zpow_sub₀ (ha : a ≠ 0) (m n : ℤ) : a ^ (m - n) = Checked.div (a ^ m) (a ^ n) := by
   simp only [Int.sub_eq_add_neg, zpow_add₀ ha, zpow_neg₀ ha, div_eq_mul_inv₀]
 
-lemma zpow_natCast_sub_natCast₀ (ha : a ≠ 0) (m n : ℕ) : a ^ (m - n : ℤ) = a ^ m / a ^ n := by
+lemma zpow_natCast_sub_natCast₀ (ha : a ≠ 0) (m n : ℕ) :
+    a ^ (m - n : ℤ) = Checked.div (a ^ m) (a ^ n) := by
   simp only [zpow_sub₀ ha, zpow_natCast₀]
 
-lemma zpow_natCast_sub_one₀ (ha : a ≠ 0) (n : ℕ) : a ^ (n - 1 : ℤ) = a ^ n / a := by
+lemma zpow_natCast_sub_one₀ (ha : a ≠ 0) (n : ℕ) : a ^ (n - 1 : ℤ) = Checked.div (a ^ n) a := by
   simp only [zpow_sub₀ ha, zpow_natCast₀, zpow_one₀]
 
-lemma zpow_one_sub_natCast₀ (ha : a ≠ 0) (n : ℕ) : a ^ (1 - n : ℤ) = a / a ^ n := by
+lemma zpow_one_sub_natCast₀ (ha : a ≠ 0) (n : ℕ) : a ^ (1 - n : ℤ) = Checked.div a (a ^ n) := by
   simp only [zpow_sub₀ ha, zpow_natCast₀, zpow_one₀]
 
 lemma zpow_neg_mul_zpow_self (n : ℤ) (ha : a ≠ 0) : a ^ (-n) * a ^ n = 1 := by

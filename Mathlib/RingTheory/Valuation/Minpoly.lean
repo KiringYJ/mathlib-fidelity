@@ -46,11 +46,10 @@ variable {L}
 the minimal polynomial of `x` over `K` is nonzero. This lemma is helpful for defining the valuation
 on `L` inducing `v`. -/
 theorem pow_coeff_zero_ne_zero_of_unit [FiniteDimensional K L] (x : L) (hx : IsUnit x) :
-    v ((minpoly K x).coeff 0) ^ (finrank K L / (minpoly K x).natDegree) ≠ (0 : Γ₀) := by
-  have h_alg : Algebra.IsAlgebraic K L := Algebra.IsAlgebraic.of_finite K L
-  have hx₀ : IsIntegral K x := (Algebra.IsAlgebraic.isAlgebraic x).isIntegral
-  have hdeg := Nat.div_pos (natDegree_le x) (natDegree_pos hx₀)
-  rw [ne_eq, pow_eq_zero_iff hdeg.ne.symm, Valuation.zero_iff]
-  exact coeff_zero_ne_zero hx₀ hx.ne_zero
+    v ((minpoly K x).coeff 0) ^ Nat.euclideanDiv (finrank K L) (minpoly K x).natDegree
+      (natDegree_pos (Algebra.IsIntegral.isIntegral x)).ne' ≠ (0 : Γ₀) := by
+  apply pow_ne_zero
+  simpa only [ne_eq, Valuation.zero_iff] using
+    coeff_zero_ne_zero (Algebra.IsIntegral.isIntegral x) hx.ne_zero
 
 end Valuation

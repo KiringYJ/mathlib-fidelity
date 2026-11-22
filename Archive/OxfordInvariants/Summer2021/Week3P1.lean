@@ -109,24 +109,37 @@ theorem OxfordInvariants.Week3P1 (n : ℕ) (a : ℕ → ℕ) (a_pos : ∀ i ≤ 
     have ha₀ : a 0 ≤ a n * b := by
       suffices h : (a 0 : α) ≤ (a n : α) * (b : α) by exact_mod_cast h
       apply (div_le_iff₀' hn).mp
-      have hlast : (a 0 : α) / a n = week3Summand a a_prev (Fin.last n) := by
+      have hlast : (a 0 : α) / (a n : α) = week3Summand a a_prev (Fin.last n) := by
         exact (mul_div_mul_right _ _).symm
       rw [hlast, hb]
       exact Finset.single_le_sum
         (fun i _ ↦ div_nonneg (mul_nonneg (Nat.cast_nonneg _) (Nat.cast_nonneg _))
           (mul_nonneg (Nat.cast_nonneg _) (Nat.cast_nonneg _))) (Finset.mem_univ (Fin.last n))
-    refine ⟨(a n + a (n + 2)) / a (n + 1) * b - (a n * b - a 0) / a (n + 1), ?_, ?_⟩
+    have hden : a (n + 1) ≠ 0 := (a_prev _ le_rfl).ne'
+    let q := Nat.euclideanDiv (a n + a (n + 2)) (a (n + 1)) hden
+    let r := Nat.euclideanDiv (a n * b - a 0) (a (n + 1)) hden
+    have hq : a (n + 1) * q = a n + a (n + 2) := by
+      simpa only [q, Nat.mod_eq_zero_of_dvd hdiv, Nat.add_zero] using
+        Nat.euclideanDiv_mul_add_mod (a n + a (n + 2)) (a (n + 1)) hden
+    have hr : a (n + 1) * r = a n * b - a 0 := by
+      simpa only [r, Nat.mod_eq_zero_of_dvd han, Nat.add_zero] using
+        Nat.euclideanDiv_mul_add_mod (a n * b - a 0) (a (n + 1)) hden
+    refine ⟨q * b - r, ?_, ?_⟩
     · calc
-        (((a n + a (n + 2)) / a (n + 1) * b - (a n * b - a 0) / a (n + 1) : ℕ) : α) =
-            (((a n : α) + a (n + 2)) / a (n + 1) * b -
-              (a n * (b : α) - a 0) / a (n + 1)) := by
-          have hle : (a n * b - a 0) / a (n + 1) ≤ (a n + a (n + 2)) / a (n + 1) * b := by
+        ((q * b - r : ℕ) : α) =
+            ((a n : α) + a (n + 2)) / (a (n + 1) : α) * b -
+              (a n * (b : α) - a 0) / (a (n + 1) : α) := by
+          have hle : r ≤ q * b := by
+            change Nat.euclideanDiv (a n * b - a 0) (a (n + 1)) hden ≤ q * b
+            rw [Nat.euclideanDiv_eq_core]
             apply Nat.div_le_of_le_mul
-            rw [← mul_assoc, Nat.mul_div_cancel' hdiv, add_mul]
+            rw [← mul_assoc, hq, add_mul]
             exact tsub_le_self.trans (Nat.le_add_right _ _)
-          rw [Nat.cast_sub hle, Nat.cast_mul, Nat.cast_div hdiv hmid, Nat.cast_div han hmid,
+          rw [Nat.cast_sub hle, Nat.cast_mul]
+          dsimp only [q, r]
+          rw [Nat.cast_div hdiv hmid, Nat.cast_div han hmid,
             Nat.cast_add, Nat.cast_sub ha₀, Nat.cast_mul]
-        _ = (a (n + 2) : α) / a (n + 1) * b + (a 0 : α) / a (n + 1) := by
+        _ = (a (n + 2) : α) / (a (n + 1) : α) * b + (a 0 : α) / (a (n + 1) : α) := by
           rw [add_div, add_mul, sub_div, mul_div_right_comm₀, add_sub_sub_cancel]
         _ = ∑ i : Fin (n + 2), week3Summand a a_pos i := by
           rw [Fin.sum_univ_castSucc, hb, Finset.mul_sum]
@@ -137,6 +150,6 @@ theorem OxfordInvariants.Week3P1 (n : ℕ) (a : ℕ → ℕ) (a_pos : ∀ i ≤ 
             rw [← mul_div_assoc₀, ← mul_div_right_comm₀, ← mul_assoc, mul_div_cancel_right₀,
               mul_comm (a (n + 2) : α) (a 0 : α)]
           · exact (mul_div_mul_right _ _).symm
-    · rw [Nat.mul_sub, ← mul_assoc, Nat.mul_div_cancel' hdiv, add_mul, Nat.mul_div_cancel' han,
+    · rw [Nat.mul_sub, ← mul_assoc, hq, add_mul, hr,
         add_tsub_tsub_cancel ha₀, add_tsub_cancel_right]
       exact dvd_mul_right _ _

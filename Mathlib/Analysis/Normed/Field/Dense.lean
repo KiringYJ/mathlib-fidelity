@@ -91,7 +91,7 @@ theorem IsAlgClosed.of_denseRange {K L : Type*} [Field K] [NontriviallyNormedFie
       rw [norm_pos_iff, sub_ne_zero]
       exact ha'.2.symm
     · linarith
-  have hε : (δ / (max ‖a‖ 1)) ^ f.natDegree / (f.natDegree + 1) > 0 := by positivity
+  have hε : (δ / (max ‖a‖ 1)) ^ f.natDegree / ((f.natDegree : ℝ) + 1) > 0 := by positivity
   -- We can find a `g ∈ K[X]` whose coefficients sufficiently close to coefficients of `f`.
   -- By continuity of roots, there exists a root `b` of `g` in `K` such that `‖a - b‖ ≤ δ`.
   obtain ⟨g, gmon, gdeg, gcoeff⟩ :=

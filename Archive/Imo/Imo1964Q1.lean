@@ -27,9 +27,11 @@ namespace Imo1964Q1
 
 theorem two_pow_mod_seven (n : ℕ) : 2 ^ n ≡ 2 ^ (n % 3) [MOD 7] :=
   let t := n % 3
-  calc 2 ^ n = 2 ^ (3 * (n / 3) + t) := by rw [Nat.div_add_mod]
-    _ = (2 ^ 3) ^ (n / 3) * 2 ^ t := by rw [pow_add, pow_mul]
-    _ ≡ 1 ^ (n / 3) * 2 ^ t [MOD 7] := by gcongr; decide
+  let q := n.euclideanDiv 3
+  calc 2 ^ n = 2 ^ (3 * q + t) :=
+      congrArg (fun k : ℕ ↦ 2 ^ k) (Nat.euclideanDiv_mul_add_mod n 3 (by decide)).symm
+    _ = (2 ^ 3) ^ q * 2 ^ t := by rw [pow_add, pow_mul]
+    _ ≡ 1 ^ q * 2 ^ t [MOD 7] := by gcongr; decide
     _ = 2 ^ t := by ring
 
 end Imo1964Q1

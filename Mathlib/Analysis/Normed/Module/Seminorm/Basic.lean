@@ -652,13 +652,13 @@ theorem closedBall_zero' (x : E) (hr : 0 < r) : closedBall (0 : Seminorm 𝕜 E)
   eq_univ_of_subset (ball_subset_closedBall _ _ _) (ball_zero' x hr)
 
 theorem ball_smul (p : Seminorm 𝕜 E) {c : NNReal} (hc : 0 < c) (r : ℝ) (x : E) :
-    (c • p).ball x r = p.ball x (r / c) := by
+    (c • p).ball x r = p.ball x (r / (c : ℝ)) := by
   ext
   rw [mem_ball, mem_ball, smul_apply, NNReal.smul_def, smul_eq_mul, mul_comm,
     lt_div_iff₀ (NNReal.coe_pos.mpr hc)]
 
 theorem closedBall_smul (p : Seminorm 𝕜 E) {c : NNReal} (hc : 0 < c) (r : ℝ) (x : E) :
-    (c • p).closedBall x r = p.closedBall x (r / c) := by
+    (c • p).closedBall x r = p.closedBall x (r / (c : ℝ)) := by
   ext
   rw [mem_closedBall, mem_closedBall, smul_apply, NNReal.smul_def, smul_eq_mul, mul_comm,
     le_div_iff₀ (NNReal.coe_pos.mpr hc)]

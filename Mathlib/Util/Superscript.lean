@@ -6,6 +6,7 @@ Authors: Mario Carneiro
 module
 
 public import Mathlib.Init
+public meta import Mathlib.Lean.Elab.NativeDivision
 
 /-!
 # A parser for superscripts and subscripts
@@ -101,13 +102,23 @@ returns `i`, by binary search. -/
 @[specialize]
 def partitionPoint (lo := 0) (hi := as.size) : Nat :=
   if lo < hi then
-    let m := (lo + hi)/2
+    let m := Nat.euclideanDiv (lo + hi) 2
     let a := as[m]!
     if leftOfPartition a then
       partitionPoint (m+1) hi
     else
       partitionPoint lo m
   else lo
+termination_by hi - lo
+decreasing_by
+  all_goals
+    have hlo : lo ≤ Nat.euclideanDiv (lo + hi) 2 := by
+      rw [Nat.euclideanDiv_eq_core]
+      exact (Nat.le_div_iff_mul_le (by decide)).2 (by omega)
+    have hhi : Nat.euclideanDiv (lo + hi) 2 < hi := by
+      rw [Nat.euclideanDiv_eq_core]
+      exact (Nat.div_lt_iff_lt_mul (by decide)).2 (by omega)
+    omega
 
 /-- The core function for super/subscript parsing. It consists of three stages:
 

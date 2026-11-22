@@ -51,18 +51,18 @@ Its center $N$ satisfies $N-O=((n+1)/n)(G-O)$, where $O$ is the circumcenter and
 The radius is $1/n$ of the circumradius.
 -/
 def ninePointCircle {n : ℕ} [NeZero n] (s : Simplex ℝ P n) : Sphere P where
-  center := ((n + 1) / n : ℝ) • (s.centroid -ᵥ s.circumcenter) +ᵥ s.circumcenter
+  center := (((n : ℝ) + 1) / (n : ℝ)) • (s.centroid -ᵥ s.circumcenter) +ᵥ s.circumcenter
   radius := s.circumradius / (n : ℝ)
 
 theorem ninePointCircle_center {n : ℕ} [NeZero n] (s : Simplex ℝ P n) : s.ninePointCircle.center =
-    ((n + 1) / n : ℝ) • (s.centroid -ᵥ s.circumcenter) +ᵥ s.circumcenter := rfl
+    (((n : ℝ) + 1) / (n : ℝ)) • (s.centroid -ᵥ s.circumcenter) +ᵥ s.circumcenter := rfl
 
 theorem ninePointCircle_center_vsub_circumcenter {n : ℕ} [NeZero n]
     (s : Simplex ℝ P n) :
     s.ninePointCircle.center -ᵥ s.circumcenter =
       (n : ℝ)⁻¹ • (s.centroid -ᵥ s.circumcenter) + (s.centroid -ᵥ s.circumcenter) := by
   rw [ninePointCircle_center, vadd_vsub]
-  have h : ((n + 1) / n : ℝ) = (n : ℝ)⁻¹ + 1 := by
+  have h : (((n : ℝ) + 1) / (n : ℝ)) = (n : ℝ)⁻¹ + 1 := by
     rw [div_eq_mul_inv₀, add_mul, mul_inv_cancel₀, one_mul, add_comm]
   rw [h, add_smul, one_smul]
 
@@ -189,7 +189,7 @@ theorem eulerPoint_eq_smul_vsub_vadd_mongePoint {n : ℕ} [NeZero n] (s : Simple
 
 theorem points_vsub_eulerPoint {n : ℕ} [NeZero n] (s : Simplex ℝ P n) (i : Fin (n + 1))
     (hn : 2 ≤ n := by omega) :
-    s.points i -ᵥ s.eulerPoint i = (((n : ℝ) - 1) / n) •
+    s.points i -ᵥ s.eulerPoint i = (((n : ℝ) - 1) / (n : ℝ)) •
       (s.points i -ᵥ s.mongePoint (by omega)) := by
   rw [eulerPoint_eq_smul_vsub_vadd_mongePoint s i hn, vsub_vadd_eq_vsub_sub,
     div_eq_mul_inv₀, sub_mul, mul_inv_cancel₀, one_mul, sub_smul, one_smul]

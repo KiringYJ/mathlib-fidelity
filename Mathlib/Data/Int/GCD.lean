@@ -45,7 +45,7 @@ def xgcdAux : ℕ → ℤ → ℤ → ℕ → ℤ → ℤ → ℕ × ℤ × ℤ 
   Nat.strongRec fun n ih s t r' s' t' ↦ match n with
   | 0 => (r', s', t')
   | succ k =>
-    let q := r' / succ k
+    let q := Nat.euclideanDiv r' (succ k) (succ_ne_zero _)
     ih (r' % succ k) (mod_lt _ <| (succ_pos _).gt) (s' - q * s) (t' - q * t) (succ k) s t
 
 @[simp]
@@ -53,9 +53,11 @@ theorem xgcd_zero_left {s t r' s' t'} : xgcdAux 0 s t r' s' t' = (r', s', t') :=
   rw [xgcdAux, Nat.strongRec_eq]
 
 theorem xgcdAux_rec {r s t r' s' t'} (h : 0 < r) :
-    xgcdAux r s t r' s' t' = xgcdAux (r' % r) (s' - r' / r * s) (t' - r' / r * t) r s t := by
+    xgcdAux r s t r' s' t' = xgcdAux (r' % r)
+      (s' - Int.euclideanDiv r' r (Int.ofNat_ne_zero.2 h.ne') * s)
+      (t' - Int.euclideanDiv r' r (Int.ofNat_ne_zero.2 h.ne') * t) r s t := by
   obtain ⟨r, rfl⟩ := Nat.exists_eq_succ_of_ne_zero h.ne'
-  rw [xgcdAux, Nat.strongRec_eq]
+  rw [← Int.natCast_div r' (succ r) (succ_ne_zero _), xgcdAux, Nat.strongRec_eq]
   rfl
 
 /-- Use the extended GCD algorithm to generate the `a` and `b` values
@@ -115,7 +117,8 @@ private theorem xgcdAux_P {r r'} :
   | H1 a b h IH =>
     intro s t s' t' p p'
     rw [xgcdAux_rec h]; refine IH ?_ p; dsimp [P] at *
-    rw [Int.emod_def]; generalize (b / a : ℤ) = k
+    rw [Int.emod_def, ← Int.euclideanDiv_eq_core (b : ℤ) (a : ℤ) (Int.ofNat_ne_zero.2 h.ne')]
+    generalize Int.euclideanDiv (b : ℤ) (a : ℤ) (Int.ofNat_ne_zero.2 h.ne') = k
     rw [p, p', Int.mul_sub, sub_add_eq_add_sub, Int.mul_sub, Int.add_mul, mul_comm k t,
       mul_comm k s, ← mul_assoc, ← mul_assoc, add_comm (x * s * k), ← add_sub_assoc, sub_sub]
 
@@ -184,8 +187,15 @@ theorem gcd_eq_gcd_ab : ∀ x y : ℤ, (gcd x y : ℤ) = x * gcdA x y + y * gcdB
 theorem lcm_def (i j : ℤ) : lcm i j = Nat.lcm (natAbs i) (natAbs j) :=
   rfl
 
-alias gcd_div := gcd_ediv
-alias gcd_div_gcd_div_gcd := gcd_ediv_gcd_ediv_gcd
+theorem gcd_div {a b c : ℤ} (hc : c ≠ 0) (ha : c ∣ a) (hb : c ∣ b) :
+    gcd (Int.euclideanDiv a c hc) (Int.euclideanDiv b c hc) =
+      Nat.euclideanDiv (gcd a b) c.natAbs (Int.natAbs_ne_zero.2 hc) := by
+  simpa only [Int.euclideanDiv_eq_core, Nat.euclideanDiv_eq_core] using gcd_ediv ha hb
+
+theorem gcd_div_gcd_div_gcd {i j : ℤ} (h : 0 < gcd i j) :
+    gcd (Int.euclideanDiv i (gcd i j) (Int.ofNat_ne_zero.2 h.ne'))
+      (Int.euclideanDiv j (gcd i j) (Int.ofNat_ne_zero.2 h.ne')) = 1 := by
+  simpa only [Int.euclideanDiv_eq_core] using gcd_ediv_gcd_ediv_gcd h
 
 /-- If `gcd a (m * n) = 1`, then `gcd a m = 1`. -/
 theorem gcd_eq_one_of_gcd_mul_right_eq_one_left {a : ℤ} {m n : ℕ} (h : a.gcd (m * n) = 1) :
@@ -202,9 +212,10 @@ theorem ne_zero_of_gcd {x y : ℤ} (hc : gcd x y ≠ 0) : x ≠ 0 ∨ y ≠ 0 :=
   rw [hc.left, hc.right, gcd_zero_right, natAbs_zero]
 
 theorem exists_gcd_one {m n : ℤ} (H : 0 < gcd m n) :
-    ∃ m' n' : ℤ, gcd m' n' = 1 ∧ m = m' * gcd m n ∧ n = n' * gcd m n :=
-  ⟨_, _, gcd_div_gcd_div_gcd H, (Int.ediv_mul_cancel (gcd_dvd_left ..)).symm,
-    (Int.ediv_mul_cancel (gcd_dvd_right ..)).symm⟩
+    ∃ m' n' : ℤ, gcd m' n' = 1 ∧ m = m' * gcd m n ∧ n = n' * gcd m n := by
+  refine ⟨_, _, gcd_div_gcd_div_gcd H, ?_, ?_⟩ <;> rw [Int.euclideanDiv_eq_core]
+  · exact (Int.ediv_mul_cancel (gcd_dvd_left ..)).symm
+  · exact (Int.ediv_mul_cancel (gcd_dvd_right ..)).symm
 
 theorem exists_gcd_one' {m n : ℤ} (H : 0 < gcd m n) :
     ∃ (g : ℕ) (m' n' : ℤ), 0 < g ∧ gcd m' n' = 1 ∧ m = m' * g ∧ n = n' * g :=

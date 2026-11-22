@@ -446,7 +446,8 @@ lemma leIdeal_v_le_of_mem {K : Type*} [Field K] (v : Valuation K Γ₀)
   rcases eq_or_ne x 0 with rfl | hx0
   · simp
   intro y hy
-  have : v ((y : K) / x) ≤ 1 := by simpa using div_le_one_of_le₀ hy zero_le
+  have hxK : (x : K) ≠ 0 := fun h ↦ hx0 (Subtype.ext h)
+  have : v ((y : K) / (x : K)) ≤ 1 := by simpa using div_le_one_of_le₀ hy zero_le
   convert! I.smul_mem ⟨_, this⟩ hx using 1
   simp [Subtype.ext_iff, div_mul_cancel₀]
 

@@ -659,7 +659,7 @@ lemma hasSum_int_completedCosZeta (a : ℝ) {s : ℂ} (hs : 1 < re s) :
         Or.inl (by rintro rfl; simp at hs)⟩)) := by
   let c (n : ℤ) : ℂ := cexp (2 * π * I * a * n) / 2
   have hF t (ht : 0 < t) : HasSum (fun n : ℤ ↦ if n = 0 then 0 else c n * rexp (-π * n ^ 2 * t))
-      ((cosKernel a t - 1) / 2) := by
+      (((cosKernel a t : ℂ) - 1) / 2) := by
     refine ((hasSum_int_cosKernel₀ a ht).div_const 2).congr_fun fun n ↦ ?_
     split_ifs <;> simp [c, div_mul_eq_mul_div₀]
   simp only [← Int.cast_eq_zero (α := ℝ)] at hF
@@ -727,7 +727,7 @@ lemma hasSum_int_completedHurwitzZetaEven (a : ℝ) {s : ℂ} (hs : 1 < re s) :
         Or.inl (ne_zero_of_one_lt_re hs)⟩)) := by
   have hF (t : ℝ) (ht : 0 < t) : HasSum (fun n : ℤ ↦ if n + a = 0 then 0
       else (1 / 2 : ℂ) * rexp (-π * (n + a) ^ 2 * t))
-      ((evenKernel a t - (if (a : UnitAddCircle) = 0 then 1 else 0 : ℝ)) / 2) := by
+      (((evenKernel a t : ℂ) - ↑(if (a : UnitAddCircle) = 0 then 1 else 0 : ℝ)) / 2) := by
     refine (ofReal_sub .. ▸ (hasSum_ofReal.mpr (hasSum_int_evenKernel₀ a ht)).div_const
       2).congr_fun fun n ↦ ?_
     split_ifs
@@ -782,7 +782,7 @@ lemma differentiableAt_update_of_residue
     (hf t ht ht').mul differentiable_reciprocalGammaℝ.differentiableAt
   have claim2 : Tendsto (fun s : ℂ ↦ Λ s * reciprocalGammaℝ s) (𝓝[≠] 0) (𝓝 <| L / 2) := by
     have hp : (π : ℂ) ≠ 0 := ofReal_ne_zero.mpr Real.pi_ne_zero
-    have hcontinuous : Continuous (fun s : ℂ ↦ reciprocalGammaℝ (s + 2) / 2 / π) :=
+    have hcontinuous : Continuous (fun s : ℂ ↦ reciprocalGammaℝ (s + 2) / 2 / (π : ℂ)) :=
       ((differentiable_reciprocalGammaℝ.continuous.comp
         (continuous_add_const 2)).div_const₀ 2).div_const₀ π
     have h := h_lim.mul ((hcontinuous.tendsto 0).mono_left nhdsWithin_le_nhds)
@@ -813,7 +813,7 @@ lemma differentiableAt_update_of_residue
 singularity at zero, so this formula never evaluates a quotient at either pole. -/
 def hurwitzZetaEvenRegularPart (a : UnitAddCircle) (s : ℂ) : ℂ :=
   completedHurwitzZetaEven₀ a s * reciprocalGammaℝ s -
-    (if a = 0 then 1 else 0) * reciprocalGammaℝ (s + 2) / 2 / π
+    (if a = 0 then 1 else 0) * reciprocalGammaℝ (s + 2) / 2 / (π : ℂ)
 
 lemma differentiable_hurwitzZetaEvenRegularPart (a : UnitAddCircle) :
     Differentiable ℂ (hurwitzZetaEvenRegularPart a) := by
@@ -1021,7 +1021,7 @@ lemma hasSum_nat_hurwitzZetaEven_of_mem_Icc {a : ℝ} (ha : a ∈ Icc 0 1) {s : 
 /-- The entire regular part of cosine zeta after removing the possible principal part
 at one. The reciprocal Gamma recurrence removes the apparent pole at zero. -/
 def cosZetaRegularPart (a : UnitAddCircle) (s : ℂ) : ℂ :=
-  completedCosZeta₀ a s * reciprocalGammaℝ s - reciprocalGammaℝ (s + 2) / 2 / π
+  completedCosZeta₀ a s * reciprocalGammaℝ s - reciprocalGammaℝ (s + 2) / 2 / (π : ℂ)
 
 lemma differentiable_cosZetaRegularPart (a : UnitAddCircle) :
     Differentiable ℂ (cosZetaRegularPart a) := by

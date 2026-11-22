@@ -535,13 +535,24 @@ protected theorem map_inv [Group G] [DivisionMonoid H] (h : G ≃* H) (x : G) :
     h x⁻¹ = (h x)⁻¹ :=
   map_inv h x
 
+/-- A multiplicative equivalence preserves multiplication by an inverse. -/
+protected theorem map_mul_inv [Group G] [DivisionMonoid H] (h : G ≃* H) (x y : G) :
+    h (x * y⁻¹) = h x * (h y)⁻¹ :=
+  _root_.map_mul_inv h x y
+
 /-- A multiplicative equivalence of groups preserves division. -/
-@[to_additive /-- An additive equivalence of additive groups preserves subtractions. -/]
-protected theorem map_div [Group G] [DivisionMonoid H] (h : G ≃* H) (x y : G) :
-    h (x / y) = h x / h y :=
-  map_div h x y
+@[to_additive map_sub_group
+  /-- An additive equivalence of additive groups preserves subtraction. -/]
+protected theorem map_div [Group G] [Group H] (h : G ≃* H) (x y : G) :
+    h (x / y) = h x / h y := by
+  simpa only [div_eq_mul_inv] using (_root_.map_mul_inv h x y)
 
 end MulEquiv
+
+/-- An additive equivalence preserves subtraction. -/
+protected theorem AddEquiv.map_sub [AddGroup G] [SubtractionMonoid H] (h : G ≃+ H) (x y : G) :
+    h (x - y) = h x - h y :=
+  _root_.map_sub h x y
 
 /-- Given a pair of multiplicative homomorphisms `f`, `g` such that `g.comp f = id` and
 `f.comp g = id`, returns a multiplicative equivalence with `toFun = f` and `invFun = g`. This

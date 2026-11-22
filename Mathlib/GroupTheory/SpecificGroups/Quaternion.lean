@@ -209,9 +209,10 @@ theorem orderOf_xa [NeZero n] (i : ZMod (2 * n)) : orderOf (xa i) = 4 := by
     simp only [pow_one, xa_sq] at h
     injection h with h'
     apply_fun ZMod.val at h'
-    apply_fun (· / n) at h'
-    simp only [ZMod.val_natCast, ZMod.val_zero, Nat.zero_div, Nat.mod_mul_left_div_self,
-      Nat.div_self (NeZero.pos n), reduceCtorEq] at h'
+    have hn := NeZero.pos n
+    have hlt : n < 2 * n := by omega
+    rw [ZMod.val_natCast, ZMod.val_zero, Nat.mod_eq_of_lt hlt] at h'
+    exact (NeZero.ne n) h'
   · simp
 
 /-- In the special case `n = 1`, `Quaternion 1` is a cyclic group (of order `4`). -/
@@ -243,9 +244,11 @@ theorem orderOf_a_one : orderOf (a 1 : QuaternionGroup n) = 2 * n := by
 /-- If `0 < n`, then `a i` has order `(2 * n) / gcd (2 * n) i`.
 -/
 theorem orderOf_a [NeZero n] (i : ZMod (2 * n)) :
-    orderOf (a i) = 2 * n / Nat.gcd (2 * n) i.val := by
+    orderOf (a i) = Nat.euclideanDiv (2 * n) (Nat.gcd (2 * n) i.val)
+      (Nat.gcd_ne_zero_left (NeZero.ne (2 * n))) := by
   conv_lhs => rw [← ZMod.natCast_zmod_val i]
-  rw [← a_one_pow, orderOf_pow, orderOf_a_one]
+  rw [← a_one_pow, orderOf_pow]
+  simp only [orderOf_a_one]
 
 theorem exponent : Monoid.exponent (QuaternionGroup n) = 2 * lcm n 2 := by
   rw [← normalize_eq 2, ← lcm_mul_left, normalize_eq]
@@ -257,8 +260,9 @@ theorem exponent : Monoid.exponent (QuaternionGroup n) = 2 * lcm n 2 := by
   · apply Monoid.exponent_dvd_of_forall_pow_eq_one
     rintro (m | m)
     · rw [← orderOf_dvd_iff_pow_eq_one, orderOf_a]
-      refine Nat.dvd_trans ⟨gcd (2 * n) m.val, ?_⟩ (dvd_lcm_left (2 * n) 4)
-      exact (Nat.div_mul_cancel (Nat.gcd_dvd_left (2 * n) m.val)).symm
+      refine Nat.dvd_trans ⟨Nat.gcd (2 * n) m.val, ?_⟩ (dvd_lcm_left (2 * n) 4)
+      simpa only [Nat.euclideanDiv_eq_core] using
+        (Nat.div_mul_cancel (Nat.gcd_dvd_left (2 * n) m.val)).symm
     · rw [← orderOf_dvd_iff_pow_eq_one, orderOf_xa]
       exact dvd_lcm_right (2 * n) 4
   · apply lcm_dvd

@@ -100,8 +100,13 @@ theorem edist_mul_right [Mul M] [PseudoEMetricSpace M] [IsIsometricSMul Mᵐᵒ�
     edist (a * c) (b * c) = edist a b :=
   isometry_mul_right c a b
 
-@[to_additive (attr := simp)]
-theorem edist_div_right [DivInvMonoid M] [PseudoEMetricSpace M] [IsIsometricSMul Mᵐᵒᵖ M]
+@[simp]
+theorem edist_sub_right [SubNegMonoid M] [PseudoEMetricSpace M] [IsIsometricVAdd Mᵃᵒᵖ M]
+    (a b c : M) : edist (a - c) (b - c) = edist a b := by
+  simp only [sub_eq_add_neg, edist_add_right]
+
+@[simp]
+theorem edist_div_right [Group M] [PseudoEMetricSpace M] [IsIsometricSMul Mᵐᵒᵖ M]
     (a b c : M) : edist (a / c) (b / c) = edist a b := by
   simp only [div_eq_mul_inv, edist_mul_right]
 
@@ -167,7 +172,9 @@ theorem mulRight_symm [IsIsometricSMul Gᵐᵒᵖ G] (x : G) : (mulRight x).symm
 @[to_additive (attr := simps! apply toEquiv) /-- Subtraction `y ↦ y - x` as an `IsometryEquiv`. -/]
 def divRight [IsIsometricSMul Gᵐᵒᵖ G] (c : G) : G ≃ᵢ G where
   toEquiv := Equiv.divRight c
-  isometry_toFun a b := edist_div_right a b c
+  isometry_toFun a b := by
+    change edist (a / c) (b / c) = edist a b
+    simp only [div_eq_mul_inv, edist_mul_right]
 
 @[to_additive (attr := simp)]
 theorem divRight_symm [IsIsometricSMul Gᵐᵒᵖ G] (c : G) : (divRight c).symm = mulRight c :=
@@ -279,12 +286,22 @@ theorem nndist_mul_right [PseudoMetricSpace M] [Mul M] [IsIsometricSMul Mᵐᵒ�
     nndist (a * c) (b * c) = nndist a b :=
   nndist_smul (MulOpposite.op c) a b
 
-@[to_additive (attr := simp)]
-theorem dist_div_right [DivInvMonoid M] [PseudoMetricSpace M] [IsIsometricSMul Mᵐᵒᵖ M]
+@[simp]
+theorem dist_sub_right [SubNegMonoid M] [PseudoMetricSpace M] [IsIsometricVAdd Mᵃᵒᵖ M]
+    (a b c : M) : dist (a - c) (b - c) = dist a b := by
+  simp only [sub_eq_add_neg, dist_add_right]
+
+@[simp]
+theorem nndist_sub_right [SubNegMonoid M] [PseudoMetricSpace M] [IsIsometricVAdd Mᵃᵒᵖ M]
+    (a b c : M) : nndist (a - c) (b - c) = nndist a b := by
+  simp only [sub_eq_add_neg, nndist_add_right]
+
+@[simp]
+theorem dist_div_right [Group M] [PseudoMetricSpace M] [IsIsometricSMul Mᵐᵒᵖ M]
     (a b c : M) : dist (a / c) (b / c) = dist a b := by simp only [div_eq_mul_inv, dist_mul_right]
 
-@[to_additive (attr := simp)]
-theorem nndist_div_right [DivInvMonoid M] [PseudoMetricSpace M] [IsIsometricSMul Mᵐᵒᵖ M]
+@[simp]
+theorem nndist_div_right [Group M] [PseudoMetricSpace M] [IsIsometricSMul Mᵐᵒᵖ M]
     (a b c : M) : nndist (a / c) (b / c) = nndist a b := by
   simp only [div_eq_mul_inv, nndist_mul_right]
 

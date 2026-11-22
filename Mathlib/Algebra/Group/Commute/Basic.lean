@@ -56,20 +56,20 @@ protected theorem inv_inv : Commute a b → Commute a⁻¹ b⁻¹ :=
 theorem inv_inv_iff : Commute a⁻¹ b⁻¹ ↔ Commute a b :=
   SemiconjBy.inv_inv_symm_iff
 
-@[to_additive]
+@[to_additive AddCommute.add_neg_add_add_neg_comm]
 protected theorem div_mul_div_comm (hbd : Commute b d) (hbc : Commute b⁻¹ c) :
-    a / b * (c / d) = a * c / (b * d) := by
-  simp_rw [div_eq_mul_inv, mul_inv_rev, hbd.inv_inv.symm.eq, hbc.mul_mul_mul_comm]
+    (a * b⁻¹) * (c * d⁻¹) = (a * c) * (b * d)⁻¹ := by
+  simp_rw [mul_inv_rev, hbd.inv_inv.symm.eq, hbc.mul_mul_mul_comm]
 
-@[to_additive]
+@[to_additive AddCommute.add_add_neg_add_comm]
 protected theorem mul_div_mul_comm (hcd : Commute c d) (hbc : Commute b c⁻¹) :
-    a * b / (c * d) = a / c * (b / d) :=
+    (a * b) * (c * d)⁻¹ = (a * c⁻¹) * (b * d⁻¹) :=
   (hcd.div_mul_div_comm hbc.symm).symm
 
-@[to_additive]
+@[to_additive AddCommute.add_neg_add_neg_comm]
 protected theorem div_div_div_comm (hbc : Commute b c) (hbd : Commute b⁻¹ d) (hcd : Commute c⁻¹ d) :
-    a / b / (c / d) = a / c / (b / d) := by
-  simp_rw [div_eq_mul_inv, mul_inv_rev, inv_inv, hbd.symm.eq, hcd.symm.eq,
+    (a * b⁻¹) * (c * d⁻¹)⁻¹ = (a * c⁻¹) * (b * d⁻¹)⁻¹ := by
+  simp_rw [mul_inv_rev, inv_inv, hbd.symm.eq, hcd.symm.eq,
     hbc.inv_inv.mul_mul_mul_comm]
 
 end DivisionMonoid
@@ -130,6 +130,23 @@ variable (a) (m n : ℤ)
 
 end Group
 end Commute
+
+namespace AddCommute
+variable [SubtractionMonoid G] {a b c d : G}
+
+protected theorem sub_add_sub_comm (hbd : AddCommute b d) (hbc : AddCommute (-b) c) :
+    a - b + (c - d) = (a + c) - (b + d) := by
+  simpa only [sub_eq_add_neg] using hbd.add_neg_add_add_neg_comm (a := a) hbc
+
+protected theorem add_sub_add_comm (hcd : AddCommute c d) (hbc : AddCommute b (-c)) :
+    (a + b) - (c + d) = a - c + (b - d) :=
+  (hcd.sub_add_sub_comm hbc.symm).symm
+
+protected theorem sub_sub_sub_comm (hbc : AddCommute b c) (hbd : AddCommute (-b) d)
+    (hcd : AddCommute (-c) d) : (a - b) - (c - d) = (a - c) - (b - d) := by
+  simpa only [sub_eq_add_neg] using hbc.add_neg_add_neg_comm (a := a) hbd hcd
+
+end AddCommute
 
 section Group
 variable [Group G]

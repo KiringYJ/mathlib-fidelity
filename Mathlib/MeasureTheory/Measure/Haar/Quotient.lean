@@ -171,14 +171,10 @@ theorem MeasureTheory.Measure.IsMulLeftInvariant.quotientMeasureEqMeasurePreimag
     rw [this]
     rfl
   have : SigmaFinite μ' := i.sigmaFiniteQuotient
-  rw [measure_eq_div_smul μ' μ neZeroV neTopV, hV]
-  symm
-  suffices (μ' V / ν (QuotientGroup.mk ⁻¹' V ∩ s)) = 1 by rw [this, one_smul]
-  rw [Measure.map_apply meas_V meas_π.aemeasurable, Measure.restrict_apply]
-  · convert! ENNReal.div_self ..
-    · exact trans hV.symm neZeroV
-    · exact trans hV.symm neTopV
-  exact measurableSet_quotient.mp meas_V
+  have hμ' : μ' V = μ V := by
+    rw [hV, Measure.map_apply meas_V meas_π.aemeasurable,
+      Measure.restrict_apply (measurableSet_quotient.mp meas_V)]
+  rw [measure_eq_div_smul μ' μ neZeroV neTopV, hμ', div_self, one_smul]
 
 /-- If a measure `μ` is left-invariant and satisfies the right scaling condition, then it
   satisfies `QuotientMeasureEqMeasurePreimage`. -/

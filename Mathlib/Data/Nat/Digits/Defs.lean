@@ -50,14 +50,14 @@ def digitsAux1 (n : ℕ) : List ℕ :=
 @[semireducible] def digitsAux (b : ℕ) (h : 2 ≤ b) : ℕ → List ℕ
   | 0 => []
   | n + 1 =>
-    ((n + 1) % b) :: digitsAux b h ((n + 1) / b)
-decreasing_by exact Nat.div_lt_self (Nat.succ_pos _) h
+    ((n + 1) % b) :: digitsAux b h (Nat.euclideanDiv (n + 1) b)
+decreasing_by rw [Nat.euclideanDiv_eq_core]; exact Nat.div_lt_self (Nat.succ_pos _) h
 
 @[simp]
 theorem digitsAux_zero (b : ℕ) (h : 2 ≤ b) : digitsAux b h 0 = [] := rfl
 
 theorem digitsAux_def (b : ℕ) (h : 2 ≤ b) (n : ℕ) (w : 0 < n) :
-    digitsAux b h n = (n % b) :: digitsAux b h (n / b) := by
+    digitsAux b h n = (n % b) :: digitsAux b h (Nat.euclideanDiv n b) := by
   cases n
   · cases w
   · rw [digitsAux]
@@ -104,16 +104,20 @@ theorem digits_one_succ (n : ℕ) : digits 1 (n + 1) = 1 :: digits 1 n :=
   rfl
 
 theorem digits_add_two_add_one (b n : ℕ) :
-    digits (b + 2) (n + 1) = ((n + 1) % (b + 2)) :: digits (b + 2) ((n + 1) / (b + 2)) := by
+    digits (b + 2) (n + 1) =
+      ((n + 1) % (b + 2)) :: digits (b + 2) (Nat.euclideanDiv (n + 1) (b + 2)) := by
   simp [digits, digitsAux_def]
 
 @[simp]
 lemma digits_of_two_le_of_pos {b : ℕ} (hb : 2 ≤ b) (hn : 0 < n) :
-    Nat.digits b n = n % b :: Nat.digits b (n / b) := by
-  rw [Nat.eq_add_of_sub_eq hb rfl, Nat.eq_add_of_sub_eq hn rfl, Nat.digits_add_two_add_one]
+    Nat.digits b n = n % b :: Nat.digits b (Nat.euclideanDiv n b) := by
+  obtain ⟨b, rfl⟩ := Nat.exists_eq_add_of_le' hb
+  obtain ⟨n, rfl⟩ := Nat.exists_eq_add_of_le' hn
+  exact digits_add_two_add_one b n
 
 theorem digits_def' :
-    ∀ {b : ℕ} (_ : 1 < b) {n : ℕ} (_ : 0 < n), digits b n = (n % b) :: digits b (n / b)
+    ∀ {b : ℕ} (hb : 1 < b) {n : ℕ} (_ : 0 < n),
+      digits b n = (n % b) :: digits b (Nat.euclideanDiv n b)
   | 0, h => absurd h (by decide)
   | 1, h => absurd h (by decide)
   | b + 2, _ => digitsAux_def _ (by simp) _
@@ -122,7 +126,8 @@ theorem digits_def' :
 theorem digits_of_lt (b x : ℕ) (hx : x ≠ 0) (hxb : x < b) : digits b x = [x] := by
   rcases exists_eq_succ_of_ne_zero hx with ⟨x, rfl⟩
   rcases Nat.exists_eq_add_of_le' ((Nat.le_add_left 1 x).trans_lt hxb) with ⟨b, rfl⟩
-  rw [digits_add_two_add_one, div_eq_of_lt hxb, digits_zero, mod_eq_of_lt hxb]
+  rw [digits_add_two_add_one, Nat.euclideanDiv_eq_core, div_eq_of_lt hxb, digits_zero,
+    mod_eq_of_lt hxb]
 
 theorem digits_add (b : ℕ) (h : 1 < b) (x y : ℕ) (hxb : x < b) (hxy : x ≠ 0 ∨ y ≠ 0) :
     digits b (x + b * y) = x :: digits b y := by
@@ -133,7 +138,7 @@ theorem digits_add (b : ℕ) (h : 1 < b) (x y : ℕ) (hxb : x < b) (hxy : x ≠ 
   rw [digitsAux_def]
   · congr
     · simp [Nat.add_mod, mod_eq_of_lt hxb]
-    · simp [add_mul_div_left, div_eq_of_lt hxb]
+    · simp [Nat.euclideanDiv_eq_core, add_mul_div_left, div_eq_of_lt hxb]
   · apply Nat.succ_pos
 
 -- If we had a function converting a list into a polynomial,
@@ -147,7 +152,7 @@ def ofDigits {α : Type*} [Semiring α] (b : α) : List ℕ → α
   | h :: t => h + b * ofDigits b t
 
 theorem ofDigits_eq_foldr {α : Type*} [Semiring α] (b : α) (L : List ℕ) :
-    ofDigits b L = List.foldr (fun x y => ↑x + b * y) 0 L := by
+    ofDigits b L = List.foldr (fun (x : ℕ) (y : α) => (x : α) + b * y) 0 L := by
   induction L with
   | nil => rfl
   | cons d L ih => dsimp [ofDigits]; rw [ih]
@@ -257,7 +262,7 @@ theorem ofDigits_digits (b n : ℕ) : ofDigits b (digits b n) = n := by
       · simp only [digits_add_two_add_one]
         dsimp [ofDigits]
         rw [h _ (Nat.div_lt_self' _ b)]
-        rw [Nat.mod_add_div]
+        rw [Nat.euclideanDiv_eq_core, Nat.mod_add_div]
 
 theorem ofDigits_one (L : List ℕ) : ofDigits 1 L = L.sum := by
   induction L with
@@ -284,13 +289,14 @@ theorem digits_ne_nil_iff_ne_zero {b n : ℕ} : digits b n ≠ [] ↔ n ≠ 0 :=
   not_congr digits_eq_nil_iff_eq_zero
 
 theorem digits_eq_cons_digits_div {b n : ℕ} (h : 1 < b) (w : n ≠ 0) :
-    digits b n = (n % b) :: digits b (n / b) :=
+    digits b n = (n % b) :: digits b (Nat.euclideanDiv n b) :=
   digits_def' h (Nat.pos_of_ne_zero w)
 
-theorem digits_getLast {b : ℕ} (m : ℕ) (h : 1 < b) (p q) :
-    (digits b m).getLast p = (digits b (m / b)).getLast q := by
+theorem digits_getLast {b : ℕ} (m : ℕ) (h : 1 < b) (p : digits b m ≠ [])
+    (q : digits b (Nat.euclideanDiv m b) ≠ []) :
+    (digits b m).getLast p = (digits b (Nat.euclideanDiv m b)).getLast q := by
   by_cases hm : m = 0
-  · simp [hm]
+  · exact (p (hm ▸ digits_zero b)).elim
   simp only [digits_eq_cons_digits_div h hm]
   rw [List.getLast_cons]
 
@@ -355,8 +361,8 @@ theorem digits_lt_base' {b m : ℕ} : ∀ {d}, d ∈ digits (b + 2) m → d < b 
   rw [digits_add_two_add_one] at hd
   cases hd
   · exact n.succ.mod_lt (by linarith)
-  · apply IH ((n + 1) / (b + 2))
-    · apply Nat.div_lt_self <;> lia
+  · apply IH (Nat.euclideanDiv (n + 1) (b + 2))
+    · rw [Nat.euclideanDiv_eq_core]; apply Nat.div_lt_self <;> lia
     · assumption
 
 /-- The digits in the base b expansion of n are all less than b, if b ≥ 2 -/
@@ -393,7 +399,7 @@ theorem lt_base_pow_length_digits {b m : ℕ} (hb : 1 < b) : m < b ^ (digits b m
 theorem digits_base_mul {b m : ℕ} (hb : 1 < b) (hm : 0 < m) :
     b.digits (b * m) = 0 :: b.digits m := by
   rw [digits_def' hb (by positivity)]
-  simp [mul_div_right m (by positivity)]
+  simp [Nat.euclideanDiv_eq_core, mul_div_right m (by positivity)]
 
 theorem digits_base_pow_mul {b k m : ℕ} (hb : 1 < b) (hm : 0 < m) :
     digits b (b ^ k * m) = List.replicate k 0 ++ digits b m := by
@@ -432,7 +438,9 @@ theorem digit_sum_le (p n : ℕ) : List.sum (digits p n) ≤ n := by
 /-- Interpreting as a base `p` number and dividing by `p` is the same as interpreting the tail.
 -/
 lemma ofDigits_div_eq_ofDigits_tail {p : ℕ} (hpos : 0 < p) (digits : List ℕ)
-    (w₁ : ∀ l ∈ digits, l < p) : ofDigits p digits / p = ofDigits p digits.tail := by
+    (w₁ : ∀ l ∈ digits, l < p) :
+    Nat.euclideanDiv (ofDigits p digits) p = ofDigits p digits.tail := by
+  rw [Nat.euclideanDiv_eq_core]
   induction digits with
   | nil => simp [ofDigits]
   | cons hd tl =>
@@ -443,18 +451,22 @@ lemma ofDigits_div_eq_ofDigits_tail {p : ℕ} (hpos : 0 < p) (digits : List ℕ)
 -/
 lemma ofDigits_div_pow_eq_ofDigits_drop
     {p : ℕ} (i : ℕ) (hpos : 0 < p) (digits : List ℕ) (w₁ : ∀ l ∈ digits, l < p) :
-    ofDigits p digits / p ^ i = ofDigits p (digits.drop i) := by
+    Nat.euclideanDiv (ofDigits p digits) (p ^ i) (pow_ne_zero _ hpos.ne') =
+      ofDigits p (digits.drop i) := by
   induction i with
-  | zero => simp
+  | zero => simp [Nat.euclideanDiv_eq_core]
   | succ i hi =>
-    rw [Nat.pow_succ, ← Nat.div_div_eq_div_mul, hi, ofDigits_div_eq_ofDigits_tail hpos
-      (List.drop i digits) fun x hx ↦ w₁ x <| List.mem_of_mem_drop hx, ← List.drop_one,
+    have htail := ofDigits_div_eq_ofDigits_tail hpos (List.drop i digits) fun x hx ↦
+      w₁ x <| List.mem_of_mem_drop hx
+    simp only [Nat.euclideanDiv_eq_core] at hi htail ⊢
+    rw [Nat.pow_succ, ← Nat.div_div_eq_div_mul, hi, htail, ← List.drop_one,
       List.drop_drop, add_comm]
 
 /-- Dividing `n` by `p^i` is like truncating the first `i` digits of `n` in base `p`.
 -/
 lemma self_div_pow_eq_ofDigits_drop {p : ℕ} (i n : ℕ) (h : 2 ≤ p) :
-    n / p ^ i = ofDigits p ((p.digits n).drop i) := by
+    Nat.euclideanDiv n (p ^ i) (pow_ne_zero _ (zero_lt_of_lt h).ne') =
+      ofDigits p ((p.digits n).drop i) := by
   convert!
     ofDigits_div_pow_eq_ofDigits_drop i (zero_lt_of_lt h) (p.digits n)
       (fun l hl ↦ digits_lt_base h hl)
@@ -498,13 +510,9 @@ lemma toDigitsCore_lens_eq_aux (b f : Nat) :
   induction f with (simp only [Nat.toDigitsCore]; intro n l1 l2 hlen)
   | zero => assumption
   | succ f ih =>
-    if hx : n / b = 0 then
-      simp only [hx, ite_true, List.length, congrArg (fun l ↦ l + 1) hlen]
-    else
-      simp only [hx, ite_false]
-      specialize ih (n / b) (Nat.digitChar (n % b) :: l1) (Nat.digitChar (n % b) :: l2)
-      simp only [List.length, congrArg (fun l ↦ l + 1) hlen] at ih
-      exact ih trivial
+    split
+    · simp [hlen]
+    · exact ih _ _ _ (by simpa using hlen)
 
 lemma toDigitsCore_lens_eq (b f : Nat) : ∀ (n : Nat) (c : Char) (tl : List Char),
     (Nat.toDigitsCore b f n (c :: tl)).length = (Nat.toDigitsCore b f n tl).length + 1 := by
@@ -512,8 +520,9 @@ lemma toDigitsCore_lens_eq (b f : Nat) : ∀ (n : Nat) (c : Char) (tl : List Cha
   | succ f ih =>
     grind
 
-lemma nat_repr_len_aux (n b e : Nat) (h_b_pos : 0 < b) : n < b ^ e.succ → n / b < b ^ e := by
-  simp only [Nat.pow_succ]
+lemma nat_repr_len_aux (n b e : Nat) (h_b_pos : 0 < b) :
+    n < b ^ e.succ → Nat.euclideanDiv n b < b ^ e := by
+  simp only [Nat.euclideanDiv_eq_core, Nat.pow_succ]
   exact (@Nat.div_lt_iff_lt_mul b n (b ^ e) h_b_pos).mpr
 
 /-- The String representation produced by toDigitsCore has the proper length relative to
@@ -533,10 +542,13 @@ lemma toDigitsCore_length (b f n e : Nat) (h_e_pos : 0 < e) (hlt : n < b ^ e) :
         rw [zero_add, pow_one] at hlt
         simp [Nat.div_eq_of_lt hlt]
       | succ e =>
-        specialize ih (n / b) _ (add_one_pos e) (Nat.div_lt_of_lt_mul <| by rwa [← pow_add_one'])
+        have hb : b ≠ 0 := by rintro rfl; simp at hlt
+        specialize ih (Nat.euclideanDiv n b hb) _ (add_one_pos e) (by
+          rw [Nat.euclideanDiv_eq_core]; apply Nat.div_lt_of_lt_mul; rwa [← pow_add_one'])
+        simp only [Nat.euclideanDiv_eq_core] at ih
         split_ifs
         · simp
-        · simp only [toDigitsCore_lens_eq b f (n / b) (Nat.digitChar <| n % b),
+        · simp only [toDigitsCore_lens_eq b f _ (Nat.digitChar <| n % b),
             Nat.succ_le_succ_iff, ih]
 
 /-- The core implementation of `Nat.toDigits` returns a String with length less than or equal to the

@@ -117,27 +117,35 @@ theorem inv_apply {M N} [One M] [InvOneClass N] (f : OneHom M N) (x : M) :
 theorem inv_comp [One M] [One N] [InvOneClass P] (g : OneHom N P) (f : OneHom M N) :
     (g⁻¹).comp f = (g.comp f)⁻¹ := rfl
 
-/-- Given two one-preserving morphisms `f`, `g`,
-`f / g` is the one-preserving morphism sending `x` to `f x / g x`. -/
-@[to_additive /-- Given two zero-preserving morphisms `f`, `g`,
-`f - g` is the additive morphism sending `x` to `f x - g x`. -/]
-instance [One M] [DivisionMonoid N] : Div (OneHom M N) where
-  div f g :=
-    { toFun m := f m / g m
-      map_one' := by simp }
+/-- Division field for the pointwise structure on one-preserving morphisms. -/
+instance instDiv [One M] [DivisionMonoid N] : Div (OneHom M N) where
+  div f g := f * g⁻¹
 
-@[to_additive (attr := norm_cast)]
-theorem coe_div {M N} [One M] [DivisionMonoid N] (f g : OneHom M N) : ⇑(f / g) = ⇑f / ⇑g := rfl
-
-@[to_additive (attr := simp)]
-theorem div_apply {M N} [One M] [DivisionMonoid N] (f g : OneHom M N) (x : M) :
-    (f / g) x = f x / g x := rfl
-
-@[to_additive]
-theorem div_comp [One M] [One N] [DivisionMonoid P] (g₁ g₂ : OneHom N P) (f : OneHom M N) :
-    (g₁ / g₂).comp f = g₁.comp f / g₂.comp f := rfl
+theorem mul_inv_apply {M N} [One M] [DivisionMonoid N] (f g : OneHom M N) (x : M) :
+    (f * g⁻¹) x = f x * (g x)⁻¹ := rfl
 
 end OneHom
+
+namespace ZeroHom
+
+/-- The pointwise subtraction of zero-preserving morphisms sends `x` to `f x - g x`. -/
+instance instSub [Zero M] [SubtractionMonoid N] : Sub (ZeroHom M N) where
+  sub f g := ⟨fun m ↦ f m - g m, by simp⟩
+
+attribute [to_additive existing] OneHom.instDiv
+
+@[norm_cast]
+theorem coe_sub {M N} [Zero M] [SubtractionMonoid N] (f g : ZeroHom M N) :
+    ⇑(f - g) = ⇑f - ⇑g := rfl
+
+@[simp]
+theorem sub_apply {M N} [Zero M] [SubtractionMonoid N] (f g : ZeroHom M N) (x : M) :
+    (f - g) x = f x - g x := rfl
+
+theorem sub_comp [Zero M] [Zero N] [SubtractionMonoid P] (g₁ g₂ : ZeroHom N P) (f : ZeroHom M N) :
+    (g₁ - g₂).comp f = g₁.comp f - g₂.comp f := rfl
+
+end ZeroHom
 
 namespace MulHom
 
@@ -198,7 +206,7 @@ theorem _root_.injective_iff_map_eq_one' {G H} [Group G] [MulOneClass H]
     forall_congr' fun _ => ⟨fun h => ⟨h, fun H => H.symm ▸ map_one f⟩, Iff.mp⟩
 
 /-- Makes a group homomorphism from a proof that the map preserves right division
-`fun x y => x * y⁻¹`. See also `MonoidHom.of_map_div` for a version using `fun x y => x / y`.
+`fun x y => x * y⁻¹`. See also `MonoidHom.ofMapDiv` for the version using group division.
 -/
 @[to_additive
   /-- Makes an additive group homomorphism from a proof that the map preserves
@@ -219,7 +227,7 @@ theorem coe_of_map_mul_inv {H : Type*} [Group H] (f : G → H)
     (map_div : ∀ a b : G, f (a * b⁻¹) = f a * (f b)⁻¹) : ↑(ofMapMulInv f map_div) = f :=
   rfl
 
-/-- Define a morphism of additive groups given a map which respects ratios. -/
+/-- Define a group homomorphism from a map that preserves division. -/
 @[to_additive /-- Define a morphism of additive groups given a map which respects difference. -/]
 def ofMapDiv {H : Type*} [Group H] (f : G → H) (hf : ∀ x y, f (x / y) = f x / f y) : G →* H :=
   ofMapMulInv f (by simpa only [div_eq_mul_inv] using hf)
@@ -281,23 +289,9 @@ theorem comp_inv (φ : G →* H) (ψ : M →* G) : φ.comp ψ⁻¹ = (φ.comp ψ
   ext
   simp
 
-/-- If `f` and `g` are monoid homomorphisms to a commutative group, then `f / g` is the homomorphism
-sending `x` to `(f x) / (g x)`. -/
-@[to_additive /-- If `f` and `g` are monoid homomorphisms to an additive commutative group,
-then `f - g` is the homomorphism sending `x` to `(f x) - (g x)`. -/]
-instance : Div (M →* G) where
-  div f g := mk' (fun x ↦ f x / g x) fun a b ↦ by
-    simp [div_eq_mul_inv, mul_assoc, mul_left_comm, mul_comm]
-
-@[to_additive (attr := simp)] lemma div_apply (f g : M →* G) (x : M) : (f / g) x = f x / g x := rfl
-
-@[to_additive (attr := simp)]
-lemma div_comp (f g : N →* G) (h : M →* N) : (f / g).comp h = f.comp h / g.comp h := rfl
-
-@[to_additive (attr := simp)]
-lemma comp_div (f : G →* H) (g h : M →* G) : f.comp (g / h) = f.comp g / f.comp h := by
-  ext
-  simp
+/-- Division field for the pointwise group of monoid homomorphisms. -/
+instance instDiv : Div (M →* G) where
+  div f g := f * g⁻¹
 
 end InvDiv
 
@@ -314,3 +308,27 @@ def commGroupOfSurjective [CommGroup G] [Group H] (f : G →* H) (hf : Function.
   ⟨by simp_rw [hf.forall₂, ← map_mul, mul_comm, implies_true]⟩
 
 end MonoidHom
+
+namespace AddMonoidHom
+
+variable [AddZeroClass M] [AddZeroClass N] [AddCommGroup G] [AddCommGroup H]
+
+/-- The subtraction of additive homomorphisms acts pointwise. -/
+instance instSub : Sub (M →+ G) where
+  sub f g := mk' (fun x ↦ f x - g x) fun a b ↦ by
+    simp [sub_eq_add_neg, add_assoc, add_left_comm, add_comm]
+
+attribute [to_additive existing] MonoidHom.instDiv
+
+@[simp]
+lemma sub_apply (f g : M →+ G) (x : M) : (f - g) x = f x - g x := rfl
+
+@[simp]
+lemma sub_comp (f g : N →+ G) (h : M →+ N) : (f - g).comp h = f.comp h - g.comp h := rfl
+
+@[simp]
+lemma comp_sub (f : G →+ H) (g h : M →+ G) : f.comp (g - h) = f.comp g - f.comp h := by
+  ext
+  simp
+
+end AddMonoidHom

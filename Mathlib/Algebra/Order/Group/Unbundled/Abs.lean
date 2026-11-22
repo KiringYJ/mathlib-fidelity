@@ -139,8 +139,9 @@ lemma mabs_mabs_div_mabs_le (a b : α) : |(|a|ₘ / |b|ₘ)|ₘ ≤ |a / b|ₘ :
 
 @[to_additive] lemma sup_div_inf_eq_mabs_div (a b : α) : (a ⊔ b) / (a ⊓ b) = |b / a|ₘ := by
   simp_rw [sup_div, div_inf, div_self', sup_comm, sup_sup_sup_comm, sup_idem]
-  rw [← inv_div, sup_comm (b := _ / _), ← mabs, sup_eq_left]
-  exact one_le_mabs _
+  have h : a / b = (b / a)⁻¹ := by rw [inv_div]
+  simpa only [h, sup_comm ((b / a)⁻¹) (b / a), mabs] using
+    (sup_eq_left.mpr (one_le_mabs (b / a)) : |b / a|ₘ ⊔ 1 = |b / a|ₘ)
 
 @[to_additive two_nsmul_sup_eq_add_add_abs_sub]
 lemma sup_sq_eq_mul_mul_mabs_div (a b : α) : (a ⊔ b) ^ 2 = a * b * |b / a|ₘ := by

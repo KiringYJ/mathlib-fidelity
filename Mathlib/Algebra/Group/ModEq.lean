@@ -335,12 +335,16 @@ theorem modEq_nsmul_cases (n : ℕ) (hn : n ≠ 0) :
     ← mul_zsmul, ← add_zsmul]
   constructor
   · rintro ⟨k, hk⟩
+    have hn' : (n : ℤ) ≠ 0 := Int.natCast_ne_zero.mpr hn
     refine ⟨(k % n).toNat, ?_⟩
-    rw [← Int.ofNat_lt, Int.toNat_of_nonneg (Int.emod_nonneg _ (mod_cast hn))]
-    refine ⟨?_, k / n, ?_⟩
+    rw [← Int.ofNat_lt, Int.toNat_of_nonneg (Int.emod_nonneg _ hn')]
+    refine ⟨?_, Int.euclideanDiv k n hn', ?_⟩
     · refine Int.emod_lt_of_pos _ ?_
       lia
-    · rw [hk, Int.ediv_mul_add_emod]
+    · have hq : Int.euclideanDiv k n hn' * n + k % n = k := by
+        rw [Int.mul_comm (Int.euclideanDiv k n hn') n]
+        exact Int.euclideanDiv_mul_add_mod k n hn'
+      rw [hk, hq]
   · rintro ⟨k, _, j, hj⟩
     rw [hj]
     exact ⟨_, rfl⟩

@@ -87,10 +87,11 @@ info: GOOD
 #guard_msgs in
 #eval show IO _ from do
   IO.runRandWith 257 do
-    let mut count := 0
+    let mut count : Nat := 0
     for _ in [:10000] do
       if (← randFin : Fin 3) == 1 then count := count + 1
-    if Float.abs (0.333 - (count / Nat.toFloat 10000)) < 0.01 then
+    -- A proportion within 0.01 of 0.333 gives this strict count interval.
+    if 3230 < count ∧ count < 3430 then
       IO.println "GOOD"
     else
       IO.println "BAD"
@@ -101,10 +102,10 @@ info: GOOD
 #guard_msgs in
 #eval show IO _ from do
   IO.runRandWith 257 do
-    let mut count := 0
+    let mut count : Nat := 0
     for _ in [:10000] do
       if (← randFin : Fin 2) == 0 then count := count + 1
-    if Float.abs (0.5 - (count / Nat.toFloat 10000)) < 0.01 then
+    if 4900 < count ∧ count < 5100 then
       IO.println "GOOD"
     else
       IO.println "BAD"
@@ -115,10 +116,10 @@ info: GOOD
 #guard_msgs in
 #eval show IO _ from do
   IO.runRandWith 257 do
-    let mut count := 0
+    let mut count : Nat := 0
     for _ in [:10000] do
       if (← randFin : Fin 10) == 5 then count := count + 1
-    if Float.abs (0.1 - (count / Nat.toFloat 10000)) < 0.01 then
+    if 900 < count ∧ count < 1100 then
       IO.println "GOOD"
     else
       IO.println "BAD"

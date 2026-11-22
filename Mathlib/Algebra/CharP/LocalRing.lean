@@ -35,9 +35,9 @@ theorem charP_zero_or_prime_power (R : Type*) [CommRing R] [IsLocalRing R] (q : 
   let n := q.factorization r
   -- `r := char(R/m)` is either prime or zero:
   rcases CharP.char_is_prime_or_zero K r with r_prime | r_zero
-  · let a := q / r ^ n
+  · let a := q.ordCompl r
     -- If `r` is prime, we can write `q` as `a * r^n` ...
-    have q_eq_a_mul_rn : q = r ^ n * a := (Nat.mul_div_cancel' (Nat.ordProj_dvd q r)).symm
+    have q_eq_a_mul_rn : q = r ^ n * a := (Nat.ordProj_mul_ordCompl_eq_self q r).symm
     have r_ne_dvd_a := Nat.not_dvd_ordCompl r_prime q_pos
     have rn_dvd_q : r ^ n ∣ q := ⟨a, q_eq_a_mul_rn⟩
     rw [mul_comm] at q_eq_a_mul_rn

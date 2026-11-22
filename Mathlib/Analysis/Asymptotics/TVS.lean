@@ -139,7 +139,7 @@ variable {f f₁ f₂ : α → E} {g g₁ g₂ : α → F} {l : Filter α}
 
 theorem isLittleOTVS_iff_tendsto_div :
     f =o[𝕜; l] g ↔ ∀ U ∈ 𝓝 0, ∃ V ∈ 𝓝 0,
-      Tendsto (fun x ↦ egauge 𝕜 U (f x) / egauge 𝕜 V (g x)) l (𝓝 0) := by
+      Tendsto (fun x ↦ ENNReal.div (egauge 𝕜 U (f x)) (egauge 𝕜 V (g x))) l (𝓝 0) := by
   simp only [isLittleOTVS_iff, ← ENNReal.coe_zero, ENNReal.nhds_coe, ← NNReal.bot_eq_zero,
     (nhds_bot_basis_Iic.map _).tendsto_right_iff]
   simp +contextual [ENNReal.div_le_iff_le_mul, pos_iff_ne_zero, EventuallyLE]
@@ -160,7 +160,7 @@ theorem isLittleOTVS_congr (hf : f₁ =ᶠ[l] f₂) (hg : g₁ =ᶠ[l] g₂) :
     f₁ =o[𝕜; l] g₁ ↔ f₂ =o[𝕜; l] g₂ := by
   simp only [isLittleOTVS_iff_tendsto_div]
   congr! 5 with U hU V hV
-  exact tendsto_congr' (hf.comp₂ (egauge _ _ · / egauge _ _ ·) hg)
+  exact tendsto_congr' (hf.comp₂ (fun a b => ENNReal.div (egauge _ _ a) (egauge _ _ b)) hg)
 
 /-- A stronger version of `IsLittleOTVS.congr` that requires the functions only agree along the
 filter. -/
@@ -679,15 +679,15 @@ lemma isLittleOTVS_one [ContinuousSMul 𝕜 E] : f =o[𝕜; l] (1 : α → 𝕜)
     lift r to ℝ≥0 using hr₀.le
     norm_cast at hr₀
     rcases NormedField.exists_one_lt_norm 𝕜 with ⟨c, hc⟩
-    obtain ⟨ε, hε₀, hε⟩ : ∃ ε : ℝ≥0, 0 < ε ∧ (ε * ‖c‖₊ / r : ℝ≥0∞) < 1 := by
+    obtain ⟨ε, hε₀, hε⟩ : ∃ ε : ℝ≥0, 0 < ε ∧ (ENNReal.div ((ε : ℝ≥0∞) * ‖c‖₊) r) < 1 := by
       apply Eventually.exists_gt
       refine Continuous.tendsto' ?_ _ _ (by simp) |>.eventually_lt_const zero_lt_one
       fun_prop (disch := intros; first | apply ENNReal.coe_ne_top | positivity)
     filter_upwards [hr ε hε₀.ne'] with x hx
     refine mem_of_egauge_lt_one hUb (hx.trans_lt ?_)
     calc
-      (ε : ℝ≥0∞) * egauge 𝕜 (ball (0 : 𝕜) r) 1 ≤ (ε * ‖c‖₊ / r : ℝ≥0∞) := by
-        rw [mul_div_assoc]
+      (ε : ℝ≥0∞) * egauge 𝕜 (ball (0 : 𝕜) r) 1 ≤ (ENNReal.div ((ε : ℝ≥0∞) * ‖c‖₊) r) := by
+        rw [ENNReal.mul_div_assoc]
         gcongr
         simpa using! egauge_ball_le_of_one_lt_norm (r := r) (x := (1 : 𝕜)) hc (by simp)
       _ < 1 := ‹_›
@@ -773,39 +773,57 @@ variable {f : α → E} {g : α → F} {l : Filter α}
 lemma isLittleOTVS_iff_isLittleO : f =o[𝕜; l] g ↔ f =o[l] g := by
   rcases NormedField.exists_one_lt_norm 𝕜 with ⟨c, hc : 1 < ‖c‖₊⟩
   have hc₀ : 0 < ‖c‖₊ := one_pos.trans hc
+  have hcu : IsUnit (‖c‖₊ : ℝ≥0∞) :=
+    ENNReal.isUnit_iff.2 ⟨ENNReal.coe_ne_zero.2 hc₀.ne', ENNReal.coe_ne_top⟩
   simp only [isLittleO_iff, nhds_basis_ball.isLittleOTVS_iff nhds_basis_ball]
   refine ⟨fun h ε hε ↦ ?_, fun h ε hε ↦ ⟨1, one_pos, fun δ hδ ↦ ?_⟩⟩
   · rcases h ε hε with ⟨δ, hδ₀, hδ⟩
     lift ε to ℝ≥0 using hε.le; lift δ to ℝ≥0 using hδ₀.le; norm_cast at hε hδ₀
+    have hδu : IsUnit (δ : ℝ≥0∞) :=
+      ENNReal.isUnit_iff.2 ⟨ENNReal.coe_ne_zero.2 hδ₀.ne', ENNReal.coe_ne_top⟩
     filter_upwards [hδ (δ / ‖c‖₊) (div_pos hδ₀ hc₀).ne'] with x hx
-    suffices (‖f x‖₊ / ε : ℝ≥0∞) ≤ ‖g x‖₊ by
+    suffices ENNReal.div (‖f x‖₊ : ℝ≥0∞) ε ≤ ‖g x‖₊ by
       have hnn : ‖f x‖₊ / ε ≤ ‖g x‖₊ := ENNReal.coe_le_coe.mp <| by
         simpa only [ENNReal.coe_div] using this
       exact_mod_cast (div_le_iff₀' hε).mp hnn
     calc
-      (‖f x‖₊ / ε : ℝ≥0∞) ≤ egauge 𝕜 (ball 0 ε) (f x) := div_le_egauge_ball 𝕜 _ _
+      ENNReal.div (‖f x‖₊ : ℝ≥0∞) ε ≤ egauge 𝕜 (ball 0 ε) (f x) := div_le_egauge_ball 𝕜 _ _
       _ ≤ ↑(δ / ‖c‖₊) * egauge 𝕜 (ball 0 ↑δ) (g x) := hx
-      _ ≤ (δ / ‖c‖₊) * (‖c‖₊ * ‖g x‖₊ / δ) := by
+      _ ≤ ((δ : ℝ≥0∞) / (‖c‖₊ : ℝ≥0∞)) * ((‖c‖₊ : ℝ≥0∞) * ‖g x‖₊ / (δ : ℝ≥0∞)) := by
+        simp only [ENNReal.checkedDiv_eq_div]
         gcongr
         exacts [le_of_eq (ENNReal.coe_div (hr := hc₀.ne'.isUnit)),
           egauge_ball_le_of_one_lt_norm hc (.inl <| ne_of_gt hδ₀)]
-      _ = (δ / δ) * (‖c‖₊ / ‖c‖₊) * ‖g x‖₊ := by simp only [div_eq_mul_inv]; ring
-      _ ≤ 1 * 1 * ‖g x‖₊ := by gcongr <;> exact ENNReal.div_self_le_one
+      _ = ((δ : ℝ≥0∞) / (δ : ℝ≥0∞)) * ((‖c‖₊ : ℝ≥0∞) / (‖c‖₊ : ℝ≥0∞)) * ‖g x‖₊ := by
+        simp only [ENNReal.checkedDiv_eq_div, ENNReal.div_eq_mul_inv]
+        ring
+      _ ≤ 1 * 1 * ‖g x‖₊ := by
+        simp only [ENNReal.checkedDiv_eq_div]
+        gcongr <;> exact ENNReal.div_self_le_one
       _ = ‖g x‖₊ := by simp
-  · filter_upwards [@h ↑(ε * δ / ‖c‖₊) (by positivity)] with x (hx : ‖f x‖₊ ≤ ε * δ / ‖c‖₊ * ‖g x‖₊)
+  · have hcn : (‖c‖₊ : ℝ) ≠ 0 := by exact_mod_cast hc₀.ne'
+    filter_upwards [@h (ε * δ / (‖c‖₊ : ℝ)) (by positivity)] with x
+      (hx : (‖f x‖₊ : ℝ) ≤ ε * δ / (‖c‖₊ : ℝ) * ‖g x‖₊)
     lift ε to ℝ≥0 using hε.le
+    have hεu : IsUnit (ε : ℝ≥0∞) :=
+      ENNReal.isUnit_iff.2 ⟨by simpa using hε.ne', ENNReal.coe_ne_top⟩
     calc
-      egauge 𝕜 (ball 0 ε) (f x) ≤ ‖c‖₊ * ‖f x‖₊ / ε :=
-        egauge_ball_le_of_one_lt_norm hc (.inl <| ne_of_gt hε)
-      _ ≤ ‖c‖₊ * (↑(ε * δ / ‖c‖₊) * ‖g x‖₊) / ε := by
+      egauge 𝕜 (ball 0 ε) (f x) ≤ (‖c‖₊ : ℝ≥0∞) * ‖f x‖₊ / (ε : ℝ≥0∞) := by
+        simpa only [ENNReal.checkedDiv_eq_div, enorm_eq_nnnorm] using
+          egauge_ball_le_of_one_lt_norm hc (.inl <| ne_of_gt hε)
+      _ ≤ (‖c‖₊ : ℝ≥0∞) * (↑(ε * δ / ‖c‖₊) * ‖g x‖₊) / (ε : ℝ≥0∞) := by
+        simp only [ENNReal.checkedDiv_eq_div]
         gcongr
         apply ENNReal.coe_le_coe.2
         apply NNReal.coe_le_coe.1
         simpa only [NNReal.coe_mul, NNReal.coe_div, coe_nnnorm] using hx
-      _ = (‖c‖₊ / ‖c‖₊) * (ε / ε) * δ * ‖g x‖₊ := by
-        simp only [ENNReal.coe_div, ENNReal.coe_mul, div_eq_mul_inv]
+      _ = ((‖c‖₊ : ℝ≥0∞) / (‖c‖₊ : ℝ≥0∞)) * ((ε : ℝ≥0∞) / (ε : ℝ≥0∞)) * δ * ‖g x‖₊ := by
+        simp only [ENNReal.checkedDiv_eq_div, ENNReal.coe_div, ENNReal.coe_mul,
+          ENNReal.div_eq_mul_inv]
         ring
-      _ ≤ 1 * 1 * δ * ‖g x‖₊ := by gcongr <;> exact ENNReal.div_self_le_one
+      _ ≤ 1 * 1 * δ * ‖g x‖₊ := by
+        simp only [ENNReal.checkedDiv_eq_div]
+        gcongr <;> exact ENNReal.div_self_le_one
       _ = δ * ‖g x‖₊ := by simp
       _ ≤ δ * egauge 𝕜 (ball 0 1) (g x) := by gcongr; apply le_egauge_ball_one
 
@@ -819,6 +837,8 @@ lemma isBigOTVS_iff_isBigO : f =O[𝕜; l] g ↔ f =O[l] g := by
     rcases h 1 one_pos with ⟨r, hr₀, hr⟩
     lift r to ℝ≥0 using hr₀.le
     norm_cast at hr₀
+    have : IsUnit (r : ℝ≥0∞) :=
+      ENNReal.isUnit_iff.2 ⟨ENNReal.coe_ne_zero.2 hr₀.ne', ENNReal.coe_ne_top⟩
     refine ⟨(‖c‖₊ / r : ℝ≥0), hr.mono fun x hx ↦ ?_⟩
     suffices ‖f x‖ₑ ≤ (‖c‖₊ / r : ℝ≥0) * ‖g x‖ₑ by
       simp only [enorm_eq_nnnorm, ← coe_nnnorm] at this ⊢
@@ -826,10 +846,12 @@ lemma isBigOTVS_iff_isBigO : f =O[𝕜; l] g ↔ f =O[l] g := by
     calc
       ‖f x‖ₑ ≤ egauge 𝕜 (ball 0 1) (f x) := le_egauge_ball_one ..
       _ ≤ egauge 𝕜 (ball 0 r) (g x) := hx
-      _ ≤ ‖c‖ₑ * ‖g x‖ₑ / ↑r :=
-        egauge_ball_le_of_one_lt_norm hc <| .inl hr₀.ne'
+      _ ≤ ‖c‖ₑ * ‖g x‖ₑ / (r : ℝ≥0∞) := by
+        simpa only [ENNReal.checkedDiv_eq_div] using
+          egauge_ball_le_of_one_lt_norm hc (.inl hr₀.ne')
       _ = (‖c‖₊ / r : ℝ≥0) * ‖g x‖ₑ := by
-        simp only [ENNReal.mul_div_right_comm, enorm_eq_nnnorm, ENNReal.coe_div]
+        simp only [ENNReal.checkedDiv_eq_div, ENNReal.mul_div_right_comm, enorm_eq_nnnorm,
+          ENNReal.coe_div]
   · rw [nhds_basis_ball.isBigOTVS_iff nhds_basis_ball, isBigO_iff']
     have hc₀ : 0 < ‖c‖₊ := one_pos.trans hc
     rintro ⟨C, hC₀, hC⟩ r hr₀
@@ -841,23 +863,29 @@ lemma isBigOTVS_iff_isBigO : f =O[𝕜; l] g ↔ f =O[l] g := by
     have hru : IsUnit r := hr₀.ne'.isUnit
     let r' : ℝ≥0 := Checked.div r (C * ‖c‖₊) hprod.ne'.isUnit
     have hr' : 0 < r' := div_pos hr₀ hprod
+    have : IsUnit (r : ℝ≥0∞) :=
+      ENNReal.isUnit_iff.2 ⟨ENNReal.coe_ne_zero.2 hr₀.ne', ENNReal.coe_ne_top⟩
+    have : IsUnit (r' : ℝ≥0∞) :=
+      ENNReal.isUnit_iff.2 ⟨ENNReal.coe_ne_zero.2 hr'.ne', ENNReal.coe_ne_top⟩
     refine ⟨(r' : ℝ), NNReal.coe_pos.mpr hr', hC.mono fun x hx ↦ ?_⟩
     calc
-      egauge 𝕜 (ball 0 r) (f x) ≤ ‖c‖ₑ * ‖f x‖ₑ / r :=
-        egauge_ball_le_of_one_lt_norm hc <| .inl hr₀.ne'
-      _ ≤ ‖c‖ₑ * (C * ‖g x‖ₑ) / r := by
+      egauge 𝕜 (ball 0 r) (f x) ≤ ‖c‖ₑ * ‖f x‖ₑ / (r : ℝ≥0∞) := by
+        simpa only [ENNReal.checkedDiv_eq_div] using
+          egauge_ball_le_of_one_lt_norm hc (.inl hr₀.ne')
+      _ ≤ ‖c‖ₑ * (C * ‖g x‖ₑ) / (r : ℝ≥0∞) := by
+        simp only [ENNReal.checkedDiv_eq_div]
         gcongr
         simp only [enorm_eq_nnnorm, ← coe_nnnorm] at hx ⊢
         exact mod_cast hx
-      _ = ‖g x‖ₑ / r' := by
-        simp only [div_eq_mul_inv]
+      _ = ‖g x‖ₑ / (r' : ℝ≥0∞) := by
+        simp only [ENNReal.checkedDiv_eq_div, ENNReal.div_eq_mul_inv]
         rw [← ENNReal.coe_inv (hr := hru), ← ENNReal.coe_inv (hr := hr'.ne'.isUnit)]
         dsimp only [r']
         rw [inv_div₀]
-        simp only [ENNReal.coe_div, ENNReal.coe_mul, ENNReal.coe_inv, div_eq_mul_inv,
+        simp only [ENNReal.coe_div, ENNReal.coe_mul, ENNReal.coe_inv, ENNReal.div_eq_mul_inv,
           enorm_eq_nnnorm]
         ac_rfl
-      _ ≤ _ := div_le_egauge_ball _ _ _
+      _ ≤ _ := by simpa only [ENNReal.checkedDiv_eq_div] using div_le_egauge_ball 𝕜 r' (g x)
 
 alias ⟨IsBigOTVS.isBigO, IsBigO.isBigOTVS⟩ := isBigOTVS_iff_isBigO
 

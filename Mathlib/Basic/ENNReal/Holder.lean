@@ -75,9 +75,10 @@ lemma inv_eq : r⁻¹ = p⁻¹ + q⁻¹ := (inv_add_inv_eq_inv ..).symm
 lemma unique (r' : ℝ≥0∞) [hr' : HolderTriple p q r'] : r = r' := by
   rw [← inv_inj, inv_eq p q r, inv_eq p q r']
 
-lemma one_div_add_one_div : 1 / p + 1 / q = 1 / r := by simpa using inv_add_inv_eq_inv ..
+lemma one_div_add_one_div : ENNReal.div 1 p + ENNReal.div 1 q = ENNReal.div 1 r := by
+  simpa only [ENNReal.one_div] using inv_add_inv_eq_inv p q r
 
-lemma one_div_eq : 1 / r = 1 / p + 1 / q :=
+lemma one_div_eq : ENNReal.div 1 r = ENNReal.div 1 p + ENNReal.div 1 q :=
   one_div_add_one_div p q r |>.symm
 
 lemma inv_inv_add_inv : (p⁻¹ + q⁻¹)⁻¹ = r := by
@@ -114,10 +115,12 @@ variable {r} in
 lemma unique_of_ne_zero (q' : ℝ≥0∞) (hr : r ≠ 0) [HolderTriple p q' r] : q = q' := by
   rw [← inv_inj, ← inv_sub_inv_eq_inv q p hr, ← inv_sub_inv_eq_inv q' p hr]
 
-lemma holderConjugate_div_div (hr₀ : r ≠ 0) (hr : r ≠ ∞) : HolderConjugate (p / r) (q / r) where
+lemma holderConjugate_div_div (hr₀ : r ≠ 0) (hr : r ≠ ∞) :
+    HolderConjugate (ENNReal.div p r) (ENNReal.div q r) where
   inv_add_inv_eq_inv := by
-    rw [ENNReal.inv_div (.inl hr) (.inl hr₀), ENNReal.inv_div (.inl hr) (.inl hr₀), div_eq_mul_inv,
-      div_eq_mul_inv, ← mul_add, inv_add_inv_eq_inv p q r, ENNReal.mul_inv_cancel hr₀ hr, inv_one]
+    rw [ENNReal.inv_div (.inl hr) (.inl hr₀), ENNReal.inv_div (.inl hr) (.inl hr₀),
+      ENNReal.div_eq_mul_inv, ENNReal.div_eq_mul_inv, ← mul_add, inv_add_inv_eq_inv p q r,
+      ENNReal.mul_inv_cancel hr₀ hr, inv_one]
 
 end HolderTriple
 

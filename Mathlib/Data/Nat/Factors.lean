@@ -40,7 +40,7 @@ def primeFactorsList : ℕ → List ℕ
   | 1 => []
   | k + 2 =>
     let m := minFac (k + 2)
-    m :: primeFactorsList ((k + 2) / m)
+    m :: primeFactorsList (Nat.euclideanDiv (k + 2) m (Nat.ne_of_gt (minFac_pos _ (by omega))))
 decreasing_by exact factors_lemma
 
 @[simp]
@@ -50,7 +50,8 @@ theorem primeFactorsList_zero : primeFactorsList 0 = [] := by rw [primeFactorsLi
 theorem primeFactorsList_one : primeFactorsList 1 = [] := by rw [primeFactorsList]
 
 @[simp]
-theorem primeFactorsList_two : primeFactorsList 2 = [2] := by simp [primeFactorsList]
+theorem primeFactorsList_two : primeFactorsList 2 = [2] := by
+  simp [primeFactorsList, Nat.euclideanDiv_eq_core]
 
 theorem prime_of_mem_primeFactorsList {n : ℕ} : ∀ {p : ℕ}, p ∈ primeFactorsList n → Prime p := by
   match n with
@@ -59,8 +60,9 @@ theorem prime_of_mem_primeFactorsList {n : ℕ} : ∀ {p : ℕ}, p ∈ primeFact
   | k + 2 =>
       intro p h
       let m := minFac (k + 2)
-      have : (k + 2) / m < (k + 2) := factors_lemma
-      have h₁ : p = m ∨ p ∈ primeFactorsList ((k + 2) / m) :=
+      let q := Nat.euclideanDiv (k + 2) m (Nat.ne_of_gt (minFac_pos _ (by omega)))
+      have : q < k + 2 := factors_lemma
+      have h₁ : p = m ∨ p ∈ primeFactorsList q :=
         List.mem_cons.1 (by rwa [primeFactorsList] at h)
       exact Or.casesOn h₁ (fun h₂ => h₂.symm ▸ minFac_prime (by simp)) prime_of_mem_primeFactorsList
 
@@ -72,21 +74,22 @@ theorem prod_primeFactorsList : ∀ {n}, n ≠ 0 → List.prod (primeFactorsList
   | 1 => by simp
   | k + 2 => fun _ =>
     let m := minFac (k + 2)
-    have : (k + 2) / m < (k + 2) := factors_lemma
+    let q := Nat.euclideanDiv (k + 2) m (Nat.ne_of_gt (minFac_pos _ (by omega)))
+    have : q < k + 2 := factors_lemma
     show (primeFactorsList (k + 2)).prod = (k + 2) by
-      have h₁ : (k + 2) / m ≠ 0 := fun h => by
-        have : (k + 2) = 0 * m :=
-          (Nat.div_eq_iff_eq_mul_left (minFac_pos _ (by omega)) (minFac_dvd _ (by omega))).1 h
-        rw [zero_mul] at this; exact (show k + 2 ≠ 0 by simp) this
-      rw [primeFactorsList, List.prod_cons, prod_primeFactorsList h₁,
-        Nat.mul_div_cancel' (minFac_dvd _ (by omega))]
+      have h₁ : q ≠ 0 := by
+        rw [show q = _ from Nat.euclideanDiv_eq_core _ _ _]
+        exact Nat.ne_of_gt (Nat.div_pos (minFac_le (by omega)) (minFac_pos _ (by omega)))
+      rw [primeFactorsList, List.prod_cons, prod_primeFactorsList h₁]
+      simpa only [q, m, Nat.euclideanDiv_eq_core] using
+        Nat.mul_div_cancel' (minFac_dvd (k + 2) (by omega))
 
 theorem primeFactorsList_prime {p : ℕ} (hp : Nat.Prime p) : p.primeFactorsList = [p] := by
   have : p = p - 2 + 2 := Nat.eq_add_of_sub_eq hp.two_le rfl
   rw [this, primeFactorsList]
   simp only [Eq.symm this]
   have : Nat.minFac p = p := hp.minFac_eq
-  simp only [this, primeFactorsList, Nat.div_self (Nat.Prime.pos hp)]
+  simp only [this, Nat.euclideanDiv_eq_core, primeFactorsList, Nat.div_self (Nat.Prime.pos hp)]
 
 theorem isChain_cons_primeFactorsList {n : ℕ} :
     ∀ {a}, (∀ p, Prime p → p ∣ n → a ≤ p) → List.IsChain (· ≤ ·) (a :: primeFactorsList n) := by
@@ -96,12 +99,14 @@ theorem isChain_cons_primeFactorsList {n : ℕ} :
   | k + 2 =>
       intro a h
       let m := minFac (k + 2)
-      have : (k + 2) / m < (k + 2) := factors_lemma
+      let q := Nat.euclideanDiv (k + 2) m (Nat.ne_of_gt (minFac_pos _ (by omega)))
+      have : q < k + 2 := factors_lemma
       rw [primeFactorsList]
       refine List.IsChain.cons_cons
         ((le_minFac (by omega)).2 h) (isChain_cons_primeFactorsList ?_)
-      exact fun p pp d =>
-        minFac_le_of_dvd pp.two_le (d.trans <| div_dvd_of_dvd <| minFac_dvd (k + 2) (by omega))
+      intro p pp d
+      rw [Nat.euclideanDiv_eq_core] at d
+      exact minFac_le_of_dvd pp.two_le (d.trans <| div_dvd_of_dvd <| minFac_dvd (k + 2) (by omega))
 
 theorem isChain_two_cons_primeFactorsList (n) : List.IsChain (· ≤ ·) (2 :: primeFactorsList n) :=
   isChain_cons_primeFactorsList fun _ pp _ => pp.two_le
@@ -115,7 +120,9 @@ theorem primeFactorsList_sorted (n : ℕ) : List.SortedLE (primeFactorsList n) :
 /-- `primeFactorsList` can be constructed inductively by extracting `minFac`, for sufficiently
 large `n`. -/
 theorem primeFactorsList_add_two (n : ℕ) :
-    primeFactorsList (n + 2) = minFac (n + 2) :: primeFactorsList ((n + 2) / minFac (n + 2)) := by
+    primeFactorsList (n + 2) = minFac (n + 2) ::
+      primeFactorsList (Nat.euclideanDiv (n + 2) (minFac (n + 2))
+        (Nat.ne_of_gt (minFac_pos _ (by omega)))) := by
   rw [primeFactorsList]
 
 @[simp]

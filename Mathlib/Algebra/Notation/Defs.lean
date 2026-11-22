@@ -139,33 +139,32 @@ end Mul
 lemma neg_ite {α : Type*} (P : Prop) [Decidable P] [Neg α] (b : α) (c : α) :
     -(if P then b else c) = if P then -b else -c := by split <;> rfl
 
-section Div
-variable [Div α]
+section Sub
+variable [Sub α]
 
-@[to_additive]
-lemma div_dite (a : α) (b : P → α) (c : ¬P → α) :
-    (a / if h : P then b h else c h) = if h : P then a / b h else a / c h := by split <;> rfl
+lemma sub_dite (a : α) (b : P → α) (c : ¬P → α) :
+    a - (if h : P then b h else c h) =
+      if h : P then a - b h else a - c h := by split <;> rfl
 
-@[to_additive]
-lemma div_ite (a b c : α) : (a / if P then b else c) = if P then a / b else a / c := div_dite ..
+lemma sub_ite (a b c : α) :
+    a - (if P then b else c) = if P then a - b else a - c := sub_dite ..
 
-@[to_additive]
-lemma dite_div (a : P → α) (b : ¬P → α) (c : α) :
-    (if h : P then a h else b h) / c = if h : P then a h / c else b h / c := by split <;> rfl
+lemma dite_sub (a : P → α) (b : ¬P → α) (c : α) :
+    (if h : P then a h else b h) - c =
+      if h : P then a h - c else b h - c := by split <;> rfl
 
-@[to_additive]
-lemma ite_div (a b c : α) : (if P then a else b) / c = if P then a / c else b / c := dite_div ..
+lemma ite_sub (a b c : α) :
+    (if P then a else b) - c = if P then a - c else b - c := dite_sub ..
 
-@[to_additive]
-lemma dite_div_dite (a : P → α) (b : ¬P → α) (c : P → α) (d : ¬P → α) :
-    ((if h : P then a h else b h) / if h : P then c h else d h) =
-      if h : P then a h / c h else b h / d h := by split <;> rfl
+lemma dite_sub_dite (a : P → α) (b : ¬P → α) (c : P → α) (d : ¬P → α) :
+    (if h : P then a h else b h) - (if h : P then c h else d h) =
+      if h : P then a h - c h else b h - d h := by split <;> rfl
 
-@[to_additive]
-lemma ite_div_ite (a b c d : α) :
-    ((if P then a else b) / if P then c else d) = if P then a / c else b / d := dite_div_dite ..
+lemma ite_sub_ite (a b c d : α) :
+    (if P then a else b) - (if P then c else d) =
+      if P then a - c else b - d := dite_sub_dite ..
 
-end Div
+end Sub
 end ite
 
 variable {α : Type u}

@@ -5059,7 +5059,9 @@ public import Mathlib.Init
 public import Mathlib.Lean.ContextInfo
 public import Mathlib.Lean.CoreM
 public import Mathlib.Lean.Elab.InfoTree
+public import Mathlib.Lean.Elab.NativeDivision
 public import Mathlib.Lean.Elab.OperatorPolicy
+public import Mathlib.Lean.Elab.OperatorTree
 public import Mathlib.Lean.Elab.Tactic.Basic
 public import Mathlib.Lean.Elab.Tactic.Meta
 public import Mathlib.Lean.Elab.Term

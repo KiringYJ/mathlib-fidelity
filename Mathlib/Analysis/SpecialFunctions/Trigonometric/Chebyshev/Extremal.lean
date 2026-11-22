@@ -58,11 +58,11 @@ noncomputable def node (n i : ℕ) (h : n ≠ 0 ∨ i = 0 := by omega) : ℝ :=
 lemma node_eq_one {n : ℕ} : node n 0 = 1 := rfl
 
 private lemma node_of_ne_zero {n : ℕ} (hn : n ≠ 0) (i : ℕ) :
-    node n i = cos (i * π / n) := by
+    node n i = cos (i * π / (n : ℝ)) := by
   cases i <;> simp [node]
 
 lemma node_eq_neg_one {n : ℕ} (hn : n ≠ 0) : node n n = -1 := by
-  have h : (n : ℝ) * π / n = π := div_eq_iff.mpr (mul_comm ..)
+  have h : (n : ℝ) * π / (n : ℝ) = π := div_eq_iff.mpr (mul_comm ..)
   rw [node_of_ne_zero hn, h, cos_pi]
 
 lemma node_mem_Icc {n i : ℕ} {h : n ≠ 0 ∨ i = 0} : node n i h ∈ Set.Icc (-1) 1 := by
@@ -75,7 +75,7 @@ lemma eval_T_real_node {n i : ℕ} (hi : i ∈ Finset.Iic n) :
     (T ℝ n).eval (node n i (by have := Finset.mem_Iic.mp hi; omega)) = (-1) ^ i := by
   rcases eq_or_ne n 0 with rfl | hn
   · simp [show i = 0 by simpa using Finset.mem_Iic.mp hi]
-  have h : (n : ℤ) * (i * π / n) = i * π := by norm_cast; field
+  have h : (n : ℤ) * (i * π / (n : ℝ)) = i * π := by norm_cast; field
   rw [node_of_ne_zero hn, T_real_cos, h, cos_nat_mul_pi]
 
 /-- The grid of the `n + 1` interpolation nodes. -/

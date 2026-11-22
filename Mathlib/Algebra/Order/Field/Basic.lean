@@ -39,75 +39,79 @@ attribute [local instance] PosMulReflectLT.toMulPosReflectLT
 -/
 
 @[bound]
-theorem le_div_self (ha : 0 ≤ a) (hb₀ : 0 < b) (hb₁ : b ≤ 1) : a ≤ a / b := by
+theorem le_div_self (ha : 0 ≤ a) (hb₀ : 0 < b) (hb₁ : b ≤ 1) : a ≤ Checked.div a b := by
   simpa only [div_one₀] using div_le_div_of_nonneg_left ha hb₀ hb₁
 
-theorem one_le_div (hb : 0 < b) : 1 ≤ a / b ↔ b ≤ a := by rw [le_div_iff₀ hb, one_mul]
+theorem one_le_div (hb : 0 < b) : 1 ≤ Checked.div a b ↔ b ≤ a := by rw [le_div_iff₀ hb, one_mul]
 
-theorem div_le_one (hb : 0 < b) : a / b ≤ 1 ↔ a ≤ b := by rw [div_le_iff₀ hb, one_mul]
+theorem div_le_one (hb : 0 < b) : Checked.div a b ≤ 1 ↔ a ≤ b := by rw [div_le_iff₀ hb, one_mul]
 
-theorem one_lt_div (hb : 0 < b) : 1 < a / b ↔ b < a := by rw [lt_div_iff₀ hb, one_mul]
+theorem one_lt_div (hb : 0 < b) : 1 < Checked.div a b ↔ b < a := by rw [lt_div_iff₀ hb, one_mul]
 
-theorem div_lt_one (hb : 0 < b) : a / b < 1 ↔ a < b := by rw [div_lt_iff₀ hb, one_mul]
+theorem div_lt_one (hb : 0 < b) : Checked.div a b < 1 ↔ a < b := by rw [div_lt_iff₀ hb, one_mul]
 
-theorem one_div_le (ha : 0 < a) (hb : 0 < b) : 1 / a ≤ b ↔ 1 / b ≤ a := by
+theorem one_div_le (ha : 0 < a) (hb : 0 < b) : Checked.div 1 a ≤ b ↔ Checked.div 1 b ≤ a := by
   simpa using inv_le_comm₀ ha hb
 
-theorem one_div_lt (ha : 0 < a) (hb : 0 < b) : 1 / a < b ↔ 1 / b < a := by
+theorem one_div_lt (ha : 0 < a) (hb : 0 < b) : Checked.div 1 a < b ↔ Checked.div 1 b < a := by
   simpa using inv_lt_comm₀ ha hb
 
-theorem le_one_div (ha : 0 < a) (hb : 0 < b) : a ≤ 1 / b ↔ b ≤ 1 / a := by
+theorem le_one_div (ha : 0 < a) (hb : 0 < b) : a ≤ Checked.div 1 b ↔ b ≤ Checked.div 1 a := by
   simpa using le_inv_comm₀ ha hb
 
-theorem lt_one_div (ha : 0 < a) (hb : 0 < b) : a < 1 / b ↔ b < 1 / a := by
+theorem lt_one_div (ha : 0 < a) (hb : 0 < b) : a < Checked.div 1 b ↔ b < Checked.div 1 a := by
   simpa using lt_inv_comm₀ ha hb
 
-@[bound] lemma Bound.one_lt_div_of_pos_of_lt (b0 : 0 < b) : b < a → 1 < a / b := (one_lt_div b0).mpr
+@[bound] lemma Bound.one_lt_div_of_pos_of_lt (b0 : 0 < b) : b < a → 1 < Checked.div a b :=
+  (one_lt_div b0).mpr
 
-@[bound] lemma Bound.div_lt_one_of_pos_of_lt (b0 : 0 < b) : a < b → a / b < 1 := (div_lt_one b0).mpr
+@[bound] lemma Bound.div_lt_one_of_pos_of_lt (b0 : 0 < b) : a < b → Checked.div a b < 1 :=
+  (div_lt_one b0).mpr
 
 /-!
 ### Relating two divisions, involving `1`
 -/
 
 theorem one_div_le_one_div_of_le (ha : 0 < a) (h : a ≤ b) :
-    Checked.div 1 b (ha.trans_le h).ne'.isUnit ≤ 1 / a := by
+    Checked.div 1 b (ha.trans_le h).ne'.isUnit ≤ Checked.div 1 a := by
   simpa using inv_anti₀ ha h
 
 theorem one_div_lt_one_div_of_lt (ha : 0 < a) (h : a < b) :
-    Checked.div 1 b (ha.trans h).ne'.isUnit < 1 / a := by
+    Checked.div 1 b (ha.trans h).ne'.isUnit < Checked.div 1 a := by
   rwa [lt_div_iff₀' ha, ← div_eq_mul_one_div₀, div_lt_one (ha.trans h)]
 
-theorem le_of_one_div_le_one_div (ha : 0 < a) {hb : IsUnit b} (h : 1 / a ≤ 1 / b) : b ≤ a := by
+theorem le_of_one_div_le_one_div (ha : 0 < a) {hb : IsUnit b}
+    (h : Checked.div 1 a ≤ Checked.div 1 b) : b ≤ a := by
   simpa using one_div_le_one_div_of_le (by simpa) h
 
-theorem lt_of_one_div_lt_one_div (ha : 0 < a) {hb : IsUnit b} (h : 1 / a < 1 / b) : b < a := by
+theorem lt_of_one_div_lt_one_div (ha : 0 < a) {hb : IsUnit b}
+    (h : Checked.div 1 a < Checked.div 1 b) : b < a := by
   simpa using one_div_lt_one_div_of_lt (by simpa) h
 
 variable [IsStrictOrderedRing α]
 
 @[bound]
-theorem div_le_self (ha : 0 ≤ a) (hb : 1 ≤ b) : a / b ≤ a := by
+theorem div_le_self (ha : 0 ≤ a) (hb : 1 ≤ b) : Checked.div a b ≤ a := by
   simpa only [div_one₀] using div_le_div_of_nonneg_left ha zero_lt_one hb
 
 @[bound]
-theorem div_lt_self (ha : 0 < a) (hb : 1 < b) : a / b < a := by
+theorem div_lt_self (ha : 0 < a) (hb : 1 < b) : Checked.div a b < a := by
   simpa only [div_one₀] using div_lt_div_of_pos_left ha zero_lt_one hb
 
 /-- For the single implications with fewer assumptions, see `one_div_le_one_div_of_le` and
   `le_of_one_div_le_one_div` -/
-theorem one_div_le_one_div (ha : 0 < a) (hb : 0 < b) : 1 / a ≤ 1 / b ↔ b ≤ a :=
+theorem one_div_le_one_div (ha : 0 < a) (hb : 0 < b) : Checked.div 1 a ≤ Checked.div 1 b ↔ b ≤ a :=
   div_le_div_iff_of_pos_left zero_lt_one ha hb
 
 /-- For the single implications with fewer assumptions, see `one_div_lt_one_div_of_lt` and
   `lt_of_one_div_lt_one_div` -/
-theorem one_div_lt_one_div (ha : 0 < a) (hb : 0 < b) : 1 / a < 1 / b ↔ b < a :=
+theorem one_div_lt_one_div (ha : 0 < a) (hb : 0 < b) : Checked.div 1 a < Checked.div 1 b ↔ b < a :=
   div_lt_div_iff_of_pos_left zero_lt_one ha hb
 
-theorem one_lt_one_div (h1 : 0 < a) (h2 : a < 1) : 1 < 1 / a := by
+theorem one_lt_one_div (h1 : 0 < a) (h2 : a < 1) : 1 < Checked.div 1 a := by
   rwa [lt_one_div (@zero_lt_one α _ _ _ _ _) h1, one_div_one₀]
 
-theorem one_le_one_div (h1 : 0 < a) (h2 : a ≤ 1) : 1 ≤ 1 / a := by
+theorem one_le_one_div (h1 : 0 < a) (h2 : a ≤ 1) : 1 ≤ Checked.div 1 a := by
   rwa [le_one_div (@zero_lt_one α _ _ _ _ _) h1, one_div_one₀]
 
 /-!
@@ -115,18 +119,18 @@ theorem one_le_one_div (h1 : 0 < a) (h2 : a ≤ 1) : 1 ≤ 1 / a := by
 The equalities also hold in semifields of characteristic `0`.
 -/
 
-theorem half_pos (h : 0 < a) : 0 < a / 2 :=
+theorem half_pos (h : 0 < a) : 0 < Checked.div a 2 :=
   div_pos h zero_lt_two
 
-theorem one_half_pos : (0 : α) < 1 / 2 :=
+theorem one_half_pos : (0 : α) < Checked.div (1 : α) 2 :=
   half_pos zero_lt_one
 
 @[simp]
-theorem half_le_self_iff : a / 2 ≤ a ↔ 0 ≤ a := by
+theorem half_le_self_iff : Checked.div a 2 ≤ a ↔ 0 ≤ a := by
   rw [div_le_iff₀ (zero_lt_two' α), mul_two, le_add_iff_nonneg_left]
 
 @[simp]
-theorem half_lt_self_iff : a / 2 < a ↔ 0 < a := by
+theorem half_lt_self_iff : Checked.div a 2 < a ↔ 0 < a := by
   rw [div_lt_iff₀ (zero_lt_two' α), mul_two, lt_add_iff_pos_left]
 
 alias ⟨_, half_le_self⟩ := half_le_self_iff
@@ -135,18 +139,18 @@ alias ⟨_, half_lt_self⟩ := half_lt_self_iff
 
 alias div_two_lt_of_pos := half_lt_self
 
-theorem one_half_lt_one : (1 / 2 : α) < 1 :=
+theorem one_half_lt_one : (Checked.div (1 : α) 2 : α) < 1 :=
   half_lt_self zero_lt_one
 
 theorem two_inv_lt_one : (2⁻¹ : α) < 1 :=
   (one_div₀ _).symm.trans_lt one_half_lt_one
 
-theorem left_lt_add_div_two : a < (a + b) / 2 ↔ a < b := by simp [lt_div_iff₀, mul_two]
+theorem left_lt_add_div_two : a < Checked.div (a + b) 2 ↔ a < b := by simp [lt_div_iff₀, mul_two]
 
-theorem add_div_two_lt_right : (a + b) / 2 < b ↔ a < b := by simp [div_lt_iff₀, mul_two]
+theorem add_div_two_lt_right : Checked.div (a + b) 2 < b ↔ a < b := by simp [div_lt_iff₀, mul_two]
 
 omit [PosMulReflectLT α] in
-theorem add_thirds (a : α) : a / 3 + a / 3 + a / 3 = a := by
+theorem add_thirds (a : α) : Checked.div a 3 + Checked.div a 3 + Checked.div a 3 = a := by
   rw [← add_div, ← add_div, ← two_mul, ← add_one_mul 2 a, two_add_one_eq_three,
     mul_div_cancel_left₀ a]
 
@@ -154,49 +158,51 @@ theorem add_thirds (a : α) : a / 3 + a / 3 + a / 3 = a := by
 ### Miscellaneous lemmas
 -/
 
-@[simp] lemma div_pos_iff_of_pos_left {hb : IsUnit b} (ha : 0 < a) : 0 < a / b ↔ 0 < b := by
+@[simp] lemma div_pos_iff_of_pos_left {hb : IsUnit b} (ha : 0 < a) :
+    0 < Checked.div a b ↔ 0 < b := by
   simp only [div_eq_mul_inv₀, mul_pos_iff_of_pos_left ha, inv_pos]
 
-@[simp] lemma div_pos_iff_of_pos_right (hb : 0 < b) : 0 < a / b ↔ 0 < a := by
+@[simp] lemma div_pos_iff_of_pos_right (hb : 0 < b) : 0 < Checked.div a b ↔ 0 < a := by
   simp only [div_eq_mul_inv₀, mul_pos_iff_of_pos_right (inv_pos.2 hb)]
 
 theorem div_mul_le_div_mul_of_div_le_div {hb : IsUnit b} {hd : IsUnit d} {heUnit : IsUnit e}
-    (h : a / b ≤ c / d) (he : 0 ≤ e) : a / (b * e) ≤ c / (d * e) := by
+    (h : Checked.div a b ≤ Checked.div c d) (he : 0 ≤ e) :
+    Checked.div a (b * e) ≤ Checked.div c (d * e) := by
   rw [div_mul_eq_div_mul_one_div₀, div_mul_eq_div_mul_one_div₀]
   exact mul_le_mul_of_nonneg_right h (one_div_nonneg.2 he)
 
 omit [IsStrictOrderedRing α] in
-theorem mul_le_mul_of_mul_div_le {hcUnit : IsUnit c} (h : a * (b / c) ≤ d) (hc : 0 < c) :
+theorem mul_le_mul_of_mul_div_le {hcUnit : IsUnit c} (h : a * (Checked.div b c) ≤ d) (hc : 0 < c) :
     b * a ≤ d * c := by
   rw [← mul_div_assoc₀] at h
   rwa [mul_comm b, ← div_le_iff₀ hc]
 
 omit [IsStrictOrderedRing α] in
-lemma monotone_div_right_of_nonneg {haUnit : IsUnit a} (ha : 0 ≤ a) : Monotone (· / a) :=
+lemma monotone_div_right_of_nonneg {haUnit : IsUnit a} (ha : 0 ≤ a) : Monotone (Checked.div · a) :=
   fun _b _c hbc ↦ div_le_div_of_nonneg_right hbc ha
 
 omit [IsStrictOrderedRing α] in
-lemma strictMono_div_right_of_pos (ha : 0 < a) : StrictMono (· / a) :=
+lemma strictMono_div_right_of_pos (ha : 0 < a) : StrictMono (Checked.div · a) :=
   fun _b _c hbc ↦ div_lt_div_of_pos_right hbc ha
 
 omit [IsStrictOrderedRing α] in
 theorem Monotone.div_const {β : Type*} [Preorder β] {f : β → α} (hf : Monotone f) {c : α}
-    {hcUnit : IsUnit c} (hc : 0 ≤ c) : Monotone fun x => f x / c :=
+    {hcUnit : IsUnit c} (hc : 0 ≤ c) : Monotone fun x => Checked.div (f x) c :=
   (monotone_div_right_of_nonneg hc).comp hf
 
 theorem StrictMono.div_const {β : Type*} [Preorder β] {f : β → α} (hf : StrictMono f) {c : α}
-    (hc : 0 < c) : StrictMono fun x => f x / c := by
+    (hc : 0 < c) : StrictMono fun x => Checked.div (f x) c := by
   simpa only [div_eq_mul_inv₀] using hf.mul_const (inv_pos.2 hc)
 
 -- see Note [lower instance priority]
 instance (priority := 100) LinearOrderedSemiField.toDenselyOrdered : DenselyOrdered α where
   dense a₁ a₂ h :=
-    ⟨(a₁ + a₂) / 2,
+    ⟨Checked.div (a₁ + a₂) 2,
       calc
-        a₁ = (a₁ + a₁) / 2 := (add_self_div_two a₁).symm
-        _ < (a₁ + a₂) / 2 := by gcongr; exact zero_lt_two,
+        a₁ = Checked.div (a₁ + a₁) 2 := (add_self_div_two a₁).symm
+        _ < Checked.div (a₁ + a₂) 2 := by gcongr; exact zero_lt_two,
       calc
-        (a₁ + a₂) / 2 < (a₂ + a₂) / 2 := by gcongr; exact zero_lt_two
+        Checked.div (a₁ + a₂) 2 < Checked.div (a₂ + a₂) 2 := by gcongr; exact zero_lt_two
         _ = a₂ := add_self_div_two a₂
         ⟩
 
@@ -206,19 +212,20 @@ theorem one_div_strictAntiOn :
   fun x y xy => (one_div_lt_one_div y.2 x.2).mpr xy
 
 theorem one_div_pow_le_one_div_pow_of_le (a1 : 1 ≤ a) {m n : ℕ} (mn : m ≤ n) :
-    1 / a ^ n ≤ 1 / a ^ m := by
+    Checked.div 1 (a ^ n) ≤ Checked.div 1 (a ^ m) := by
   refine (one_div_le_one_div ?_ ?_).mpr (pow_right_mono₀ a1 mn) <;>
     exact pow_pos (zero_lt_one.trans_le a1) _
 
 theorem one_div_pow_lt_one_div_pow_of_lt (a1 : 1 < a) {m n : ℕ} (mn : m < n) :
-    1 / a ^ n < 1 / a ^ m := by
+    Checked.div 1 (a ^ n) < Checked.div 1 (a ^ m) := by
   refine (one_div_lt_one_div ?_ ?_).2 (pow_lt_pow_right₀ a1 mn) <;>
     exact pow_pos (zero_lt_one.trans a1) _
 
-theorem one_div_pow_anti (a1 : 1 ≤ a) : Antitone fun n : ℕ => 1 / a ^ n := fun _ _ =>
+theorem one_div_pow_anti (a1 : 1 ≤ a) : Antitone fun n : ℕ => Checked.div 1 (a ^ n) := fun _ _ =>
   one_div_pow_le_one_div_pow_of_le a1
 
-theorem one_div_pow_strictAnti (a1 : 1 < a) : StrictAnti fun n : ℕ => 1 / a ^ n := fun _ _ =>
+theorem one_div_pow_strictAnti (a1 : 1 < a) :
+    StrictAnti fun n : ℕ => Checked.div 1 (a ^ n) := fun _ _ =>
   one_div_pow_lt_one_div_pow_of_lt a1
 
 omit [IsStrictOrderedRing α] in
@@ -247,10 +254,11 @@ theorem le_iff_forall_one_lt_le_mul₀ {α : Type*}
   · simp_rw [zero_mul] at h
     exact h 2 one_lt_two
   refine le_of_forall_gt_imp_ge_of_dense fun x hbx => ?_
-  convert h (x / b) ((one_lt_div hb).mpr hbx)
+  convert h (Checked.div x b) ((one_lt_div hb).mpr hbx)
   rw [mul_div_cancel₀]
 
-theorem div_nat_le_self_of_nonneg (ha : 0 ≤ a) (n : ℕ) {hn : IsUnit (n : α)} : a / n ≤ a :=
+theorem div_nat_le_self_of_nonneg (ha : 0 ≤ a) (n : ℕ) {hn : IsUnit (n : α)} :
+    Checked.div a (n : α) ≤ a :=
   div_le_self ha (n.one_le_cast_iff_ne_zero.mpr (Nat.cast_ne_zero.mp hn.ne_zero))
 
 @[deprecated (since := "2026-09-17")] alias div_nat_le_self_of_nonnneg := div_nat_le_self_of_nonneg
@@ -300,8 +308,8 @@ variable {α : Type*} [Semifield α] [LinearOrder α] [IsStrictOrderedRing α] {
 
 theorem exists_pos_mul_lt {a : α} (h : 0 < a) (b : α) : ∃ c : α, 0 < c ∧ b * c < a := by
   have hd : 0 < max (b + 1) 1 := lt_max_iff.2 (Or.inr zero_lt_one)
-  have : 0 < a / max (b + 1) 1 := div_pos h hd
-  refine ⟨a / max (b + 1) 1, this, ?_⟩
+  have : 0 < Checked.div a (max (b + 1) 1) := div_pos h hd
+  refine ⟨Checked.div a (max (b + 1) 1), this, ?_⟩
   rw [← lt_div_iff₀ this, div_div_cancel₀]
   exact lt_max_iff.2 (Or.inl <| lt_add_one _)
 
@@ -310,11 +318,11 @@ theorem exists_pos_lt_mul {a : α} (h : 0 < a) (b : α) : ∃ c : α, 0 < c ∧ 
   ⟨c⁻¹, inv_pos.2 hc₀, by rwa [← div_eq_inv_mul₀, lt_div_iff₀ hc₀]⟩
 
 theorem min_div_div_right {c : α} {hcUnit : IsUnit c} (hc : 0 ≤ c) (a b : α) :
-    min (a / c) (b / c) = min a b / c :=
+    min (Checked.div a c) (Checked.div b c) = Checked.div (min a b) c :=
   (monotone_div_right_of_nonneg hc).map_min.symm
 
 theorem max_div_div_right {c : α} {hcUnit : IsUnit c} (hc : 0 ≤ c) (a b : α) :
-    max (a / c) (b / c) = max a b / c :=
+    max (Checked.div a c) (Checked.div b c) = Checked.div (max a b) c :=
   (monotone_div_right_of_nonneg hc).map_max.symm
 
 end LinearOrderedSemifield
@@ -748,17 +756,17 @@ variable {α : Type*} [GroupWithZero α] [PartialOrder α]
 variable {a b : α}
 
 lemma div_nonneg_of_pos_of_nonneg [PosMulReflectLT α] {hbUnit : IsUnit b} (ha : 0 < a)
-    (hb : 0 ≤ b) : 0 ≤ a / b :=
+    (hb : 0 ≤ b) : 0 ≤ Checked.div a b :=
   div_nonneg ha.le hb
 
 lemma div_nonneg_of_nonneg_of_pos [PosMulReflectLT α] (ha : 0 ≤ a) (hb : 0 < b) :
-    0 ≤ a / b :=
+    0 ≤ Checked.div a b :=
   div_nonneg ha hb.le
 
-lemma div_ne_zero_of_pos_of_ne_zero (ha : 0 < a) (hb : b ≠ 0) : a / b ≠ 0 :=
+lemma div_ne_zero_of_pos_of_ne_zero (ha : 0 < a) (hb : b ≠ 0) : Checked.div a b ≠ 0 :=
   div_ne_zero ha.ne'
 
-lemma div_ne_zero_of_ne_zero_of_pos (ha : a ≠ 0) (hb : 0 < b) : a / b ≠ 0 :=
+lemma div_ne_zero_of_ne_zero_of_pos (ha : a ≠ 0) (hb : 0 < b) : Checked.div a b ≠ 0 :=
   div_ne_zero ha
 
 lemma zpow_zero_pos {α : Type*} [Semifield α] [PartialOrder α] [IsStrictOrderedRing α]

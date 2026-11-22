@@ -52,11 +52,12 @@ local notation "ℍₒ" => upperHalfPlaneSet
 
 private lemma iteratedDerivWithin_cexp_aux (k m : ℕ) (p : ℝ) {hp : IsUnit (p : ℂ)}
     {S : Set ℂ} (hs : IsOpen S) :
-    EqOn (iteratedDerivWithin k (fun s : ℂ ↦ cexp (2 * π * I * m * s / p)) S)
-    (fun s ↦ (2 * π * I * m / p) ^ k * cexp (2 * π * I * m * s / p)) S := by
+    EqOn (iteratedDerivWithin k (fun s : ℂ ↦ cexp (2 * π * I * m * s / (p : ℂ))) S)
+    (fun s ↦ (2 * π * I * m / (p : ℂ)) ^ k * cexp (2 * π * I * m * s / (p : ℂ))) S := by
   apply EqOn.trans (iteratedDerivWithin_of_isOpen hs)
   intro x hx
-  have : (fun s ↦ cexp (2 * π * I * m * s / p)) = fun s ↦ cexp (((2 * π * I * m) / p) * s) := by
+  have : (fun s ↦ cexp (2 * π * I * m * s / (p : ℂ))) =
+      fun s ↦ cexp (((2 * π * I * m) / (p : ℂ)) * s) := by
     ext z
     ring_nf
   simp only [this, iteratedDeriv_cexp_const_mul]
@@ -64,16 +65,16 @@ private lemma iteratedDerivWithin_cexp_aux (k m : ℕ) (p : ℝ) {hp : IsUnit (p
 
 private lemma aux_IsBigO_mul (k l : ℕ) (p : ℝ) {hp : IsUnit (p : ℂ)} {f : ℕ → ℂ}
     (hf : f =O[atTop] fun n ↦ ((n ^ l) : ℝ)) :
-    (fun n ↦ f n * (2 * π * I * n / p) ^ k) =O[atTop] fun n ↦ (↑(n ^ (l + k)) : ℝ) := by
-  have h0 : (fun n : ℕ ↦ (2 * π * I * n / p) ^ k) =O[atTop] fun n ↦ ((n ^ k) : ℝ) := by
-    have h1 : (fun n : ℕ ↦ (2 * π * I * n / p) ^ k) =
-        fun n : ℕ ↦ ((2 * π * I / p) ^ k) * n ^ k := by
+    (fun n ↦ f n * (2 * π * I * n / (p : ℂ)) ^ k) =O[atTop] fun n ↦ (↑(n ^ (l + k)) : ℝ) := by
+  have h0 : (fun n : ℕ ↦ (2 * π * I * n / (p : ℂ)) ^ k) =O[atTop] fun n ↦ ((n ^ k) : ℝ) := by
+    have h1 : (fun n : ℕ ↦ (2 * π * I * n / (p : ℂ)) ^ k) =
+        fun n : ℕ ↦ ((2 * π * I / (p : ℂ)) ^ k) * n ^ k := by
       ext z
       ring
     rw [h1]
     simpa only [Nat.cast_pow, Complex.ofReal_pow, Complex.ofReal_natCast] using!
       isBigO_ofReal_right.mp (Asymptotics.isBigO_const_mul_self
-        ((2 * π * I / p) ^ k) (fun (n : ℕ) ↦ (↑(n ^ k) : ℝ)) atTop)
+        ((2 * π * I / (p : ℂ)) ^ k) (fun (n : ℕ) ↦ (↑(n ^ k) : ℝ)) atTop)
   push_cast
   convert! hf.mul h0
   ring
@@ -90,19 +91,19 @@ theorem summableLocallyUniformlyOn_iteratedDerivWithin_smul_cexp (k l : ℕ) {f 
   apply SummableLocallyUniformlyOn_of_locally_bounded isOpen_upperHalfPlaneSet
   intro K hK hKc
   have : CompactSpace K := isCompact_univ_iff.mp (isCompact_iff_isCompact_univ.mp hKc)
-  let c : ContinuousMap K ℂ := ⟨fun r : K ↦ Complex.exp (2 * π * I * r / p), by fun_prop⟩
+  let c : ContinuousMap K ℂ := ⟨fun r : K ↦ Complex.exp (2 * π * I * r / (p : ℂ)), by fun_prop⟩
   let r : ℝ := ‖mkOfCompact c‖
   have hr : ‖r‖ < 1 := by
     simp only [norm_norm, r, norm_lt_iff_of_compact Real.zero_lt_one, mkOfCompact_apply,
       ContinuousMap.coe_mk, c]
     intro x
-    have h1 : cexp (2 * π * I * (x / p)) = cexp (2 * π * I * x / p) := by
+    have h1 : cexp (2 * π * I * ((x : ℂ) / (p : ℂ))) = cexp (2 * π * I * x / (p : ℂ)) := by
       ring_nf
     have hx : 0 < (x : ℂ).im := hK x.property
-    have hx' : 0 < (((x : ℂ) / p : ℂ)).im := by
+    have hx' : 0 < (((x : ℂ) / (p : ℂ) : ℂ)).im := by
       rw [Complex.div_ofReal_im]
       exact div_pos hx hp
-    simpa using h1 ▸ norm_exp_two_pi_I_lt_one ⟨((x : ℂ) / p), hx'⟩
+    simpa using h1 ▸ norm_exp_two_pi_I_lt_one ⟨((x : ℂ) / (p : ℂ)), hx'⟩
   have hpabs : IsUnit |p| := (abs_pos.mpr hp.ne').isUnit
   refine ⟨fun n ↦ ‖f n‖ * (Checked.div (2 * π * n) |p| hpabs) ^ k * |r| ^ n, by
     simpa using (summable_norm_mul_geometric_of_norm_lt_one' hr

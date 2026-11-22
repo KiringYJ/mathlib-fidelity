@@ -27,7 +27,9 @@ variable {m n : ℕ}
 @[grind =]
 lemma even_iff : Even n ↔ n % 2 = 0 where
   mp := fun ⟨m, hm⟩ ↦ by simp [← Nat.two_mul, hm]
-  mpr h := ⟨n / 2, by grind⟩
+  mpr h := ⟨Nat.euclideanDiv n 2, by
+    simpa only [h, Nat.add_zero, Nat.two_mul] using
+      (Nat.euclideanDiv_mul_add_mod n 2 (by decide)).symm⟩
 
 instance : DecidablePred (Even : ℕ → Prop) := fun _ ↦ decidable_of_iff _ even_iff.symm
 
@@ -71,11 +73,12 @@ lemma even_mul_succ_self (n : ℕ) : Even (n * (n + 1)) := by grind
 
 lemma even_mul_pred_self (n : ℕ) : Even (n * (n - 1)) := by grind
 
-lemma two_mul_div_two_of_even : Even n → 2 * (n / 2) = n := fun h ↦
-  Nat.mul_div_cancel_left' ((even_iff_exists_two_nsmul _).1 h)
+lemma two_mul_div_two_of_even : Even n → 2 * Nat.euclideanDiv n 2 = n := fun h ↦ by
+  simpa only [even_iff.mp h, Nat.add_zero] using Nat.euclideanDiv_mul_add_mod n 2 (by decide)
 
-lemma div_two_mul_two_of_even : Even n → n / 2 * 2 = n :=
-  fun h ↦ Nat.div_mul_cancel ((even_iff_exists_two_nsmul _).1 h)
+lemma div_two_mul_two_of_even : Even n → Nat.euclideanDiv n 2 * 2 = n := fun h ↦ by
+  rw [Nat.mul_comm]
+  exact two_mul_div_two_of_even h
 
 theorem one_lt_of_ne_zero_of_even (h0 : n ≠ 0) (hn : Even n) : 1 < n := by grind
 

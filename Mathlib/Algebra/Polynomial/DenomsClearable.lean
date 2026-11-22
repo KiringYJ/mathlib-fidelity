@@ -85,8 +85,8 @@ The assumption on `K` could be weakened to `LinearOrderedCommRing` assuming that
 image of the denominator is invertible in `K`. -/
 theorem one_le_pow_mul_abs_eval_div {K : Type*} [Field K] [LinearOrder K] [IsStrictOrderedRing K]
     {f : ℤ[X]} {a b : ℤ}
-    (b0 : 0 < b) (fab : eval ((a : K) / b) (f.map (algebraMap ℤ K)) ≠ 0) :
-    (1 : K) ≤ (b : K) ^ f.natDegree * |eval ((a : K) / b) (f.map (algebraMap ℤ K))| := by
+    (b0 : 0 < b) (fab : eval ((a : K) / (b : K)) (f.map (algebraMap ℤ K)) ≠ 0) :
+    (1 : K) ≤ (b : K) ^ f.natDegree * |eval ((a : K) / (b : K)) (f.map (algebraMap ℤ K))| := by
   have hb : (b : K) ≠ 0 := Int.cast_ne_zero.2 b0.ne'
   obtain ⟨ev, bi, bu, hF⟩ :=
     denomsClearable_natDegree (b := b) (algebraMap ℤ K) f a

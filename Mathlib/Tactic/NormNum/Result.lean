@@ -212,7 +212,7 @@ required in each use of a number literal at type `α`.
 @[simp]
 noncomputable def _root_.NNRat.rawCast [DivisionSemiring α]
     (n : ℕ) (d : ℕ) (hd : (d : α) ≠ 0) : α :=
-  n / d
+  Checked.div (n : α) (d : α) (GroupWithZero.isUnit_of_ne_zero hd)
 
 /--
 A "raw rat cast" is an expression of the form:
@@ -231,7 +231,7 @@ required in each use of a number literal at type `α`.
 @[simp]
 noncomputable def _root_.Rat.rawCast [DivisionRing α]
     (n : ℤ) (d : ℕ) (hd : (d : α) ≠ 0) : α :=
-  n / d
+  Checked.div (n : α) (d : α) (GroupWithZero.isUnit_of_ne_zero hd)
 
 theorem IsNNRat.to_isNat {α} [Semiring α] : ∀ {a : α} {n}, IsNNRat a (n) (nat_lit 1) → IsNat a n
   | _, num, ⟨inv, rfl⟩ => have := @invertibleOne α _; ⟨by simp⟩

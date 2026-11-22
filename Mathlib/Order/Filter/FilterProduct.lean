@@ -69,13 +69,13 @@ theorem const_inv₀ (a : M) {ha : IsUnit a} :
 
 @[simp, norm_cast]
 theorem coe_div₀ (f g : α → M) {hg : IsUnit g} :
-    ((f / g : α → M) : Germ l M) = Checked.div (f : Germ l M) (g : Germ l M)
+    ((Checked.div f g hg : α → M) : Germ l M) = Checked.div (f : Germ l M) (g : Germ l M)
       (show IsUnit (g : Germ l M) from hg.map (coeMulHom l)) := by
   rw [div_eq_mul_inv₀, div_eq_mul_inv₀, coe_mul, coe_inv₀]
 
 @[simp, norm_cast]
 theorem const_div₀ (a b : M) {hb : IsUnit b} :
-    ((a / b : M) : Germ l M) = Checked.div (a : Germ l M) (b : Germ l M)
+    ((Checked.div a b hb : M) : Germ l M) = Checked.div (a : Germ l M) (b : Germ l M)
       (show IsUnit (b : Germ l M) from (hb.map (Pi.constMonoidHom α M)).map (coeMulHom l)) := by
   rw [div_eq_mul_inv₀, div_eq_mul_inv₀, ← const_inv₀ b (ha := hb)]
   rfl

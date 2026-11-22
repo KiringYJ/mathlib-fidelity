@@ -310,7 +310,7 @@ theorem _root_.LipschitzOnWith.absolutelyContinuousOnInterval {f : ℝ → X} {K
     (hfK : LipschitzOnWith K f (uIcc a b)) : AbsolutelyContinuousOnInterval f a b := by
   rw [absolutelyContinuousOnInterval_iff]
   intro ε hε
-  refine ⟨ε / (K + 1), by positivity, fun (n, I) hnI₁ hnI₂ ↦ ?_⟩
+  refine ⟨ε / ((K : ℝ) + 1), by positivity, fun (n, I) hnI₁ hnI₂ ↦ ?_⟩
   calc
     _ ≤ ∑ i ∈ Finset.range n, K * dist (I i).1 (I i).2 := by
       apply Finset.sum_le_sum
@@ -319,8 +319,8 @@ theorem _root_.LipschitzOnWith.absolutelyContinuousOnInterval {f : ℝ → X} {K
       apply ENNReal.toReal_mono (Ne.symm (not_eq_of_beq_eq_false rfl)) at this
       rwa [ENNReal.toReal_mul, ← dist_edist, ← dist_edist] at this
     _ = K * ∑ i ∈ Finset.range n, dist (I i).1 (I i).2 := by symm; exact Finset.mul_sum _ _ _
-    _ ≤ K * (ε / (K + 1)) := by gcongr
-    _ < (K + 1) * (ε / (K + 1)) := by gcongr; linarith
+    _ ≤ K * (ε / ((K : ℝ) + 1)) := by gcongr
+    _ < ((K : ℝ) + 1) * (ε / ((K : ℝ) + 1)) := by gcongr; linarith
     _ = ε := by field
 
 /-- If `f` is Lipschitz on a set containing `g '' uIcc a b` and `g` is absolutely continuous on
@@ -374,7 +374,7 @@ theorem boundedVariationOn (hf : AbsolutelyContinuousOnInterval f a b) :
   -- Split `[a, b]` into subintervals `[a + i * δ', a + (i + 1) * δ']` for `i = 0, ..., n`, where
   --   `a + (n + 1) * δ' = b` and `δ' < δ`.
   obtain ⟨n, hn⟩ := exists_nat_one_div_lt (div_pos hδ₁ hab₁)
-  set δ' := (b - a) / (n + 1)
+  set δ' := (b - a) / ((n : ℝ) + 1)
   have hδ₃ : δ' < δ := by
     dsimp only [δ']
     convert! mul_lt_mul_of_pos_right hn hab₁ using 1 <;> field

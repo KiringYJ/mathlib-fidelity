@@ -41,19 +41,26 @@ The multiplicity of a prime in `n!` is the sum of the quotients `n / p ^ i`. Thi
 over the finset `Ico 1 b` where `b` is any exponent with `n < p ^ b`, that is, any bound greater
 than `log p n` for `n ≠ 0`. -/
 theorem factorization_factorial {p : ℕ} (hp : p.Prime) :
-    ∀ {n b : ℕ}, n < p ^ b → (n)!.factorization p = ∑ i ∈ Ico 1 b, n / p ^ i
-  | 0, b, _ => by simp
+    ∀ {n b : ℕ}, n < p ^ b → (n)!.factorization p =
+      ∑ i ∈ Ico 1 b, Nat.euclideanDiv n (p ^ i) (pow_ne_zero _ hp.ne_zero)
+  | 0, b, _ => by simp [Nat.euclideanDiv_eq_core]
   | n + 1, b, hb =>
     calc
       (n + 1)!.factorization p = (n + 1).factorization p + (n)!.factorization p := by
         rw [factorial_succ, factorization_mul (zero_ne_add_one n).symm n.factorial_ne_zero,
           coe_add, Pi.add_apply]
-      _ = #{i ∈ Ico 1 b | p ^ i ∣ n + 1} + ∑ i ∈ Ico 1 b, n / p ^ i := by
+      _ = #{i ∈ Ico 1 b | p ^ i ∣ n + 1} +
+          ∑ i ∈ Ico 1 b, Nat.euclideanDiv n (p ^ i) (pow_ne_zero _ hp.ne_zero) := by
         rw [factorization_factorial hp ((le_succ n).trans_lt hb), add_left_inj]
         exact factorization_eq_card_pow_dvd_of_lt hp (zero_lt_succ n) hb
-      _ = ∑ i ∈ Ico 1 b, (n / p ^ i + if p ^ i ∣ n + 1 then 1 else 0) := by
+      _ = ∑ i ∈ Ico 1 b,
+          (Nat.euclideanDiv n (p ^ i) (pow_ne_zero _ hp.ne_zero) +
+            if p ^ i ∣ n + 1 then 1 else 0) := by
         simp [Nat.add_comm, sum_add_distrib, sum_boole]
-      _ = ∑ i ∈ Ico 1 b, (n + 1) / p ^ i := Finset.sum_congr rfl fun _ _ => Nat.succ_div.symm
+      _ = ∑ i ∈ Ico 1 b, Nat.euclideanDiv (n + 1) (p ^ i) (pow_ne_zero _ hp.ne_zero) := by
+        apply Finset.sum_congr rfl
+        intro i hi
+        simpa only [Nat.euclideanDiv_eq_core] using (Nat.succ_div (a := n) (b := p ^ i)).symm
 
 /-- For a prime number `p`, taking `(p - 1)` times the factorization of `p` in `n!` equals `n` minus
 the sum of base `p` digits of `n`. -/
@@ -95,20 +102,26 @@ theorem factorization_factorial_mul {n p : ℕ} (hp : p.Prime) :
     ring
 
 theorem factorization_factorial_le_div_pred {p : ℕ} (hp : p.Prime) (n : ℕ) :
-    (n)!.factorization p ≤ (n / (p - 1) : ℕ) := by
+    (n)!.factorization p ≤
+      Nat.euclideanDiv n (p - 1) (Nat.ne_of_gt (Nat.sub_pos_of_lt hp.one_lt)) := by
   rw [factorization_factorial hp (Nat.lt_pow_self hp.one_lt)]
-  exact Nat.geom_sum_Ico_le hp.two_le _ _
+  simpa only [Nat.euclideanDiv_eq_core] using Nat.geom_sum_Ico_le hp.two_le n n
 
 lemma multiplicity_choose_aux {p n b k : ℕ} (hp : p.Prime) (hkn : k ≤ n) :
-    ∑ i ∈ Finset.Ico 1 b, n / p ^ i =
-      ((∑ i ∈ Finset.Ico 1 b, k / p ^ i) + ∑ i ∈ Finset.Ico 1 b, (n - k) / p ^ i) +
+    ∑ i ∈ Finset.Ico 1 b, Nat.euclideanDiv n (p ^ i) (pow_ne_zero _ hp.ne_zero) =
+      ((∑ i ∈ Finset.Ico 1 b, Nat.euclideanDiv k (p ^ i) (pow_ne_zero _ hp.ne_zero)) +
+        ∑ i ∈ Finset.Ico 1 b, Nat.euclideanDiv (n - k) (p ^ i) (pow_ne_zero _ hp.ne_zero)) +
         #{i ∈ Ico 1 b | p ^ i ≤ k % p ^ i + (n - k) % p ^ i} :=
   calc
-    ∑ i ∈ Finset.Ico 1 b, n / p ^ i = ∑ i ∈ Finset.Ico 1 b, (k + (n - k)) / p ^ i := by
+    ∑ i ∈ Finset.Ico 1 b, Nat.euclideanDiv n (p ^ i) (pow_ne_zero _ hp.ne_zero) =
+        ∑ i ∈ Finset.Ico 1 b,
+          Nat.euclideanDiv (k + (n - k)) (p ^ i) (pow_ne_zero _ hp.ne_zero) := by
       simp only [add_tsub_cancel_of_le hkn]
     _ = ∑ i ∈ Finset.Ico 1 b,
-          (k / p ^ i + (n - k) / p ^ i + if p ^ i ≤ k % p ^ i + (n - k) % p ^ i then 1 else 0) := by
-      simp only [Nat.add_div (pow_pos hp.pos _)]
+          (Nat.euclideanDiv k (p ^ i) (pow_ne_zero _ hp.ne_zero) +
+            Nat.euclideanDiv (n - k) (p ^ i) (pow_ne_zero _ hp.ne_zero) +
+            if p ^ i ≤ k % p ^ i + (n - k) % p ^ i then 1 else 0) := by
+      simp only [Nat.euclideanDiv_eq_core, Nat.add_div (pow_pos hp.pos _)]
     _ = _ := by simp [sum_add_distrib, sum_boole]
 
 /-- The factorization of `p` in `choose (n + k) k` is the number of carries when `k` and `n` are
@@ -260,7 +273,8 @@ theorem factorization_factorial_eq_zero_of_lt (h : n < p) : (factorial n).factor
 theorem factorization_choose_eq_zero_of_lt (h : n < p) : (choose n k).factorization p = 0 := by
   by_cases! hnk : n < k; · simp [choose_eq_zero_of_lt hnk]
   rw [choose_eq_factorial_div_factorial hnk,
-    factorization_div (factorial_mul_factorial_dvd_factorial hnk), Finsupp.coe_tsub,
+    factorization_div (factorial_mul_factorial_dvd_factorial hnk)
+      (mul_ne_zero (factorial_ne_zero _) (factorial_ne_zero _)), Finsupp.coe_tsub,
     Pi.sub_apply, factorization_factorial_eq_zero_of_lt h, zero_tsub]
 
 /-- If a prime `p` has positive multiplicity in the `n`th central binomial coefficient,

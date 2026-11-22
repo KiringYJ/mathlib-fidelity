@@ -156,7 +156,10 @@ theorem Subgroup.properlyDiscontinuousSMul_of_tendsto_cofinite (S : Subgroup G)
     (hS : Tendsto S.subtype cofinite (cocompact G)) : ProperlyDiscontinuousSMul S G :=
   { finite_disjoint_inter_image := by
       intro K L hK hL
-      have H : Set.Finite _ := hS ((hL.prod hK).image continuous_div').compl_mem_cocompact
+      have hdiv : Continuous (fun p : G × G ↦ p.1 / p.2) := by
+        simp only [div_eq_mul_inv]
+        fun_prop
+      have H : Set.Finite _ := hS ((hL.prod hK).image hdiv).compl_mem_cocompact
       rw [preimage_compl, compl_compl] at H
       convert! H
       ext x

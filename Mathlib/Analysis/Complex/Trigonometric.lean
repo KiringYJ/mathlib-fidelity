@@ -616,8 +616,8 @@ open Finset
 theorem cos_bound {x : ℂ} (hx : ‖x‖ ≤ 1) : ‖cos x - (1 - x ^ 2 / 2)‖ ≤ ‖x‖ ^ 4 * (5 / 96) :=
   calc
     ‖cos x - (1 - x ^ 2 / 2)‖ =
-        ‖(exp (-x * I) - ∑ m ∈ range 4, (-x * I) ^ m / m.factorial) / 2 +
-         (exp (x * I) - ∑ m ∈ range 4, (x * I) ^ m / m.factorial) / 2‖ := by
+        ‖(exp (-x * I) - ∑ m ∈ range 4, (-x * I) ^ m / (m.factorial : ℂ)) / 2 +
+         (exp (x * I) - ∑ m ∈ range 4, (x * I) ^ m / (m.factorial : ℂ)) / 2‖ := by
       congr 1
       have hS (z : ℂ) :
           ∑ m ∈ range 4, z ^ m / (m.factorial : ℂ) = 1 + z + z ^ 2 / 2 + z ^ 3 / 6 := by
@@ -626,8 +626,8 @@ theorem cos_bound {x : ℂ} (hx : ‖x‖ ≤ 1) : ‖cos x - (1 - x ^ 2 / 2)‖
       have hI' : (-x * I) ^ 2 = -x ^ 2 := by rw [mul_pow, I_sq, mul_neg_one, neg_sq]
       rw [hS, hS, cos, hI, hI']
       ring
-    _ ≤ ‖exp (-x * I) - ∑ m ∈ range 4, (-x * I) ^ m / m.factorial‖ / 2 +
-        ‖exp (x * I) - ∑ m ∈ range 4, (x * I) ^ m / m.factorial‖ / 2 := by
+    _ ≤ ‖exp (-x * I) - ∑ m ∈ range 4, (-x * I) ^ m / (m.factorial : ℂ)‖ / 2 +
+        ‖exp (x * I) - ∑ m ∈ range 4, (x * I) ^ m / (m.factorial : ℂ)‖ / 2 := by
       grw [norm_add_le]
       simp
     _ ≤ ‖-x * I‖ ^ 4 * (Nat.succ 4 * (Nat.factorial 4 * (4 : ℕ) : ℝ)⁻¹) / 2 +
@@ -638,8 +638,8 @@ theorem cos_bound {x : ℂ} (hx : ‖x‖ ≤ 1) : ‖cos x - (1 - x ^ 2 / 2)‖
 theorem sin_bound {x : ℂ} (hx : ‖x‖ ≤ 1) : ‖sin x - (x - x ^ 3 / 6)‖ ≤ ‖x‖ ^ 5 / 100 :=
   calc
     ‖sin x - (x - x ^ 3 / 6)‖ =
-        ‖(exp (-x * I) - ∑ m ∈ range 5, (-x * I) ^ m / m.factorial) * I / 2 -
-         (exp (x * I) - ∑ m ∈ range 5, (x * I) ^ m / m.factorial) * I / 2‖ := by
+        ‖(exp (-x * I) - ∑ m ∈ range 5, (-x * I) ^ m / (m.factorial : ℂ)) * I / 2 -
+         (exp (x * I) - ∑ m ∈ range 5, (x * I) ^ m / (m.factorial : ℂ)) * I / 2‖ := by
       congr 1
       have hS (z : ℂ) : ∑ m ∈ range 5, z ^ m / (m.factorial : ℂ) =
           1 + z + z ^ 2 / 2 + z ^ 3 / 6 + z ^ 4 / 24 := by
@@ -649,8 +649,8 @@ theorem sin_bound {x : ℂ} (hx : ‖x‖ ≤ 1) : ‖sin x - (x - x ^ 3 / 6)‖
       ring_nf
       rw [I_sq, h4]
       ring
-    _ ≤ ‖exp (-x * I) - ∑ m ∈ range 5, (-x * I) ^ m / m.factorial‖ / 2 +
-        ‖exp (x * I) - ∑ m ∈ range 5, (x * I) ^ m / m.factorial‖ / 2 := by
+    _ ≤ ‖exp (-x * I) - ∑ m ∈ range 5, (-x * I) ^ m / (m.factorial : ℂ)‖ / 2 +
+        ‖exp (x * I) - ∑ m ∈ range 5, (x * I) ^ m / (m.factorial : ℂ)‖ / 2 := by
       grw [norm_sub_le]
       simp
     _ ≤ ‖-x * I‖ ^ 5 * (Nat.succ 5 * (Nat.factorial 5 * (5 : ℕ) : ℝ)⁻¹) / 2 +

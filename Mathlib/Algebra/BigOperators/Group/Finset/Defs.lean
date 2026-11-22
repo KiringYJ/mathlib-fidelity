@@ -675,15 +675,22 @@ variable [DivisionCommMonoid G]
 theorem prod_inv_distrib (f : ι → G) : (∏ x ∈ s, (f x)⁻¹) = (∏ x ∈ s, f x)⁻¹ :=
   Multiset.prod_map_inv
 
-@[to_additive (attr := simp)]
-theorem prod_div_distrib (f g : ι → G) : ∏ x ∈ s, f x / g x = (∏ x ∈ s, f x) / ∏ x ∈ s, g x :=
-  Multiset.prod_map_div
-
 @[to_additive]
 theorem prod_zpow (f : ι → G) (s : Finset ι) (n : ℤ) : ∏ a ∈ s, f a ^ n = (∏ a ∈ s, f a) ^ n :=
   Multiset.prod_map_zpow
 
 end DivisionCommMonoid
+
+@[simp] theorem sum_sub_distrib [SubtractionCommMonoid G] (f g : ι → G) :
+    ∑ x ∈ s, (f x - g x) = (∑ x ∈ s, f x) - (∑ x ∈ s, g x) :=
+  Multiset.sum_map_sub
+
+@[to_additive AddCommGroup.sum_sub_distrib]
+theorem prod_div_distrib [CommGroup G] (f g : ι → G) :
+    ∏ x ∈ s, (f x / g x) = (∏ x ∈ s, f x) / (∏ x ∈ s, g x) :=
+  Multiset.prod_map_div
+
+attribute [simp] prod_div_distrib
 
 theorem sum_nat_mod (s : Finset ι) (n : ℕ) (f : ι → ℕ) :
     (∑ i ∈ s, f i) % n = (∑ i ∈ s, f i % n) % n :=

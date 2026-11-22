@@ -21,7 +21,7 @@ namespace Shrink
 
 @[to_additive] instance [One α] : One (Shrink.{v} α) := (equivShrink α).symm.one
 @[to_additive] instance [Mul α] : Mul (Shrink.{v} α) := (equivShrink α).symm.mul
-@[to_additive] instance [Div α] : Div (Shrink.{v} α) := (equivShrink α).symm.div
+instance [Sub α] : Sub (Shrink.{v} α) := (equivShrink α).symm.sub
 @[to_additive] instance [Inv α] : Inv (Shrink.{v} α) := (equivShrink α).symm.Inv
 @[to_additive] instance [Pow α M] : Pow (Shrink.{v} α) M := (equivShrink α).symm.pow M
 
@@ -50,15 +50,17 @@ lemma equivShrink_symm_smul {M : Type*} [SMul M α] (m : M) (x : Shrink α) :
 lemma equivShrink_smul {M : Type*} [SMul M α] (m : M) (x : α) :
     equivShrink α (m • x) = m • equivShrink α x := by
   simp [Equiv.smul_def]
-@[to_additive (attr := simp)]
-lemma equivShrink_symm_div [Div α] (x y : Shrink α) :
-    (equivShrink α).symm (x / y) = (equivShrink α).symm x / (equivShrink α).symm y := by
-  simp [Equiv.div_def]
 
-@[to_additive (attr := simp)]
-lemma equivShrink_div [Div α] (x y : α) :
-    equivShrink α (x / y) = equivShrink α x / equivShrink α y := by
-  simp [Equiv.div_def]
+@[simp]
+lemma equivShrink_symm_sub [Sub α] (x y : Shrink α) :
+    (equivShrink α).symm (x - y) =
+      (equivShrink α).symm x - (equivShrink α).symm y := by
+  simp [Equiv.sub_def]
+
+@[simp]
+lemma equivShrink_sub [Sub α] (x y : α) :
+    equivShrink α (x - y) = equivShrink α x - equivShrink α y := by
+  simp [Equiv.sub_def]
 
 @[to_additive (attr := simp)]
 lemma equivShrink_symm_inv [Inv α] (x : Shrink α) :
@@ -111,3 +113,14 @@ instance [CommGroup α] : CommGroup (Shrink.{v} α) := (equivShrink α).symm.com
 instance [Monoid M] [MulAction M α] : MulAction M (Shrink.{v} α) := (equivShrink α).symm.mulAction M
 
 end Shrink
+
+@[simp]
+lemma equivShrink_symm_div [Group α] (x y : Shrink α) :
+    (equivShrink α).symm (x / y) =
+      (equivShrink α).symm x / (equivShrink α).symm y := by
+  simp [Equiv.div_def]
+
+@[simp]
+lemma equivShrink_div [Group α] (x y : α) :
+    equivShrink α (x / y) = equivShrink α x / equivShrink α y := by
+  simp [Equiv.div_def]

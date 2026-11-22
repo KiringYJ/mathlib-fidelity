@@ -27,14 +27,14 @@ statements about them. For a more extensive theory of fields, see the `FieldTheo
 ## Implementation details
 
 These structures assert that nonzero elements are units. Inversion, division and integer
-powers are not operations on the whole ambient carrier `K`: the notation `a⁻¹`, `a / b` and
-`a ^ n` for an integer `n` elaborates to the operations of
-`Mathlib.Algebra.GroupWithZero.Checked`, which take evidence that the inverted element is a
-unit (for an integer power, only when the exponent is negative). Mixed division uses an
-ambient numerator and a unit denominator.
+powers use the operations of `Mathlib.Algebra.GroupWithZero.Checked` with evidence that the
+inverted element is a unit. An integer power needs this evidence only for negative exponents.
+In a division ring, the ordinary notation `a / b` denotes right division by a unit.
+`divp` accepts an ambient numerator and a bundled unit denominator.
 
 In characteristic zero every nonzero natural number is a unit, so every rational number `q`
-has the value `q.num / q.den`. A division semiring records the embedding of `ℚ≥0` and its
+has the value of the checked quotient of its cast numerator and denominator.
+A division semiring records the embedding of `ℚ≥0` and its
 scalar action as data guarded by a `CharZero` hypothesis; a division ring also records the
 embedding of `ℚ` and its scalar action. The laws `q * q.den = q.num` and `q • a = q * a`
 determine this data. A type overrides the default values only so that they agree

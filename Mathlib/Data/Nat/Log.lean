@@ -36,9 +36,10 @@ Adapted from https://downloads.haskell.org/~ghc/9.0.1/docs/html/libraries/ghc-bi
 Note a tail-recursive version of `Nat.log` is also possible:
 ```
 def logTR (b n : ℕ) : ℕ :=
-  let rec go : ℕ → ℕ → ℕ | n, acc => if h : b ≤ n ∧ 1 < b then go (n / b) (acc + 1) else acc
+  let rec go : ℕ → ℕ → ℕ
+    | n, acc => if h : b ≤ n ∧ 1 < b then go (Nat.euclideanDiv n b) (acc + 1) else acc
   decreasing_by
-    have : n / b < n := Nat.div_lt_self (by lia) h.2
+    have : Nat.euclideanDiv n b < n := Nat.div_lt_self (by lia) h.2
     decreasing_trivial
   go n 0
 ```
@@ -84,18 +85,20 @@ elab (name := natLogTac) "nat_log_tac" : tactic => do
 none does. The proofs `_hb` and `_hn` can usually be omitted, see `nat_log_tac`. -/
 @[pp_nodot, nolint unusedArguments]
 def log (b n : ℕ) (_hb : 1 < b := by nat_log_tac) (_hn : n ≠ 0 := by nat_log_tac) : ℕ :=
-  (go b n).2 where
+  (go b n _hb).2 where
   /-- An auxiliary definition for `Nat.log`.
 
-  For `b > 1`, `n ≠ 0`, `n < b ^ fuel`, `Nat.log.go n b fuel = (n / b ^ b.log n, b.log n)`. -/
-  go : ℕ → ℕ → ℕ × ℕ
-  | _, 0 => (n, 0)
-  | b, fuel + 1 =>
+  For `1 < b`, `n ≠ 0` and `n < b ^ fuel`, this returns the quotient of `n` by
+  `b ^ log b n` together with `log b n`. -/
+  go (b fuel : ℕ) (hb : 1 < b) : ℕ × ℕ := match fuel with
+  | 0 => (n, 0)
+  | fuel + 1 =>
     if n < b then
       (n, 0)
     else
-      let (q, e) := go (b * b) fuel
-      if q < b then (q, 2 * e) else (q / b, 2 * e + 1)
+      let (q, e) := go (b * b) fuel (Nat.one_mul 1 ▸ Nat.mul_lt_mul_of_lt_of_lt hb hb)
+      if q < b then (q, 2 * e)
+      else (Nat.euclideanDiv q b (Nat.ne_of_gt (Nat.zero_lt_of_lt hb)), 2 * e + 1)
 
 private theorem log.go_aux {n b fuel : ℕ} (hb : 1 < b) (hfuel : n < b ^ (fuel + 1)) (hbn : b ≤ n) :
     n < (b * b) ^ fuel := by
@@ -104,18 +107,21 @@ private theorem log.go_aux {n b fuel : ℕ} (hb : 1 < b) (hfuel : n < b ^ (fuel 
   exact Nat.lt_of_lt_of_le hfuel <| Nat.pow_le_pow_right (by grind) (by grind)
 
 lemma log.go_spec {b n fuel : ℕ} (hb : 1 < b) (hn : n ≠ 0) (hfuel : n < b ^ fuel) :
-    (log.go n b fuel).1 = n / b ^ (log.go n b fuel).2 ∧
-      b ^ (log.go n b fuel).2 ≤ n ∧ n < b ^ ((log.go n b fuel).2 + 1) := by
+    (log.go n b fuel hb).1 =
+      Nat.euclideanDiv n (b ^ (log.go n b fuel hb).2)
+        (Nat.ne_of_gt (Nat.pow_pos (Nat.zero_lt_of_lt hb))) ∧
+      b ^ (log.go n b fuel hb).2 ≤ n ∧ n < b ^ ((log.go n b fuel hb).2 + 1) := by
   induction fuel generalizing b with
   | zero => simp_all
   | succ fuel ih =>
     cases Nat.lt_or_ge n b with
     | inl hnb =>
-      simp [go, hnb, one_le_iff_ne_zero, hn]
+      simp [go, Nat.euclideanDiv_eq_core, hnb, one_le_iff_ne_zero, hn]
     | inr hnb =>
       rcases ih (Nat.one_mul 1 ▸ Nat.mul_lt_mul_of_lt_of_lt hb hb) (go_aux hb hfuel hnb)
         with ⟨ih₁, ih₂, ih₃⟩
-      simp_all only [go, ite_eq_right (Nat.not_lt_of_le hnb), ← Nat.pow_two, ← Nat.pow_mul,
+      simp_all only [go, Nat.euclideanDiv_eq_core, ite_eq_right (Nat.not_lt_of_le hnb),
+        ← Nat.pow_two, ← Nat.pow_mul,
         Nat.div_lt_iff_lt_mul, Nat.pow_pos (Nat.zero_lt_of_lt hb), Nat.div_div_eq_div_mul,
         ← Nat.pow_add_one, ← Nat.pow_add_one', Nat.mul_add_one]
       split <;> simp_all
@@ -124,7 +130,7 @@ theorem log_lt_iff_lt_pow {b : ℕ} (hb : 1 < b) {x y : ℕ} (hy : y ≠ 0) :
     log b y < x ↔ y < b ^ x := by
   rcases log.go_spec hb hy (Nat.lt_pow_self hb) with ⟨-, H₁, H₂⟩
   rw [log]
-  cases Nat.lt_or_ge (log.go y b y).snd x with
+  cases Nat.lt_or_ge (log.go y b y hb).snd x with
   | inl h =>
     exact iff_of_true h <| Nat.lt_of_lt_of_le H₂ <| Nat.pow_le_pow_right (Nat.zero_lt_of_lt hb) h
   | inr h =>
@@ -147,13 +153,17 @@ theorem log_pos {b n : ℕ} (hb : 1 < b) (hbn : b ≤ n) : 0 < log b n :=
   (log_pos_iff hb (by omega)).2 hbn
 
 theorem log_of_one_lt_of_le {b n : ℕ} (h : 1 < b) (hn : b ≤ n) :
-    log b n = log b (n / b) h (Nat.div_pos hn (Nat.zero_lt_of_lt h)).ne' + 1 := by
+    log b n = log b (Nat.euclideanDiv n b) h (by
+      rw [Nat.euclideanDiv_eq_core]
+      exact (Nat.div_pos hn (Nat.zero_lt_of_lt h)).ne') + 1 := by
   apply eq_of_forall_gt_iff
   rintro (_ | c)
   · simp
-  · have : n / b ≠ 0 := (Nat.div_pos hn (Nat.zero_lt_of_lt h)).ne'
+  · have : Nat.euclideanDiv n b ≠ 0 := by
+      rw [Nat.euclideanDiv_eq_core]
+      exact (Nat.div_pos hn (Nat.zero_lt_of_lt h)).ne'
     rw [log_lt_iff_lt_pow h (by omega), Nat.add_lt_add_iff_right, log_lt_iff_lt_pow h this,
-      Nat.pow_add_one, Nat.div_lt_iff_lt_mul (Nat.zero_lt_of_lt h)]
+      Nat.pow_add_one, Nat.euclideanDiv_eq_core, Nat.div_lt_iff_lt_mul (Nat.zero_lt_of_lt h)]
 
 @[simp]
 theorem log_one_right {b : ℕ} (hb : 1 < b) : log b 1 = 0 :=
@@ -253,30 +263,36 @@ theorem log_mono {b c m n : ℕ} (hc : 1 < c) (hb : c ≤ b) {hm : m ≠ 0} (hmn
     log b m (Nat.lt_of_lt_of_le hc hb) hm ≤ log c n :=
   (log_anti_left hc hb).trans (log_mono_right hmn)
 
-theorem log_div_base {b n : ℕ} (hb : 1 < b) (hbn : b ≤ n) {h : n / b ≠ 0} :
-    log b (n / b) hb h = log b n - 1 := by
+theorem log_div_base {b n : ℕ} (hb : 1 < b) (hbn : b ≤ n) {h : Nat.euclideanDiv n b ≠ 0} :
+    log b (Nat.euclideanDiv n b) hb h = log b n - 1 := by
   rw [log_of_one_lt_of_le hb hbn, Nat.add_sub_cancel_right]
 
-lemma log_div_base_pow {b n k : ℕ} (hb : 1 < b) (hbn : b ^ k ≤ n) {h : n / b ^ k ≠ 0} :
-    log b (n / b ^ k) hb h = log b n hb (ne_zero_of_pow_le hb hbn) - k := by
+lemma log_div_base_pow {b n k : ℕ} (hb : 1 < b) (hbn : b ^ k ≤ n)
+    {h : Nat.euclideanDiv n (b ^ k) (Nat.ne_of_gt (Nat.pow_pos (Nat.zero_lt_of_lt hb))) ≠ 0} :
+    log b (Nat.euclideanDiv n (b ^ k) (Nat.ne_of_gt (Nat.pow_pos (Nat.zero_lt_of_lt hb)))) hb h =
+      log b n hb (ne_zero_of_pow_le hb hbn) - k := by
   have hn : n ≠ 0 := ne_zero_of_pow_le hb hbn
   have hpos : 0 < b ^ k := Nat.pow_pos (Nat.zero_lt_of_lt hb)
   have h1 := pow_log_le_self hb h
   have h2 := lt_pow_succ_log_self hb h
+  conv_rhs at h1 => rw [Nat.euclideanDiv_eq_core]
   rw [Nat.le_div_iff_mul_le hpos, ← Nat.pow_add] at h1
+  conv_lhs at h2 => rw [Nat.euclideanDiv_eq_core]
   rw [Nat.div_lt_iff_lt_mul hpos, ← Nat.pow_add, Nat.succ_add] at h2
   have := (log_eq_iff hb hn).2 ⟨h1, h2⟩
   omega
 
 @[simp]
-theorem log_div_mul_self {b n : ℕ} (hb : 1 < b) (hbn : b ≤ n) {h : n / b * b ≠ 0} :
-    log b (n / b * b) hb h = log b n := by
-  have hnb : n / b ≠ 0 := (Nat.div_pos hbn (by omega)).ne'
+theorem log_div_mul_self {b n : ℕ} (hb : 1 < b) (hbn : b ≤ n) {h : Nat.euclideanDiv n b * b ≠ 0} :
+    log b (Nat.euclideanDiv n b * b) hb h = log b n := by
+  have hnb : Nat.euclideanDiv n b ≠ 0 := by
+    rw [Nat.euclideanDiv_eq_core]; exact (Nat.div_pos hbn (by omega)).ne'
   rw [log_mul_base hb hnb, log_div_base hb hbn,
     Nat.sub_add_cancel (succ_le_iff.2 <| log_pos hb hbn)]
 
-theorem add_pred_div_lt {b n : ℕ} (hb : 1 < b) (hn : 2 ≤ n) : (n + b - 1) / b < n := by
-  rw [div_lt_iff_lt_mul (by lia), ← succ_le_iff, ← pred_eq_sub_one,
+theorem add_pred_div_lt {b n : ℕ} (hb : 1 < b) (hn : 2 ≤ n) :
+    Nat.euclideanDiv (n + b - 1) b < n := by
+  rw [Nat.euclideanDiv_eq_core, div_lt_iff_lt_mul (by lia), ← succ_le_iff, ← pred_eq_sub_one,
     succ_pred_eq_of_pos (by lia)]
   exact Nat.add_le_mul hn hb
 
@@ -295,9 +311,10 @@ lemma log2_eq_log_two {n : ℕ} (hn : n ≠ 0) : Nat.log2 n = Nat.log 2 n := by
 
 @[simp]
 lemma log_pow_left {b k n : ℕ} (hb : 1 < b) (hk : k ≠ 0) (hn : n ≠ 0) {h : 1 < b ^ k} :
-    log (b ^ k) n h hn = log b n / k := by
+    log (b ^ k) n h hn = Nat.euclideanDiv (log b n) k := by
   refine eq_of_forall_le_iff fun c ↦ ?_
-  rw [le_log_iff_pow_le h hn, Nat.le_div_iff_mul_le (Nat.pos_of_ne_zero hk),
+  rw [le_log_iff_pow_le h hn, Nat.euclideanDiv_eq_core,
+    Nat.le_div_iff_mul_le (Nat.pos_of_ne_zero hk),
     le_log_iff_pow_le hb hn, Nat.pow_mul']
 
 /-! ### Ceil logarithm -/
@@ -309,18 +326,19 @@ lemma log_pow_left {b k n : ℕ} (hb : 1 < b) (hk : k ≠ 0) (hn : n ≠ 0) {h :
 inequality. The proof `_h` can usually be omitted, see `nat_log_tac`. -/
 @[pp_nodot, nolint unusedArguments]
 def clog (b n : ℕ) (_h : 1 < b ∨ n ≤ 1 := by nat_log_tac) : ℕ :=
-  if 1 < b ∧ 1 < n then (go b n).2 + 1 else 0 where
+  if h : 1 < b ∧ 1 < n then (go b n h.1 h.2).2 + 1 else 0 where
   /-- An auxiliary definition for `Nat.clog`.
 
   For `n > 1`, `b > 1`, `n ≤ b ^ fuel`, returns `(b ^ clog b n / n, clog b n - 1)`.
   -/
-  go : ℕ → ℕ → ℕ × ℕ
-  | b, 0 => (b / n, 0)
-  | b, fuel + 1 =>
-    if n ≤ b then (b / n, 0)
+  go (b fuel : ℕ) (hb : 1 < b) (hn : 1 < n) : ℕ × ℕ := match fuel with
+  | 0 => (Nat.euclideanDiv b n (Nat.ne_of_gt (Nat.zero_lt_of_lt hn)), 0)
+  | fuel + 1 =>
+    if n ≤ b then (Nat.euclideanDiv b n (Nat.ne_of_gt (Nat.zero_lt_of_lt hn)), 0)
     else
-      let (q, e) := go (b * b) fuel
-      if q < b then (q, 2 * e + 1) else (q / b, 2 * e)
+      let (q, e) := go (b * b) fuel (Nat.one_mul 1 ▸ Nat.mul_lt_mul_of_lt_of_lt hb hb) hn
+      if q < b then (q, 2 * e + 1)
+      else (Nat.euclideanDiv q b (Nat.ne_of_gt (Nat.zero_lt_of_lt hb)), 2 * e)
 
 theorem clog_of_right_le_one {n : ℕ} (hn : n ≤ 1) (b : ℕ) : clog b n = 0 := by
   grind [clog]
@@ -332,17 +350,18 @@ theorem clog_one_right (b : ℕ) : clog b 1 = 0 :=
   clog_of_right_le_one le_rfl _
 
 theorem clog.go_spec {n b fuel} (hn : 1 < n) (hb : 1 < b) (hfuel : n < b ^ fuel) :
-    (go n b fuel).1 = b ^ ((go n b fuel).2 + 1) / n ∧
-      b ^ (go n b fuel).2 < n ∧ n ≤ b ^ ((go n b fuel).2 + 1) := by
+    (go n b fuel hb hn).1 = Nat.euclideanDiv (b ^ ((go n b fuel hb hn).2 + 1)) n ∧
+      b ^ (go n b fuel hb hn).2 < n ∧ n ≤ b ^ ((go n b fuel hb hn).2 + 1) := by
   induction fuel generalizing b with
-  | zero => simp_all
+  | zero => simp at hfuel; omega
   | succ fuel ih =>
     cases Nat.lt_or_ge b n with
-    | inr hbn => simp_all [go]
+    | inr hbn => simp_all [go, Nat.euclideanDiv_eq_core]
     | inl hbn =>
       rcases ih (Nat.one_mul 1 ▸ Nat.mul_lt_mul_of_lt_of_lt hb hb)
         (log.go_aux hb hfuel (Nat.le_of_lt hbn)) with ⟨ih₁, ih₂, ih₃⟩
-      simp_all only [go, ite_eq_right (Nat.not_le_of_gt hbn), ← Nat.pow_two, ← Nat.pow_mul,
+      simp_all only [go, Nat.euclideanDiv_eq_core, ite_eq_right (Nat.not_le_of_gt hbn),
+        ← Nat.pow_two, ← Nat.pow_mul,
         Nat.div_lt_iff_lt_mul (Nat.zero_lt_of_lt hbn), Nat.div_div_eq_div_mul,
         Nat.mul_comm n b, Nat.mul_add_one, @Nat.pow_add_one' _ (2 * _ + 1),
         Nat.mul_lt_mul_left, Nat.mul_div_mul_left, Nat.zero_lt_of_lt hb]
@@ -353,7 +372,7 @@ theorem clog_le_iff_le_pow {b : ℕ} (hb : 1 < b) {x y : ℕ} : clog b x ≤ y �
   fun_cases clog with
   | case1 h =>
     rcases clog.go_spec h.2 hb (Nat.lt_pow_self hb) with ⟨-, H₁, H₂⟩
-    cases Nat.lt_or_ge (clog.go x b x).2 y with
+    cases Nat.lt_or_ge (clog.go x b x hb h.2).2 y with
     | inl hy =>
       rw [← Nat.add_one_le_iff] at hy
       exact iff_of_true hy <| Nat.le_trans H₂ <| Nat.pow_le_pow_right (Nat.zero_lt_of_lt hb) hy
@@ -363,25 +382,25 @@ theorem clog_le_iff_le_pow {b : ℕ} (hb : 1 < b) {x y : ℕ} : clog b x ≤ y �
   | case2 h => grind [Nat.one_le_pow]
 
 theorem clog_pos {b n : ℕ} (hb : 1 < b) (hn : 1 < n) : 0 < clog b n := by
-  rw [clog, ite_eq_left]
-  exacts [Nat.succ_pos _, ⟨hb, hn⟩]
+  rw [clog, dite_eq_left ⟨hb, hn⟩]
+  exact Nat.succ_pos _
 
 theorem clog_of_one_lt {b n : ℕ} (hb : 1 < b) (hn : 1 < n) :
-    clog b n = clog b ((n + b - 1) / b) + 1 := by
+    clog b n = clog b (Nat.euclideanDiv (n + b - 1) b) + 1 := by
   apply eq_of_forall_ge_iff
   rintro (_ | c)
   · simp [Nat.ne_of_gt <| clog_pos hb hn]
   · simp only [clog_le_iff_le_pow hb, Nat.pow_add_one, Nat.add_le_add_iff_right,
-      Nat.zero_lt_of_lt hb, div_le_iff_le_mul]
+      Nat.zero_lt_of_lt hb, Nat.euclideanDiv_eq_core, div_le_iff_le_mul]
     grind
 
 theorem clog_of_two_le {b n : ℕ} (hb : 1 < b) (hn : 2 ≤ n) :
-    clog b n = clog b ((n + b - 1) / b) + 1 :=
+    clog b n = clog b (Nat.euclideanDiv (n + b - 1) b) + 1 :=
   clog_of_one_lt hb hn
 
 theorem clog_eq_one {b n : ℕ} (hn : 2 ≤ n) (h : n ≤ b) : clog b n = 1 := by
   rw [clog_of_two_le (hn.trans h) hn, clog_of_right_le_one]
-  rw [← Nat.lt_succ_iff, Nat.div_lt_iff_lt_mul] <;> lia
+  rw [← Nat.lt_succ_iff, Nat.euclideanDiv_eq_core, Nat.div_lt_iff_lt_mul] <;> lia
 
 theorem clog_le_of_le_pow {b x y : ℕ} {h' : 1 < b ∨ x ≤ 1} (h : x ≤ b ^ y) : clog b x ≤ y := by
   rcases h' with hb | hx
@@ -455,9 +474,10 @@ to express this equality.
 Since Lean has no dedicated function for the ceiling division,
 we use `(a + (b - 1)) / b` for `⌈a / b⌉`. -/
 theorem clog_pow_left {b k n : ℕ} (hb : 1 < b) (hk : k ≠ 0) {h : 1 < b ^ k ∨ n ≤ 1} :
-    clog (b ^ k) n h = (clog b n + (k - 1)) / k := by
+    clog (b ^ k) n h = Nat.euclideanDiv (clog b n + (k - 1)) k := by
   refine eq_of_forall_lt_iff fun c ↦ ?_
-  rw [lt_clog_iff_pow_lt (Nat.one_lt_pow hk hb), Nat.lt_div_iff_mul_lt (Nat.pos_of_ne_zero hk),
-    Nat.add_sub_cancel, lt_clog_iff_pow_lt hb, Nat.pow_mul']
+  rw [lt_clog_iff_pow_lt (Nat.one_lt_pow hk hb), Nat.euclideanDiv_eq_core,
+    Nat.lt_div_iff_mul_lt (Nat.pos_of_ne_zero hk), Nat.add_sub_cancel,
+    lt_clog_iff_pow_lt hb, Nat.pow_mul']
 
 end Nat

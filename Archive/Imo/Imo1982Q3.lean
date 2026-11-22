@@ -44,7 +44,7 @@ include hn hx
 /-- `x n` is at most the average of all previous terms in the sequence.
 
 This is expressed here with `∑ k ∈ range n, x k` added to both sides. -/
-lemma le_avg : ∑ k ∈ range (n + 1), x k ≤ (∑ k ∈ range n, x k) * (1 + 1 / n) := by
+lemma le_avg : ∑ k ∈ range (n + 1), x k ≤ (∑ k ∈ range n, x k) * (1 + 1 / (n : ℝ)) := by
   rw [sum_range_succ, mul_one_add, add_le_add_iff_left, mul_one_div₀,
     le_div_iff₀ (mod_cast hn.bot_lt), mul_comm, ← nsmul_eq_mul]
   conv_lhs => rw [← card_range n, ← sum_const]
@@ -54,7 +54,7 @@ lemma le_avg : ∑ k ∈ range (n + 1), x k ≤ (∑ k ∈ range n, x k) * (1 + 
 
 /-- The main inequality used for part a. -/
 lemma ineq (h0 : x 0 = 1) (hp : ∀ k, 0 < x k) :
-    4 * n / (n + 1) ≤ ∑ k ∈ range (n + 1),
+    4 * (n : ℝ) / ((n : ℝ) + 1) ≤ ∑ k ∈ range (n + 1),
       Checked.div (x k ^ 2) (x (k + 1)) (hp (k + 1)).ne'.isUnit := by
   let s := ∑ k ∈ range n, x (k + 1)
   let t := ∑ k ∈ range (n + 1), x (k + 1)
@@ -62,7 +62,7 @@ lemma ineq (h0 : x 0 = 1) (hp : ∀ k, 0 < x k) :
   have hn' : (0 : ℝ) < n := Nat.cast_pos.mpr (Nat.pos_of_ne_zero hn)
   have ht : 0 < t := sum_pos (fun k _ ↦ hp (k + 1)) nonempty_range_add_one
   have hnt : t * n ≤ s * (n + 1) := by
-    have havg : t ≤ s * (1 + 1 / n) := le_avg hn (hx.comp_monotone @Nat.succ_le_succ)
+    have havg : t ≤ s * (1 + 1 / (n : ℝ)) := le_avg hn (hx.comp_monotone @Nat.succ_le_succ)
     have h := mul_le_mul_of_nonneg_right havg hn'.le
     rwa [mul_assoc, add_mul, one_mul, div_mul_cancel₀] at h
   have hu : u = s + 1 := by

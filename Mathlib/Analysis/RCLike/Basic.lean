@@ -530,18 +530,18 @@ lemma conj_div (x y : K) {hy : IsUnit y} : conj (x / y) = conj x / conj y :=
 lemma exists_norm_eq_mul_self (x : K) : ∃ c, ‖c‖ = 1 ∧ ↑‖x‖ = c * x := by
   obtain rfl | hx := eq_or_ne x 0
   · exact ⟨1, by simp⟩
-  · exact ⟨‖x‖ / x, by simp⟩
+  · exact ⟨(‖x‖ : K) / x, by simp⟩
 
 lemma exists_norm_mul_eq_self (x : K) : ∃ c, ‖c‖ = 1 ∧ c * ‖x‖ = x := by
   obtain rfl | hx := eq_or_ne x 0
   · exact ⟨1, by simp⟩
-  · exact ⟨x / ‖x‖, by simp⟩
+  · exact ⟨x / (‖x‖ : K), by simp⟩
 
 @[rclike_simps, norm_cast]
-theorem ofReal_div (r s : ℝ) {hs : IsUnit s} : ((r / s : ℝ) : K) = r / s :=
+theorem ofReal_div (r s : ℝ) {hs : IsUnit s} : ((r / s : ℝ) : K) = (r : K) / (s : K) :=
   map_div₀ (algebraMap ℝ K) r s
 
-theorem div_re_ofReal {z : K} {r : ℝ} {hr : IsUnit (r : K)} : re (z / r) = re z / r := by
+theorem div_re_ofReal {z : K} {r : ℝ} {hr : IsUnit (r : K)} : re (z / (r : K)) = re z / r := by
   rw [div_eq_inv_mul₀, div_eq_inv_mul₀, ← ofReal_inv, re_ofReal_mul]
 
 @[rclike_simps, norm_cast]

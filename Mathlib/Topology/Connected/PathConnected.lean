@@ -403,7 +403,9 @@ def Subgroup.pathComponentOne (G : Type*) [Group G] [TopologicalSpace G] [IsTopo
 @[to_additive /-- The path component of zero in an additive topological group is normal. -/]
 instance Subgroup.Normal.pathComponentOne (G : Type*) [Group G] [TopologicalSpace G]
     [IsTopologicalGroup G] : (Subgroup.pathComponentOne G).Normal where
-  conj_mem _ := fun ⟨γ⟩ g ↦ ⟨⟨⟨(g * γ · * g⁻¹), by fun_prop⟩, by simp, by simp⟩⟩
+  conj_mem _ := fun ⟨γ⟩ g ↦
+    ⟨⟨⟨(g * γ · * g⁻¹), (continuous_const.mul γ.continuous).mul continuous_const⟩,
+      by simp, by simp⟩⟩
 
 /-! ### Path connected sets -/
 

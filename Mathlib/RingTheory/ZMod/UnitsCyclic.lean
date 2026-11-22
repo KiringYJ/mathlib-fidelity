@@ -104,8 +104,9 @@ lemma exists_one_add_mul_pow_prime_eq
       simp [hp.two_le])]
   obtain ⟨a, ha⟩ := hvu
   obtain ⟨b, hb⟩ := hpuv
+  let c (i : ℕ) := Nat.euclideanDiv (p.choose i) p hp.ne_zero
   use a * x ^ 2 * ∑ i ∈ (((Finset.range (p + 1)).erase 0).erase 1).erase p,
-    (u * x) ^ (i - 2) * (p.choose i / p : ℕ) + b * x ^ p
+    (u * x) ^ (i - 2) * (c i : ℕ) + b * x ^ p
   rw [mul_add]
   congr 2
   · rw [Nat.choose_one_right]; ring
@@ -118,11 +119,12 @@ lemma exists_one_add_mul_pow_prime_eq
       (u * x) ^ i * p.choose i =
         (u * x) ^ (2 + (i - 2)) * p.choose i := by rw [Nat.add_sub_of_le hi']
       _ = u ^ 2 * x ^ 2 * (u * x) ^ (i - 2) * p.choose i := by ring_nf
-      _ = u ^ 2 * x ^ 2 * (u * x) ^ (i - 2) * (p * (p.choose i / p) : ℕ) := by
-        rw [Nat.mul_div_cancel' (hp.dvd_choose_self hi.2.2.1 <| by lia)]
-      _ = u ^ 2 * x ^ 2 * (u * x) ^ (i - 2) * p * (p.choose i / p : ℕ) := by
+      _ = u ^ 2 * x ^ 2 * (u * x) ^ (i - 2) * (p * c i : ℕ) := by
+        dsimp only [c]
+        rw [Nat.euclideanDiv_eq_core, Nat.mul_div_cancel' (hp.dvd_choose_self hi.2.2.1 <| by lia)]
+      _ = u ^ 2 * x ^ 2 * (u * x) ^ (i - 2) * p * (c i : ℕ) := by
         simp only [Nat.cast_mul]; ring_nf
-      _ = p * u * (v * (a * x ^ 2 * ((u * x) ^ (i - 2) * (p.choose i / p : ℕ)))) := by
+      _ = p * u * (v * (a * x ^ 2 * ((u * x) ^ (i - 2) * (c i : ℕ)))) := by
         rw [ha]; ring
   · calc
       (u * x) ^ p * (p.choose p) = u ^ p * x ^ p := by simp [Nat.choose_self, mul_pow]
@@ -214,7 +216,7 @@ theorem isCyclic_units_of_prime_pow (p : ℕ) (hp : p.Prime) (hp2 : p ≠ 2) (n 
   obtain ⟨(b : (ZMod (p ^ (n + 1)))ˣ), rfl⟩ :=
     ZMod.unitsMap_surjective (Dvd.intro_left (p ^ n) rfl) c
   have : p - 1 ∣ orderOf b := hc ▸ orderOf_map_dvd _ b
-  let k := orderOf b / (p - 1)
+  let k := Nat.euclideanDiv (orderOf b) (p - 1) (Nat.sub_ne_zero_of_lt hp.one_lt)
   have : orderOf (b ^ k) = p - 1 := orderOf_pow_orderOf_div (orderOf_pos b).ne' this
   rw [isCyclic_iff_exists_orderOf_eq_natCard]
   -- The product of `ha.unit` and `b ^ k` has the required order
@@ -306,14 +308,12 @@ theorem isCyclic_units_iff_of_odd {n : ℕ} (hn : Odd n) :
   · exact hnp ▸ iff_of_true (isCyclic_units_of_prime_pow p hp (odd.ne_two_of_dvd_nat dvd_rfl) _)
       ⟨p, _, hp, odd, rfl⟩
   refine iff_of_false ?_ (mt ?_ hnp)
-  · have := n.ordProj_dvd p
-    rw [← Nat.mul_div_cancel' this]
-    refine not_isCyclic_units_of_mul_coprime _ _ (hn.of_dvd_nat this) ?_
-      (hn.of_dvd_nat (Nat.div_dvd_of_dvd this)) ?_ ((Nat.coprime_ordCompl hp hn0).pow_left ..)
+  · rw [← n.ordProj_mul_ordCompl_eq_self p]
+    refine not_isCyclic_units_of_mul_coprime _ _ (hn.of_dvd_nat (n.ordProj_dvd p)) ?_
+      (hn.of_dvd_nat (n.ordCompl_dvd p)) ?_ ((Nat.coprime_ordCompl hp hn0).pow_left ..)
     · simpa [Nat.ordProj, (hp.factorization_pos_of_dvd hn0 dvd).ne'] using hp.ne_one
     · contrapose hnp
-      conv_lhs => rw [← Nat.div_mul_cancel this, hnp, one_mul]
-      rfl
+      simpa only [hnp, mul_one, Nat.ordProj_def] using (n.ordProj_mul_ordCompl_eq_self p).symm
   rintro ⟨q, m, hq, -, rfl⟩
   cases (Nat.prime_dvd_prime_iff_eq hp hq).mp (hp.dvd_of_dvd_pow dvd)
   simp [hp.factorization_self] at hnp

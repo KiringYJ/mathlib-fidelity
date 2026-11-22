@@ -388,7 +388,7 @@ open scoped Modular
 lemma fdo_subset_fd : 𝒟ᵒ ⊆ 𝒟 := fun _ ⟨hx, hx'⟩ ↦ ⟨hx.le, hx'.le⟩
 
 lemma ρ_mem_fd : ρ ∈ 𝒟 := by
-  constructor <;> norm_num [ρ, ← pow_two, div_pow]
+  constructor <;> norm_num [ρ, ← pow_two, div_pow₀]
 
 lemma I_mem_fd : I ∈ 𝒟 := by
   constructor <;> norm_num
@@ -680,19 +680,19 @@ private lemma serreTheorem_im_eq (hz : z ∈ 𝒟) (hg : g • z ∈ 𝒟) : (g 
         ⟨rfl, hnm⟩ | ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩
       · simp [normSq_eq_norm_sq, denom, coe_S, hnm]
       · rw [show T⁻¹ * S = ⟨!![-1, -1; 1, 0], by simp⟩ by decide]
-        norm_num [ρ, denom, ← pow_two, div_pow]
+        norm_num [ρ, denom, ← pow_two, div_pow₀]
       · rw [show T * S = ⟨!![1, -1; 1, 0], by simp⟩ by decide]
-        norm_num [ρ, denom, normSq, ← pow_two, div_pow]
+        norm_num [ρ, denom, normSq, ← pow_two, div_pow₀]
     · rcases case_c_one_d_one hz hg hden hc hd with ⟨(rfl | rfl), rfl⟩
       · rw [show S * T = ⟨!![0, -1; 1, 1], by simp⟩ by decide]
-        norm_num [ρ, denom, normSq, ← pow_two, div_pow]
+        norm_num [ρ, denom, normSq, ← pow_two, div_pow₀]
       · rw [show T * S * T = ⟨!![1, 0; 1, 1], by simp⟩ by decide]
-        norm_num [ρ, denom, normSq, ← pow_two, div_pow]
+        norm_num [ρ, denom, normSq, ← pow_two, div_pow₀]
     · rcases case_c_one_d_neg_one hz hg hden hc hd with ⟨(rfl | rfl), rfl⟩
       · rw [show S * T⁻¹ = ⟨!![0, -1; 1, -1], by simp⟩ by decide]
-        norm_num [ρ, denom, normSq, ← pow_two, div_pow]
+        norm_num [ρ, denom, normSq, ← pow_two, div_pow₀]
       · rw [show T⁻¹ * S * T⁻¹ = ⟨!![-1, 0; 1, -1], by simp⟩ by decide]
-        norm_num [ρ, denom, normSq, ← pow_two, div_pow]
+        norm_num [ρ, denom, normSq, ← pow_two, div_pow₀]
 
 /-- Classify the `z` and `g` with `z ∈ 𝒟` and `g • z ∈ 𝒟`. -/
 lemma cases_of_mem_fd_smul_mem_fd (hz : z ∈ 𝒟) (hg : g • z ∈ 𝒟) :
@@ -758,7 +758,7 @@ lemma stabilizer_ρ :
     have neS : g ≠ S ∧ g ≠ -S := by
       have : S • ρ ≠ ρ := by
         rw [ne_eq, UpperHalfPlane.ext_iff, modular_S_smul, coe_mk, Complex.ext_iff]
-        norm_num [ρ, ← pow_two, div_pow]
+        norm_num [ρ, ← pow_two, div_pow₀]
       grind [SL_neg_smul]
     have neT : g ≠ T ∧ g ≠ -T ∧ g ≠ T⁻¹ ∧ g ≠ -T⁻¹ := by
       have : T • ρ ≠ ρ := by
@@ -770,7 +770,7 @@ lemma stabilizer_ρ :
       have : (T * S * T) • ρ ≠ ρ := by
         simp only [mul_smul, modular_T_smul, modular_S_smul,
           ne_eq, UpperHalfPlane.ext_iff, Complex.ext_iff]
-        norm_num [ρ, ← pow_two, div_pow, normSq]
+        norm_num [ρ, ← pow_two, div_pow₀, normSq]
       grind [SL_neg_smul]
     have := cases_of_mem_fd_smul_mem_fd ρ_mem_fd (hg ▸ ρ_mem_fd)
     norm_num [UpperHalfPlane.ext_iff, Complex.ext_iff, norm_ρ, ρ, neS, neT, neTST] at this
@@ -778,7 +778,7 @@ lemma stabilizer_ρ :
   · suffices (S * T) • ρ = ρ ∧ (T⁻¹ * S) • ρ = ρ by simp +contextual [-sl_moeb, or_imp, this]
     rw [mul_smul T⁻¹, inv_smul_eq_iff, ← eq_inv_smul_iff (g := S), S_inv, SL_neg_smul,
       mul_smul, eq_comm, and_self, modular_T_smul, modular_S_smul, UpperHalfPlane.ext_iff]
-    norm_num [ρ, Complex.ext_iff, normSq, ← pow_two, div_pow]
+    norm_num [ρ, Complex.ext_iff, normSq, ← pow_two, div_pow₀]
 
 /-- Second Fundamental Domain Lemma: if `z ∈ 𝒟ᵒ` and `g • z ∈ 𝒟`, then `g = ± 1`. -/
 theorem eq_one_or_neg_one_of_mem_fdo_mem_fd (hz : z ∈ 𝒟ᵒ) (hg : g • z ∈ 𝒟) : g = 1 ∨ g = -1 := by

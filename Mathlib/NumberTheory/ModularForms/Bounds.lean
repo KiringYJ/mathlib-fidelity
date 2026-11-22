@@ -231,7 +231,7 @@ lemma CuspFormClass.petersson_bounded_right
 /-- A weight `k` cusp form is bounded in norm by a constant multiple of `(im τ) ^ (-k / 2)`. -/
 lemma CuspFormClass.exists_bound {k : ℤ} {Γ : Subgroup (GL (Fin 2) ℝ)} [Γ.IsArithmetic]
     {F : Type*} [FunLike F ℍ ℂ] [CuspFormClass F Γ k] (f : F) :
-    ∃ C, ∀ τ, ‖f τ‖ ≤ C / τ.im ^ (k / 2 : ℝ) := by
+    ∃ C, ∀ τ, ‖f τ‖ ≤ C / τ.im ^ ((k : ℝ) / 2) := by
   obtain ⟨C, hC⟩ := petersson_bounded_left k Γ f f
   refine ⟨C.sqrt, fun τ ↦ ?_⟩
   specialize hC τ

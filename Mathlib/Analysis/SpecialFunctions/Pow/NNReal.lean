@@ -507,7 +507,7 @@ namespace ENNReal
 /-- The real power function `x^y` on extended nonnegative reals, defined for `x : ℝ≥0∞` and
 `y : ℝ` as the restriction of the real power function if `0 < x < ⊤`, and with the natural values
 for `0` and `⊤` (i.e., `0 ^ x = 0` for `x > 0`, `1` for `x = 0` and `⊤` for `x < 0`, and
-`⊤ ^ x = 1 / 0 ^ x`). -/
+`⊤ ^ x = (0 ^ x)⁻¹`). -/
 noncomputable def rpow : ℝ≥0∞ → ℝ → ℝ≥0∞
   | some x, y => if x = 0 ∧ y < 0 then ⊤ else (x ^ y : ℝ≥0)
   | none, y => if 0 < y then ⊤ else if y = 0 then 1 else 0
@@ -691,8 +691,9 @@ theorem rpow_neg (x : ℝ≥0∞) (y : ℝ) : x ^ (-y) = (x ^ y)⁻¹ := by
           (NNReal.rpow_neg x y (hxy := A.isUnit))
         _ = ((x : ℝ≥0∞) ^ y)⁻¹ := by rw [coe_inv, coe_rpow_of_ne_zero h]
 
-theorem rpow_sub {x : ℝ≥0∞} (y z : ℝ) (hx : x ≠ 0) (h'x : x ≠ ⊤) : x ^ (y - z) = x ^ y / x ^ z := by
-  rw [sub_eq_add_neg, rpow_add _ _ hx h'x, rpow_neg, div_eq_mul_inv]
+theorem rpow_sub {x : ℝ≥0∞} (y z : ℝ) (hx : x ≠ 0) (h'x : x ≠ ⊤) :
+    x ^ (y - z) = ENNReal.div (x ^ y) (x ^ z) := by
+  rw [sub_eq_add_neg, rpow_add _ _ hx h'x, rpow_neg, ENNReal.div_eq_mul_inv]
 
 theorem rpow_neg_one (x : ℝ≥0∞) : x ^ (-1 : ℝ) = x⁻¹ := by simp [rpow_neg]
 
@@ -796,8 +797,9 @@ theorem inv_rpow (x : ℝ≥0∞) (y : ℝ) : x⁻¹ ^ y = (x ^ y)⁻¹ := by
   rw [← mul_rpow_of_ne_zero (ENNReal.inv_ne_zero.2 h_top) h0, ENNReal.inv_mul_cancel h0 h_top,
     one_rpow]
 
-theorem div_rpow_of_nonneg (x y : ℝ≥0∞) {z : ℝ} (hz : 0 ≤ z) : (x / y) ^ z = x ^ z / y ^ z := by
-  rw [div_eq_mul_inv, mul_rpow_of_nonneg _ _ hz, inv_rpow, div_eq_mul_inv]
+theorem div_rpow_of_nonneg (x y : ℝ≥0∞) {z : ℝ} (hz : 0 ≤ z) :
+    (ENNReal.div x y) ^ z = ENNReal.div (x ^ z) (y ^ z) := by
+  rw [ENNReal.div_eq_mul_inv, mul_rpow_of_nonneg _ _ hz, inv_rpow, ENNReal.div_eq_mul_inv]
 
 theorem strictMono_rpow_of_pos {z : ℝ} (h : 0 < z) : StrictMono fun x : ℝ≥0∞ => x ^ z := by
   intro x y hxy
@@ -1235,7 +1237,7 @@ theorem IsNNRat.nnreal_rpow_isNNRat (a : ℝ≥0) (b : ℝ) (na da : ℕ) (ha : 
     (nr dr : ℕ) (hnum : IsNat ((na : ℝ≥0) ^ b) nr) (hden : IsNat ((da : ℝ≥0) ^ b) dr) :
     IsNNRat (a ^ b) nr dr := by
   have hdr : (dr : ℝ≥0) ≠ 0 := by simp [← hden.1, ha.den_nz]
-  suffices IsNNRat (nr / dr : ℝ≥0) nr dr by
+  suffices IsNNRat ((nr : ℝ≥0) / (dr : ℝ≥0)) nr dr by
     simpa [ha.to_eq, NNReal.div_rpow, hnum.1, hden.1]
   exact IsNNRat.of_raw ℝ≥0 nr dr hdr
 

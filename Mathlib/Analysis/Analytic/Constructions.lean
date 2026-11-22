@@ -797,12 +797,11 @@ variable {u : E →L[𝕜] F} {f : F → G} {pf : FormalMultilinearSeries 𝕜 F
 
 theorem HasFPowerSeriesWithinOnBall.compContinuousLinearMap
     (hf : HasFPowerSeriesWithinOnBall f pf s (u x) r) :
-    HasFPowerSeriesWithinOnBall (f ∘ u) (pf.compContinuousLinearMap u) (u ⁻¹' s) x (r / ‖u‖ₑ) where
+    HasFPowerSeriesWithinOnBall (f ∘ u) (pf.compContinuousLinearMap u) (u ⁻¹' s) x
+      (ENNReal.div r ‖u‖ₑ) where
   r_le := by
     calc
-      _ ≤ pf.radius / ‖u‖ₑ := by
-        gcongr
-        exact hf.r_le
+      _ ≤ ENNReal.div pf.radius ‖u‖ₑ := ENNReal.div_le_div_right hf.r_le _
       _ ≤ _ := pf.div_le_radius_compContinuousLinearMap _
   r_pos := by
     simp only [ENNReal.div_pos_iff, ne_eq, enorm_ne_top, not_false_eq_true, and_true]
@@ -820,20 +819,20 @@ theorem HasFPowerSeriesWithinOnBall.compContinuousLinearMap
       Function.comp_def, id_eq] using hf.hasSum hmem hsmall
 
 theorem HasFPowerSeriesOnBall.compContinuousLinearMap (hf : HasFPowerSeriesOnBall f pf (u x) r) :
-    HasFPowerSeriesOnBall (f ∘ u) (pf.compContinuousLinearMap u) x (r / ‖u‖ₑ) := by
+    HasFPowerSeriesOnBall (f ∘ u) (pf.compContinuousLinearMap u) x (ENNReal.div r ‖u‖ₑ) := by
   rw [← hasFPowerSeriesWithinOnBall_univ] at hf ⊢
   exact hf.compContinuousLinearMap
 
 theorem HasFPowerSeriesAt.compContinuousLinearMap (hf : HasFPowerSeriesAt f pf (u x)) :
     HasFPowerSeriesAt (f ∘ u) (pf.compContinuousLinearMap u) x :=
   let ⟨r, hr⟩ := hf
-  ⟨r / ‖u‖ₑ, hr.compContinuousLinearMap⟩
+  ⟨ENNReal.div r ‖u‖ₑ, hr.compContinuousLinearMap⟩
 
 theorem HasFPowerSeriesWithinAt.compContinuousLinearMap
     (hf : HasFPowerSeriesWithinAt f pf s (u x)) :
     HasFPowerSeriesWithinAt (f ∘ u) (pf.compContinuousLinearMap u) (u ⁻¹' s) x :=
   let ⟨r, hr⟩ := hf
-  ⟨r / ‖u‖ₑ, hr.compContinuousLinearMap⟩
+  ⟨ENNReal.div r ‖u‖ₑ, hr.compContinuousLinearMap⟩
 
 theorem AnalyticAt.compContinuousLinearMap (hf : AnalyticAt 𝕜 f (u x)) :
     AnalyticAt 𝕜 (f ∘ u) x :=

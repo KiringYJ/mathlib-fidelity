@@ -494,7 +494,7 @@ theorem jacobiTheta₂_functional_equation (z τ : ℂ) (hτ : 0 < τ.im) :
     _ = ∑' n : ℤ, cexp (-π * (-I * τ) * ↑n ^ 2 + 2 * π * (I * z) * ↑n) :=
       tsum_congr (fun n ↦ by ring_nf)
     _ = 1 / (-I * τ) ^ (1 / 2 : ℂ) *
-        ∑' n : ℤ, cexp (-π / (-I * τ) * (n + I * (I * z)) ^ 2) := by
+        ∑' n : ℤ, cexp (-(π : ℂ) / (-I * τ) * (n + I * (I * z)) ^ 2) := by
       exact tsum_exp_neg_quadratic h2 (I * z)
     _ = 1 / (-I * τ) ^ (1 / 2 : ℂ) * cexp (π * I * (-1 / τ) * z ^ 2) *
         ∑' n : ℤ, cexp (2 * π * I * n * (z / τ) + π * I * n ^ 2 * (-1 / τ)) := by

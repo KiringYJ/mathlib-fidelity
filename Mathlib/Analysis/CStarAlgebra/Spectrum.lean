@@ -141,9 +141,9 @@ theorem IsStarNormal.spectralRadius_eq_nnnorm (a : A) [IsStarNormal a] :
   refine (ENNReal.pow_right_strictMono two_ne_zero).injective ?_
   have heq :
     (fun n : {n : ℕ // n ≠ 0} ↦
-      (‖(a⋆ * a) ^ (n : ℕ)‖₊ : ℝ≥0∞) ^ (1 / (n : ℕ) : ℝ)) =
+      (‖(a⋆ * a) ^ (n : ℕ)‖₊ : ℝ≥0∞) ^ (1 / ((n : ℕ) : ℝ))) =
       (fun x => x ^ 2) ∘ fun n : {n : ℕ // n ≠ 0} ↦
-        (‖a ^ (n : ℕ)‖₊ : ℝ≥0∞) ^ (1 / (n : ℕ) : ℝ) := by
+        (‖a ^ (n : ℕ)‖₊ : ℝ≥0∞) ^ (1 / ((n : ℕ) : ℝ)) := by
     funext n
     rw [Function.comp_apply, ← rpow_natCast, ← rpow_mul, mul_comm, rpow_mul, rpow_natCast, ←
       coe_pow, sq, ← nnnorm_star_mul_self, Commute.mul_pow (star_comm_self' a), star_pow]

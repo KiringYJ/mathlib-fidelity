@@ -28,23 +28,27 @@ end powers
 
 section casts
 
-example (m n : ℕ) (h : n ∣ m) (hn : (n : ℚ) ≠ 0) : ((m / n : ℕ) : ℚ) = m / n :=
+example (m n : ℕ) (h : n ∣ m) (hn : (n : ℚ) ≠ 0) :
+    (Nat.euclideanDiv m n (Nat.cast_ne_zero.1 hn) : ℚ) = (m : ℚ) / (n : ℚ) :=
   Nat.cast_div h hn
 
-example (m n : ℕ) (h : n ∣ m) (hn : n ≠ 0) : ((m / n : ℕ) : ℚ) = m / n :=
+example (m n : ℕ) (h : n ∣ m) (hn : n ≠ 0) :
+    (Nat.euclideanDiv m n hn : ℚ) = (m : ℚ) / (n : ℚ) :=
   Nat.cast_div_charZero h hn
 
 /-- The quotient by a natural quotient finds its evidence from the divisibility hypotheses. -/
 example (d m n : ℕ) (hn : d ∣ n) (hm : d ∣ m) (hn0 : n ≠ 0) :
-    ((m / d : ℕ) : ℚ) / ((n / d : ℕ) : ℚ) = m / n :=
+    let hd : d ≠ 0 := fun h ↦ hn0 (Nat.eq_zero_of_zero_dvd (h ▸ hn))
+    (Nat.euclideanDiv m d hd : ℚ) / (Nat.euclideanDiv n d hd : ℚ) = (m : ℚ) / (n : ℚ) :=
   Nat.cast_div_div_div_cancel_right hn hm hn0
 
-example (m n : ℤ) (h : n ∣ m) (hn : (n : ℚ) ≠ 0) : ((m / n : ℤ) : ℚ) = m / n :=
+example (m n : ℤ) (h : n ∣ m) (hn : (n : ℚ) ≠ 0) :
+    (Int.exactQuotient m n h (Int.cast_ne_zero.1 hn) : ℚ) = (m : ℚ) / (n : ℚ) :=
   Int.cast_div h hn
 
 example {ι : Type*} (s : Finset ι) (f : ι → ℚ) (a : ℚ) (ha : a ≠ 0) :
     (∑ i ∈ s, f i) / a = ∑ i ∈ s, f i / a :=
-  Finset.sum_div s f a
+  Finset.sum_div s f ha.isUnit.unit
 
 end casts
 

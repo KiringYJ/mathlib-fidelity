@@ -371,7 +371,8 @@ theorem convexBodySum_compact : IsCompact (convexBodySum K B) := by
 
 /-- The fudge factor that appears in the formula for the volume of `convexBodyLt`. -/
 noncomputable abbrev convexBodySumFactor : ℝ≥0 :=
-  (2 : ℝ≥0) ^ nrRealPlaces K * (NNReal.pi / 2) ^ nrComplexPlaces K / (finrank ℚ K).factorial
+  (2 : ℝ≥0) ^ nrRealPlaces K * (NNReal.pi / 2) ^ nrComplexPlaces K /
+    ((finrank ℚ K).factorial : ℝ≥0)
 
 theorem convexBodySumFactor_ne_zero : convexBodySumFactor K ≠ 0 := by
   apply div_ne_zero
@@ -602,7 +603,7 @@ theorem exists_ne_zero_mem_ideal_of_norm_le {B : ℝ}
   -- Some inequalities that will be useful later on
   have hd : 0 < (finrank ℚ K : ℝ) := Nat.cast_pos.mpr finrank_pos
   have h1 : 0 < (finrank ℚ K : ℝ)⁻¹ := inv_pos.mpr hd
-  have h2 : 0 ≤ B / (finrank ℚ K) := div_nonneg hB (Nat.cast_nonneg _)
+  have h2 : 0 ≤ B / (finrank ℚ K : ℝ) := div_nonneg hB (Nat.cast_nonneg _)
   have h_fund := ZSpan.isAddFundamentalDomain' (fractionalIdealLatticeBasis K I) volume
   have : Countable (span ℤ (Set.range (fractionalIdealLatticeBasis K I))).toAddSubgroup := by
     change Countable (span ℤ (Set.range (fractionalIdealLatticeBasis K I)))

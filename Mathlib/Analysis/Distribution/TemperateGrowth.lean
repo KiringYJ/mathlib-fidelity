@@ -591,8 +591,9 @@ theorem HasTemperateGrowth.exists_eLpNorm_lt_top (p : ℝ≥0∞)
       have h_one_add (x : E) : 0 < 1 + ‖x‖ := lt_add_of_pos_of_le zero_lt_one (norm_nonneg x)
       have hp_pos : 0 < (p : ℝ) := by simpa [zero_lt_iff] using hp
       rcases hμ.exists_integrable with ⟨l, hl⟩
-      let k := ⌈(l / p : ℝ)⌉₊
-      have hlk : l ≤ k * (p : ℝ) := by simpa [div_le_iff₀ hp_pos] using Nat.le_ceil (l / p : ℝ)
+      let k := ⌈((l : ℝ) / (p : ℝ))⌉₊
+      have hlk : l ≤ k * (p : ℝ) := by
+        simpa [div_le_iff₀ hp_pos] using Nat.le_ceil ((l : ℝ) / (p : ℝ))
       use k
       suffices HasFiniteIntegral (fun x ↦ ((1 + ‖x‖) ^ (-(k * p) : ℝ))) μ by
         rw [hasFiniteIntegral_iff_enorm] at this

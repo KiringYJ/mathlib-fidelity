@@ -175,7 +175,7 @@ lemma exists_open_approx (f : C_c(X, ℝ)) {ε : ℝ} (hε : 0 < ε) (E : Set X)
 
 /-- Choose `N` sufficiently large such that a particular quantity is small. -/
 private lemma exists_nat_large (a' b' : ℝ) {ε : ℝ} (hε : 0 < ε) : ∃ (N : ℕ) (hN : 0 < N),
-    a' / N * (b' + a' / N) ≤ ε := by
+    a' / (N : ℝ) * (b' + a' / (N : ℝ)) ≤ ε := by
   let n (k : ℕ) : ℝ := ((k + 1 : ℕ) : ℝ)
   have hn : Tendsto n atTop atTop := tendsto_natCast_atTop_atTop.comp (tendsto_add_atTop_nat 1)
   have hu (k : ℕ) : IsUnit (n k) := (Nat.cast_pos'.mpr (Nat.succ_pos k) : 0 < n k).ne'.isUnit
@@ -202,7 +202,7 @@ private lemma integral_riesz_aux (f : C_c(X, ℝ)) : Λ f ≤ ∫ x, f x ∂(rie
     exact ⟨-r, r, by linarith, hr.2.trans_eq (by simp [Real.ball_eq_Ioo])⟩
   -- Choose `N` positive and sufficiently large such that `ε'` is sufficiently small
   obtain ⟨N, hN, hε'⟩ := exists_nat_large (b - a) (2 * μ.real K + |a| + b) hε
-  let ε' := (b - a) / N
+  let ε' := (b - a) / (N : ℝ)
   replace hε' : 0 < ε' ∧ ε' * (2 * μ.real K + |a| + b + ε') ≤ ε :=
     ⟨div_pos (sub_pos.mpr hab.1) (Nat.cast_pos'.mpr hN), hε'⟩
   have hcut : a + N * ε' = b := by
@@ -225,7 +225,7 @@ private lemma integral_riesz_aux (f : C_c(X, ℝ)) : Λ f ≤ ∫ x, f x ∂(rie
     exact Content.outerMeasure_lt_top_of_isCompact _ f.2
   -- Define sets `V` which are open approximations to the sets `E`
   obtain ⟨V, hV⟩ : ∃ V : Fin N → Opens X, ∀ n, E n ⊆ (V n) ∧ (∀ x ∈ V n, f x < y n + ε') ∧
-      μ (V n) ≤ μ (E n) + ENNReal.ofReal (ε' / N) := by
+      μ (V n) ≤ μ (E n) + ENNReal.ofReal (ε' / (N : ℝ)) := by
     have h_ε' := (div_pos hε'.1 (Nat.cast_pos'.mpr hN))
     have h n x (hx : x ∈ E n) := lt_add_of_le_of_pos ((hE.2.2.1 n x hx).right) hε'.1
     have h' n := Eq.trans_ne
@@ -250,11 +250,11 @@ private lemma integral_riesz_aux (f : C_c(X, ℝ)) : Λ f ≤ ∫ x, f x ∂(rie
     -- That `y n + ε'` can be negative is bad in the inequalities so we artificially include `|a|`.
     _ = ∑ n, (|a| + y n + ε') * Λ (g n) - |a| * ∑ n, Λ (g n) := by
       simp [add_assoc, add_mul |a|, Finset.sum_add_distrib, Finset.mul_sum]
-    _ ≤ ∑ n, (|a| + y n + ε') * (μ.real (E n) + ε' / N) - |a| * ∑ n, Λ (g n) := ?_
-    _ ≤ ∑ n, (|a| + y n + ε') * (μ.real (E n) + ε' / N) - |a| * μ.real K := ?_
+    _ ≤ ∑ n, (|a| + y n + ε') * (μ.real (E n) + ε' / (N : ℝ)) - |a| * ∑ n, Λ (g n) := ?_
+    _ ≤ ∑ n, (|a| + y n + ε') * (μ.real (E n) + ε' / (N : ℝ)) - |a| * μ.real K := ?_
     _ = ∑ n, (y n - ε') * μ.real (E n) +
-      2 * ε' * μ.real K + ε' / N * ∑ n, (|a| + y n + ε') := ?_
-    _ ≤ ∫ x, f x ∂μ + 2 * ε' * μ.real K + ε' / N * ∑ n, (|a| + y n + ε') := ?_
+      2 * ε' * μ.real K + ε' / (N : ℝ) * ∑ n, (|a| + y n + ε') := ?_
+    _ ≤ ∫ x, f x ∂μ + 2 * ε' * μ.real K + ε' / (N : ℝ) * ∑ n, (|a| + y n + ε') := ?_
     _ ≤ ∫ x, f x ∂μ + ε' * (2 * μ.real K + |a| + b + ε') := ?_
     _ ≤ ∫ x, f x ∂μ + ε := by simp [hε'.2]
   · -- Equality since `∑ i : Fin N, (g i)` is equal to unity on the support of `f`

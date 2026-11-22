@@ -273,8 +273,8 @@ open ENNReal Polynomial
 variable (𝕜)
 
 theorem spectralRadius_le_pow_nnnorm_pow_one_div (a : A) (n : ℕ) :
-    spectralRadius 𝕜 a ≤ (‖a ^ (n + 1)‖₊ : ℝ≥0∞) ^ (1 / (n + 1) : ℝ) *
-      (‖(1 : A)‖₊ : ℝ≥0∞) ^ (1 / (n + 1) : ℝ) := by
+    spectralRadius 𝕜 a ≤ (‖a ^ (n + 1)‖₊ : ℝ≥0∞) ^ (1 / ((n + 1 : ℕ) : ℝ)) *
+      (‖(1 : A)‖₊ : ℝ≥0∞) ^ (1 / ((n + 1 : ℕ) : ℝ)) := by
   rw [spectralRadius_eq_of_unital]
   refine iSup₂_le fun k hk => ?_
   -- apply easy direction of the spectral mapping theorem for polynomials
@@ -296,7 +296,7 @@ theorem spectralRadius_le_pow_nnnorm_pow_one_div (a : A) (n : ℕ) :
 
 theorem spectralRadius_le_liminf_pow_nnnorm_pow_one_div (a : A) :
     spectralRadius 𝕜 a ≤ (comap Subtype.val atTop).liminf
-      fun n : {n : ℕ // n ≠ 0} ↦ (‖a ^ (n : ℕ)‖₊ : ℝ≥0∞) ^ (1 / (n : ℕ) : ℝ) := by
+      fun n : {n : ℕ // n ≠ 0} ↦ (‖a ^ (n : ℕ)‖₊ : ℝ≥0∞) ^ (1 / ((n : ℕ) : ℝ)) := by
   refine ENNReal.le_of_forall_lt_one_mul_le fun ε hε => ?_
   by_cases h : ε = 0
   · simp [h]
@@ -311,9 +311,7 @@ theorem spectralRadius_le_liminf_pow_nnnorm_pow_one_div (a : A) :
       (ENNReal.coe_ne_top : ↑‖(1 : A)‖₊ ≠ ∞) hεinv] with n hn
     rcases n with ⟨_ | k, hn₀⟩
     · exact (hn₀ rfl).elim
-    · simp only [Nat.cast_add, Nat.cast_one] at hn ⊢
-      exact (spectralRadius_le_pow_nnnorm_pow_one_div 𝕜 a k).trans
-        (by gcongr)
+    · exact (spectralRadius_le_pow_nnnorm_pow_one_div 𝕜 a k).trans (by gcongr)
 
 end Unital
 

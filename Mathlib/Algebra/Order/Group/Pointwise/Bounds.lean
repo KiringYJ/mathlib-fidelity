@@ -132,15 +132,26 @@ lemma IsGLB.mul (hs : IsGLB s a) (ht : IsGLB t b) :
     IsGLB (s * t) (a * b) :=
   IsLUB.mul (G := Gᵒᵈ) hs ht
 
-@[to_additive]
+@[to_additive IsLUB.add_neg]
 lemma IsLUB.div (hs : IsLUB s a) (ht : IsGLB t b) :
-    IsLUB (s / t) (a / b) := by
-  rw [div_eq_mul_inv, div_eq_mul_inv]
+    IsLUB (s * t⁻¹) (a / b) := by
+  rw [div_eq_mul_inv]
   exact hs.mul ht.inv
 
-@[to_additive]
+@[to_additive IsGLB.add_neg]
 lemma IsGLB.div (hs : IsGLB s a) (ht : IsLUB t b) :
-    IsGLB (s / t) (a / b) :=
+    IsGLB (s * t⁻¹) (a / b) :=
   IsLUB.div (G := Gᵒᵈ) hs ht
 
 end Group
+
+section AddGroup
+variable [AddGroup G] [Preorder G] [AddLeftMono G] [AddRightMono G] {s t : Set G} {a b : G}
+
+lemma IsLUB.sub (hs : IsLUB s a) (ht : IsGLB t b) : IsLUB (s - t) (a - b) := by
+  simpa only [sub_eq_add_neg] using hs.add_neg ht
+
+lemma IsGLB.sub (hs : IsGLB s a) (ht : IsLUB t b) : IsGLB (s - t) (a - b) := by
+  simpa only [sub_eq_add_neg] using hs.add_neg ht
+
+end AddGroup

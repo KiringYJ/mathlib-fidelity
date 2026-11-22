@@ -53,14 +53,16 @@ private theorem not_power_nat_pow {n p q : ℕ} (h_coprime : p.Coprime q) (hq : 
   rcases eq_or_ne n 0 with (rfl | hn)
   · simpa [hq.ne'] using h 0
   contrapose! h
-  let f := n.factorization.mapRange (· / q) <| by simp
+  let f := n.factorization.mapRange (fun e ↦ Nat.euclideanDiv e q hq.ne') <| by
+    simp [Nat.euclideanDiv_eq_core]
   suffices hf : n.factorization = q • f by
     have hf0 : f 0 = 0 := by simpa [hq.ne'] using congr($hf 0)
     refine ⟨f.prod (· ^ ·), Nat.factorization_inj hn (by simp [hf0]) ?_⟩
     rwa [Nat.factorization_pow, n.factorization_prod_pow_eq_self_of_le_factorization ?_]
     exact hf ▸ le_self_nsmul zero_le (by lia)
   ext z
-  rw [Finsupp.smul_apply, smul_eq_mul, Finsupp.mapRange_apply, Nat.mul_div_cancel']
+  rw [Finsupp.smul_apply, smul_eq_mul, Finsupp.mapRange_apply, Nat.euclideanDiv_eq_core,
+    Nat.mul_div_cancel']
   simpa using h_coprime.symm.dvd_of_dvd_mul_left ⟨_, by simpa using congr(Nat.factorization $h z)⟩
 
 private theorem not_power_nat_of_bounds {n k d : ℕ}
@@ -202,7 +204,7 @@ def findNotPowerCertificateCore (m n : ℕ) : Option ℕ := Id.run do
   let mut left := 0
   let mut right := m + 1
   while right - left > 1 do
-    let middle := (left + right) / 2
+    let middle := Nat.euclideanDiv (left + right) 2
     if middle ^ n ≤ m then
       left := middle
     else

@@ -65,7 +65,7 @@ theorem antideriv_sin_comp_const_mul (hz : z ≠ 0) (x : ℝ) :
 
 theorem integral_cos_mul_cos_pow_aux (hn : 2 ≤ n) (hz : z ≠ 0) :
     (∫ x in (0 : ℝ)..π / 2, Complex.cos (2 * z * x) * (cos x : ℂ) ^ n) =
-      n / (2 * z) *
+      (n : ℂ) / (2 * z) *
         ∫ x in (0 : ℝ)..π / 2, Complex.sin (2 * z * x) * sin x * (cos x : ℂ) ^ (n - 1) := by
   have der1 :
     ∀ x : ℝ,
@@ -90,8 +90,8 @@ theorem integral_cos_mul_cos_pow_aux (hn : 2 ≤ n) (hz : z ≠ 0) :
 
 theorem integral_sin_mul_sin_mul_cos_pow_eq (hn : 2 ≤ n) (hz : z ≠ 0) :
     (∫ x in (0 : ℝ)..π / 2, Complex.sin (2 * z * x) * sin x * (cos x : ℂ) ^ (n - 1)) =
-      (n / (2 * z) * ∫ x in (0 : ℝ)..π / 2, Complex.cos (2 * z * x) * (cos x : ℂ) ^ n) -
-        (n - 1) / (2 * z) *
+      ((n : ℂ) / (2 * z) * ∫ x in (0 : ℝ)..π / 2, Complex.cos (2 * z * x) * (cos x : ℂ) ^ n) -
+        ((n : ℂ) - 1) / (2 * z) *
           ∫ x in (0 : ℝ)..π / 2, Complex.cos (2 * z * x) * (cos x : ℂ) ^ (n - 2) := by
   have der1 :
     ∀ x : ℝ,
@@ -137,14 +137,14 @@ theorem integral_sin_mul_sin_mul_cos_pow_eq (hn : 2 ≤ n) (hz : z ≠ 0) :
 theorem integral_cos_mul_cos_pow (hn : 2 ≤ n) (hz : z ≠ 0) :
     (((1 : ℂ) - (4 : ℂ) * z ^ 2 / (n : ℂ) ^ 2) *
       ∫ x in (0 : ℝ)..π / 2, Complex.cos (2 * z * x) * (cos x : ℂ) ^ n) =
-      (n - 1 : ℂ) / n *
+      (n - 1 : ℂ) / (n : ℂ) *
         ∫ x in (0 : ℝ)..π / 2, Complex.cos (2 * z * x) * (cos x : ℂ) ^ (n - 2) := by
   have nne : (n : ℂ) ≠ 0 := by
     contrapose! hn; rw [Nat.cast_eq_zero] at hn; rw [hn]; exact zero_lt_two
   have := integral_cos_mul_cos_pow_aux hn hz
   rw [integral_sin_mul_sin_mul_cos_pow_eq hn hz, sub_eq_neg_add, mul_add, ← sub_eq_iff_eq_add]
     at this
-  convert! congr_arg (fun u : ℂ => -u * (2 * z) ^ 2 / n ^ 2) this using 1 <;> field
+  convert! congr_arg (fun u : ℂ => -u * (2 * z) ^ 2 / (n : ℂ) ^ 2) this using 1 <;> field
 
 lemma two_mul_natCast_add_two_ne_zero (n : ℕ) : (2 * (n : ℂ) + 2) ≠ 0 := by
   exact_mod_cast (by omega : 2 * n + 2 ≠ 0)
@@ -221,7 +221,7 @@ theorem sin_pi_mul_eq (z : ℂ) (n : ℕ) :
     push_cast
     ring
   | succ n ih =>
-    have hC : C (n + 1) = ((2 * n + 1 : ℝ) / (2 * n + 2)) * C n := by
+    have hC : C (n + 1) = ((2 * n + 1 : ℝ) / (2 * (n : ℝ) + 2)) * C n := by
       dsimp only [C]
       rw [integral_cos_pow_eq (2 * (n + 1)), integral_cos_pow_eq (2 * n),
         show 2 * (n + 1) = 2 * n + 2 by omega, integral_sin_pow]
@@ -318,8 +318,8 @@ theorem _root_.Real.tendsto_euler_sin_prod (x : ℝ) :
   · ext1 n
     rw [Function.comp_apply, ← Complex.ofReal_mul, Complex.re_ofReal_mul]
     suffices
-      (∏ j ∈ Finset.range n, (1 - x ^ 2 / (j + 1) ^ 2) : ℂ) =
-        (∏ j ∈ Finset.range n, (1 - x ^ 2 / (j + 1) ^ 2) : ℝ) by
+      (∏ j ∈ Finset.range n, (1 - (x : ℂ) ^ 2 / ((j : ℂ) + 1) ^ 2) : ℂ) =
+        (∏ j ∈ Finset.range n, (1 - x ^ 2 / ((j : ℝ) + 1) ^ 2) : ℝ) by
       rw [this, Complex.ofReal_re]
     simp
   · rw [← Complex.ofReal_mul, ← Complex.ofReal_sin, Complex.ofReal_re]

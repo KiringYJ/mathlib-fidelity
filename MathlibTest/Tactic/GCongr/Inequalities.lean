@@ -194,7 +194,7 @@ example (f g : ℕ → ℕ) (s : Finset ℕ) (h : ∀ i ∈ s, f i ^ 2 + 1 ≤ g
   linarith [h i hi]
 
 example (f g : ℕ → ℕ) (s : Finset ℕ) (h : ∀ i ∈ s, f i ^ 2 + 1 ≤ g i ^ 2 + 1) :
-    ∑ i ∈ s, (f i ^ 2 / 5) ≤ ∑ i ∈ s, (g i ^ 2 / 5) := by
+    ∑ i ∈ s, Nat.euclideanDiv (f i ^ 2) 5 ≤ ∑ i ∈ s, Nat.euclideanDiv (g i ^ 2) 5 := by
   gcongr 2 with i hi
   linarith [h i hi]
 

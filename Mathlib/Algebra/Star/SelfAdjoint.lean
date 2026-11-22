@@ -534,7 +534,7 @@ theorem val_inv (x : selfAdjoint R) {hx : IsUnit x} : (↑x⁻¹ : R) = (x : R)�
   map_inv₀ coeRingHom.toMonoidHom x
 
 @[simp, norm_cast]
-theorem val_div (x y : selfAdjoint R) {hy : IsUnit y} : (↑(x / y) : R) = x / y :=
+theorem val_div (x y : selfAdjoint R) {hy : IsUnit y} : (↑(x / y) : R) = (x : R) / (y : R) :=
   map_div₀ coeRingHom.toMonoidHom x y
 
 @[simp, norm_cast]

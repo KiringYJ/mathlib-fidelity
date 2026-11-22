@@ -146,8 +146,7 @@ elab tk:"deprecate" "to" id:ident* dat:(ppSpace str ppSpace)? ppLine cmd:command
       logWarningAt tk m!"{warn.foldl (· ++ "\n" ++ ·) "Warnings:\n"}"
     liftTermElabM do
       let prettyStxs ← stxs.mapM (SuggestionText.prettyExtra <|.tsyntax ·)
-      let toMessageData := (prettyStxs.toList.drop 1).foldl
-        (fun x y => x ++ "\n\n" ++ y) prettyStxs[0]!
+      let toMessageData := "\n\n".intercalate prettyStxs.toList
 
       addSuggestion (header := msg ++ "\n\nTry this:\n") (← getRef)
         toMessageData

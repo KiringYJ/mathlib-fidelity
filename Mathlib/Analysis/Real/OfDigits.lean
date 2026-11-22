@@ -130,8 +130,8 @@ theorem ofDigits_digits_sum_eq {x : ℝ} {b : ℕ} [NeZero b] (hx : x ∈ Set.Ic
     rw [← pow_succ', mul_left_comm, mul_inv_cancel₀, mul_one, mul_comm x, pow_succ', mul_assoc]
     set y := (b : ℝ) ^ n * x
     norm_cast
-    rw [← Nat.cast_mul_floor_div_cancel (a := y) (show b ≠ 0 by lia),
-      Fin.val_ofNat, Nat.div_add_mod]
+    rw [← Nat.cast_mul_floor_div_cancel (a := y) (NeZero.ne b), Fin.val_ofNat,
+      Nat.euclideanDiv_mul_add_mod]
 
 theorem le_sum_ofDigitsTerm_digits {x : ℝ} {b : ℕ} [NeZero b]
     (hx : x ∈ Set.Ico 0 1) (n : ℕ) :

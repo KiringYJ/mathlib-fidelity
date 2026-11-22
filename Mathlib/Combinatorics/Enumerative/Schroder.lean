@@ -77,16 +77,16 @@ theorem even_largeSchroder : ∀ {n : ℕ}, n ≠ 0 → Even (largeSchroder n)
 def smallSchroder : ℕ → ℕ
   | 0 => 1
   | 1 => 1
-  | n + 1 => largeSchroder n / 2
+  | n + 1 => Nat.euclideanDiv (largeSchroder n) 2
 
 @[simp] lemma smallSchroder_zero : smallSchroder 0 = 1 := by simp [smallSchroder]
 @[simp] lemma smallSchroder_one : smallSchroder 1 = 1 := by simp [smallSchroder]
 
 lemma smallSchroder_succ_eq_largeSchroder_div_two (h : n ≠ 0) :
-    smallSchroder (n + 1) = largeSchroder n / 2 := by simp [smallSchroder]
+    smallSchroder (n + 1) = Nat.euclideanDiv (largeSchroder n) 2 := by simp [smallSchroder]
 
 lemma two_mul_smallSchroder_succ (hn : n ≠ 0) : 2 * smallSchroder (n + 1) = largeSchroder n := by
-  rw [smallSchroder_succ_eq_largeSchroder_div_two hn,
+  rw [smallSchroder_succ_eq_largeSchroder_div_two hn, Nat.euclideanDiv_eq_core,
     Nat.mul_div_cancel_left' (even_largeSchroder hn).two_dvd]
 
 theorem smallSchroder_succ (hn : 1 < n) :

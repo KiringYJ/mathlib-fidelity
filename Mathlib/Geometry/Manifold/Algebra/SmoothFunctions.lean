@@ -139,7 +139,7 @@ instance group {G : Type*} [Group G] [TopologicalSpace G] [ChartedSpace H' G] [L
   { ContMDiffMap.monoid with
     inv := fun f => ⟨fun x => (f x)⁻¹, f.contMDiff.inv⟩
     inv_mul_cancel := fun a => by ext; exact inv_mul_cancel _
-    div := fun f g => ⟨f / g, f.contMDiff.div g.contMDiff⟩
+    div := fun f g => ⟨fun x ↦ f x / g x, f.contMDiff.div g.contMDiff⟩
     div_eq_mul_inv := fun f g => by ext; exact div_eq_mul_inv _ _ }
 
 @[to_additive (attr := simp)]
@@ -149,8 +149,8 @@ theorem coe_inv {G : Type*} [Group G] [TopologicalSpace G] [ChartedSpace H' G] [
 
 @[to_additive (attr := simp)]
 theorem coe_div {G : Type*} [Group G] [TopologicalSpace G] [ChartedSpace H' G] [LieGroup I' n G]
-    (f g : C^n⟮I, N; I', G⟯) : ⇑(f / g) = f / g :=
-  rfl
+    (f g : C^n⟮I, N; I', G⟯) : ⇑(f / g) = ⇑f / ⇑g :=
+  (Pi.div_def _ _).symm
 
 @[to_additive]
 instance commGroup {G : Type*} [CommGroup G] [TopologicalSpace G] [ChartedSpace H' G]

@@ -230,12 +230,12 @@ private lemma isPreLocalizingSequence_of_isLocalizingSequence_aux'
     {τ : ℕ → Ω → WithTop ι} {σ : ℕ → ℕ → Ω → WithTop ι}
     (hτ : IsLocalizingSequence 𝓕 τ P) (hσ : ∀ n, IsLocalizingSequence 𝓕 (σ n) P) :
     ∃ T : ℕ → ι, Tendsto T atTop atTop ∧
-      ∀ n, ∃ k, P {ω | σ n k ω < min (τ n ω) (T n)} ≤ (1 / 2) ^ n := by
+      ∀ n, ∃ k, P {ω | σ n k ω < min (τ n ω) (T n)} ≤ (2 : ℝ≥0∞)⁻¹ ^ n := by
   obtain ⟨T, -, hT⟩ := Filter.exists_seq_monotone_tendsto_atTop_atTop ι
   refine ⟨T, hT, fun n ↦ ?_⟩
   by_contra! hn
-  suffices (1 / 2) ^ n ≤ P (⋂ k : ℕ, {ω | σ n k ω < min (τ n ω) (T n)}) by
-    refine (by simp : ¬ (1 / 2 : ℝ≥0∞) ^ n ≤ 0) <| this.trans <| nonpos_iff_eq_zero.2 ?_
+  suffices (2 : ℝ≥0∞)⁻¹ ^ n ≤ P (⋂ k : ℕ, {ω | σ n k ω < min (τ n ω) (T n)}) by
+    refine (by simp : ¬ (2 : ℝ≥0∞)⁻¹ ^ n ≤ 0) <| this.trans <| nonpos_iff_eq_zero.2 ?_
     rw [measure_eq_zero_iff_ae_notMem]
     filter_upwards [(hσ n).tendsto_top] with ω hTop hmem
     simp_rw [WithTop.tendsto_nhds_top_iff, eventually_atTop] at hTop
@@ -274,7 +274,7 @@ private lemma isPreLocalizingSequence_of_isLocalizingSequence_aux
     {τ : ℕ → Ω → WithTop ι} {σ : ℕ → ℕ → Ω → WithTop ι}
     (hτ : IsLocalizingSequence 𝓕 τ P) (hσ : ∀ n, IsLocalizingSequence 𝓕 (σ n) P) :
     ∃ (nk : ℕ → ℕ) (T : ℕ → ι), StrictMono nk ∧ Tendsto T atTop atTop ∧
-      ∀ n, P {ω | σ n (nk n) ω < min (τ n ω) (T n)} ≤ (1 / 2) ^ n := by
+      ∀ n, P {ω | σ n (nk n) ω < min (τ n ω) (T n)} ≤ (2 : ℝ≥0∞)⁻¹ ^ n := by
   obtain ⟨T, hT, h⟩ := isPreLocalizingSequence_of_isLocalizingSequence_aux' hτ hσ
   choose nk hnk using h
   refine ⟨mkStrictMonoAux nk, T, mkStrictMonoAux_strictMono nk, hT,

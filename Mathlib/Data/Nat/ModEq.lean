@@ -258,8 +258,12 @@ lemma of_mul_left (m : ℕ) (h : a ≡ b [MOD m * n]) : a ≡ b [MOD n] := by
 For cancelling right multiplication on both sides of the `≡`, see `nat.modeq.mul_right_cancel'`. -/
 lemma of_mul_right (m : ℕ) : a ≡ b [MOD n * m] → a ≡ b [MOD n] := mul_comm m n ▸ of_mul_left _
 
-theorem of_div (h : a / c ≡ b / c [MOD m / c]) (ha : c ∣ a) (ha : c ∣ b) (ha : c ∣ m) :
-    a ≡ b [MOD m] := by convert! h.mul_left' c <;> rwa [Nat.mul_div_cancel']
+theorem of_div {hc : c ≠ 0}
+    (h : Nat.euclideanDiv a c ≡ Nat.euclideanDiv b c [MOD Nat.euclideanDiv m c])
+    (hca : c ∣ a) (hcb : c ∣ b) (hcm : c ∣ m) :
+    a ≡ b [MOD m] := by
+  simp only [Nat.euclideanDiv_eq_core] at h
+  convert! h.mul_left' c <;> rwa [Nat.mul_div_cancel']
 
 end ModEq
 
@@ -383,32 +387,39 @@ lemma eq_of_lt_of_lt (h : a ≡ b [MOD m]) (ha : a < m) (hb : b < m) : a = b :=
   h.eq_of_abs_lt <| Int.abs_sub_lt_of_lt_lt ha hb
 
 /-- To cancel a common factor `c` from a `ModEq` we must divide the modulus `m` by `gcd m c` -/
-lemma cancel_left_div_gcd (hm : 0 < m) (h : c * a ≡ c * b [MOD m]) : a ≡ b [MOD m / gcd m c] := by
+lemma cancel_left_div_gcd (hm : 0 < m) (h : c * a ≡ c * b [MOD m]) :
+    a ≡ b [MOD Nat.euclideanDiv m (gcd m c) (gcd_pos_of_pos_left c hm).ne'] := by
   let d := gcd m c
   have hmd := gcd_dvd_left m c
   have hcd := gcd_dvd_right m c
-  rw [modEq_iff_dvd]
-  refine @Int.dvd_of_dvd_mul_right_of_gcd_one (m / d) (c / d) (b - a) ?_ ?_
-  · show (m / d : ℤ) ∣ c / d * (b - a)
+  have hd : d ≠ 0 := (gcd_pos_of_pos_left c hm).ne'
+  have hd' : (d : ℤ) ≠ 0 := Int.ofNat_ne_zero.2 hd
+  rw [modEq_iff_dvd, Int.natCast_div _ _ hd]
+  refine @Int.dvd_of_dvd_mul_right_of_gcd_one (Int.euclideanDiv m d hd') (Int.euclideanDiv c d hd')
+    (b - a) ?_ ?_
+  · show (Int.euclideanDiv m d hd') ∣ Int.euclideanDiv c d hd' * (b - a)
+    simp only [Int.euclideanDiv_eq_core]
     rw [mul_comm, ← Int.mul_ediv_assoc (b - a) (Int.natCast_dvd_natCast.mpr hcd), mul_comm]
     apply Int.ediv_dvd_ediv (Int.natCast_dvd_natCast.mpr hmd)
     rw [Int.mul_sub]
     exact modEq_iff_dvd.mp h
-  · show Int.gcd (m / d) (c / d) = 1
-    simp only [d, ← Int.natCast_div, Int.gcd_natCast_natCast (m / d) (c / d),
-      gcd_div hmd hcd, Nat.div_self (gcd_pos_of_pos_left c hm)]
+  · show Int.gcd (Int.euclideanDiv m d hd') (Int.euclideanDiv c d hd') = 1
+    rw [← Int.natCast_div m d hd, ← Int.natCast_div c d hd, Int.gcd_natCast_natCast]
+    simp only [d, Nat.euclideanDiv_eq_core, gcd_div hmd hcd,
+      Nat.div_self (gcd_pos_of_pos_left c hm)]
 
 /-- To cancel a common factor `c` from a `ModEq` we must divide the modulus `m` by `gcd m c` -/
-lemma cancel_right_div_gcd (hm : 0 < m) (h : a * c ≡ b * c [MOD m]) : a ≡ b [MOD m / gcd m c] := by
+lemma cancel_right_div_gcd (hm : 0 < m) (h : a * c ≡ b * c [MOD m]) :
+    a ≡ b [MOD Nat.euclideanDiv m (gcd m c) (gcd_pos_of_pos_left c hm).ne'] := by
   apply cancel_left_div_gcd hm
   simpa [mul_comm] using h
 
 lemma cancel_left_div_gcd' (hm : 0 < m) (hcd : c ≡ d [MOD m]) (h : c * a ≡ d * b [MOD m]) :
-    a ≡ b [MOD m / gcd m c] :=
+    a ≡ b [MOD Nat.euclideanDiv m (gcd m c) (gcd_pos_of_pos_left c hm).ne'] :=
   (h.trans <| hcd.symm.mul_right b).cancel_left_div_gcd hm
 
 lemma cancel_right_div_gcd' (hm : 0 < m) (hcd : c ≡ d [MOD m]) (h : a * c ≡ b * d [MOD m]) :
-    a ≡ b [MOD m / gcd m c] :=
+    a ≡ b [MOD Nat.euclideanDiv m (gcd m c) (gcd_pos_of_pos_left c hm).ne'] :=
   (h.trans <| hcd.symm.mul_left b).cancel_right_div_gcd hm
 
 /-- A common factor that's coprime with the modulus can be cancelled from a `ModEq` -/
@@ -418,7 +429,7 @@ lemma cancel_left_of_coprime (hmc : gcd m c = 1) (h : c * a ≡ c * b [MOD m]) :
     simp only [hmc, one_mul, modEq_zero_iff] at h
     subst h
     rfl
-  simpa [hmc] using h.cancel_left_div_gcd hm
+  simpa [hmc, Nat.euclideanDiv_eq_core] using h.cancel_left_div_gcd hm
 
 /-- A common factor that's coprime with the modulus can be cancelled from a `ModEq` -/
 lemma cancel_right_of_coprime (hmc : gcd m c = 1) (h : a * c ≡ b * c [MOD m]) : a ≡ b [MOD m] :=
@@ -438,9 +449,10 @@ def chineseRemainder' (h : a ≡ b [MOD gcd n m]) : { k // k ≡ a [MOD n] ∧ k
       · exact h.symm
       · rfl⟩
     else
-      ⟨let (c, d) := xgcd n m; Int.toNat ((n * c * b + m * d * a) / gcd n m % lcm n m), by
+      ⟨let (c, d) := xgcd n m; Int.toNat (Int.euclideanDiv (n * c * b + m * d * a) (gcd n m)
+        (Int.ofNat_ne_zero.2 (Nat.gcd_ne_zero_left hn)) % lcm n m), by
         rw [xgcd_val]
-        dsimp
+        simp only [Int.euclideanDiv_eq_core]
         rw [modEq_iff_dvd, modEq_iff_dvd,
           Int.toNat_of_nonneg (Int.emod_nonneg _ (Int.natCast_ne_zero.2 (lcm_ne_zero hn hm)))]
         have hnonzero : (gcd n m : ℤ) ≠ 0 := by
@@ -516,15 +528,17 @@ theorem add_mod_add_ite (a b c : ℕ) :
   else by
     rw [this]
     split_ifs with h
-    · have h2 : (a % c + b % c) / c < 2 :=
-        Nat.div_lt_of_lt_mul
-          (by
-            rw [mul_two]
-            exact
-              add_lt_add (Nat.mod_lt _ (Nat.pos_of_ne_zero hc0))
-                (Nat.mod_lt _ (Nat.pos_of_ne_zero hc0)))
-      have h0 : 0 < (a % c + b % c) / c := Nat.div_pos h (Nat.pos_of_ne_zero hc0)
-      rw [← @add_right_cancel_iff _ _ _ (c * ((a % c + b % c) / c)), add_comm _ c, add_assoc,
+    · have h2 : Nat.euclideanDiv (a % c + b % c) c hc0 < 2 := by
+        rw [Nat.euclideanDiv_eq_core]
+        apply Nat.div_lt_of_lt_mul
+        rw [mul_two]
+        exact add_lt_add (Nat.mod_lt _ (Nat.pos_of_ne_zero hc0))
+          (Nat.mod_lt _ (Nat.pos_of_ne_zero hc0))
+      have h0 : 0 < Nat.euclideanDiv (a % c + b % c) c hc0 := by
+        simpa only [Nat.euclideanDiv_eq_core] using Nat.div_pos h (Nat.pos_of_ne_zero hc0)
+      simp only [Nat.euclideanDiv_eq_core] at h0 h2
+      rw [← @add_right_cancel_iff _ _ _ (c * Nat.euclideanDiv (a % c + b % c) c hc0),
+        Nat.euclideanDiv_eq_core, add_comm _ c, add_assoc,
         mod_add_div, le_antisymm (le_of_lt_succ h2) h0, mul_one, add_comm]
     · rw [Nat.mod_eq_of_lt (lt_of_not_ge h), add_zero]
 
@@ -536,33 +550,38 @@ theorem add_mod_add_of_le_add_mod {a b c : ℕ} (hc : c ≤ a % c + b % c) :
     (a + b) % c + c = a % c + b % c := by rw [← add_mod_add_ite, ite_eq_left hc]
 
 theorem add_div_eq_of_add_mod_lt {a b c : ℕ} (hc : a % c + b % c < c) :
-    (a + b) / c = a / c + b / c :=
-  if hc0 : c = 0 then by simp [hc0]
-  else by rw [Nat.add_div (Nat.pos_of_ne_zero hc0), ite_eq_right (not_le_of_gt hc), add_zero]
+    Nat.euclideanDiv (a + b) c = Nat.euclideanDiv a c + Nat.euclideanDiv b c := by
+  simp only [Nat.euclideanDiv_eq_core]
+  rw [Nat.add_div (Nat.zero_lt_of_lt hc), ite_eq_right (not_le_of_gt hc), add_zero]
 
-protected theorem add_div_of_dvd_right {a b c : ℕ} (hca : c ∣ a) : (a + b) / c = a / c + b / c :=
-  if h : c = 0 then by simp [h]
-  else
-    add_div_eq_of_add_mod_lt
-      (by
-        rw [Nat.mod_eq_zero_of_dvd hca, zero_add]
-        exact Nat.mod_lt _ (zero_lt_of_ne_zero h))
+protected theorem add_div_of_dvd_right {a b c : ℕ} (hca : c ∣ a)
+    (hc : c ≠ 0 := by checked_native_nonzero) :
+    Nat.euclideanDiv (a + b) c = Nat.euclideanDiv a c + Nat.euclideanDiv b c := by
+  apply add_div_eq_of_add_mod_lt
+  rw [Nat.mod_eq_zero_of_dvd hca, zero_add]
+  exact Nat.mod_lt _ (Nat.pos_of_ne_zero hc)
 
-protected theorem add_div_of_dvd_left {a b c : ℕ} (hca : c ∣ b) : (a + b) / c = a / c + b / c := by
+protected theorem add_div_of_dvd_left {a b c : ℕ} (hca : c ∣ b)
+    (hc : c ≠ 0 := by checked_native_nonzero) :
+    Nat.euclideanDiv (a + b) c = Nat.euclideanDiv a c + Nat.euclideanDiv b c := by
   rwa [add_comm, Nat.add_div_of_dvd_right, add_comm]
 
 theorem add_div_eq_of_le_mod_add_mod {a b c : ℕ} (hc : c ≤ a % c + b % c) (hc0 : 0 < c) :
-    (a + b) / c = a / c + b / c + 1 := by rw [Nat.add_div hc0, ite_eq_left hc]
+    Nat.euclideanDiv (a + b) c = Nat.euclideanDiv a c + Nat.euclideanDiv b c + 1 := by
+  simp only [Nat.euclideanDiv_eq_core]
+  rw [Nat.add_div hc0, ite_eq_left hc]
 
 @[deprecated Nat.div_add_div_le_add_div (since := "2026-08-05")]
-theorem add_div_le_add_div (a b c : ℕ) : a / c + b / c ≤ (a + b) / c :=
-  Nat.div_add_div_le_add_div
+theorem add_div_le_add_div (a b c : ℕ) (hc : c ≠ 0 := by checked_native_nonzero) :
+    Nat.euclideanDiv a c + Nat.euclideanDiv b c ≤ Nat.euclideanDiv (a + b) c := by
+  simpa only [Nat.euclideanDiv_eq_core] using
+    (Nat.div_add_div_le_add_div (x := a) (y := b) (z := c))
 
-theorem add_div_le_div_add_div_add_one (a b c : ℕ) : (a + b) / c ≤ a / c + b / c + 1 := by
-  by_cases h : c = 0
-  · simp [h]
-  · rw [Nat.add_div (Nat.pos_of_ne_zero h), Nat.add_le_add_iff_left]
-    split <;> decide
+theorem add_div_le_div_add_div_add_one (a b c : ℕ) (hc : c ≠ 0 := by checked_native_nonzero) :
+    Nat.euclideanDiv (a + b) c ≤ Nat.euclideanDiv a c + Nat.euclideanDiv b c + 1 := by
+  simp only [Nat.euclideanDiv_eq_core]
+  rw [Nat.add_div (Nat.pos_of_ne_zero hc), Nat.add_le_add_iff_left]
+  split <;> decide
 
 theorem le_mod_add_mod_of_dvd_add_of_not_dvd {a b c : ℕ} (h : c ∣ a + b) (ha : ¬c ∣ a) :
     c ≤ a % c + b % c :=
@@ -579,7 +598,7 @@ theorem odd_mul_odd {n m : ℕ} : n % 2 = 1 → m % 2 = 1 → n * m % 2 = 1 := b
   simpa [Nat.ModEq] using @ModEq.mul 2 n 1 m 1
 
 theorem odd_mul_odd_div_two {m n : ℕ} (hm1 : m % 2 = 1) (hn1 : n % 2 = 1) :
-    m * n / 2 = m * (n / 2) + m / 2 :=
+    Nat.euclideanDiv (m * n) 2 = m * (Nat.euclideanDiv n 2) + Nat.euclideanDiv m 2 :=
   have hn0 : 0 < n := Nat.pos_of_ne_zero fun h => by simp_all
   mul_right_injective₀ two_ne_zero <| by
     dsimp
@@ -603,13 +622,16 @@ theorem odd_mod_four_iff {n : ℕ} : n % 2 = 1 ↔ n % 4 = 1 ∨ n % 4 = 3 :=
 lemma mod_eq_of_modEq {a b n} (h : a ≡ b [MOD n]) (hb : b < n) : a % n = b :=
   Eq.trans h (mod_eq_of_lt hb)
 
-theorem ext_div_modEq {n a b : ℕ} (h0 : a / n = b / n) (h1 : a ≡ b [MOD n]) : a = b :=
-  ext_div_mod h0 h1
+theorem ext_div_modEq {n a b : ℕ} {hn : n ≠ 0}
+    (h0 : Nat.euclideanDiv a n = Nat.euclideanDiv b n) (h1 : a ≡ b [MOD n]) : a = b :=
+  ext_div_mod (by simpa only [Nat.euclideanDiv_eq_core] using h0) h1
 
-theorem ext_div_modEq_iff (n a b : ℕ) : a = b ↔ a / n = b / n ∧ a ≡ b [MOD n] :=
-  ext_div_mod_iff _ _ _
+theorem ext_div_modEq_iff (n a b : ℕ) (hn : n ≠ 0 := by checked_native_nonzero) :
+    a = b ↔ Nat.euclideanDiv a n = Nat.euclideanDiv b n ∧ a ≡ b [MOD n] := by
+  simpa only [Nat.euclideanDiv_eq_core, ModEq] using ext_div_mod_iff n a b
 
-theorem modEq_iff_eq_of_div_eq {n a b : ℕ} (h : a / n = b / n) :
+theorem modEq_iff_eq_of_div_eq {n a b : ℕ} {hn : n ≠ 0}
+    (h : Nat.euclideanDiv a n = Nat.euclideanDiv b n) :
     a ≡ b [MOD n] ↔ a = b := by grind [ext_div_modEq_iff]
 
 end Nat

@@ -6,6 +6,7 @@ Authors: Mario Carneiro, Eric Wieser
 module
 
 public import Mathlib.Data.Nat.Factors
+public meta import Mathlib.Lean.Elab.NativeDivision
 public import Mathlib.Tactic.NormNum.Prime
 public import Batteries.Lean.Expr
 
@@ -92,13 +93,15 @@ private partial def evalPrimeFactorsListAux
     throwError m!"{eal} must be at most the least prime factor of {enl}"
   if h_bn : b < n then
     -- the factor is less than `n`, so we are not done; remove it to get `m`
-    let m := n / b
+    let m := n.euclideanDiv b (minFac_pos n hn1).ne'
+    have hbm : b * m = n := by
+      simpa only [m, Nat.euclideanDiv_eq_core] using Nat.mul_div_cancel' (minFac_dvd n hn1)
     have em : Q(ℕ) := mkRawNatLit m
     have ehm : Q(IsNat (OfNat.ofNat $em) $em) := q(⟨rfl⟩)
     if h_ba_eq : b = a then
       -- if the factor is our minimum `a`, then recurse without changing the minimum
       have eh : Q($eal * $em = $en) :=
-        have : a * m = n := by simp [m, b, ← h_ba_eq, Nat.mul_div_cancel' (minFac_dvd _ hn1)]
+        have : a * m = n := h_ba_eq ▸ hbm
         (q(Eq.refl $en) : Expr)
       let ehp₁ := q(isNat_mul rfl $eha $ehm $eh)
       let ⟨el, ehp₂⟩ ← evalPrimeFactorsListAux ehm eha
@@ -109,7 +112,6 @@ private partial def evalPrimeFactorsListAux
       have eb : Q(ℕ) := mkRawNatLit b
       have ehb : Q(IsNat (OfNat.ofNat $eb) $eb) := q(⟨rfl⟩)
       have ehbm : Q($eb * $em = $en) :=
-        have : b * m = n := Nat.mul_div_cancel' (minFac_dvd _ hn1)
         (q(Eq.refl $en) : Expr)
       have ehp₁ := q(isNat_mul rfl $ehb $ehm $ehbm)
       have ehp₂ : Q(Nat.blt $ea $eb = true) :=

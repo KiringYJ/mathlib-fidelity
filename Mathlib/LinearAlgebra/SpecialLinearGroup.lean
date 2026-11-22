@@ -99,9 +99,6 @@ instance : Inv (SpecialLinearGroup R V) :=
 instance : Mul (SpecialLinearGroup R V) :=
   ⟨fun A B => ⟨A * B, by simp [A.prop, B.prop]⟩⟩
 
-instance : Div (SpecialLinearGroup R V) :=
-  ⟨fun A B => ⟨A / B, by simp [A.prop, B.prop]⟩⟩
-
 instance : One (SpecialLinearGroup R V) :=
   ⟨⟨1, by simp⟩⟩
 
@@ -138,10 +135,6 @@ theorem coe_mul : (A * B : SpecialLinearGroup R V) = (A * B : V ≃ₗ[R] V) :=
   rfl
 
 @[simp]
-theorem coe_div : (A / B : SpecialLinearGroup R V) = (A / B : V ≃ₗ[R] V) :=
-  rfl
-
-@[simp]
 theorem coe_inv : (A : SpecialLinearGroup R V)⁻¹ = (A⁻¹ : V ≃ₗ[R] V) :=
   rfl
 
@@ -170,8 +163,16 @@ theorem coe_dualMap
 end CoeLemmas
 
 /-- The special linear group of a module is a group. -/
-instance : Group (SpecialLinearGroup R V) := fast_instance%
-  Function.Injective.group _ Subtype.coe_injective coe_one coe_mul coe_inv coe_div coe_pow coe_zpow
+instance : Group (SpecialLinearGroup R V) := by
+  letI : Div (SpecialLinearGroup R V) :=
+    ⟨fun A B ↦ ⟨A.val / B.val, by simp [A.prop, B.prop]⟩⟩
+  exact fast_instance% Function.Injective.group _ Subtype.coe_injective coe_one coe_mul coe_inv
+    (fun _ _ ↦ rfl) coe_pow coe_zpow
+
+@[simp]
+theorem coe_div (A B : SpecialLinearGroup R V) :
+    ((A / B : SpecialLinearGroup R V) : V ≃ₗ[R] V) = (A : V ≃ₗ[R] V) / (B : V ≃ₗ[R] V) :=
+  rfl
 
 /-- A version of `Matrix.toLin' A` that produces linear equivalences. -/
 def toLinearEquiv : SpecialLinearGroup R V →* V ≃ₗ[R] V where

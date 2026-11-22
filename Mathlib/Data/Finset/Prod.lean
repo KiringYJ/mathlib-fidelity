@@ -371,7 +371,11 @@ lemma card_product_filter_lt [LinearOrder α] :
   have disj : Disjoint u v := by grind [disjoint_left]
   have union : u.disjUnion v disj = s.offDiag := by grind
   have swap : #u = #v := Finset.card_equiv (Equiv.prodComm α α) (by grind)
-  grind [Nat.mul_sub_one, offDiag_card, Nat.choose_two_right]
+  have hcount : #u * 2 = #s * (#s - 1) := by
+    simpa only [card_disjUnion, ← swap, ← Nat.mul_two, offDiag_card, Nat.mul_sub_one]
+      using congrArg Finset.card union
+  change #u = (#s).choose 2
+  rw [Nat.choose_two_right, ← hcount, Nat.euclideanDiv_mul_right_cancel _ (by decide)]
 
 end Diag
 

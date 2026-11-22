@@ -60,7 +60,8 @@ lemma mul₀_sup' [PosMulReflectLT G₀] (ha : 0 ≤ a) (f : ι → G₀) (s : F
   exact map_finset_sup' (OrderIso.mulLeft₀ _ (lt_of_le_of_ne ha h)) hs f
 
 lemma sup'_div₀ [MulPosReflectLT G₀] (ha : 0 < a) (f : ι → G₀) (s : Finset ι) (hs) :
-    s.sup' hs f / a = s.sup' hs fun i ↦ f i / a :=
+    Checked.div (s.sup' hs f) a ha.ne'.isUnit =
+      s.sup' hs fun i ↦ Checked.div (f i) a ha.ne'.isUnit :=
   map_finset_sup' (OrderIso.divRight₀ a ha) hs f
 
 end GroupWithZero

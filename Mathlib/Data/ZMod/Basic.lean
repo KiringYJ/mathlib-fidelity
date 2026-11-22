@@ -125,16 +125,18 @@ theorem addOrderOf_one (n : ℕ) : addOrderOf (1 : ZMod n) = n :=
 /-- This lemma works in the case in which `ZMod n` is not infinite, i.e. `n ≠ 0`.  The version
 where `a ≠ 0` is `addOrderOf_coe'`. -/
 @[simp]
-theorem addOrderOf_coe (a : ℕ) {n : ℕ} (n0 : n ≠ 0) : addOrderOf (a : ZMod n) = n / n.gcd a := by
+theorem addOrderOf_coe (a : ℕ) {n : ℕ} (n0 : n ≠ 0) :
+    addOrderOf (a : ZMod n) = Nat.euclideanDiv n (n.gcd a) (Nat.gcd_ne_zero_left n0) := by
   rcases a with - | a
   · simp only [Nat.cast_zero, addOrderOf_zero, Nat.gcd_zero_right,
-      Nat.pos_of_ne_zero n0, Nat.div_self]
+      Nat.euclideanDiv_eq_core, Nat.pos_of_ne_zero n0, Nat.div_self]
   rw [← Nat.smul_one_eq_cast, addOrderOf_nsmul' _ a.succ_ne_zero, ZMod.addOrderOf_one]
 
 /-- This lemma works in the case in which `a ≠ 0`.  The version where
 `ZMod n` is not infinite, i.e. `n ≠ 0`, is `addOrderOf_coe`. -/
 @[simp]
-theorem addOrderOf_coe' {a : ℕ} (n : ℕ) (a0 : a ≠ 0) : addOrderOf (a : ZMod n) = n / n.gcd a := by
+theorem addOrderOf_coe' {a : ℕ} (n : ℕ) (a0 : a ≠ 0) :
+    addOrderOf (a : ZMod n) = Nat.euclideanDiv n (n.gcd a) (Nat.gcd_ne_zero_right a0) := by
   rw [← Nat.smul_one_eq_cast, addOrderOf_nsmul' _ a0, ZMod.addOrderOf_one]
 
 /-- We have that `ringChar (ZMod n) = n`. -/
@@ -575,8 +577,8 @@ theorem natCast_eq_iff (p : ℕ) (n : ℕ) (z : ZMod p) [NeZero p] :
     ↑n = z ↔ ∃ k, n = z.val + p * k := by
   constructor
   · rintro rfl
-    refine ⟨n / p, ?_⟩
-    rw [val_natCast, Nat.mod_add_div]
+    refine ⟨Nat.euclideanDiv n p (NeZero.ne p), ?_⟩
+    rw [val_natCast, Nat.add_comm, Nat.euclideanDiv_mul_add_mod]
   · rintro ⟨k, rfl⟩
     rw [Nat.cast_add, natCast_zmod_val, Nat.cast_mul, natCast_self, zero_mul,
       add_zero]
@@ -585,8 +587,8 @@ theorem intCast_eq_iff (p : ℕ) (n : ℤ) (z : ZMod p) [NeZero p] :
     ↑n = z ↔ ∃ k, n = z.val + p * k := by
   constructor
   · rintro rfl
-    refine ⟨n / p, ?_⟩
-    rw [val_intCast, Int.emod_add_mul_ediv]
+    refine ⟨Int.euclideanDiv n p (Int.natCast_ne_zero.mpr (NeZero.ne p)), ?_⟩
+    rw [val_intCast, Int.add_comm, Int.euclideanDiv_mul_add_mod]
   · rintro ⟨k, rfl⟩
     rw [Int.cast_add, Int.cast_mul, Int.cast_natCast, Int.cast_natCast, natCast_val,
       ZMod.natCast_self, zero_mul, add_zero, cast_id]
@@ -1031,7 +1033,8 @@ theorem val_pow_le {m n : ℕ} [Fact (1 < n)] {a : ZMod n} : (a ^ m).val ≤ a.v
     apply le_trans (ZMod.val_mul_le _ _)
     apply Nat.mul_le_mul_right _ ih
 
-theorem natAbs_min_of_le_div_two (n : ℕ) (x y : ℤ) (he : (x : ZMod n) = y) (hl : x.natAbs ≤ n / 2) :
+theorem natAbs_min_of_le_div_two (n : ℕ) (x y : ℤ) (he : (x : ZMod n) = y)
+    (hl : x.natAbs ≤ Nat.euclideanDiv n 2) :
     x.natAbs ≤ y.natAbs := by
   rw [intCast_eq_intCast_iff_dvd_sub] at he
   obtain ⟨m, he⟩ := he
@@ -1044,7 +1047,8 @@ theorem natAbs_min_of_le_div_two (n : ℕ) (x y : ℤ) (he : (x : ZMod n) = y) (
   refine le_trans (le_trans ((add_le_add_iff_left _).2 hl) ?_) (Int.natAbs_sub_le _ _)
   rw [add_sub_cancel_right, Int.natAbs_mul, Int.natAbs_natCast]
   refine le_trans ?_ (Nat.le_mul_of_pos_right _ <| Int.natAbs_pos.2 hm)
-  rw [← mul_two]; apply Nat.div_mul_le_self
+  rw [← mul_two, Nat.euclideanDiv_eq_core]
+  apply Nat.div_mul_le_self
 
 end ZMod
 
@@ -1248,16 +1252,17 @@ lemma Nat.range_mul_add (m k : ℕ) :
     obtain ⟨b, rfl⟩ := H₁
     exact ⟨b, ha⟩
 
-/-- Equivalence between `ℕ` and `ZMod N × ℕ`, sending `n` to `(n mod N, n / N)`. -/
+/-- Equivalence between `ℕ` and `ZMod N × ℕ` given by the residue and Euclidean quotient. -/
 def Nat.residueClassesEquiv (N : ℕ) [NeZero N] : ℕ ≃ ZMod N × ℕ where
-  toFun n := (↑n, n / N)
+  toFun n := (↑n, Nat.euclideanDiv n N (NeZero.ne N))
   invFun p := p.1.val + N * p.2
-  left_inv n := by simpa only [val_natCast] using mod_add_div n N
+  left_inv n := by
+    simpa only [val_natCast, Nat.add_comm] using Nat.euclideanDiv_mul_add_mod n N (NeZero.ne N)
   right_inv p := by
     ext1
     · simp only [add_comm p.1.val, cast_add, cast_mul, natCast_self, zero_mul, natCast_val,
         cast_id', id_eq, zero_add]
-    · simp only [add_comm p.1.val, mul_add_div (NeZero.pos _),
+    · simp only [add_comm p.1.val, Nat.euclideanDiv_eq_core, mul_add_div (NeZero.pos _),
         (Nat.div_eq_zero_iff).2 <| .inr p.1.val_lt, add_zero]
 
 -- there is a faster proof with Module.toAddMonoidEnd

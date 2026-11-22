@@ -132,7 +132,7 @@ attribute [local instance] IsCyclic.commGroup in
 that `N_{L/K}(x) = 1`, and a generator `g` of `Gal(L/K)`, there exists `y : Lˣ`
 such that `y/g y = x`. -/
 theorem exists_div_of_norm_eq_one (hg : ∀ x, x ∈ Subgroup.zpowers g) {x : L}
-    (hx : Algebra.norm K x = 1) : ∃ y : Lˣ, y / g y = x := by
+    (hx : Algebra.norm K x = 1) : ∃ y : Lˣ, (y : L) / g (y : L) = x := by
   have hx₀ : x ≠ 0 := Algebra.norm_ne_zero_iff.1 (by rw [hx]; exact one_ne_zero)
   let xu : Lˣ := Units.mk0 x hx₀
   have hx' : algebraMap K L (Algebra.norm K (xu : L)) = algebraMap K L 1 :=

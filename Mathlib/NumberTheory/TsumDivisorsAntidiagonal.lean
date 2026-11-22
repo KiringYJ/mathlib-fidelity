@@ -109,9 +109,12 @@ private lemma summable_divisorsAntidiagonal_aux (k : ℕ) {r : 𝕜} (hr : ‖r�
     transitivity ∑ _ ∈ (b : ℕ).divisors, ‖(b : 𝕜)‖ ^ k * ‖r ^ (b : ℕ)‖
     · rw [(b : ℕ).divisorsAntidiagonal.sum_attach (fun x ↦ ‖(x.2 : 𝕜)‖ ^ _ * _ ^ (x.1 * x.2)),
           sum_divisorsAntidiagonal ((fun x y ↦ ‖(y : 𝕜)‖ ^ k * _ ^ (x * y)))]
-      gcongr with i hi
-      · simpa using! le_of_dvd b.2 (div_dvd_of_dvd (dvd_of_mem_divisors hi))
-      · rw [norm_pow, mul_comm, Nat.div_mul_cancel (dvd_of_mem_divisors hi)]
+      rw [← (b : ℕ).divisors.sum_attach (fun _ ↦ ‖(b : 𝕜)‖ ^ k * ‖r ^ (b : ℕ)‖)]
+      gcongr with i
+      · rw [Nat.euclideanDiv_eq_core]
+        simpa using! le_of_dvd b.2 (div_dvd_of_dvd (dvd_of_mem_divisors i.property))
+      · rw [norm_pow, Nat.euclideanDiv_eq_core,
+          Nat.mul_div_cancel' (dvd_of_mem_divisors i.property)]
     · simp only [norm_pow, Finset.sum_const, nsmul_eq_mul, ← mul_assoc, add_comm k 1, pow_add,
         pow_one, norm_mul]
       gcongr
@@ -135,7 +138,8 @@ theorem tsum_prod_pow_eq_tsum_sigma (k : ℕ) {r : 𝕜} (hr : ‖r‖ < 1) :
   simpa [tsum_fintype, Finset.sum_mul,
     (n : ℕ).divisorsAntidiagonal.sum_attach fun x : ℕ × ℕ ↦ x.2 ^ k * r ^ (x.1 * x.2),
     sum_divisorsAntidiagonal fun x y ↦ y ^ k * r ^ (x * y)]
-      using Finset.sum_congr rfl fun i hi ↦ by rw [Nat.mul_div_cancel' (dvd_of_mem_divisors hi)]
+      using Finset.sum_congr rfl fun i _ ↦ by
+        rw [Nat.euclideanDiv_eq_core, Nat.mul_div_cancel' (dvd_of_mem_divisors i.property)]
 
 lemma tsum_pow_div_one_sub_eq_tsum_sigma {r : 𝕜} (hr : ‖r‖ < 1) (k : ℕ) :
     ∑' n : ℕ+, Checked.div ((n : 𝕜) ^ k * r ^ (n : ℕ)) (1 - r ^ (n : ℕ))

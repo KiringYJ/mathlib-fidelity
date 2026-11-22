@@ -244,7 +244,11 @@ end OrderIso
 namespace Nat
 
 theorem galoisConnection_mul_div {k : ℕ} (h : 0 < k) :
-    GaloisConnection (fun n => n * k) fun n => n / k := fun _ _ => (le_div_iff_mul_le h).symm
+    GaloisConnection (fun n => n * k) (fun n => Nat.euclideanDiv n k h.ne') := by
+  intro a b
+  change a * k ≤ b ↔ a ≤ Nat.euclideanDiv b k h.ne'
+  rw [Nat.euclideanDiv_eq_core]
+  exact (le_div_iff_mul_le h).symm
 
 end Nat
 

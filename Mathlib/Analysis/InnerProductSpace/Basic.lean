@@ -764,7 +764,7 @@ norms, has absolute value 1 if and only if they are nonzero and one is
 a multiple of the other. One form of equality case for Cauchy-Schwarz. -/
 theorem norm_inner_div_norm_mul_norm_eq_one_iff (x y : E)
     {hxy : IsUnit ((‖x‖ : 𝕜) * ‖y‖)} :
-    ‖⟪x, y⟫ / (‖x‖ * ‖y‖)‖ = 1 ↔ x ≠ 0 ∧ ∃ r : 𝕜, r ≠ 0 ∧ y = r • x := by
+    ‖⟪x, y⟫ / ((‖x‖ : 𝕜) * ‖y‖)‖ = 1 ↔ x ≠ 0 ∧ ∃ r : 𝕜, r ≠ 0 ∧ y = r • x := by
   have hx₀ : x ≠ 0 := by
     intro hx
     simpa [hx] using hxy.ne_zero
@@ -789,7 +789,7 @@ theorem abs_real_inner_div_norm_mul_norm_eq_one_iff (x y : F)
   @norm_inner_div_norm_mul_norm_eq_one_iff ℝ F _ _ _ x y hxy
 
 theorem inner_eq_norm_mul_iff_div {x y : E} (h₀ : x ≠ 0) :
-    ⟪x, y⟫ = (‖x‖ : 𝕜) * ‖y‖ ↔ (‖y‖ / ‖x‖ : 𝕜) • x = y := by
+    ⟪x, y⟫ = (‖x‖ : 𝕜) * ‖y‖ ↔ ((‖y‖ : 𝕜) / (‖x‖ : 𝕜)) • x = y := by
   have h₀' := h₀
   rw [← norm_ne_zero_iff, Ne, ← @ofReal_eq_zero 𝕜] at h₀'
   constructor <;> intro h

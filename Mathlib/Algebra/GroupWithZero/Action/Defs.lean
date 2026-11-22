@@ -458,7 +458,7 @@ lemma IsUnit.smul' (g : α) {x : β} (hx : IsUnit x) : IsUnit (g • x) := by
   rw [← smul_mul', mul_inv_cancel₀, smul_one]
 
 theorem smul_div₀' (g : α) (x y : β) {hy : IsUnit y} :
-    g • (x / y) = Checked.div (g • x) (g • y) (hy.smul' g) := by
+    g • Checked.div x y hy = Checked.div (g • x) (g • y) (hy.smul' g) := by
   rw [div_eq_mul_inv₀, div_eq_mul_inv₀, smul_mul', smul_inv₀']
 
 end MulDistribMulAction

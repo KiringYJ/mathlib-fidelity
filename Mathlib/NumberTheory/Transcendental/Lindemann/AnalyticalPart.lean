@@ -170,11 +170,11 @@ Note: Jacobson (equation (68) / lemma 3, page 285) writes `Nₚ` for our `nₚ` 
 public theorem exp_polynomial_approx (f : ℤ[X]) (hf : f.eval 0 ≠ 0) :
     haveI : f.map (algebraMap ℤ ℂ) ≠ 0 :=
       (Polynomial.map_ne_zero_iff (algebraMap ℤ ℂ).injective_int).mpr fun h ↦ hf (by simp [h])
-    ∃ c,
+    ∃ c : ℝ,
       ∀ p > (eval 0 f).natAbs, p.Prime →
         ∃ nₚ : ℤ, ¬ ↑p ∣ nₚ ∧ ∃ gₚ : ℤ[X], gₚ.natDegree ≤ p * f.natDegree - 1 ∧
           ∀ {r : ℂ}, r ∈ f.aroots ℂ →
-            ‖nₚ • exp r - p • aeval r gₚ‖ ≤ c ^ p / (p - 1)! := by
+            ‖nₚ • exp r - p • aeval r gₚ‖ ≤ c ^ p / ((p - 1)! : ℝ) := by
   have hf' : f.map (algebraMap ℤ ℂ) ≠ 0 :=
     (Polynomial.map_ne_zero_iff (algebraMap ℤ ℂ).injective_int).mpr fun h ↦ hf (by simp [h])
   simp_rw [nsmul_eq_mul, zsmul_eq_mul]

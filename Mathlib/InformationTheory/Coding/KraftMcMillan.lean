@@ -68,11 +68,11 @@ private lemma concatFn_injective_of_isUniquelyDecodable {S : Finset (List α)}
 private lemma sum_pow_length_filter_eq_le_card_mul [Fintype α] [Nonempty α]
     {T : Finset (List α)} {s : ℕ} :
     (∑ x ∈ T.filter (fun x => x.length = s), (1 / (Fintype.card α : ℝ)) ^ x.length)
-      ≤ ((Fintype.card α) ^ s) * (1 / Fintype.card α) ^ s := by
+      ≤ ((Fintype.card α) ^ s) * (1 / (Fintype.card α : ℝ)) ^ s := by
   calc
     _ = ∑ x ∈ T.filter (fun x => x.length = s), (1 / (Fintype.card α : ℝ)) ^ s :=
       Finset.sum_congr rfl fun x hx ↦ by simp [Finset.mem_filter.mp hx]
-    _ = (T.filter fun x => x.length = s).card * (1 / Fintype.card α) ^ s := by
+    _ = (T.filter fun x => x.length = s).card * (1 / (Fintype.card α : ℝ)) ^ s := by
       simp only [Finset.sum_const, nsmul_eq_mul]
   gcongr
   exact_mod_cast Finset.card_filter_length_eq_le
@@ -99,7 +99,7 @@ is bounded by `r * sup length`:
 `(∑ w ∈ S, (1 / D) ^ w.length) ^ r ≤ r * (S.sup List.length)`. -/
 private lemma kraft_mcmillan_inequality_aux {S : Finset (List α)} [Fintype α] [Nonempty α]
     (h : IsUniquelyDecodable (S : Set (List α))) (r : ℕ) (hr : r ≥ 1) :
-    (∑ w ∈ S, (1 / (Fintype.card α) : ℝ) ^ w.length) ^ r ≤ r * (Finset.sup S List.length) := by
+    (∑ w ∈ S, (1 / (Fintype.card α : ℝ)) ^ w.length) ^ r ≤ r * (Finset.sup S List.length) := by
   classical
   -- We use maxLen to bound lengths of `r`-fold concatenations.
   set maxLen := S.sup List.length
@@ -113,7 +113,7 @@ private lemma kraft_mcmillan_inequality_aux {S : Finset (List α)} [Fintype α] 
   let D := (Fintype.card α : ℝ)
   -- Expand the `r`-th power as a sum over `r`-tuples of codewords;
   -- each tuple contributes the weight `(1/D)^{|concatFn w|}`.
-  calc (∑ w ∈ S, (1 / (Fintype.card α) : ℝ) ^ w.length) ^ r
+  calc (∑ w ∈ S, (1 / (Fintype.card α : ℝ)) ^ w.length) ^ r
     _ = ∑ w : Fin r → S, ∏ i : Fin r, (1 / D) ^ (w i).val.length := by
       simpa [(Finset.sum_coe_sort S _).symm] using
         Fintype.sum_pow (f := fun c : S => (1 / D) ^ c.val.length) r
@@ -146,7 +146,7 @@ alphabet of size `D`, then `Σ D^{-|w|} ≤ 1`. -/
 public theorem IsUniquelyDecodable.finsetSum_one_div_card_pow_length_le_one
     {S : Finset (List α)} [Fintype α] [Nonempty α]
     (h : IsUniquelyDecodable (S : Set (List α))) :
-    ∑ w ∈ S, (1 / Fintype.card α : ℝ) ^ w.length ≤ 1 := by
+    ∑ w ∈ S, (1 / (Fintype.card α : ℝ)) ^ w.length ≤ 1 := by
   have h_kraft := kraft_mcmillan_inequality_aux h
   contrapose! h_kraft
   let K := ∑ w ∈ S, (1 / (Fintype.card α : ℝ)) ^ w.length
@@ -156,7 +156,7 @@ public theorem IsUniquelyDecodable.finsetSum_one_div_card_pow_length_le_one
   have hAbs : |1 / K| < 1 := by
     rw [abs_of_pos (one_div_pos.mpr hK_pos), div_lt_one hK_pos]
     exact hK
-  have : Tendsto (fun r : ℕ => r * maxLen / K ^ r) atTop (nhds 0) := by
+  have : Tendsto (fun r : ℕ => (r : ℝ) * maxLen / K ^ r) atTop (nhds 0) := by
     simpa [div_eq_mul_inv₀, mul_assoc, mul_left_comm, mul_comm] using
       (tendsto_self_mul_const_pow_of_abs_lt_one hAbs).const_mul (maxLen : ℝ)
   obtain ⟨r, hr⟩ := eventually_atTop.mp <| this.eventually <| gt_mem_nhds zero_lt_one

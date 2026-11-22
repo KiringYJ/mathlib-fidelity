@@ -7,6 +7,7 @@ module
 
 public import Mathlib.Data.Nat.Prime.Basic
 public meta import Mathlib.Data.Nat.Prime.Defs
+public meta import Mathlib.Lean.Elab.NativeDivision
 public import Mathlib.Tactic.NormNum.Basic
 
 /-!
@@ -39,12 +40,17 @@ theorem not_prime_mul_of_ble (a b n : ℕ) (h : a * b = n) (h₁ : a.ble 1 = fal
 
 /-- Produce a proof that `n` is not prime from a factor `1 < d < n`. `en` should be the expression
   that is the natural number literal `n`. -/
-def deriveNotPrime (n d : ℕ) (en : Q(ℕ)) : Q(¬ Nat.Prime $en) := Id.run do
-  let d' : ℕ := n / d
+def deriveNotPrime (n d : ℕ) (hd : d ≠ 0) (en : Q(ℕ)) : Q(¬ Nat.Prime $en) := Id.run do
+  have d' : ℕ := Nat.euclideanDiv n d hd
   let prf : Q($d * $d' = $en) := (q(Eq.refl $en) : Expr)
   let r : Q(Nat.ble $d 1 = false) := (q(Eq.refl false) : Expr)
   let r' : Q(Nat.ble $d' 1 = false) := (q(Eq.refl false) : Expr)
   return q(not_prime_mul_of_ble _ _ _ $prf $r $r')
+
+/-- A nonzero candidate for the factor test. At `1`, the candidate is `1` itself. -/
+private def factorCandidate (n : ℕ) : {d : ℕ // d ≠ 0} :=
+  if hn : n = 1 then ⟨1, Nat.one_ne_zero⟩
+  else ⟨n.minFac hn, Nat.ne_of_gt (Nat.minFac_pos n hn)⟩
 
 /-- A natural number with `Nat.ble 2 n = true` is not `1`. -/
 theorem ne_one_of_ble_two {n : ℕ} (h : Nat.ble 2 n = true) : n ≠ 1 :=
@@ -133,13 +139,13 @@ partial def evalMinFac.core (n : Q(ℕ)) (hn : Q($n ≠ 1)) (nn : Q(ℕ)) (pn : 
       let r : Q(Nat.ble ($ek * $ek) $nn = false) := (q(Eq.refl false) : Expr)
       ⟨nn, q(isNat_minFac_4 (hn := $hn) $pn $prf $r)⟩
     else
-      let d : ℕ := if hk : k = 1 then k else k.minFac hk
+      let ⟨d, hd⟩ := factorCandidate k
       -- the following branch is not necessary for the correctness,
       -- but makes the algorithm 2x faster
       if d < k then
         have ek' : Q(ℕ) := mkRawNatLit <| k + 2
         let pk' : Q($ek + 2 = $ek') := (q(Eq.refl $ek') : Expr)
-        let pd := deriveNotPrime k d ek
+        let pd := deriveNotPrime k d hd ek
         aux ek' q(minFacHelper_2 $pk' $pd $prf)
       -- remark: `deriveBool q($nn % $ek = 0)` is 5x slower than the following test
       else if n' % k = 0 then
@@ -191,9 +197,9 @@ theorem isNat_not_prime {n n' : ℕ} (h : IsNat n n') : ¬n'.Prime → ¬n.Prime
     | 0 => haveI' : $nn =Q 0 := ⟨⟩; return .isFalse q(isNat_prime_0 $pn)
     | 1 => haveI' : $nn =Q 1 := ⟨⟩; return .isFalse q(isNat_prime_1 $pn)
     | _ =>
-      let d := if hn : n' = 1 then n' else n'.minFac hn
+      let ⟨d, hd⟩ := factorCandidate n'
       if d < n' then
-        let prf : Q(¬ Nat.Prime $nn) := deriveNotPrime n' d nn
+        let prf : Q(¬ Nat.Prime $nn) := deriveNotPrime n' d hd nn
         return .isFalse q(isNat_not_prime $pn $prf)
       let r : Q(Nat.ble 2 $nn = true) := (q(Eq.refl true) : Expr)
       let .isNat _ _lit (p2n : Q(IsNat (minFac $nn (ne_one_of_ble_two $r)) $nn)) ←

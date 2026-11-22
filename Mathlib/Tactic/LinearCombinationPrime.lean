@@ -56,9 +56,6 @@ theorem pf_mul_c [Mul α] (p : a = b) (c : α) : a * c = b * c := p ▸ rfl
 theorem c_mul_pf [Mul α] (p : b = c) (a : α) : a * b = a * c := p ▸ rfl
 theorem mul_pf [Mul α] (p₁ : (a₁ : α) = b₁) (p₂ : a₂ = b₂) : a₁ * a₂ = b₁ * b₂ := p₁ ▸ p₂ ▸ rfl
 theorem inv_pf [Inv α] (p : (a : α) = b) : a⁻¹ = b⁻¹ := p ▸ rfl
-theorem pf_div_c [Div α] (p : a = b) (c : α) : a / c = b / c := p ▸ rfl
-theorem c_div_pf [Div α] (p : b = c) (a : α) : a / b = a / c := p ▸ rfl
-theorem div_pf [Div α] (p₁ : (a₁ : α) = b₁) (p₂ : a₂ = b₂) : a₁ / a₂ = b₁ / b₂ := p₁ ▸ p₂ ▸ rfl
 
 /-- Result of `expandLinearCombo`, either an equality proof or a value. -/
 inductive Expanded
@@ -132,19 +129,14 @@ partial def expandLinearCombo (ty : Expr) (stx : Syntax.Term) : TermElabM Expand
       let α ← ty.toSyntax
       .proof <$> ``(congrArg (fun x : $α ↦ x / $c₂) $p₁)
     | .const c₁, .proof p₂ => do
-      if (← synthInstance? (← mkAppM ``Div #[ty])).isSome then
-        return .proof (← ``(c_div_pf $p₂ $c₁))
       let α ← ty.toSyntax
       let h₂ ← checkedUnitEquality p₂
-      .proof <$> ``(congrArg (fun u : {x : $α // IsUnit x} ↦
-        Checked.div $c₁ (Subtype.val u) (Subtype.property u)) $h₂)
+      .proof <$> ``(congrArg (fun u : {x : $α // IsUnit x} ↦ $c₁ / Subtype.val u) $h₂)
     | .proof p₁, .proof p₂ => do
-      if (← synthInstance? (← mkAppM ``Div #[ty])).isSome then
-        return .proof (← ``(div_pf $p₁ $p₂))
       let α ← ty.toSyntax
       let h₂ ← checkedUnitEquality p₂
       .proof <$> ``(congrArg₂ (fun x (u : {x : $α // IsUnit x}) ↦
-        Checked.div x (Subtype.val u) (Subtype.property u)) $p₁ $h₂)
+        x / Subtype.val u) $p₁ $h₂)
   | e =>
     -- We have the expected type from the goal, so we can fully synthesize this leaf node.
     withSynthesize do
@@ -230,6 +222,7 @@ Note: The left and right sides of all the equalities should have the same
   The coefficients may be arbitrary expressions.
   The expressions can be arbitrary proof terms proving equalities.
   Most commonly they are hypothesis names `h1, h2, ...`.
+  Division follows the ordinary `/` rules, transporting unit evidence along a denominator equality.
 * `linear_combination' (norm := tac) e` runs the "normalization tactic" `tac`
   on the subgoal(s) after constructing the linear combination.
   * The default normalization tactic is `ring1`, which closes the goal or fails.

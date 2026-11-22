@@ -363,7 +363,7 @@ theorem sum_variance_truncation_le {X : Ω → ℝ} (hint : Integrable X) (hnonn
       · apply Continuous.integrableOn_Ioc (by fun_prop)
       · apply Continuous.integrableOn_Ioc (by fun_prop)
       · calc
-          2 / (↑k + 1) * x ^ 2 = x / (k + 1) * (2 * x) := by ring
+          2 / (↑k + 1) * x ^ 2 = x / ((k : ℝ) + 1) * (2 * x) := by ring
           _ ≤ 1 * (2 * x) := by
               have : 0 < x := k.cast_nonneg.trans_lt hx.1
               gcongr

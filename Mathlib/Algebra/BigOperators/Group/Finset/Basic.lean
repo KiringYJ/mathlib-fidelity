@@ -1106,13 +1106,23 @@ theorem toFinset_sum_count_nsmul_eq (s : Multiset ι) :
 
 theorem exists_smul_of_dvd_count (s : Multiset ι) {k : ℕ}
     (h : ∀ a : ι, a ∈ s → k ∣ Multiset.count a s) : ∃ u : Multiset ι, s = k • u := by
-  use ∑ a ∈ s.toFinset, (s.count a / k) • {a}
+  obtain rfl | hk := eq_or_ne k 0
+  · refine ⟨0, ?_⟩
+    rw [zero_nsmul]
+    apply eq_zero_iff_forall_notMem.mpr
+    intro a ha
+    obtain ⟨m, hm⟩ := h a ha
+    exact count_ne_zero.mpr ha (by simpa only [Nat.zero_mul] using hm)
+  use ∑ a ∈ s.toFinset, Nat.euclideanDiv (s.count a) k hk • {a}
   have h₂ :
-    (∑ x ∈ s.toFinset, k • (count x s / k) • ({x} : Multiset ι)) =
+    (∑ x ∈ s.toFinset, k • Nat.euclideanDiv (count x s) k hk • ({x} : Multiset ι)) =
       ∑ x ∈ s.toFinset, count x s • {x} := by
     apply Finset.sum_congr rfl
     intro x hx
-    rw [← mul_nsmul', Nat.mul_div_cancel' (h x (mem_toFinset.mp hx))]
+    rw [← mul_nsmul']
+    have hq := Nat.euclideanDiv_mul_add_mod (count x s) k hk
+    rw [Nat.mod_eq_zero_of_dvd (h x (mem_toFinset.mp hx)), Nat.add_zero] at hq
+    rw [hq]
   rw [← Finset.sum_nsmul, h₂, toFinset_sum_count_nsmul_eq]
 
 @[to_additive]

@@ -498,7 +498,8 @@ lemma sub_lt_sub_of_le_of_gt {x y z t : EReal} (h : x ≤ y) (h' : z < t)
     (hx_top : x ≠ ⊤) (hy_bot : y ≠ ⊥) :
     x - t < y - z := by
   refine sub_lt_of_lt_add' ?_
-  rw [add_sub_assoc', add_comm, add_sub_assoc]
+  rw [show t + (y - z) = y + (t - z) by
+    simpa only [sub_eq_add_neg] using add_left_comm t y (-z)]
   by_cases hy_top : y = ⊤
   · rw [hy_top, top_add_of_ne_bot]
     · exact hx_top.lt_top

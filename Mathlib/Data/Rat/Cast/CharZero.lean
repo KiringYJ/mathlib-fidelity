@@ -29,9 +29,13 @@ private theorem cast_eq_eval_den (q : ℚ) :
     (q : α) = eval q (Nat.cast_ne_zero.mpr q.den_nz) :=
   cast_eq_eval q _
 
-lemma cast_def (q : ℚ) : (q : α) = q.num / q.den := cast_eq_eval_den q
+lemma cast_def (q : ℚ) :
+    (q : α) = Checked.div (q.num : α) (q.den : α) (Nat.cast_ne_zero.mpr q.den_nz).isUnit :=
+  cast_eq_eval_den q
 
-lemma cast_mk' (a b h1 h2) : ((⟨a, b, h1, h2⟩ : ℚ) : α) = a / b := cast_def _
+lemma cast_mk' (a b h1 h2) :
+    ((⟨a, b, h1, h2⟩ : ℚ) : α) = Checked.div (a : α) (b : α) (Nat.cast_ne_zero.mpr h1).isUnit :=
+  cast_def _
 
 @[simp, norm_cast] theorem cast_natCast (n : ℕ) : ((n : ℚ) : α) = n :=
   (cast_eq_eval_den _).trans (eval_natCast _ _)
@@ -93,13 +97,13 @@ def castHom : ℚ →+* α where
   map_inv₀ (castHom α) _
 
 @[simp, norm_cast] lemma cast_div (p q : ℚ) {hq : IsUnit q} :
-    ((p / q : ℚ) : α) = (p : α) / (q : α) :=
+    ((p / q : ℚ) : α) = Checked.div (p : α) (q : α) (hq.map (castHom α)) :=
   map_div₀ (castHom α) ..
 
 @[norm_cast]
 theorem cast_fractionInt (n d : ℤ) (hd : d ≠ 0) :
-    (fractionInt n d hd : α) = (n : α) / (d : α) := by
-  simp only [fractionInt_eq_div, cast_div, cast_intCast]
+    (fractionInt n d hd : α) = Checked.div (n : α) (d : α) (Int.cast_ne_zero.mpr hd).isUnit :=
+  (cast_eq_eval_den _).trans (eval_fractionInt n d hd (Int.cast_ne_zero.mpr hd))
 
 @[simp, norm_cast]
 lemma cast_zpow (p : ℚ) (n : ℤ) {h : n < 0 → IsUnit p} :
@@ -127,7 +131,9 @@ private theorem cast_eq_eval_den (q : ℚ≥0) :
     (q : α) = eval q (Nat.cast_ne_zero.mpr q.den_ne_zero) :=
   cast_eq_eval q _
 
-lemma cast_def (q : ℚ≥0) : (q : α) = q.num / q.den := cast_eq_eval_den q
+lemma cast_def (q : ℚ≥0) :
+    (q : α) = Checked.div (q.num : α) (q.den : α) (Nat.cast_ne_zero.mpr q.den_ne_zero).isUnit :=
+  cast_eq_eval_den q
 
 @[simp, norm_cast] theorem cast_natCast (n : ℕ) : ((n : ℚ≥0) : α) = n :=
   (cast_eq_eval_den _).trans (eval_natCast _ _)
@@ -179,7 +185,7 @@ def castHom : ℚ≥0 →+* α where
   map_inv₀ (castHom α) _
 
 @[simp, norm_cast] lemma cast_div (p q : ℚ≥0) {hq : IsUnit q} :
-    ((p / q : ℚ≥0) : α) = (p : α) / (q : α) :=
+    ((p / q : ℚ≥0) : α) = Checked.div (p : α) (q : α) (hq.map (castHom α)) :=
   map_div₀ (castHom α) ..
 
 @[simp, norm_cast]
@@ -189,7 +195,8 @@ lemma cast_zpow (q : ℚ≥0) (p : ℤ) {h : p < 0 → IsUnit q} :
   map_zpow₀ (castHom α) ..
 
 @[simp]
-lemma cast_divNat (a b : ℕ) (hb : b ≠ 0) : (divNat a b hb : α) = a / b := by
+lemma cast_divNat (a b : ℕ) (hb : b ≠ 0) :
+    (divNat a b hb : α) = Checked.div (a : α) (b : α) (Nat.cast_ne_zero.mpr hb).isUnit := by
   apply eq_div_of_mul_eq
   rw [← cast_natCast b, ← cast_mul, divNat_mul_den, cast_natCast]
 

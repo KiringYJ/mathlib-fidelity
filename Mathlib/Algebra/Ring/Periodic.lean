@@ -49,17 +49,27 @@ protected theorem Periodic.funext [Add α] (h : Periodic f c) : (fun x => f (x +
 protected theorem Periodic.comp [Add α] (h : Periodic f c) (g : β → γ) : Periodic (g ∘ f) c := by
   simp_all
 
+/-- Applying a binary function pointwise preserves a common period. -/
+protected theorem Periodic.comp₂ {δ : Type*} [Add α] {g : α → γ} (hf : Periodic f c)
+    (hg : Periodic g c) (op : β → γ → δ) : Periodic (fun x ↦ op (f x) (g x)) c :=
+  fun x ↦ congrArg₂ op (hf x) (hg x)
+
 theorem Periodic.comp_addHom [Add α] [Add γ] (h : Periodic f c) (g : AddHom γ α) (g_inv : α → γ)
     (hg : RightInverse g_inv g) : Periodic (f ∘ g) (g_inv c) := fun x => by
   simp only [hg c, h (g x), map_add, comp_apply]
 
 @[to_additive]
 protected theorem Periodic.mul [Add α] [Mul β] (hf : Periodic f c) (hg : Periodic g c) :
-    Periodic (f * g) c := by simp_all
+    Periodic (f * g) c :=
+  hf.comp₂ hg (· * ·)
 
-@[to_additive]
-protected theorem Periodic.div [Add α] [Div β] (hf : Periodic f c) (hg : Periodic g c) :
-    Periodic (f / g) c := by simp_all
+protected theorem Periodic.sub [Add α] [Sub β] (hf : Periodic f c) (hg : Periodic g c) :
+    Periodic (f - g) c :=
+  hf.comp₂ hg (· - ·)
+
+protected theorem Periodic.div [Add α] [Group β] (hf : Periodic f c) (hg : Periodic g c) :
+    Periodic (f / g) c := by
+  simpa only [Pi.div_def] using hf.comp₂ hg (· / ·)
 
 @[to_additive]
 theorem _root_.List.periodic_prod [Add α] [MulOneClass β] (l : List (α → β))
@@ -410,8 +420,15 @@ theorem Periodic.sub_antiperiod_eq [AddGroup α] [InvolutiveNeg β] (h1 : Period
 theorem Antiperiodic.mul [Add α] [Mul β] [HasDistribNeg β] (hf : Antiperiodic f c)
     (hg : Antiperiodic g c) : Periodic (f * g) c := by simp_all
 
-theorem Antiperiodic.div [Add α] [DivisionMonoid β] [HasDistribNeg β] (hf : Antiperiodic f c)
-    (hg : Antiperiodic g c) : Periodic (f / g) c := by simp_all [neg_div_neg_eq]
+/-- Pointwise inversion preserves antiperiodicity because it commutes with negation. -/
+protected theorem Antiperiodic.inv [Add α] [DivisionMonoid β] [HasDistribNeg β]
+    (hf : Antiperiodic f c) : Antiperiodic f⁻¹ c := fun x ↦ by
+  change (f (x + c))⁻¹ = -(f x)⁻¹
+  rw [hf x, ← neg_inv]
+
+theorem Antiperiodic.div [Add α] [Group β] [HasDistribNeg β] (hf : Antiperiodic f c)
+    (hg : Antiperiodic g c) : Periodic (f / g) c := by
+  simpa only [div_eq_mul_inv] using hf.mul hg.inv
 
 /-- For an antiperiodic function `f` with antiperiod `c`, summing `f` over a `Finset` shifted by
 `c` (via `addRightEmbedding c`) negates the sum over the original `Finset`. -/

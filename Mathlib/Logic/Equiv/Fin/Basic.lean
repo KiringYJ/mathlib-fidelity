@@ -342,48 +342,48 @@ def finProdFinEquiv : Fin m × Fin n ≃ Fin (m * n) where
   left_inv := fun ⟨x, y⟩ =>
     have H : 0 < n := Nat.pos_of_ne_zero fun H => Nat.not_lt_zero y.1 <| H ▸ y.2
     Prod.ext
-      (Fin.eq_of_val_eq <|
-        calc
-          (y.1 + n * x.1) / n = y.1 / n + x.1 := Nat.add_mul_div_left _ _ H
-          _ = 0 + x.1 := by rw [Nat.div_eq_of_lt y.2]
-          _ = x.1 := Nat.zero_add x.1)
+      (Fin.eq_of_val_eq <| by
+        simpa only [Fin.divNat, Nat.euclideanDiv_eq_core] using
+          Nat.euclideanDiv_eq_of_remainder H.ne' (Nat.add_comm y.val (n * x.val)) y.is_lt)
       (Fin.eq_of_val_eq <|
         calc
           (y.1 + n * x.1) % n = y.1 % n := Nat.add_mul_mod_self_left _ _ _
           _ = y.1 := Nat.mod_eq_of_lt y.2)
   right_inv _ := Fin.eq_of_val_eq <| Nat.mod_add_div _ _
 
-/-- The equivalence induced by `a ↦ (a / n, a % n)` for nonzero `n`.
+/-- The equivalence sending an input to its Euclidean quotient and remainder for nonzero `n`.
 This is like `finProdFinEquiv.symm` but with `m` infinite.
 See `Nat.div_mod_unique` for a similar propositional statement. -/
 @[simps]
 def Nat.divModEquiv (n : ℕ) [NeZero n] : ℕ ≃ ℕ × Fin n where
-  toFun a := (a / n, Fin.ofNat n a)
+  toFun a := (Nat.euclideanDiv a n (NeZero.ne n), Fin.ofNat n a)
   invFun p := p.1 * n + ↑p.2
   -- TODO: is there a canonical order of `*` and `+` here?
-  left_inv _ := Nat.div_add_mod' _ _
+  left_inv a := by
+    simpa only [Fin.val_ofNat, Nat.mul_comm] using Nat.euclideanDiv_mul_add_mod a n (NeZero.ne n)
   right_inv p := by
     refine Prod.ext ?_ (Fin.ext <| Nat.mul_add_mod_of_lt p.2.is_lt)
-    dsimp only
-    rw [Nat.add_comm, Nat.add_mul_div_right _ _ n.pos_of_neZero, Nat.div_eq_of_lt p.2.is_lt,
-      Nat.zero_add]
+    exact Nat.euclideanDiv_eq_of_remainder (NeZero.ne n)
+      (congrArg (· + p.2.val) (Nat.mul_comm p.1 n)) p.2.is_lt
 
-/-- The equivalence induced by `a ↦ (a / n, a % n)` for nonzero `n`.
+/-- The equivalence sending an input to its Euclidean quotient and remainder for nonzero `n`.
 See `Int.ediv_emod_unique` for a similar propositional statement. -/
 @[simps]
 def Int.divModEquiv (n : ℕ) [NeZero n] : ℤ ≃ ℤ × Fin n where
   -- TODO: could cast from int directly if we import `Data.ZMod.Defs`, though there are few lemmas
   -- about that coercion.
-  toFun a := (a / n, Fin.ofNat n (a.natMod n))
+  toFun a := (Int.euclideanDiv a (n : ℤ) (Int.ofNat_ne_zero.mpr (NeZero.ne n)),
+    Fin.ofNat n (a.natMod n))
   invFun p := p.1 * n + ↑p.2
   left_inv a := by
-    simp_rw [Fin.val_ofNat, natCast_mod, natMod,
+    simp_rw [Int.euclideanDiv_eq_core, Fin.val_ofNat, natCast_mod, natMod,
       toNat_of_nonneg (emod_nonneg _ <| natCast_eq_zero.not.2 (NeZero.ne n)), emod_emod,
       ediv_mul_add_emod]
   right_inv := fun ⟨q, r, hrn⟩ => by
     simp only [Prod.mk_inj, Fin.ext_iff]
     obtain ⟨h1, h2⟩ := Int.natCast_nonneg r, Int.ofNat_lt.2 hrn
-    rw [Int.add_comm, add_mul_ediv_right _ _ (natCast_eq_zero.not.2 (NeZero.ne n)),
+    rw [Int.euclideanDiv_eq_core, Int.add_comm,
+      add_mul_ediv_right _ _ (natCast_eq_zero.not.2 (NeZero.ne n)),
       ediv_eq_zero_of_lt h1 h2, natMod, add_mul_emod_self_right, emod_eq_of_lt h1 h2, toNat_natCast]
     exact ⟨q.zero_add, Fin.val_cast_of_lt hrn⟩
 

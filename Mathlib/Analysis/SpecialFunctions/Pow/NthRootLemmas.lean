@@ -33,7 +33,7 @@ theorem nthRoot_zero_right (h : n ≠ 0) : nthRoot n 0 = 0 := by
 
 @[simp]
 theorem nthRoot_one_right : nthRoot n 1 = 1 := by
-  rcases n with _ | _ | _ <;> simp [nthRoot, nthRoot.go, Nat.add_comm 1]
+  rcases n with _ | _ | _ <;> simp [nthRoot, nthRoot.go, Nat.euclideanDiv_eq_core, Nat.add_comm 1]
 
 private theorem nthRoot.pow_go_le (hle : guess ≤ fuel) (n a : ℕ) :
     go n a fuel guess ^ (n + 2) ≤ a := by
@@ -42,15 +42,19 @@ private theorem nthRoot.pow_go_le (hle : guess ≤ fuel) (n a : ℕ) :
     obtain rfl : guess = 0 := by grind
     simp [go]
   | succ fuel ih =>
-    rw [go]
-    split_ifs with h
-    case pos =>
-      grind
-    case neg =>
-      have : guess ≤ a / guess ^ (n + 1) := by
-        linarith only [Nat.mul_le_of_le_div _ _ _ (not_lt.1 h)]
-      replace := Nat.mul_le_of_le_div _ _ _ this
-      grind
+    cases guess with
+    | zero => simp [go]
+    | succ g =>
+      rw [go]
+      split_ifs with h
+      · exact ih (Nat.le_of_lt_succ (Nat.lt_of_lt_of_le h hle))
+      · have hq : g + 1 ≤
+            Nat.euclideanDiv a ((g + 1) ^ (n + 1)) (pow_ne_zero _ (Nat.succ_ne_zero _)) := by
+          simp only [Nat.euclideanDiv_eq_core] at h ⊢
+          nlinarith only [Nat.mul_le_of_le_div _ _ _ (not_lt.1 h)]
+        rw [Nat.euclideanDiv_eq_core] at hq
+        rw [Nat.pow_succ, Nat.mul_comm]
+        exact Nat.mul_le_of_le_div _ _ _ hq
 
 /-- `nthRoot n a ^ n ≤ a` unless both `n` and `a` are zeros. -/
 @[simp]
@@ -60,7 +64,9 @@ theorem pow_nthRoot_le_iff : nthRoot n a ^ n ≤ a ↔ n ≠ 0 ∨ a ≠ 0 := by
 alias ⟨_, pow_nthRoot_le⟩ := pow_nthRoot_le_iff
 
 private theorem nthRoot.lt_pow_go_succ_aux0 (hb : b ≠ 0) :
-    a ≤ ((a ^ (n + 1) / b ^ n) + n * b) / (n + 1) := by
+    a ≤ Nat.euclideanDiv (Nat.euclideanDiv (a ^ (n + 1)) (b ^ n) (pow_ne_zero _ hb) + n * b)
+      (n + 1) := by
+  simp only [Nat.euclideanDiv_eq_core]
   rw [Nat.le_div_iff_mul_le (by positivity), Nat.mul_comm,
     ← Nat.add_mul_div_right _ _ (by positivity),
     Nat.le_div_iff_mul_le (by positivity)]
@@ -93,13 +99,17 @@ An auxiliary lemma saying that if `b ≠ 0`,
 then `(a / b ^ n + n * b) / (n + 1) + 1` is a strict upper estimate on `√[n + 1] a`.
 -/
 theorem nthRoot.lt_pow_go_succ_aux (hb : b ≠ 0) :
-     a < ((a / b ^ n + n * b) / (n + 1) + 1) ^ (n + 1) := by
+    a < (Nat.euclideanDiv (Nat.euclideanDiv a (b ^ n) (pow_ne_zero _ hb) + n * b)
+      (n + 1) + 1) ^ (n + 1) := by
   have ⟨c, hc1, hc2⟩ := nthRoot.always_exists n a
   calc a < (c + 1) ^ (n + 1) := hc2
-    _ ≤ ((c ^ (n + 1) / b ^ n + n * b) / (n + 1) + 1) ^ (n + 1) := by
+    _ ≤ (Nat.euclideanDiv (Nat.euclideanDiv (c ^ (n + 1)) (b ^ n) (pow_ne_zero _ hb) + n * b)
+        (n + 1) + 1) ^ (n + 1) := by
       gcongr
       exact nthRoot.lt_pow_go_succ_aux0 hb
-    _ ≤ ((a / b ^ n + n * b) / (n + 1) + 1) ^ (n + 1) := by
+    _ ≤ (Nat.euclideanDiv (Nat.euclideanDiv a (b ^ n) (pow_ne_zero _ hb) + n * b)
+      (n + 1) + 1) ^ (n + 1) := by
+      simp only [Nat.euclideanDiv_eq_core]
       gcongr
 
 private theorem nthRoot.lt_pow_go_succ (hlt : a < (guess + 1) ^ (n + 2)) :
@@ -107,14 +117,13 @@ private theorem nthRoot.lt_pow_go_succ (hlt : a < (guess + 1) ^ (n + 2)) :
   induction fuel generalizing guess with
   | zero => simpa [go]
   | succ fuel ih =>
-    rw [go]
-    split_ifs with h
-    case pos =>
-      rcases eq_or_ne guess 0 with rfl | hguess
-      · grind
-      · exact ih <| Nat.nthRoot.lt_pow_go_succ_aux hguess
-    case neg =>
-      assumption
+    cases guess with
+    | zero => simpa only [go] using hlt
+    | succ g =>
+      rw [go]
+      split_ifs
+      · exact ih <| Nat.nthRoot.lt_pow_go_succ_aux (Nat.succ_ne_zero g)
+      · exact hlt
 
 theorem lt_pow_nthRoot_add_one (hn : n ≠ 0) (a : ℕ) : a < (nthRoot n a + 1) ^ n := by
   match n, hn with

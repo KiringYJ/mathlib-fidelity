@@ -136,17 +136,19 @@ lemma pepin_primality (n : ℕ) (h : 3 ^ (2 ^ (2 ^ n - 1)) = (-1 : ZMod (fermatN
   apply lucas_primality (p := 2 ^ (2 ^ n) + 1) (a := 3)
   · rw [Nat.add_sub_cancel, key, pow_succ, pow_mul, ← pow_succ, ← key, h, neg_one_sq]
   · intro p hp1 hp2
-    rw [Nat.add_sub_cancel, (Nat.prime_dvd_prime_iff_eq hp1 prime_two).mp (hp1.dvd_of_dvd_pow hp2),
-        key, pow_succ, Nat.mul_div_cancel _ two_pos, ← pow_succ, ← key, h]
+    obtain rfl := (Nat.prime_dvd_prime_iff_eq hp1 prime_two).mp (hp1.dvd_of_dvd_pow hp2)
+    rw [Nat.add_sub_cancel, key, pow_succ, Nat.euclideanDiv_mul_right_cancel, ← pow_succ, ← key, h]
     exact neg_one_ne_one
 
 /-- `Fₙ = 2^(2^n)+1` is prime if `3^((Fₙ - 1)/2) = -1 mod Fₙ` (**Pépin's test**). -/
-lemma pepin_primality' (n : ℕ) (h : 3 ^ ((fermatNumber n - 1) / 2) = (-1 : ZMod (fermatNumber n))) :
+lemma pepin_primality' (n : ℕ)
+    (h : 3 ^ Nat.euclideanDiv (fermatNumber n - 1) 2 = (-1 : ZMod (fermatNumber n))) :
     (fermatNumber n).Prime := by
   apply pepin_primality
   rw [← h]
   congr
-  rw [fermatNumber, add_tsub_cancel_right, Nat.pow_div Nat.one_le_two_pow Nat.zero_lt_two]
+  rw [Nat.euclideanDiv_eq_core, fermatNumber, add_tsub_cancel_right,
+    Nat.pow_div Nat.one_le_two_pow Nat.zero_lt_two]
 
 
 /-- Prime factors of `a ^ (2 ^ n) + 1` are of form `k * 2 ^ (n + 1) + 1`. -/
@@ -210,8 +212,9 @@ theorem prime_of_pow_sub_one_prime {a n : ℕ} (hn1 : n ≠ 1) (hP : (a ^ n - 1)
   refine ⟨rfl, Nat.prime_def.mpr ⟨(two_le_iff n).mpr ⟨hn0, hn1⟩, fun d hdn ↦ ?_⟩⟩
   have hinj : ∀ x y, 2 ^ x - 1 = 2 ^ y - 1 → x = y :=
     fun x y h ↦ Nat.pow_right_injective le_rfl (sub_one_cancel (pow_pos ha0 x) (pow_pos ha0 y) h)
-  let h := Nat.sub_dvd_pow_sub_pow (2 ^ d) 1 (n / d)
-  rw [one_pow, ← pow_mul, Nat.mul_div_cancel' hdn] at h
+  obtain ⟨e, he⟩ := hdn
+  have h := Nat.sub_dvd_pow_sub_pow (2 ^ d) 1 e
+  rw [one_pow, ← pow_mul, ← he] at h
   exact (hP.eq_one_or_self_of_dvd (2 ^ d - 1) h).imp (hinj d 1) (hinj d n)
 
 end Nat

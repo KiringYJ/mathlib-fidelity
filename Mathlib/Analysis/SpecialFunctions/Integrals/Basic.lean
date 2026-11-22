@@ -208,14 +208,15 @@ theorem integral_zpow {n : ℤ} (h : 0 ≤ n ∨ n ≠ -1 ∧ (0 : ℝ) ∉ [[a,
   simp only [hcast, Real.rpow_intCast a (n + 1) (h := ha), Real.rpow_intCast b (n + 1) (h := hb)]
 
 @[simp]
-theorem integral_pow : ∫ x in a..b, x ^ n = (b ^ (n + 1) - a ^ (n + 1)) / (n + 1) := by
+theorem integral_pow : ∫ x in a..b, x ^ n = (b ^ (n + 1) - a ^ (n + 1)) / ((n : ℝ) + 1) := by
   simpa only [← Nat.cast_succ, Real.rpow_natCast] using
     integral_rpow (r := (n : ℝ)) (a := a) (b := b)
       (.inl (neg_one_lt_zero.trans_le (Nat.cast_nonneg _)))
 
 /-- Integral of `|x - a| ^ n` over `Ι a b`. This integral appears in the proof of the
 Picard-Lindelöf/Cauchy-Lipschitz theorem. -/
-theorem integral_pow_abs_sub_uIoc : ∫ x in Ι a b, |x - a| ^ n = |b - a| ^ (n + 1) / (n + 1) := by
+theorem integral_pow_abs_sub_uIoc :
+    ∫ x in Ι a b, |x - a| ^ n = |b - a| ^ (n + 1) / ((n : ℝ) + 1) := by
   rcases le_or_gt a b with hab | hab
   · calc
       ∫ x in Ι a b, |x - a| ^ n = ∫ x in a..b, |x - a| ^ n := by
@@ -225,7 +226,7 @@ theorem integral_pow_abs_sub_uIoc : ∫ x in Ι a b, |x - a| ^ n = |b - a| ^ (n 
         refine integral_congr fun x hx => congr_arg₂ Pow.pow (abs_of_nonneg <| ?_) rfl
         rw [uIcc_of_le (sub_nonneg.2 hab)] at hx
         exact hx.1
-      _ = |b - a| ^ (n + 1) / (n + 1) := by simp [abs_of_nonneg (sub_nonneg.2 hab)]
+      _ = |b - a| ^ (n + 1) / ((n : ℝ) + 1) := by simp [abs_of_nonneg (sub_nonneg.2 hab)]
   · calc
       ∫ x in Ι a b, |x - a| ^ n = ∫ x in b..a, |x - a| ^ n := by
         rw [uIoc_of_ge hab.le, ← integral_of_le hab.le]
@@ -234,7 +235,7 @@ theorem integral_pow_abs_sub_uIoc : ∫ x in Ι a b, |x - a| ^ n = |b - a| ^ (n 
         refine integral_congr fun x hx => congr_arg₂ Pow.pow (abs_of_nonpos <| ?_) rfl
         rw [uIcc_of_le (sub_nonpos.2 hab.le)] at hx
         exact hx.2
-      _ = |b - a| ^ (n + 1) / (n + 1) := by
+      _ = |b - a| ^ (n + 1) / ((n : ℝ) + 1) := by
         simp [integral_comp_neg fun x => x ^ n, abs_of_neg (sub_neg.2 hab)]
 
 @[simp]
@@ -590,8 +591,8 @@ theorem integral_sin_pow_aux :
 /-- The reduction formula for the integral of `sin x ^ n` for any natural `n ≥ 2`. -/
 theorem integral_sin_pow :
     (∫ x in a..b, sin x ^ (n + 2)) =
-      (sin a ^ (n + 1) * cos a - sin b ^ (n + 1) * cos b) / (n + 2) +
-        (n + 1) / (n + 2) * ∫ x in a..b, sin x ^ n := by
+      (sin a ^ (n + 1) * cos a - sin b ^ (n + 1) * cos b) / ((n : ℝ) + 2) +
+        ((n : ℝ) + 1) / ((n : ℝ) + 2) * ∫ x in a..b, sin x ^ n := by
   rw [div_mul_eq_mul_div₀, ← _root_.add_div]
   apply (eq_div_iff (hb := (show 0 < (n : ℝ) + 2 by positivity).ne'.isUnit)).mpr
   linear_combination integral_sin_pow_aux (a := a) (b := b) n
@@ -601,7 +602,8 @@ theorem integral_sin_sq : ∫ x in a..b, sin x ^ 2 = (sin a * cos a - sin b * co
   simp [field, integral_sin_pow, add_sub_assoc]
 
 theorem integral_sin_pow_odd :
-    (∫ x in 0..π, sin x ^ (2 * n + 1)) = 2 * ∏ i ∈ range n, (2 * (i : ℝ) + 2) / (2 * i + 3) := by
+    (∫ x in 0..π, sin x ^ (2 * n + 1)) =
+      2 * ∏ i ∈ range n, (2 * (i : ℝ) + 2) / (2 * (i : ℝ) + 3) := by
   induction n with
   | zero => norm_num
   | succ k ih =>
@@ -611,7 +613,8 @@ theorem integral_sin_pow_odd :
     simp
 
 theorem integral_sin_pow_even :
-    (∫ x in 0..π, sin x ^ (2 * n)) = π * ∏ i ∈ range n, (2 * (i : ℝ) + 1) / (2 * i + 2) := by
+    (∫ x in 0..π, sin x ^ (2 * n)) =
+      π * ∏ i ∈ range n, (2 * (i : ℝ) + 1) / (2 * (i : ℝ) + 2) := by
   induction n with
   | zero => simp
   | succ k ih =>
@@ -663,8 +666,8 @@ theorem integral_cos_pow_aux :
 /-- The reduction formula for the integral of `cos x ^ n` for any natural `n ≥ 2`. -/
 theorem integral_cos_pow :
     (∫ x in a..b, cos x ^ (n + 2)) =
-      (cos b ^ (n + 1) * sin b - cos a ^ (n + 1) * sin a) / (n + 2) +
-        (n + 1) / (n + 2) * ∫ x in a..b, cos x ^ n := by
+      (cos b ^ (n + 1) * sin b - cos a ^ (n + 1) * sin a) / ((n : ℝ) + 2) +
+        ((n : ℝ) + 1) / ((n : ℝ) + 2) * ∫ x in a..b, cos x ^ n := by
   rw [div_mul_eq_mul_div₀, ← _root_.add_div]
   apply (eq_div_iff (hb := (show 0 < (n : ℝ) + 2 by positivity).ne'.isUnit)).mpr
   linear_combination integral_cos_pow_aux (a := a) (b := b) n

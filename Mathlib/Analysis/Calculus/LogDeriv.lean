@@ -210,12 +210,12 @@ lemma logDeriv_zpow {x : 𝕜} {hx : IsUnit x} (n : ℤ) :
     logDeriv (fun y : {y : 𝕜 // n < 0 → IsUnit y} ↦ Checked.zpow y.val n y.2)
       ⟨x, fun _ ↦ hx⟩ Subtype.val
       ((hasDerivAt_zpow n ⟨x, fun _ ↦ hx⟩).existsUnique_hasDerivAt
-        (isOpen_zpow_domain n).isOpenEmbedding_subtypeVal) (hx.zpow₀ n) = n / x := by
+        (isOpen_zpow_domain n).isOpenEmbedding_subtypeVal) (hx.zpow₀ n) = (n : 𝕜) / x := by
   rw [logDeriv_eq (hasDerivAt_zpow n ⟨x, fun _ ↦ hx⟩)]
   by_cases hn : n = 0
   · simp [hn]
   simp only [dite_eq_right hn]
-  change (n * x ^ (n - 1)) / x ^ n = n / x
+  change (n * x ^ (n - 1)) / x ^ n = (n : 𝕜) / x
   have hn' := hx.zpow₀ n
   rw [zpow_sub_one₀ hx.ne_zero]
   field_simp
@@ -223,7 +223,7 @@ lemma logDeriv_zpow {x : 𝕜} {hx : IsUnit x} (n : ℤ) :
 @[simp]
 lemma logDeriv_pow (x : 𝕜) {hx : x ≠ 0} (n : ℕ) :
     logDeriv (· ^ n) x id ((hasDerivAt_id x).fun_pow n).existsUnique_hasDerivAt (hx.isUnit.pow n) =
-      n / x := by
+      (n : 𝕜) / x := by
   have h := logDeriv_fun_pow (f := id) (x := x) (hf := hx.isUnit) differentiableAt_id n
   rw [logDeriv_id, ← mul_div_assoc₀, mul_one] at h
   exact h
@@ -235,7 +235,7 @@ lemma logDeriv_pow (x : 𝕜) {hx : x ≠ 0} (n : ℕ) :
   rw [logDeriv_eq (hasDerivAt_inv x)]
   have hi := (x⁻¹).isUnit
   rw [neg_div₀, pow_two, mul_div_cancel_right₀]
-  simp [divp]
+  rw [neg_div₀, one_div₀, inv_eq_val_inv_of_eq_val₀ x rfl]
 
 @[to_fun logDeriv_fun_comp]
 theorem logDeriv_comp {f : 𝕜' → 𝕜'} {g : 𝕜 → 𝕜'} {x : 𝕜} (hf : DifferentiableAt 𝕜' f (g x))

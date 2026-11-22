@@ -68,7 +68,11 @@ protected def con : Con G where
       _ = (a * c)⁻¹ * (b * d) := by
         simp only [mul_inv_rev, mul_assoc, inv_mul_cancel_left]
 
-@[to_additive]
+instance _root_.QuotientAddGroup.Quotient.addGroup {G : Type*} [AddGroup G] (N : AddSubgroup G)
+    [nN : N.Normal] : AddGroup (G ⧸ N) :=
+  inferInstanceAs <| AddGroup (delta% QuotientAddGroup.con N).Quotient
+
+@[to_additive existing]
 instance Quotient.group : Group (G ⧸ N) :=
   inferInstanceAs <| Group (delta% QuotientGroup.con N).Quotient
 
@@ -168,8 +172,8 @@ theorem mk_inv (a : G) : ((a⁻¹ : G) : Q) = (a : Q)⁻¹ :=
   rfl
 
 @[to_additive (attr := simp)]
-theorem mk_div (a b : G) : ((a / b : G) : Q) = a / b :=
-  rfl
+theorem mk_div (a b : G) : ((a / b : G) : Q) = (a : Q) / (b : Q) :=
+  map_div (mk' N) a b
 
 @[to_additive (attr := simp)]
 theorem mk_pow (a : G) (n : ℕ) : ((a ^ n : G) : Q) = (a : Q) ^ n :=

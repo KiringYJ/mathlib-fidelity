@@ -62,10 +62,13 @@ theorem oscillationWithin_eq_zero [TopologicalSpace E] {f : E → F} {D : Set E}
   rw [← nonpos_iff_eq_zero]
   refine _root_.le_of_forall_pos_le_add fun ε hε ↦ ?_
   rw [zero_add]
-  have : eball (f x) (ε / 2) ∈ (𝓝[D] x).map f :=
-    hf <| eball_mem_nhds _ (by simp [ne_of_gt hε])
-  refine (biInf_le ediam this).trans (le_of_le_of_eq ediam_eball_le ?_)
-  exact (ENNReal.mul_div_cancel (by simp) (by simp))
+  have : IsUnit (2 : ℝ≥0∞) := ENNReal.isUnit_iff.2 ⟨by simp, ENNReal.ofNat_ne_top⟩
+  have hball : eball (f x) (ε / 2) ∈ (𝓝[D] x).map f := by
+    apply hf (eball_mem_nhds _ ?_)
+    rw [ENNReal.checkedDiv_eq_div]
+    exact ENNReal.half_pos hε.ne'
+  refine (biInf_le ediam hball).trans (ediam_eball_le.trans_eq ?_)
+  rw [ENNReal.checkedDiv_eq_div, ENNReal.mul_div_cancel (by simp) ENNReal.ofNat_ne_top]
 
 end ContinuousWithinAt
 

@@ -58,12 +58,13 @@ theorem inv_right_self₀ {ha : IsUnit a} : Commute a a⁻¹ :=
   (Commute.refl a).inv_right₀
 
 @[simp]
-theorem div_right {hc : IsUnit c} (hab : Commute a b) (hac : Commute a c) : Commute a (b / c) :=
+theorem div_right {hc : IsUnit c} (hab : Commute a b) (hac : Commute a c) :
+    Commute a (Checked.div b c hc) :=
   SemiconjBy.div_right hab hac
 
 @[simp]
 theorem div_left {hb : IsUnit b} (hac : Commute a c) (hbc : Commute b c) :
-    Commute (a / b) c := by
+    Commute (Checked.div a b hb) c := by
   rw [div_eq_mul_inv₀]
   exact hac.mul_left hbc.inv_left₀
 

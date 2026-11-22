@@ -340,17 +340,17 @@ theorem cycleType_of_card_le_mem_cycleType_add_two {n : ℕ} {g : Perm α}
 theorem sign_of_cycleType_eq_replicate {σ : Perm α} {n : ℕ} (hn : 0 < n)
     (hσ : σ.cycleType = Multiset.replicate σ.cycleType.card n) :
     sign σ = if Odd n then 1 else
-      (-1) ^ ((Fintype.card α - Fintype.card (Function.fixedPoints σ)) / n) := by
+      (-1) ^ (Fintype.card α - Fintype.card (Function.fixedPoints σ)).euclideanDiv n hn.ne' := by
   rw [sign_of_cycleType', hσ, Multiset.map_replicate, Multiset.prod_replicate]
   obtain h | h := Nat.even_or_odd n
   · rw [ite_eq_right (Nat.not_odd_iff_even.mpr h), h.neg_one_pow, σ.card_fixedPoints,
       Nat.sub_sub_self σ.sum_cycleType_le,
       show σ.cycleType.sum = σ.cycleType.card * n by rw [hσ]; simp,
-        Nat.mul_div_cancel _ hn]
+        Nat.euclideanDiv_mul_right_cancel _ hn.ne']
   · rw [ite_eq_left h, h.neg_one_pow, neg_neg, one_pow]
 
 theorem sign_of_pow_two_eq_one {σ : Perm α} (hσ : σ ^ 2 = 1) :
-    sign σ = (-1) ^ ((Fintype.card α - Fintype.card (Function.fixedPoints σ)) / 2) := by
+    sign σ = (-1) ^ (Fintype.card α - Fintype.card (Function.fixedPoints σ)).euclideanDiv 2 := by
   rw [sign_of_cycleType_eq_replicate zero_lt_two (cycleType_of_pow_prime_eq_one hσ),
     ite_eq_right (Nat.not_odd_iff.mpr rfl)]
 

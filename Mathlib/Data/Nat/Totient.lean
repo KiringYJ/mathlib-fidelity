@@ -83,9 +83,11 @@ theorem filter_coprime_Ico_eq_totient (a n : ℕ) :
   exact periodic_coprime a
 
 theorem Ico_filter_coprime_le {a : ℕ} (k n : ℕ) (a_ne_zero : a ≠ 0) :
-    #{x ∈ Ico k (k + n) | a.Coprime x} ≤ totient a * (n / a + 1) := by
-  conv_lhs => rw [← Nat.mod_add_div n a]
-  induction n / a with
+    #{x ∈ Ico k (k + n) | a.Coprime x} ≤ totient a * (Nat.euclideanDiv n a a_ne_zero + 1) := by
+  have hrec := Nat.euclideanDiv_mul_add_mod n a a_ne_zero
+  rw [Nat.add_comm] at hrec
+  conv_lhs => rw [← hrec]
+  induction Nat.euclideanDiv n a a_ne_zero with
   | zero =>
     rw [← filter_coprime_Ico_eq_totient a k]
     simp only [add_zero, mul_one, mul_zero, zero_add]
@@ -142,12 +144,18 @@ theorem totient_mul {m n : ℕ} (h : m.Coprime n) : φ (m * n) = φ m * φ n :=
     rw [Fintype.card_congr (Units.mapEquiv (ZMod.chineseRemainder h).toMulEquiv).toEquiv,
       Fintype.card_congr (@MulEquiv.prodUnits (ZMod m) (ZMod n) _ _).toEquiv, Fintype.card_prod]
 
+/-- No `k < n` has `gcd n k = 0`. -/
+theorem card_filter_gcd_eq_zero (n : ℕ) : #{k ∈ range n | n.gcd k = 0} = 0 := by
+  cases n with
+  | zero => simp
+  | succ n => simp [Nat.gcd_ne_zero_left (Nat.succ_ne_zero n)]
+
 /-- For `d ∣ n`, the totient of `n/d` equals the number of values `k < n` such that `gcd n k = d` -/
-theorem totient_div_of_dvd {n d : ℕ} (hnd : d ∣ n) :
-    φ (n / d) = #{k ∈ range n | n.gcd k = d} := by
-  rcases d.eq_zero_or_pos with (rfl | hd0); · simp [eq_zero_of_zero_dvd hnd]
+theorem totient_div_of_dvd {n d : ℕ} (hnd : d ∣ n) (hd : d ≠ 0 := by checked_native_nonzero) :
+    φ (Nat.euclideanDiv n d hd) = #{k ∈ range n | n.gcd k = d} := by
+  have hd0 := Nat.pos_of_ne_zero hd
   rcases hnd with ⟨x, rfl⟩
-  rw [Nat.mul_div_cancel_left x hd0]
+  rw [Nat.euclideanDiv_eq_core, Nat.mul_div_cancel_left x hd0]
   apply Finset.card_bij fun k _ => d * k
   · simp only [mem_filter, mem_range, and_imp, Coprime]
     refine fun a ha1 ha2 => ⟨by gcongr, ?_⟩
@@ -170,8 +178,13 @@ theorem sum_totient (n : ℕ) : n.divisors.sum φ = n := by
     nth_rw 1 [← card_range n]
     refine card_eq_sum_card_fiberwise fun x _ => mem_divisors.2 ⟨?_, hn.ne'⟩
     apply gcd_dvd_left
-  nth_rw 3 [this]
-  exact sum_congr rfl fun x hx => totient_div_of_dvd (dvd_of_mem_divisors hx)
+  calc
+    _ = ∑ d ∈ n.divisors.attach, #{k ∈ range n | n.gcd k = d.val} :=
+      sum_congr rfl fun d _ ↦ totient_div_of_dvd (dvd_of_mem_divisors d.property)
+        (Nat.ne_of_gt (pos_of_mem_divisors d.property))
+    _ = ∑ d ∈ n.divisors, #{k ∈ range n | n.gcd k = d} :=
+      Finset.sum_attach n.divisors (fun d ↦ #{k ∈ range n | n.gcd k = d})
+    _ = n := this.symm
 
 theorem sum_totient' (n : ℕ) : ∑ m ∈ range n.succ with m ∣ n, φ m = n := by
   convert! sum_totient _ using 1
@@ -307,7 +320,10 @@ theorem totient_mul_prod_primeFactors (n : ℕ) :
 
 /-- Euler's product formula for the totient function. -/
 theorem totient_eq_div_primeFactors_mul (n : ℕ) :
-    φ n = (n / ∏ p ∈ n.primeFactors, p) * ∏ p ∈ n.primeFactors, (p - 1) := by
+    φ n =
+      Nat.euclideanDiv n (∏ p ∈ n.primeFactors, p) (prod_pos fun _ ↦ pos_of_mem_primeFactors).ne' *
+      ∏ p ∈ n.primeFactors, (p - 1) := by
+  rw [Nat.euclideanDiv_eq_core]
   rw [← mul_div_left n.totient, totient_mul_prod_primeFactors, mul_comm,
     Nat.mul_div_assoc _ (prod_primeFactors_dvd n), mul_comm]
   exact prod_pos (fun p => pos_of_mem_primeFactors)
@@ -334,22 +350,21 @@ theorem totient_eq_mul_prod_factors (n : ℕ) :
   simp only [sub_mul, one_mul, inv_mul_cancel₀]
 
 theorem totient_gcd_mul_totient_mul (a b : ℕ) : φ (a.gcd b) * φ (a * b) = φ a * φ b * a.gcd b := by
-  have shuffle :
-    ∀ a1 a2 b1 b2 c1 c2 : ℕ,
-      b1 ∣ a1 → b2 ∣ a2 → a1 / b1 * c1 * (a2 / b2 * c2) = a1 * a2 / (b1 * b2) * (c1 * c2) := by
-    intro a1 a2 b1 b2 c1 c2 h1 h2
-    calc
-      a1 / b1 * c1 * (a2 / b2 * c2) = a1 / b1 * (a2 / b2) * (c1 * c2) := by apply mul_mul_mul_comm
-      _ = a1 * a2 / (b1 * b2) * (c1 * c2) := by
-        congr 1
-        exact div_mul_div_comm h1 h2
-  simp only [totient_eq_div_primeFactors_mul]
-  rw [shuffle, shuffle]
-  rotate_left
-  repeat' apply prod_primeFactors_dvd
-  simp only [prod_primeFactors_gcd_mul_prod_primeFactors_mul]
-  rw [eq_comm, mul_comm, ← mul_assoc, ← Nat.mul_div_assoc]
-  exact mul_dvd_mul (prod_primeFactors_dvd a) (prod_primeFactors_dvd b)
+  let r (n : ℕ) := ∏ p ∈ n.primeFactors, p
+  let s (n : ℕ) := ∏ p ∈ n.primeFactors, (p - 1)
+  have hr (n : ℕ) : 0 < r n := prod_pos fun _ ↦ pos_of_mem_primeFactors
+  have h (n : ℕ) : φ n * r n = n * s n := totient_mul_prod_primeFactors n
+  have hd : r (a.gcd b) * r (a * b) = r a * r b :=
+    prod_primeFactors_gcd_mul_prod_primeFactors_mul a b id
+  have hs : s (a.gcd b) * s (a * b) = s a * s b :=
+    prod_primeFactors_gcd_mul_prod_primeFactors_mul a b (· - 1)
+  apply Nat.mul_right_cancel (Nat.mul_pos (hr a) (hr b))
+  calc
+    φ (a.gcd b) * φ (a * b) * (r a * r b) =
+        a.gcd b * (a * b) * (s (a.gcd b) * s (a * b)) := by
+      rw [← hd, mul_mul_mul_comm, h, h, mul_mul_mul_comm]
+    _ = (a * s a) * (b * s b) * a.gcd b := by rw [hs]; ac_rfl
+    _ = φ a * φ b * a.gcd b * (r a * r b) := by rw [← h, ← h]; ac_rfl
 
 theorem totient_super_multiplicative (a b : ℕ) : φ a * φ b ≤ φ (a * b) := by
   let d := a.gcd b
@@ -425,24 +440,40 @@ theorem _root_.Even.eq_of_totient_eq_totient {a b : ℕ} (h : a ∣ b) (ha : Eve
   lia
 
 theorem prime_pow_pow_totient_ediv_prod {p k : ℕ} (hp : p.Prime) (hk : 0 < k) :
-      (p ^ k : ℕ) ^ φ (p ^ k) / ∏ q ∈ (p ^ k).primeFactors, q ^ (φ (p ^ k) / (q - 1)) =
-        p ^ (p ^ (k - 1) * ((p - 1) * k - 1)) := by
+    Nat.euclideanDiv ((p ^ k) ^ φ (p ^ k))
+      (∏ q ∈ (p ^ k).primeFactors.attach,
+        q.val ^ Nat.euclideanDiv (φ (p ^ k)) (q.val - 1)
+          (Nat.ne_of_gt (Nat.sub_pos_of_lt (prime_of_mem_primeFactors q.property).one_lt)))
+      (prod_ne_zero_iff.mpr fun q _ ↦
+        pow_ne_zero _ (prime_of_mem_primeFactors q.property).ne_zero) =
+      p ^ (p ^ (k - 1) * ((p - 1) * k - 1)) := by
   have h : p ^ (k - 1) ≤ k * (p ^ (k - 1) * (p - 1)) := by
     rw [mul_left_comm]
     refine le_mul_of_one_le_right (Nat.zero_le _) ?_
     exact Right.one_le_mul hk <| Nat.le_sub_one_of_lt <| hp.one_lt
-  simp_rw [Nat.totient_prime_pow hp hk, Nat.primeFactors_prime_pow hk.ne' hp, Finset.prod_singleton,
-    Nat.mul_div_left _ (Nat.sub_pos_of_lt hp.one_lt), ← pow_mul]
+  let q : (p ^ k).primeFactors := ⟨p, by simp [Nat.primeFactors_prime_pow hk.ne' hp]⟩
+  have hq (r : (p ^ k).primeFactors) : r = q := by
+    apply Subtype.ext
+    simpa only [Nat.primeFactors_prime_pow hk.ne' hp, Finset.mem_singleton] using r.property
+  simp only [Nat.euclideanDiv_eq_core]
+  rw [Finset.prod_eq_single q (fun r _ hr ↦ (hr (hq r)).elim)
+    (fun hnot ↦ (hnot (Finset.mem_attach _ q)).elim)]
+  simp only [q, Nat.totient_prime_pow hp hk, Nat.mul_div_left _ (Nat.sub_pos_of_lt hp.one_lt),
+    ← pow_mul]
   rw [Nat.pow_div h hp.pos]
   simp_rw [Nat.sub_mul, one_mul, Nat.mul_sub, mul_one]
   ring_nf
 
 theorem prod_primeFactors_pow_totient_ediv_dvd {n : ℕ} (hn : 0 < n) :
-    ∏ p ∈ n.primeFactors, p ^ (φ n / (p - 1)) ∣ n ^ φ n := by
+    ∏ p ∈ n.primeFactors.attach, p.val ^ Nat.euclideanDiv (φ n) (p.val - 1)
+      (Nat.ne_of_gt (Nat.sub_pos_of_lt (prime_of_mem_primeFactors p.property).one_lt)) ∣
+        n ^ φ n := by
   have := Nat.prod_primeFactors_dvd n
   rw [← Nat.pow_dvd_pow_iff (Nat.totient_pos.mpr hn).ne', ← Finset.prod_pow] at this
+  rw [← Finset.prod_attach n.primeFactors (fun p ↦ p ^ φ n)] at this
   refine dvd_trans (Finset.prod_dvd_prod_of_dvd _ _ fun p hp ↦ ?_) this
-  exact Nat.pow_dvd_pow p <| Nat.div_le_self _ _
+  rw [Nat.euclideanDiv_eq_core]
+  exact Nat.pow_dvd_pow p.val <| Nat.div_le_self _ _
 
 end Nat
 

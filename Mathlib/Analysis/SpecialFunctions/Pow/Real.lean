@@ -930,7 +930,7 @@ lemma log_le_rpow_div {x ε : ℝ} (hx : 0 ≤ x) (hε : 0 < ε) : log x ≤ x ^
 
 /-- The (real) logarithm of a natural number `n` is bounded by a multiple of every power of `n`
 with positive exponent. -/
-lemma log_natCast_le_rpow_div (n : ℕ) {ε : ℝ} (hε : 0 < ε) : log n ≤ n ^ ε / ε :=
+lemma log_natCast_le_rpow_div (n : ℕ) {ε : ℝ} (hε : 0 < ε) : log n ≤ (n : ℝ) ^ ε / ε :=
   log_le_rpow_div n.cast_nonneg hε
 
 lemma strictMono_rpow_of_base_gt_one {b : ℝ} (hb : 1 < b) :
@@ -1001,7 +1001,7 @@ lemma norm_natCast_cpow_le_norm_natCast_cpow_iff {n : ℕ} (hn : 1 < n) {w z : �
   simp_rw [norm_natCast_cpow_of_pos (Nat.zero_lt_of_lt hn),
     Real.rpow_le_rpow_left_iff (Nat.one_lt_cast.mpr hn)]
 
-lemma norm_log_natCast_le_rpow_div (n : ℕ) {ε : ℝ} (hε : 0 < ε) : ‖log n‖ ≤ n ^ ε / ε := by
+lemma norm_log_natCast_le_rpow_div (n : ℕ) {ε : ℝ} (hε : 0 < ε) : ‖log n‖ ≤ (n : ℝ) ^ ε / ε := by
   rcases n.eq_zero_or_pos with rfl | h
   · rw [Nat.cast_zero, Nat.cast_zero, log_zero, norm_zero, Real.zero_rpow hε.ne', zero_div]
   rw [← natCast_log, norm_real, norm_of_nonneg <| Real.log_nonneg <| by
@@ -1128,7 +1128,7 @@ theorem IsNNRat.rpow_isNNRat (a b : ℝ) (na da : ℕ) (ha : IsNNRat a na da)
   have hdr : (dr : ℝ) ≠ 0 := by
     rw [← hden.1]
     exact (Real.rpow_pos_of_pos (lt_of_le_of_ne' da.cast_nonneg ha.den_nz) b).ne'
-  suffices IsNNRat (nr / dr : ℝ) nr dr by
+  suffices IsNNRat ((nr : ℝ) / (dr : ℝ)) nr dr by
     simpa [ha.to_eq, Real.div_rpow, hnum.1, hden.1]
   exact IsNNRat.of_raw ℝ nr dr hdr
 

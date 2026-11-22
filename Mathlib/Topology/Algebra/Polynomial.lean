@@ -206,7 +206,7 @@ theorem coeff_le_of_roots_le {p : F[X]} {f : F →+* K} {B : ℝ} (i : ℕ) (h1 
 uniformly bounded. -/
 theorem coeff_bdd_of_roots_le {B : ℝ} {d : ℕ} (f : F →+* K) {p : F[X]} (h1 : p.Monic)
     (h2 : Splits (p.map f)) (h3 : p.natDegree ≤ d) (h4 : ∀ z ∈ (map f p).roots, ‖z‖ ≤ B) (i : ℕ) :
-    ‖(map f p).coeff i‖ ≤ max B 1 ^ d * d.choose (d / 2) := by
+    ‖(map f p).coeff i‖ ≤ max B 1 ^ d * d.choose (Nat.euclideanDiv d 2) := by
   obtain hB | hB := le_or_gt 0 B
   · apply (coeff_le_of_roots_le i h1 h2 h4).trans
     calc
@@ -215,12 +215,13 @@ theorem coeff_bdd_of_roots_le {B : ℝ} {d : ℕ} (f : F →+* K) {p : F[X]} (h1
         gcongr
         · apply le_max_right
         · exact le_trans (Nat.sub_le _ _) h3
-      _ ≤ max B 1 ^ d * d.choose (d / 2) := by
+      _ ≤ max B 1 ^ d * d.choose (Nat.euclideanDiv d 2) := by
         gcongr; exact (i.choose_mono h3).trans (i.choose_le_middle d)
   · rw [eq_one_of_roots_le hB h1 h2 h4, Polynomial.map_one, coeff_one]
     refine le_trans ?_ (one_le_mul_of_one_le_of_one_le (one_le_pow₀ (le_max_right B 1)) ?_)
     · split_ifs <;> norm_num
-    · exact mod_cast Nat.succ_le_iff.mpr (Nat.choose_pos (d.div_le_self 2))
+    · rw [Nat.euclideanDiv_eq_core]
+      exact mod_cast Nat.succ_le_iff.mpr (Nat.choose_pos (d.div_le_self 2))
 
 end Roots
 

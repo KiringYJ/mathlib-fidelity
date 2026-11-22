@@ -109,7 +109,7 @@ variable [TopologicalSpace G]
 noncomputable def prehaar (K₀ U : Set G) (hU : index K₀ U ≠ 0)
     (K : Compacts G) : ℝ := by
   have : (index K₀ U : ℝ) ≠ 0 := Nat.cast_ne_zero.mpr hU
-  exact (index (K : Set G) U : ℝ) / index K₀ U
+  exact (index (K : Set G) U : ℝ) / (index K₀ U : ℝ)
 
 @[to_additive]
 theorem prehaar_empty (K₀ : Set G) {U : Set G} {hU : index K₀ U ≠ 0} :
@@ -319,7 +319,7 @@ theorem prehaar_sup_eq {K₀ : Set G} {U : Set G}
       prehaar (K₀ : Set G) U hU₀ K₁ + prehaar (K₀ : Set G) U hU₀ K₂ := by
   simp only [prehaar]; rw [← add_div]
   -- Porting note: Here was `congr`, but `to_additive` failed to generate a theorem.
-  refine congr_arg (fun x : ℝ => x / index K₀ U) ?_
+  refine congr_arg (fun x : ℝ => x / (index K₀ U : ℝ)) ?_
   exact mod_cast index_union_eq K₁ K₂ hU h
 
 @[to_additive]
@@ -545,11 +545,21 @@ variable [TopologicalSpace G] [IsTopologicalGroup G] [SigmaAlgebra G] [BorelSpac
 noncomputable def haarMeasure (K₀ : PositiveCompacts G) : Measure G :=
   ((haarContent K₀).measure K₀)⁻¹ • (haarContent K₀).measure
 
+/-- The Haar normalization constant is an invertible extended nonnegative real. -/
+@[to_additive /-- The additive Haar normalization constant is an invertible element of `ℝ≥0∞`. -/]
+theorem isUnit_haarContent_measure_self (K₀ : PositiveCompacts G) :
+    IsUnit ((haarContent K₀).measure K₀) := by
+  have : LocallyCompactSpace G := K₀.locallyCompactSpace_of_group
+  rw [← K₀.isCompact.measure_closure, Content.measure_apply _ isClosed_closure.measurableSet]
+  exact ENNReal.isUnit_iff.mpr ⟨(haarContent_outerMeasure_closure_pos K₀).ne',
+    (Content.outerMeasure_lt_top_of_isCompact _ K₀.isCompact.closure).ne⟩
+
 @[to_additive]
 theorem haarMeasure_apply {K₀ : PositiveCompacts G} {s : Set G} (hs : MeasurableSet s) :
-    haarMeasure K₀ s = (haarContent K₀).outerMeasure s / (haarContent K₀).measure K₀ := by
+    haarMeasure K₀ s = Checked.div ((haarContent K₀).outerMeasure s) ((haarContent K₀).measure K₀)
+      (isUnit_haarContent_measure_self K₀) := by
   change ((haarContent K₀).measure K₀)⁻¹ * (haarContent K₀).measure s = _
-  simp only [hs, div_eq_mul_inv, mul_comm, Content.measure_apply]
+  simp only [ENNReal.checkedDiv_eq_div, ENNReal.div_eq_mul_inv, hs, mul_comm, Content.measure_apply]
 
 @[to_additive]
 instance isMulLeftInvariant_haarMeasure (K₀ : PositiveCompacts G) :
@@ -558,7 +568,7 @@ instance isMulLeftInvariant_haarMeasure (K₀ : PositiveCompacts G) :
   intro g A hA
   rw [haarMeasure_apply hA, haarMeasure_apply (measurable_const_mul g hA)]
   -- Porting note: Here was `congr 1`, but `to_additive` failed to generate a theorem.
-  refine congr_arg (fun x : ℝ≥0∞ => x / (haarContent K₀).measure K₀) ?_
+  refine congr_arg (fun x : ℝ≥0∞ => Checked.div x _ (isUnit_haarContent_measure_self K₀)) ?_
   apply Content.is_mul_left_invariant_outerMeasure
   apply is_left_invariant_haarContent
 
@@ -608,10 +618,10 @@ instance isHaarMeasure_haarMeasure (K₀ : PositiveCompacts G) : IsHaarMeasure (
 noncomputable abbrev haar [LocallyCompactSpace G] : Measure G :=
   haarMeasure <| Classical.arbitrary _
 
-/-! Steinhaus theorem: if `E` has positive measure, then `E / E` contains a neighborhood of zero.
+/-! Steinhaus theorem: if `E` has positive measure, then `E * E⁻¹` contains a neighborhood of `1`.
 Note that this is not true for general regular Haar measures: in `ℝ × ℝ` where the first factor
 has the discrete topology, then `E = ℝ × {0}` has infinite measure for the regular Haar measure,
-but `E / E` does not contain a neighborhood of zero. On the other hand, it is always true for
+but `E * E⁻¹` does not contain a neighborhood of `1`. On the other hand, it is always true for
 inner regular Haar measures (and in particular for any Haar measure on a second countable group).
 -/
 
@@ -620,11 +630,11 @@ open scoped Pointwise
 @[to_additive]
 private lemma steinhaus_mul_aux (μ : Measure G) [IsHaarMeasure μ] [μ.InnerRegularCompactLTTop]
     [LocallyCompactSpace G] (E : Set G) (hE : MeasurableSet E)
-    (hEapprox : ∃ K ⊆ E, IsCompact K ∧ 0 < μ K) : E / E ∈ 𝓝 (1 : G) := by
+    (hEapprox : ∃ K ⊆ E, IsCompact K ∧ 0 < μ K) : E * E⁻¹ ∈ 𝓝 (1 : G) := by
   /- For any measure `μ` and set `E` containing a compact set `K` of positive measure, there exists
   a neighborhood `V` of the identity such that `v • K \ K` has small measure for all `v ∈ V`, say
   `< μ K`. Then `v • K` and `K` cannot be disjoint, as otherwise `μ (v • K \ K) = μ (v • K) = μ K`.
-  This show that `K / K` contains the neighborhood `V` of `1`, and therefore that it is
+  This shows that `K * K⁻¹` contains the neighborhood `V` of `1`, and therefore that it is
   itself such a neighborhood. -/
   obtain ⟨K, hKE, hK, K_closed, hKpos⟩ : ∃ K ⊆ E, IsCompact K ∧ IsClosed K ∧ 0 < μ K := by
     obtain ⟨K, hKE, hK_comp, hK_meas⟩ := hEapprox
@@ -634,36 +644,50 @@ private lemma steinhaus_mul_aux (μ : Measure G) [IsHaarMeasure μ] [μ.InnerReg
     with g hg
   obtain ⟨_, ⟨x, hxK, rfl⟩, hgxK⟩ : ∃ x ∈ g • K, x ∈ K :=
      not_disjoint_iff.1 fun hd ↦ by simp [hd.symm.sdiff_eq_right, measure_smul] at hg
-  simpa using div_mem_div (hKE hgxK) (hKE hxK)
+  simpa [smul_eq_mul] using Set.mul_mem_mul (hKE hgxK) (Set.inv_mem_inv.mpr (hKE hxK))
 
 /-- **Steinhaus Theorem** for finite mass sets.
 
 In any locally compact group `G` with a Haar measure `μ` that's inner regular on finite measure
-sets, for any measurable set `E` of finite positive measure, the set `E / E` is a neighbourhood of
+sets, for any measurable set `E` of finite positive measure, the set `E * E⁻¹` is a neighbourhood of
 `1`. -/
-@[to_additive
+@[to_additive add_neg_mem_nhds_zero_of_addHaar_pos_ne_top
 /-- **Steinhaus Theorem** for finite mass sets.
 
 In any locally compact group `G` with a Haar measure `μ` that's inner regular on finite measure
-sets, for any measurable set `E` of finite positive measure, the set `E - E` is a neighbourhood of
+sets, for any measurable set `E` of finite positive measure, the set `E + -E` is a neighbourhood of
 `0`. -/]
 theorem div_mem_nhds_one_of_haar_pos_ne_top (μ : Measure G) [IsHaarMeasure μ]
     [LocallyCompactSpace G] [μ.InnerRegularCompactLTTop] (E : Set G) (hE : MeasurableSet E)
-    (hEpos : 0 < μ E) (hEfin : μ E ≠ ∞) : E / E ∈ 𝓝 (1 : G) :=
+    (hEpos : 0 < μ E) (hEfin : μ E ≠ ∞) : E * E⁻¹ ∈ 𝓝 (1 : G) :=
   steinhaus_mul_aux μ E hE <| hE.exists_lt_isCompact_of_ne_top hEfin hEpos
 
 /-- **Steinhaus Theorem**.
 
 In any locally compact group `G` with an inner regular Haar measure `μ`,
-for any measurable set `E` of positive measure, the set `E / E` is a neighbourhood of `1`. -/
-@[to_additive
+for any measurable set `E` of positive measure, the set `E * E⁻¹` is a neighbourhood of `1`. -/
+@[to_additive add_neg_mem_nhds_zero_of_addHaar_pos
 /-- **Steinhaus Theorem**.
 
 In any locally compact group `G` with an inner regular Haar measure `μ`,
-for any measurable set `E` of positive measure, the set `E - E` is a neighbourhood of `0`. -/]
+for any measurable set `E` of positive measure, the set `E + -E` is a neighbourhood of `0`. -/]
 theorem div_mem_nhds_one_of_haar_pos (μ : Measure G) [IsHaarMeasure μ] [LocallyCompactSpace G]
     [InnerRegular μ] (E : Set G) (hE : MeasurableSet E) (hEpos : 0 < μ E) :
-    E / E ∈ 𝓝 (1 : G) := steinhaus_mul_aux μ E hE <| hE.exists_lt_isCompact hEpos
+    E * E⁻¹ ∈ 𝓝 (1 : G) := steinhaus_mul_aux μ E hE <| hE.exists_lt_isCompact hEpos
+
+/-- Steinhaus's theorem for a measurable set of finite positive additive Haar measure. -/
+theorem sub_mem_nhds_zero_of_addHaar_pos_ne_top {H : Type*} [AddGroup H] [TopologicalSpace H]
+    [IsTopologicalAddGroup H] [SigmaAlgebra H] [BorelSpace H] (μ : Measure H) [IsAddHaarMeasure μ]
+    [LocallyCompactSpace H] [μ.InnerRegularCompactLTTop] (E : Set H) (hE : MeasurableSet E)
+    (hEpos : 0 < μ E) (hEfin : μ E ≠ ∞) : E - E ∈ 𝓝 (0 : H) := by
+  simpa only [sub_eq_add_neg] using add_neg_mem_nhds_zero_of_addHaar_pos_ne_top μ E hE hEpos hEfin
+
+/-- Steinhaus's theorem for a measurable set of positive inner regular additive Haar measure. -/
+theorem sub_mem_nhds_zero_of_addHaar_pos {H : Type*} [AddGroup H] [TopologicalSpace H]
+    [IsTopologicalAddGroup H] [SigmaAlgebra H] [BorelSpace H] (μ : Measure H) [IsAddHaarMeasure μ]
+    [LocallyCompactSpace H] [InnerRegular μ] (E : Set H) (hE : MeasurableSet E)
+    (hEpos : 0 < μ E) : E - E ∈ 𝓝 (0 : H) := by
+  simpa only [sub_eq_add_neg] using add_neg_mem_nhds_zero_of_addHaar_pos μ E hE hEpos
 
 section SecondCountable_SigmaFinite
 /-! In this section, we investigate uniqueness of left-invariant measures without assuming that
@@ -697,7 +721,8 @@ theorem haarMeasure_unique (μ : Measure G) [SigmaFinite μ] [IsMulLeftInvariant
     K₀.interior_nonempty.mono (interior_mono subset_closure)
   have := measure_eq_div_smul μ (haarMeasure K₀)
     (measure_pos_of_nonempty_interior _ A).ne' K₀.isCompact.closure.measure_ne_top
-  rwa [haarMeasure_closure_self, div_one, K₀.isCompact.measure_closure] at this
+  rwa [ENNReal.checkedDiv_eq_div, haarMeasure_closure_self, ENNReal.div_eq_mul_inv, inv_one,
+    mul_one, K₀.isCompact.measure_closure] at this
 
 /-- Let `μ` be a σ-finite left invariant measure on `G`. Then `μ` is equal to the Haar measure
 defined by `K₀` iff `μ K₀ = 1`. -/

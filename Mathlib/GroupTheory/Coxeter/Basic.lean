@@ -476,22 +476,26 @@ lemma listTake_succ_alternatingWord (i j : B) (p : ℕ) (k : ℕ) (h : k + 1 < 2
       alternatingWord_succ', h_even]
 
 theorem prod_alternatingWord_eq_mul_pow (i i' : B) (m : ℕ) :
-    π (alternatingWord i i' m) = (if Even m then 1 else s i') * (s i * s i') ^ (m / 2) := by
+    π (alternatingWord i i' m) =
+      (if Even m then 1 else s i') * (s i * s i') ^ Nat.euclideanDiv m 2 := by
   induction m with
-  | zero => simp [alternatingWord]
+  | zero => simp [alternatingWord, Nat.euclideanDiv_eq_core]
   | succ m ih =>
     rw [alternatingWord_succ', wordProd_cons, ih]
     by_cases hm : Even m
     · have h₁ : ¬ Even (m + 1) := by simp [hm, parity_simps]
-      have h₂ : (m + 1) / 2 = m / 2 := Nat.succ_div_of_not_dvd <| by rwa [← even_iff_two_dvd]
+      have h₂ : Nat.euclideanDiv (m + 1) 2 = Nat.euclideanDiv m 2 := by
+        simp only [Nat.euclideanDiv_eq_core]
+        exact Nat.succ_div_of_not_dvd (by rwa [← even_iff_two_dvd])
       simp [hm, h₁, h₂]
     · have h₁ : Even (m + 1) := by simp [hm, parity_simps]
-      have h₂ : (m + 1) / 2 = m / 2 + 1 := Nat.succ_div_of_dvd h₁.two_dvd
+      have h₂ : Nat.euclideanDiv (m + 1) 2 = Nat.euclideanDiv m 2 + 1 := by
+        simpa only [Nat.euclideanDiv_eq_core] using Nat.succ_div_of_dvd h₁.two_dvd
       simp [hm, h₁, h₂, ← pow_succ', ← mul_assoc]
 
 theorem prod_alternatingWord_eq_prod_alternatingWord_sub (i i' : B) (m : ℕ) (hm : m ≤ M i i' * 2) :
     π (alternatingWord i i' m) = π (alternatingWord i' i (M i i' * 2 - m)) := by
-  simp_rw [prod_alternatingWord_eq_mul_pow, ← Int.even_coe_nat]
+  simp_rw [prod_alternatingWord_eq_mul_pow, Nat.euclideanDiv_eq_core, ← Int.even_coe_nat]
   /- Rewrite everything in terms of an integer m' which is equal to m.
   The resulting equation holds for all integers m'. -/
   simp_rw [← zpow_natCast, Int.natCast_ediv, Int.ofNat_sub hm]

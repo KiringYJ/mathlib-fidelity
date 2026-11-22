@@ -354,9 +354,11 @@ lemma eventually_nhdsWithin_sign_eq_of_deriv_pos (hf : deriv f x₀ > 0) (hx : f
 matches `x₀ - x`. -/
 lemma eventually_nhdsWithin_sign_eq_of_deriv_neg (hf : deriv f x₀ < 0) (hx : f x₀ = 0) :
     ∀ᶠ x in 𝓝 x₀, sign (f x) = sign (x₀ - x) := by
-  simpa [Pi.neg_apply, Left.sign_neg, -neg_sub, ← neg_sub x₀] using
-    eventually_nhdsWithin_sign_eq_of_deriv_pos
-      (f := -f) (x₀ := x₀) (by simpa [deriv.neg] using hf) (by simp [hx])
+  have h := eventually_nhdsWithin_sign_eq_of_deriv_pos
+    (f := -f) (x₀ := x₀) (by simpa [deriv.neg] using hf) (by simp [hx])
+  filter_upwards [h] with x hsign
+  rw [Pi.neg_apply, Left.sign_neg] at hsign
+  rw [← neg_sub x x₀, Left.sign_neg, ← hsign, neg_neg]
 
 lemma deriv_neg_left_of_sign_deriv {f : ℝ → ℝ} {x₀ : ℝ}
     (h₀ : ∀ᶠ (x : ℝ) in 𝓝[≠] x₀, sign (deriv f x) = sign (x - x₀)) :
@@ -398,7 +400,8 @@ theorem isLocalMin_of_sign_deriv {f : ℝ → ℝ} {x₀ : ℝ} (h : ContinuousA
     (hf : ∀ᶠ x in 𝓝[≠] x₀, sign (deriv f x) = sign (x - x₀)) :
     IsLocalMin f x₀ := by
   refine neg_neg f ▸ (isLocalMax_of_sign_deriv (f := -f) h.neg ?_ |>.neg)
-  simpa [Left.sign_neg, -neg_sub, ← neg_sub _ x₀, deriv.neg] using hf
+  filter_upwards [hf] with x hsign
+  rw [deriv.neg, Left.sign_neg, hsign, ← Left.sign_neg, neg_sub]
 
 /-- The Second-Derivative Test from calculus, minimum version.
 Applies to functions like `x^2 + 1[x ≥ 0]` as well as twice differentiable

@@ -5,7 +5,7 @@ Authors: Mario Carneiro, Heather Macbeth, Jovan Gerbscheid, Yury Kudryashov
 -/
 module
 
-public import Mathlib.Tactic.GCongr.Core
+public import Mathlib.Tactic.GCongr.CoreAttrs
 public import Mathlib.Tactic.Hint
 
 /-! # Setup for the `gcongr` tactic
@@ -32,7 +32,7 @@ attribute [gcongr] mt Or.imp forall_imp Exists.imp
   List.Perm.cons List.Perm.append List.Perm.map
   List.cons_subset_cons
   Nat.sub_le_sub_left Nat.sub_le_sub_right Nat.sub_lt_sub_left Nat.sub_lt_sub_right
-  Nat.succ_le_succ Nat.div_le_div_right Nat.div_le_div
+  Nat.succ_le_succ
 
 -- `Nat.pow_le_pow_right` has side condition `0 < n`, which `gcongr` discharges automatically via
 -- `positivity`, unlike the `1 ≤ a` side condition of the more general `pow_le_pow_right₀`.

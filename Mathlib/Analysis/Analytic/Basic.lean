@@ -850,8 +850,8 @@ theorem HasFPowerSeriesWithinOnBall.uniform_geometric_approx' {D : Type*}
   rw [norm_sub_rev, ← mul_div_right_comm₀]
   have ya : a * (‖y‖ / ↑r') ≤ a :=
     mul_le_of_le_one_right ha.1.le (div_le_one_of_le₀ yr'.le r'.coe_nonneg)
-  have hqa : a * (‖y‖ / r') < 1 := ya.trans_lt ha.2
-  suffices ‖p.partialSum n y - f z‖ ≤ C * (a * (‖y‖ / r')) ^ n / (1 - a * (‖y‖ / r')) by
+  have hqa : a * (‖y‖ / ↑r') < 1 := ya.trans_lt ha.2
+  suffices ‖p.partialSum n y - f z‖ ≤ C * (a * (‖y‖ / ↑r')) ^ n / (1 - a * (‖y‖ / ↑r')) by
     refine this.trans ?_
     have : 0 < a := ha.1
     gcongr
@@ -861,10 +861,10 @@ theorem HasFPowerSeriesWithinOnBall.uniform_geometric_approx' {D : Type*}
   calc
     ‖(p n) fun _ : Fin n => y‖
     _ ≤ ‖p n‖ * ∏ _i : Fin n, ‖y‖ := ContinuousMultilinearMap.le_opNorm _ _
-    _ = ‖p n‖ * (r' : ℝ) ^ n * (‖y‖ / r') ^ n := by
+    _ = ‖p n‖ * (r' : ℝ) ^ n * (‖y‖ / ↑r') ^ n := by
       simp [field, div_pow₀]
-    _ ≤ C * a ^ n * (‖y‖ / r') ^ n := by gcongr ?_ * _; apply hp
-    _ ≤ C * (a * (‖y‖ / r')) ^ n := by rw [mul_pow, mul_assoc]
+    _ ≤ C * a ^ n * (‖y‖ / ↑r') ^ n := by gcongr ?_ * _; apply hp
+    _ ≤ C * (a * (‖y‖ / ↑r')) ^ n := by rw [mul_pow, mul_assoc]
 
 /-- If a function admits a power series expansion, then it is exponentially close to the partial
 sums of this power series on strict subdisks of the disk of convergence.
@@ -919,13 +919,13 @@ theorem HasFPowerSeriesWithinAt.isBigO_sub_partialSum_pow
   rcases ENNReal.lt_iff_exists_nnreal_btwn.1 hf.r_pos with ⟨r', r'0, h⟩
   replace r'0 : 0 < (r' : ℝ) := mod_cast r'0
   obtain ⟨a, -, C, -, hp⟩ : ∃ a ∈ Ioo (0 : ℝ) 1, ∃ C > 0, ∀ y ∈ Metric.ball (0 : E) r', ∀ n,
-      x + y ∈ insert x s → ‖f (x + y) - p.partialSum n y‖ ≤ C * (a * (‖y‖ / r')) ^ n := by
+      x + y ∈ insert x s → ‖f (x + y) - p.partialSum n y‖ ≤ C * (a * (‖y‖ / ↑r')) ^ n := by
     obtain ⟨a, ha, C, hC, hp⟩ := hf.uniform_geometric_approx' h
     refine ⟨a, ha, C, hC, ?_⟩
     intro y hy n hs
     simpa only [id_eq, add_sub_cancel_left] using
       hp (x + y) (by simpa only [id_eq, add_sub_cancel_left] using hy) n hs
-  refine isBigO_iff.2 ⟨C * (a / r') ^ n, ?_⟩
+  refine isBigO_iff.2 ⟨C * (a / ↑r') ^ n, ?_⟩
   filter_upwards [inter_mem_nhdsWithin _ (Metric.ball_mem_nhds (0 : E) r'0)] with y hy
   simpa [mul_pow, mul_div_assoc₀, mul_assoc, div_mul_eq_mul_div₀, div_pow₀]
     using hp y hy.2 n (by simpa using hy.1)
@@ -956,7 +956,7 @@ theorem HasFPowerSeriesWithinOnBall.isBigO_image_sub_image_sub_deriv_principal
   have ha1 : a < 1 := ha.2
   simp only [← le_div_iff₀ (pow_pos hrpos _)] at hp
   set L : E × E → ℝ := fun y =>
-    C * (a / r') ^ 2 * (‖y - (x, x)‖ * ‖y.1 - y.2‖) * (a / (1 - a) ^ 2 + 2 / (1 - a))
+    C * (a / ↑r') ^ 2 * (‖y - (x, x)‖ * ‖y.1 - y.2‖) * (a / (1 - a) ^ 2 + 2 / (1 - a))
   have hL : ∀ y ∈ Metric.eball (x, x) r' ∩ ((insert x s) ×ˢ (insert x s)),
       ‖f y.1 - f y.2 - p 1 fun _ => y.1 - y.2‖ ≤ L y := by
     intro y ⟨hy', ys⟩
@@ -973,7 +973,8 @@ theorem HasFPowerSeriesWithinOnBall.isBigO_image_sub_image_sub_deriv_principal
         ← Subsingleton.pi_single_eq (0 : Fin 1) (y.2 - x), Pi.single, ← (p 1).map_update_sub,
         ← Pi.single, Subsingleton.pi_single_eq, sub_sub_sub_cancel_right]
     rw [Metric.mem_eball, edist_eq_enorm_sub, enorm_lt_coe] at hy'
-    set B : ℕ → ℝ := fun n => C * (a / r') ^ 2 * (‖y - (x, x)‖ * ‖y.1 - y.2‖) * ((n + 2) * a ^ n)
+    set B : ℕ → ℝ := fun n =>
+      C * (a / ↑r') ^ 2 * (‖y - (x, x)‖ * ‖y.1 - y.2‖) * ((n + 2) * a ^ n)
     have hAB : ∀ n, ‖A (n + 2)‖ ≤ B n := fun n =>
       calc
         ‖A (n + 2)‖ ≤ ‖p (n + 2)‖ * ↑(n + 2) * ‖y - (x, x)‖ ^ (n + 1) * ‖y.1 - y.2‖ := by
@@ -983,7 +984,7 @@ theorem HasFPowerSeriesWithinOnBall.isBigO_image_sub_image_sub_deriv_principal
         _ = ‖p (n + 2)‖ * ‖y - (x, x)‖ ^ n * (↑(n + 2) * ‖y - (x, x)‖ * ‖y.1 - y.2‖) := by
           rw [pow_succ ‖y - (x, x)‖]
           ring
-        _ ≤ C * a ^ (n + 2) / r' ^ (n + 2)
+        _ ≤ C * a ^ (n + 2) / (r' : ℝ) ^ (n + 2)
             * r' ^ n * (↑(n + 2) * ‖y - (x, x)‖ * ‖y.1 - y.2‖) := by
           have : 0 < a := ha.1
           gcongr

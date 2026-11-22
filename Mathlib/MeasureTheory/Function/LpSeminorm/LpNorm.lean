@@ -43,9 +43,9 @@ lemma lpNorm_of_not_memLp (hf' : ¬ MemLp f p μ) : lpNorm f p μ = 0 := by simp
 
 lemma lpNorm_eq_integral_norm_rpow_toReal (hp₀ : p ≠ 0) (hp : p ≠ ∞)
     (hf : AEStronglyMeasurable f μ) :
-    lpNorm f p μ = (∫ x, ‖f x‖ ^ p.toReal ∂μ) ^ (1 / p).toReal := by
+    lpNorm f p μ = (∫ x, ‖f x‖ ^ p.toReal ∂μ) ^ (ENNReal.div 1 p).toReal := by
   have hpUnit : IsUnit p.toReal := (ENNReal.toReal_pos hp₀ hp).ne'.isUnit
-  rw [show (1 / p).toReal = 1 / p.toReal by simp [ENNReal.toReal_inv (ha := hpUnit)]]
+  rw [ENNReal.toReal_div 1 p (hb := hpUnit), ENNReal.toReal_one]
   rw [← toReal_eLpNorm hf, eLpNorm_eq_lintegral_rpow_enorm_toReal hp₀ hp, ← ENNReal.toReal_rpow,
     ← integral_toReal]
   · simp [← ENNReal.toReal_rpow]
@@ -58,7 +58,7 @@ lemma lpNorm_nnreal_eq_integral_norm_rpow {p : ℝ≥0} (hp : p ≠ 0) (hf : AES
     lpNorm f p μ = (∫ x, ‖f x‖ ^ (p : ℝ) ∂μ) ^ (p⁻¹ : ℝ) := by
   have hpUnit : IsUnit ((p : ℝ≥0∞).toReal) := (NNReal.coe_ne_zero.mpr hp).isUnit
   rw [lpNorm_eq_integral_norm_rpow_toReal (by positivity) (by simp) hf]
-  simp only [one_div, ENNReal.toReal_inv (ha := hpUnit), ENNReal.coe_toReal]
+  simp only [ENNReal.one_div, ENNReal.toReal_inv (ha := hpUnit), ENNReal.coe_toReal]
 
 lemma lpNorm_one_eq_integral_norm (hf : AEStronglyMeasurable f μ) :
     lpNorm f 1 μ = ∫ x, ‖f x‖ ∂μ := by
@@ -115,12 +115,12 @@ lemma lpNorm_sub_comm (f g : α → E) (p : ℝ≥0∞) (μ : Measure α) :
     lpNorm (fun x ↦ |f x|) p μ = lpNorm f p μ := lpNorm_abs hf _
 
 @[simp] lemma lpNorm_const (hp : p ≠ 0) (hμ : μ ≠ 0) (c : E) :
-    lpNorm (fun _x ↦ c) p μ = ‖c‖ * μ.real .univ ^ (1 / p).toReal := by
+    lpNorm (fun _x ↦ c) p μ = ‖c‖ * μ.real .univ ^ (ENNReal.div 1 p).toReal := by
   simp [lpNorm, eLpNorm_const c hp hμ, Measure.real, ENNReal.toReal_rpow,
     aestronglyMeasurable_const]
 
 @[simp] lemma lpNorm_const' (hp₀ : p ≠ 0) (hp : p ≠ ∞) (c : E) :
-    lpNorm (fun _x ↦ c) p μ = ‖c‖ * μ.real .univ ^ (1 / p).toReal := by
+    lpNorm (fun _x ↦ c) p μ = ‖c‖ * μ.real .univ ^ (ENNReal.div 1 p).toReal := by
   simp [lpNorm, eLpNorm_const' c hp₀ hp, Measure.real, ENNReal.toReal_rpow,
     aestronglyMeasurable_const]
 
@@ -128,11 +128,11 @@ section NormedField
 variable {𝕜 : Type*} [NormedField 𝕜]
 
 @[simp] lemma lpNorm_one (hp : p ≠ 0) (hμ : μ ≠ 0) :
-    lpNorm (1 : α → 𝕜) p μ = μ.real .univ ^ ((1 / p).toReal : ℝ) := by
+    lpNorm (1 : α → 𝕜) p μ = μ.real .univ ^ ((ENNReal.div 1 p).toReal : ℝ) := by
   simp [Pi.one_def, lpNorm_const hp hμ, Measure.real, ENNReal.toReal_rpow]
 
 @[simp] lemma lpNorm_one' (hp₀ : p ≠ 0) (hp : p ≠ ∞) (μ : Measure α) :
-    lpNorm (1 : α → 𝕜) p μ = μ.real .univ ^ ((1 / p).toReal : ℝ) := by
+    lpNorm (1 : α → 𝕜) p μ = μ.real .univ ^ ((ENNReal.div 1 p).toReal : ℝ) := by
   simp [Pi.one_def, lpNorm_const' hp₀ hp, Measure.real, ENNReal.toReal_rpow]
 
 lemma lpNorm_const_smul [Module 𝕜 E] [NormSMulClass 𝕜 E] (c : 𝕜) (f : α → E) (μ : Measure α) :
@@ -166,13 +166,13 @@ lemma lpNorm_fun_mul_natCast (f : α → 𝕜) (n : ℕ) (p : ℝ≥0∞) (μ : 
     lpNorm (f · * n) p μ = lpNorm f p μ * n := lpNorm_mul_natCast ..
 
 lemma lpNorm_div_natCast [CharZero 𝕜] {n : ℕ} (hn : n ≠ 0) (f : α → 𝕜) (p : ℝ≥0∞)
-    (μ : Measure α) : lpNorm (f / (n : α → 𝕜)) p μ = lpNorm f p μ / n := by
+    (μ : Measure α) : lpNorm (f / (n : α → 𝕜)) p μ = lpNorm f p μ / (n : ℝ) := by
   rw [eq_div_iff, ← lpNorm_mul_natCast]
   simp
 
 lemma lpNorm_fun_div_natCast [CharZero 𝕜] {n : ℕ} (hn : n ≠ 0) (f : α → 𝕜) (p : ℝ≥0∞)
-    (μ : Measure α) : lpNorm (f · / n) p μ = lpNorm f p μ / n := by
-  have h : f / (n : α → 𝕜) = fun x ↦ f x / n := by
+    (μ : Measure α) : lpNorm (f · / (n : 𝕜)) p μ = lpNorm f p μ / (n : ℝ) := by
+  have h : f / (n : α → 𝕜) = fun x ↦ f x / (n : 𝕜) := by
     funext x
     exact Pi.div_apply₀ f (n : α → 𝕜) x
   rw [← h, lpNorm_div_natCast hn]
@@ -240,7 +240,7 @@ lemma lpNorm_mono_real {g : α → ℝ} (hg : MemLp g p μ) (h : ∀ x, ‖f x�
   · simp [hf]
 
 lemma lpNorm_smul_measure_of_ne_zero {f : α → E} {c : ℝ≥0} (hc : c ≠ 0) :
-    lpNorm f p (c • μ) = c ^ (1 / p).toReal • lpNorm f p μ := by
+    lpNorm f p (c • μ) = c ^ (ENNReal.div 1 p).toReal • lpNorm f p μ := by
   by_cases hf : AEStronglyMeasurable f μ
   · simp [← toReal_eLpNorm, hf, hf.smul_measure, eLpNorm_smul_measure_of_ne_zero' hc f p μ]
     simp [ENNReal.smul_def, NNReal.smul_def]
@@ -249,7 +249,7 @@ lemma lpNorm_smul_measure_of_ne_zero {f : α → E} {c : ℝ≥0} (hc : c ≠ 0)
     simp
 
 lemma lpNorm_smul_measure_of_ne_top (hp : p ≠ ∞) {f : α → E} (c : ℝ≥0) :
-    lpNorm f p (c • μ) = c ^ (1 / p).toReal • lpNorm f p μ := by
+    lpNorm f p (c • μ) = c ^ (ENNReal.div 1 p).toReal • lpNorm f p μ := by
   by_cases hf : AEStronglyMeasurable f μ
   · simp [← toReal_eLpNorm, hf, hf.smul_measure, eLpNorm_smul_measure_of_ne_top' hp]
     simp [ENNReal.smul_def, NNReal.smul_def]

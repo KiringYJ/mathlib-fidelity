@@ -6,6 +6,7 @@ Authors: Sebastian Zimmer
 module
 
 public meta import Mathlib.Data.Nat.Factorial.Basic
+public meta import Mathlib.Lean.Elab.NativeDivision
 public import Mathlib.Tactic.NormNum
 
 /-! # `norm_num` extensions for factorials
@@ -38,9 +39,8 @@ partial def proveAscFactorial (n l : ℕ) (en el : Q(ℕ)) :
     have : ($en).ascFactorial $el =Q $eres := ⟨⟩
     ⟨res, eres, q(Eq.refl $eres)⟩
   else
-    have m : ℕ := l / 2
+    have m : ℕ := l.euclideanDiv 2
     have em : Q(ℕ) := mkRawNatLit m
-    have : $em =Q $el / 2 := ⟨⟩
 
     have r : ℕ := l - m
     have er : Q(ℕ) := mkRawNatLit r

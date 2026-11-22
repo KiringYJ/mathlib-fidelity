@@ -10,15 +10,16 @@ public import Mathlib.Tactic.NormNum
 
 /-! Regression tests for exact-domain rational coefficient normalization. -/
 
-example {K : Type*} [DivisionSemiring K] (h5 : (5 : K) ≠ 0) : (5 : K) / 5 = 1 := by
+example {K : Type*} [DivisionSemiring K] (h5 : (5 : K) ≠ 0) :
+    Checked.div (5 : K) 5 h5.isUnit = 1 := by
   norm_num
 
 example {K : Type*} [DivisionSemiring K] (h2 : (2 : K) ≠ 0) :
-    (1 : K) / 2 + 1 / 2 = 1 := by
+    Checked.div (1 : K) 2 h2.isUnit + Checked.div (1 : K) 2 h2.isUnit = 1 := by
   norm_num
 
 example {K : Type*} [DivisionSemiring K] (h3 : (3 : K) ≠ 0) :
-    ((2 : K) / 3) * 3 = 2 := by
+    Checked.div (2 : K) 3 h3.isUnit * 3 = 2 := by
   norm_num
 
 example {K : Type*} [DivisionRing K] (h2 : (2 : K) ≠ 0) :

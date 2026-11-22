@@ -611,7 +611,8 @@ theorem mul_ne_zero_of_pow_p_ne_zero {x y : ModP O p} (hx : x ^ p ≠ 0) (hy : y
     x * y ≠ 0 := by
   obtain ⟨r, rfl⟩ := Ideal.Quotient.mk_surjective x
   obtain ⟨s, rfl⟩ := Ideal.Quotient.mk_surjective y
-  have h1p : (0 : ℝ) < 1 / p := one_div_pos.2 (Nat.cast_pos.2 hp.1.pos)
+  have hp_real : 0 < (p : ℝ) := Nat.cast_pos.2 hp.1.pos
+  have h1p : (0 : ℝ) < 1 / (p : ℝ) := one_div_pos.2 hp_real
   rw [← (Ideal.Quotient.mk (Ideal.span {(p : O)})).map_mul]
   rw [← (Ideal.Quotient.mk (Ideal.span {(p : O)})).map_pow] at hx hy
   rw [← v_p_lt_val hv] at hx hy ⊢
@@ -624,7 +625,7 @@ theorem mul_ne_zero_of_pow_p_ne_zero {x y : ModP O p} (hx : x ^ p ≠ 0) (hy : y
   conv_lhs => rw [← rpow_one (v p)]
   rw [← rpow_add (ne_of_gt hvp)]
   refine rpow_le_rpow_of_exponent_ge hvp (map_natCast (algebraMap O K) p ▸ hv.2 _) ?_
-  rw [← add_div, div_le_one (Nat.cast_pos.2 hp.1.pos : 0 < (p : ℝ))]; exact mod_cast hp.1.two_le
+  rw [← add_div, div_le_one hp_real]; exact mod_cast hp.1.two_le
 
 end Classical
 

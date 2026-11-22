@@ -47,12 +47,12 @@ open Nat
 
 /-- Power series for the exponential function at zero. -/
 noncomputable def exp : PowerSeries A :=
-  mk fun n => algebraMap ℚ A (1 / n !)
+  mk fun n => algebraMap ℚ A (1 / (n ! : ℚ))
 
 variable {A A'} (n : ℕ) (f : A →+* A')
 
 @[simp]
-theorem coeff_exp : coeff n (exp A) = algebraMap ℚ A (1 / n !) :=
+theorem coeff_exp : coeff n (exp A) = algebraMap ℚ A (1 / (n ! : ℚ)) :=
   coeff_mk _ _
 
 @[simp]

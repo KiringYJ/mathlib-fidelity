@@ -6,6 +6,7 @@ Authors: Mario Carneiro
 module
 
 public import Mathlib.Algebra.Group.Nat.Defs
+public meta import Mathlib.Lean.Elab.NativeDivision
 public import Mathlib.Tactic.Push
 
 /-!
@@ -260,7 +261,7 @@ partial def buildConj (arr : Array (Array Int)) (start stop : Nat) : Expr :=
   | 0 => panic! "empty"
   | 1 => mkApp (mkConst ``Sat.Fmla.one) (buildClause arr[start]!)
   | len =>
-    let mid := start + len / 2
+    let mid := start + Nat.euclideanDiv len 2
     mkApp2 (mkConst ``Sat.Fmla.and) (buildConj arr start mid) (buildConj arr mid stop)
 
 /-- Constructs the proofs of `⊢ ctx.proof c` for each clause `c` in `ctx`.
@@ -275,7 +276,7 @@ partial def buildClauses (arr : Array (Array Int)) (ctx : Expr) (start stop : Na
     let n := accum.1 + 1
     (n, accum.2.insert n { lits := arr[start]!, expr := c, proof })
   | len =>
-    let mid := start + len / 2
+    let mid := start + Nat.euclideanDiv len 2
     let f₁ := f.appFn!.appArg!
     let f₂ := f.appArg!
     let p₁ := mkApp4 (mkConst ``Sat.Fmla.subsumes_left) ctx f₁ f₂ p

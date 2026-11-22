@@ -77,7 +77,8 @@ set_option backward.isDefEq.respectTransparency false in
 /-- The p-adic integers are a binomial ring, i.e. a ring where binomial coefficients make sense. -/
 noncomputable instance instBinomialRing : BinomialRing ℤ_[p] where
   -- We define `multichoose` as a fraction in `ℚ_[p]` together with a proof that its norm is `≤ 1`.
-  multichoose x k := ⟨(ascPochhammer ℤ_[p] k).eval x / (k.factorial : ℚ_[p]), by
+  multichoose x k :=
+    ⟨(((ascPochhammer ℤ_[p] k).eval x : ℤ_[p]) : ℚ_[p]) / (k.factorial : ℚ_[p]), by
     rw [norm_div, div_le_one (by simpa using k.factorial_ne_zero)]
     exact x.norm_ascPochhammer_le k⟩
   factorial_nsmul_multichoose x k := by rw [← Subtype.coe_inj, nsmul_eq_mul, PadicInt.coe_mul,
@@ -161,9 +162,9 @@ times a sup over values for smaller `n`.
 We use `nnnorm`s on the RHS since `Finset.sup` requires an order with a bottom element.
 -/
 private lemma bojanic_mahler_step2 {f : C(ℤ_[p], E)} {s t : ℕ}
-    (hst : ∀ x y : ℤ_[p], ‖x - y‖ ≤ p ^ (-t : ℤ) → ‖f x - f y‖ ≤ ‖f‖ / p ^ s) (n : ℕ) :
+    (hst : ∀ x y : ℤ_[p], ‖x - y‖ ≤ p ^ (-t : ℤ) → ‖f x - f y‖ ≤ ‖f‖ / (p : ℝ) ^ s) (n : ℕ) :
     ‖Δ_[1]^[n + p ^ t] f 0‖ ≤ max ↑((Finset.range (p ^ t - 1)).sup
-      fun j ↦ ‖Δ_[1]^[n + (j + 1)] f 0‖₊ / p) (‖f‖ / p ^ s) := by
+      fun j ↦ ‖Δ_[1]^[n + (j + 1)] f 0‖₊ / (p : ℝ≥0)) (‖f‖ / (p : ℝ) ^ s) := by
   -- Use previous lemma to rewrite in a convenient form.
   rw [bojanic_mahler_step1 _ _ (one_le_pow₀ hp.out.one_le)]
   -- Now use ultrametric property and bound each term separately.
@@ -194,7 +195,7 @@ private lemma bojanic_mahler_step2 {f : C(ℤ_[p], E)} {s t : ℕ}
     _ ≤ ‖f (i + ↑(p ^ t)) - f i‖ := by
       apply mul_le_of_le_one_left (norm_nonneg _)
       simpa only [← coe_intCast] using norm_le_one _
-    _ ≤ ‖f‖ / p ^ s := by
+    _ ≤ ‖f‖ / (p : ℝ) ^ s := by
       apply hst
       simp only [Nat.cast_pow, add_sub_cancel_left, norm_pow, norm_p, inv_pow₀,
         zpow_neg₀ (by exact_mod_cast hp.out.ne_zero : (p : ℝ) ≠ 0), zpow_natCast₀, le_rfl]
@@ -204,10 +205,10 @@ Explicit bound for the decay rate of the Mahler coefficients of a continuous fun
 This will be used to prove Mahler's theorem.
 -/
 lemma fwdDiff_iter_le_of_forall_le {f : C(ℤ_[p], E)} {s t : ℕ}
-    (hst : ∀ x y : ℤ_[p], ‖x - y‖ ≤ p ^ (-t : ℤ) → ‖f x - f y‖ ≤ ‖f‖ / p ^ s) (n : ℕ) :
-    ‖Δ_[1]^[n + s * p ^ t] f 0‖ ≤ ‖f‖ / p ^ s := by
+    (hst : ∀ x y : ℤ_[p], ‖x - y‖ ≤ p ^ (-t : ℤ) → ‖f x - f y‖ ≤ ‖f‖ / (p : ℝ) ^ s) (n : ℕ) :
+    ‖Δ_[1]^[n + s * p ^ t] f 0‖ ≤ ‖f‖ / (p : ℝ) ^ s := by
   -- We show the following more general statement by induction on `k`:
-  suffices ∀ {k : ℕ}, k ≤ s → ‖Δ_[1]^[n + k * p ^ t] f 0‖ ≤ ‖f‖ / p ^ k from this le_rfl
+  suffices ∀ {k : ℕ}, k ≤ s → ‖Δ_[1]^[n + k * p ^ t] f 0‖ ≤ ‖f‖ / (p : ℝ) ^ k from this le_rfl
   intro k hk
   induction k generalizing n with
   | zero => -- base case just says that `‖Δ^[·] (⇑f) 0‖` is bounded by `‖f‖`
@@ -217,7 +218,7 @@ lemma fwdDiff_iter_le_of_forall_le {f : C(ℤ_[p], E)} {s t : ℕ}
     refine (bojanic_mahler_step2 hst (n + k * p ^ t)).trans (max_le ?_ ?_)
     · have hp₀ : 0 < (p : ℝ≥0) := by exact_mod_cast hp.out.pos
       suffices hbound : (Finset.range (p ^ t - 1)).sup
-          (fun j ↦ ‖Δ_[1]^[n + k * p ^ t + (j + 1)] f 0‖₊ / p) ≤
+          (fun j ↦ ‖Δ_[1]^[n + k * p ^ t + (j + 1)] f 0‖₊ / (p : ℝ≥0)) ≤
             ‖f‖₊ / (p : ℝ≥0) ^ (k + 1) by
         simpa only [NNReal.coe_div, NNReal.coe_pow, NNReal.coe_natCast, coe_nnnorm] using
           NNReal.coe_le_coe.mpr hbound
@@ -236,16 +237,16 @@ estimate of the decay rate. -/
 lemma fwdDiff_tendsto_zero (f : C(ℤ_[p], E)) : Tendsto (Δ_[1]^[·] f 0) atTop (𝓝 0) := by
   -- first extract an `s`
   refine NormedAddGroup.tendsto_nhds_zero.mpr (fun ε hε ↦ ?_)
-  have : Tendsto (fun s ↦ ‖f‖ / p ^ s) _ _ := tendsto_const_nhds.div_atTop
+  have : Tendsto (fun s ↦ ‖f‖ / (p : ℝ) ^ s) _ _ := tendsto_const_nhds.div_atTop
     (tendsto_pow_atTop_atTop_of_one_lt (mod_cast hp.out.one_lt))
   obtain ⟨s, hs⟩ := (this.eventually_lt_const hε).exists
   refine .mp ?_ (.of_forall fun x hx ↦ lt_of_le_of_lt hx hs)
   -- use uniform continuity to find `t`
-  obtain ⟨t, ht⟩ : ∃ t : ℕ, ∀ x y, ‖x - y‖ ≤ p ^ (-t : ℤ) → ‖f x - f y‖ ≤ ‖f‖ / p ^ s := by
+  obtain ⟨t, ht⟩ : ∃ t : ℕ, ∀ x y, ‖x - y‖ ≤ p ^ (-t : ℤ) → ‖f x - f y‖ ≤ ‖f‖ / (p : ℝ) ^ s := by
     rcases eq_or_ne f 0 with rfl | hf
     · -- silly case : f = 0
       simp
-    have : 0 < ‖f‖ / p ^ s := div_pos (norm_pos_iff.mpr hf) (mod_cast pow_pos hp.out.pos _)
+    have : 0 < ‖f‖ / (p : ℝ) ^ s := div_pos (norm_pos_iff.mpr hf) (mod_cast pow_pos hp.out.pos _)
     obtain ⟨δ, hδpos, hδf⟩ := f.uniform_continuity _ this
     obtain ⟨t, ht⟩ := PadicInt.exists_pow_neg_lt p hδpos
     exact ⟨t, fun x y hxy ↦  by simpa only [dist_eq_norm_sub] using (hδf (hxy.trans_lt ht)).le⟩

@@ -60,14 +60,14 @@ noncomputable def reciprocalGammaℝ (s : ℂ) := π ^ (s / 2) * reciprocalGamma
 /-- The entire reciprocal of Deligne's Gamma factor for a complex infinite place. -/
 noncomputable def reciprocalGammaℂ (s : ℂ) := (2 * π) ^ s * reciprocalGamma s / 2
 
-lemma Gammaℝ_add_two {s : ℂ} (hs : s ≠ 0) : Gammaℝ (s + 2) = Gammaℝ s * s / 2 / π := by
+lemma Gammaℝ_add_two {s : ℂ} (hs : s ≠ 0) : Gammaℝ (s + 2) = Gammaℝ s * s / 2 / (π : ℂ) := by
   have hp : IsUnit (π : ℂ) := (ofReal_ne_zero.mpr pi_ne_zero).isUnit
   rw [Gammaℝ_def, Gammaℝ_def, neg_div₀, add_div, neg_add, div_self,
     Gamma_add_one _ (div_ne_zero hs), cpow_add _ _ hp.ne_zero, cpow_neg_one _ (hx := hp)]
   simp only [div_eq_mul_inv₀]
   ring
 
-lemma Gammaℂ_add_one {s : ℂ} (hs : s ≠ 0) : Gammaℂ (s + 1) = Gammaℂ s * s / 2 / π := by
+lemma Gammaℂ_add_one {s : ℂ} (hs : s ≠ 0) : Gammaℂ (s + 1) = Gammaℂ s * s / 2 / (π : ℂ) := by
   have hp : IsUnit (2 * π : ℂ) := (mul_ne_zero two_ne_zero (ofReal_ne_zero.mpr pi_ne_zero)).isUnit
   rw [Gammaℂ_def, Gammaℂ_def, Gamma_add_one _ hs, neg_add,
     cpow_add _ _ hp.ne_zero, cpow_neg_one _ (hx := hp), div_div₀]
@@ -143,7 +143,7 @@ lemma Gammaℝ_one : Gammaℝ 1 = 1 := by
   simp [neg_div₀, cpow_neg, pi_ne_zero]
 
 @[simp]
-lemma Gammaℂ_one : Gammaℂ 1 = 1 / π := by
+lemma Gammaℂ_one : Gammaℂ 1 = 1 / (π : ℂ) := by
   have hp : IsUnit (2 * π : ℂ) := (mul_ne_zero two_ne_zero (ofReal_ne_zero.mpr pi_ne_zero)).isUnit
   rw [Gammaℂ_def, cpow_neg_one _ (hx := hp), Complex.Gamma_one, mul_one]
   apply (eq_div_iff).mpr
@@ -183,7 +183,7 @@ lemma reciprocalGammaℝ_two : reciprocalGammaℝ 2 = π := by
 
 /-- The recurrence for the entire reciprocal real-place Gamma factor, including its zeros. -/
 lemma reciprocalGammaℝ_eq_self_mul_reciprocalGammaℝ_add_two (s : ℂ) :
-    reciprocalGammaℝ s = s * reciprocalGammaℝ (s + 2) / 2 / π := by
+    reciprocalGammaℝ s = s * reciprocalGammaℝ (s + 2) / 2 / (π : ℂ) := by
   have hp : (π : ℂ) ≠ 0 := ofReal_ne_zero.mpr pi_ne_zero
   rw [reciprocalGammaℝ, reciprocalGammaℝ,
     show (s + 2) / 2 = s / 2 + 1 by ring,
@@ -273,10 +273,10 @@ lemma reciprocalGammaℝ_one_sub_mul_reciprocalGammaℝ_one_add (s : ℂ) :
       simp only [reciprocalGammaℝ]
       rw [mul_mul_mul_comm, ← cpow_add _ _ hp]
       congr 2 <;> ring
-    _ = π * (sin (π * ((1 - s) / 2)) / π) := by
+    _ = π * (sin (π * ((1 - s) / 2)) / (π : ℂ)) := by
       rw [cpow_one, reciprocalGamma_mul_reciprocalGamma_one_sub]
     _ = cos (π * s / 2) := by
-      rw [mul_div_cancel₀, show π * ((1 - s) / 2) = π / 2 - π * s / 2 by ring,
+      rw [mul_div_cancel₀, show π * ((1 - s) / 2) = (π : ℂ) / 2 - π * s / 2 by ring,
         sin_pi_div_two_sub]
 
 /-- Reformulation of the reflection formula in terms of `Gammaℝ`, away from its poles. -/
@@ -327,7 +327,7 @@ lemma reciprocalGammaℝ_two_sub {s : ℂ} (hs : ∀ (n : ℕ), s ≠ -n) :
   have hreflect : reciprocalGammaℝ (2 - s) * reciprocalGammaℝ s = sin (π * s / 2) := by
     convert reciprocalGammaℝ_one_sub_mul_reciprocalGammaℝ_one_add (s - 1) using 1
     · congr 2 <;> ring
-    · rw [show π * (s - 1) / 2 = π * s / 2 - π / 2 by ring, cos_sub_pi_div_two]
+    · rw [show π * (s - 1) / 2 = π * s / 2 - (π : ℂ) / 2 by ring, cos_sub_pi_div_two]
   calc
     _ = Gammaℂ s * (reciprocalGammaℂ s * reciprocalGammaℝ (2 - s)) := by
       rw [← mul_assoc, mul_comm (Gammaℂ s), reciprocalGammaℂ_mul_Gammaℂ hs, one_mul]

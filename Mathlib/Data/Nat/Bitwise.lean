@@ -66,23 +66,30 @@ lemma bitwise_zero : bitwise f 0 0 = 0 := by
   simp only [bitwise_zero_right, ite_self]
 
 lemma bitwise_of_ne_zero {n m : Nat} (hn : n ≠ 0) (hm : m ≠ 0) :
-    bitwise f n m = bit (f (bodd n) (bodd m)) (bitwise f (n / 2) (m / 2)) := by
+    bitwise f n m =
+      bit (f (bodd n) (bodd m)) (bitwise f (Nat.euclideanDiv n 2) (Nat.euclideanDiv m 2)) := by
   conv_lhs => unfold bitwise
   have mod_two_iff_bod x : (x % 2 = 1 : Bool) = bodd x := by
     simp only [mod_two_of_bodd]; cases bodd x <;> rfl
-  simp [hn, hm, mod_two_iff_bod, bit, two_mul]
+  simp [hn, hm, mod_two_iff_bod, bit, two_mul, Nat.euclideanDiv_eq_core]
 
 theorem binaryRec_of_ne_zero {C : Nat → Sort*} (z : C 0) (f : ∀ b n, C n → C (bit b n)) {n}
     (h : n ≠ 0) :
     binaryRec z f n = n.bit_bodd_div2 ▸ f n.bodd n.div2 (binaryRec z f n.div2) := by
-  rw [binaryRec, dite_eq_right h, eqRec_eq_cast, eqRec_eq_cast]; rfl
+  rw [binaryRec, dite_eq_right h, eqRec_eq_cast, eqRec_eq_cast]
+  apply eq_of_heq
+  refine (cast_heq _ _).trans (HEq.trans ?_ (cast_heq _ _).symm)
+  have hd : n.div2 = n >>> 1 := (div2_val n).trans (shiftRight_one n).symm
+  rw [hd]
+  rfl
 
 @[simp]
 lemma bitwise_bit {f : Bool → Bool → Bool} (h : f false false = false := by rfl) (a m b n) :
     bitwise f (bit a m) (bit b n) = bit (f a b) (bitwise f m n) := by
   conv_lhs => unfold bitwise
   simp only [bit, Bool.cond_eq_ite]
-  have h4 x : (x + x + 1) / 2 = x := by rw [← two_mul, add_comm]; simp [add_mul_div_left]
+  have h4 (x : ℕ) := bit_div_two true x
+  simp only [Nat.euclideanDiv_eq_core, bit_true_apply, two_mul] at h4
   cases a <;> cases b <;> simp <;> split_ifs
     <;> simp_all +decide [two_mul]
 
@@ -132,8 +139,9 @@ lemma bitwise_bit' {f : Bool → Bool → Bool} (a : Bool) (m : Nat) (b : Bool) 
     bitwise f (bit a m) (bit b n) = bit (f a b) (bitwise f m n) := by
   conv_lhs => unfold bitwise
   rw [← bit_ne_zero_iff] at ham hbn
-  simp only [ham, hbn, bit_mod_two_eq_one_iff, Bool.decide_coe, ← div2_val, div2_bit,
-    ite_false]
+  have hd (c : Bool) (x : ℕ) := bit_div_two c x
+  simp only [Nat.euclideanDiv_eq_core] at hd
+  simp only [ham, hbn, bit_mod_two_eq_one_iff, Bool.decide_coe, hd, ite_false]
   conv_rhs => simp only [bit, two_mul, Bool.cond_eq_ite]
 
 lemma bitwise_eq_binaryRec (f : Bool → Bool → Bool) :
@@ -317,8 +325,8 @@ theorem xor_one_of_even {n : ℕ} (h : Even n) : n ^^^ 1 = n + 1 := by
   cases n with
   | zero => rfl
   | succ n =>
-    simp +instances [HXor.hXor, instXorOp, xor, bitwise, even_iff.mp h, ← mul_two,
-      div_two_mul_two_of_even h]
+    have hd := Nat.div_mul_cancel (even_iff_two_dvd.mp h)
+    simp +instances [HXor.hXor, instXorOp, xor, bitwise, even_iff.mp h, ← mul_two, hd]
 
 @[simp]
 theorem xor_one_of_odd {n : ℕ} (h : Odd n) : n ^^^ 1 = n - 1 := by

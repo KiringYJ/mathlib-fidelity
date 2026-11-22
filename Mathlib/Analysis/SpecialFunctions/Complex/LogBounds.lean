@@ -78,7 +78,7 @@ lemma log_inv_eq_integral {z : ℂ} (hz : 1 - z ∈ slitPlane) :
 /-- The `n`th Taylor polynomial of `log` at `1`, as a function `ℂ → ℂ` -/
 noncomputable
 def logTaylor (n : ℕ) : ℂ → ℂ :=
-  fun z ↦ ∑ j ∈ Finset.range (n - 1), (-1) ^ (j + 2) * z ^ (j + 1) / (j + 1)
+  fun z ↦ ∑ j ∈ Finset.range (n - 1), (-1) ^ (j + 2) * z ^ (j + 1) / ((j : ℂ) + 1)
 
 lemma logTaylor_zero : logTaylor 0 = fun _ ↦ 0 := by
   funext
@@ -89,12 +89,12 @@ lemma logTaylor_one : logTaylor 1 = fun _ ↦ 0 := by
   simp only [logTaylor, Nat.sub_self, Finset.range_zero, Finset.sum_empty]
 
 lemma logTaylor_succ {n : ℕ} (hn : n ≠ 0) :
-    logTaylor (n + 1) = logTaylor n + (fun z : ℂ ↦ (-1) ^ (n + 1) * z ^ n / n) := by
+    logTaylor (n + 1) = logTaylor n + (fun z : ℂ ↦ (-1) ^ (n + 1) * z ^ n / (n : ℂ)) := by
   obtain ⟨k, rfl⟩ := Nat.exists_eq_succ_of_ne_zero hn
   funext z
   simpa only [logTaylor, Nat.succ_eq_add_one, Nat.add_sub_cancel, Nat.cast_add, Nat.cast_one,
     Pi.add_apply] using
-    Finset.sum_range_succ (fun j ↦ (-1 : ℂ) ^ (j + 2) * z ^ (j + 1) / (j + 1)) k
+    Finset.sum_range_succ (fun j ↦ (-1 : ℂ) ^ (j + 2) * z ^ (j + 1) / ((j : ℂ) + 1)) k
 
 lemma logTaylor_at_zero (n : ℕ) : logTaylor n 0 = 0 := by
   simp [logTaylor]
@@ -105,7 +105,7 @@ lemma hasDerivAt_logTaylor (n : ℕ) (z : ℂ) :
   | zero => simp [logTaylor_one, hasDerivAt_const]
   | succ n ih =>
     have hn : IsUnit ((n : ℂ) + 1) := (Nat.cast_add_one_ne_zero n).isUnit
-    have hp : HasDerivAt (fun x : ℂ ↦ x ^ (n + 1) / (n + 1)) (z ^ n) z := by
+    have hp : HasDerivAt (fun x : ℂ ↦ x ^ (n + 1) / ((n : ℂ) + 1)) (z ^ n) z := by
       convert (hasDerivAt_pow (n + 1) z).div_const ((n : ℂ) + 1) (hd := hn) using 1
       simp only [Nat.cast_add, Nat.cast_one, Nat.add_sub_cancel]
       rw [mul_comm, mul_div_cancel_right₀]
@@ -169,7 +169,7 @@ open intervalIntegral in
 /-- The difference of `log (1+z)` and its `(n+1)`st Taylor polynomial can be bounded in
 terms of `‖z‖`. -/
 lemma norm_log_sub_logTaylor_le (n : ℕ) {z : ℂ} (hz : ‖z‖ < 1) :
-    ‖log (1 + z) - logTaylor (n + 1) z‖ ≤ ‖z‖ ^ (n + 1) * (1 - ‖z‖)⁻¹ / (n + 1) := by
+    ‖log (1 + z) - logTaylor (n + 1) z‖ ≤ ‖z‖ ^ (n + 1) * (1 - ‖z‖)⁻¹ / ((n : ℝ) + 1) := by
   have hzS : 1 + z ∈ slitPlane := mem_slitPlane_of_norm_lt_one hz
   let f (z : ℂ) : ℂ := log (1 + z) - logTaylor (n + 1) z
   let f' (t : Set.Icc (0 : ℝ) 1) : ℂ := (-(t : ℝ) * z) ^ n *
@@ -193,7 +193,7 @@ lemma norm_log_sub_logTaylor_le (n : ℕ) {z : ℂ} (hz : ‖z‖ < 1) :
     (MeasureTheory.integrableOn_iff_comap_subtypeVal measurableSet_Icc).mp
       ((continuous_pow n).continuousOn.integrableOn_compact isCompact_Icc)
   have hint : (∫ t : Set.Icc (0 : ℝ) 1, (t : ℝ) ^ n
-      ∂(MeasureTheory.volume.comap Subtype.val)) = 1 / (n + 1) := by
+      ∂(MeasureTheory.volume.comap Subtype.val)) = 1 / ((n : ℝ) + 1) := by
     rw [MeasureTheory.integral_subtype_comap measurableSet_Icc (fun t : ℝ ↦ t ^ n),
       MeasureTheory.integral_Icc_eq_integral_Ioc, ← integral_of_le zero_le_one, integral_pow]
     simp
@@ -210,7 +210,7 @@ lemma norm_log_sub_logTaylor_le (n : ℕ) {z : ℂ} (hz : ‖z‖ < 1) :
       simp only [f', norm_mul, norm_pow, norm_neg, Complex.norm_of_nonneg t.2.1, mul_pow]
       exact mul_le_mul_of_nonneg_left (norm_one_add_mul_inv_le t.2 hz)
         (mul_nonneg (pow_nonneg t.2.1 n) (pow_nonneg (norm_nonneg z) n))
-    _ = ‖z‖ ^ (n + 1) * (1 - ‖z‖)⁻¹ / (n + 1) := by
+    _ = ‖z‖ ^ (n + 1) * (1 - ‖z‖)⁻¹ / ((n : ℝ) + 1) := by
       rw [MeasureTheory.integral_mul_const, MeasureTheory.integral_mul_const, hint]
       rw [pow_succ, div_eq_mul_inv₀]
       ring
@@ -227,7 +227,7 @@ open scoped Topology in
 lemma log_sub_logTaylor_isBigO (n : ℕ) :
     (fun z ↦ log (1 + z) - logTaylor (n + 1) z) =O[𝓝 0] fun z ↦ z ^ (n + 1) := by
   rw [Asymptotics.isBigO_iff]
-  use 2 / (n + 1)
+  use 2 / ((n : ℝ) + 1)
   have hhalf_pos : (0 : ℝ) < (2 : ℝ)⁻¹ := inv_pos.mpr zero_lt_two
   filter_upwards [
     eventually_norm_sub_lt 0 one_pos,
@@ -272,7 +272,7 @@ lemma norm_log_one_add_half_le_self {z : ℂ} (hz : ‖z‖ ≤ 1 / 2) : ‖log 
 terms of `‖z‖`. -/
 lemma norm_log_one_sub_inv_add_logTaylor_neg_le (n : ℕ) {z : ℂ} (hz : ‖z‖ < 1) :
     ‖log (Checked.inv (1 - z) (isUnit_one_sub_of_norm_lt_one hz)) + logTaylor (n + 1) (-z)‖ ≤
-      ‖z‖ ^ (n + 1) * (1 - ‖z‖)⁻¹ / (n + 1) := by
+      ‖z‖ ^ (n + 1) * (1 - ‖z‖)⁻¹ / ((n : ℝ) + 1) := by
   have hneg : ‖-z‖ < 1 := by simpa only [norm_neg] using hz
   have hs : 1 - z ∈ slitPlane := by
     simpa only [sub_eq_add_neg] using mem_slitPlane_of_norm_lt_one hneg
@@ -292,7 +292,7 @@ open Filter Asymptotics in
 /-- The Taylor series of the complex logarithm at `1` converges to the logarithm in the
 open unit disk. -/
 lemma hasSum_taylorSeries_log {z : ℂ} (hz : ‖z‖ < 1) :
-    HasSum (fun n : ℕ ↦ (-1) ^ (n + 2) * z ^ (n + 1) / (n + 1)) (log (1 + z)) := by
+    HasSum (fun n : ℕ ↦ (-1) ^ (n + 2) * z ^ (n + 1) / ((n : ℂ) + 1)) (log (1 + z)) := by
   refine (hasSum_iff_tendsto_nat_of_summable_norm ?_).mpr ?_
   · refine (summable_geometric_of_norm_lt_one hz).norm.of_nonneg_of_le (fun _ ↦ norm_nonneg _) ?_
     intro n
@@ -306,7 +306,7 @@ lemma hasSum_taylorSeries_log {z : ℂ} (hz : ‖z‖ < 1) :
         rw [pow_succ]
         exact mul_le_of_le_one_right (pow_nonneg (norm_nonneg z) n) hz.le
   · have hsum (n : ℕ) :
-        (∑ j ∈ Finset.range n, (-1 : ℂ) ^ (j + 2) * z ^ (j + 1) / (j + 1)) =
+        (∑ j ∈ Finset.range n, (-1 : ℂ) ^ (j + 2) * z ^ (j + 1) / ((j : ℂ) + 1)) =
           logTaylor (n + 1) z := by simp only [logTaylor, Nat.add_sub_cancel]
     simp_rw [hsum]
     rw [← tendsto_sub_nhds_zero_iff, tendsto_zero_iff_norm_tendsto_zero]
@@ -321,8 +321,8 @@ lemma hasSum_taylorSeries_log {z : ℂ} (hz : ‖z‖ < 1) :
 
 /-- The series `∑ z^n/n` converges to `-log (1-z)` on the open unit disk. -/
 lemma hasSum_taylorSeries_neg_log {z : ℂ} (hz : ‖z‖ < 1) :
-    HasSum (fun n : ℕ ↦ z ^ (n + 1) / (n + 1)) (-log (1 - z)) := by
-  conv => enter [1, n]; rw [← neg_neg (z ^ (n + 1) / (n + 1))]
+    HasSum (fun n : ℕ ↦ z ^ (n + 1) / ((n : ℂ) + 1)) (-log (1 - z)) := by
+  conv => enter [1, n]; rw [← neg_neg (z ^ (n + 1) / ((n : ℂ) + 1))]
   refine HasSum.neg ?_
   convert! hasSum_taylorSeries_log (z := -z) (norm_neg z ▸ hz) using 2 with n
   suffices h : z ^ n * z = z * (-1) ^ n * (-z) ^ n by
@@ -375,7 +375,7 @@ lemma tendsto_one_add_cpow_exp_of_tendsto {α : Type*} {l : Filter α} {x : α �
 
 /-- The limit of `(1 + t/x) ^ x` as `x → ∞` is `exp t` for `t : ℂ`. -/
 lemma tendsto_one_add_div_cpow_exp (t : ℂ) :
-    Tendsto (fun x : {x : ℝ // x ≠ 0} ↦ (1 + t / (x : ℝ)) ^ ((x : ℝ) : ℂ))
+    Tendsto (fun x : {x : ℝ // x ≠ 0} ↦ (1 + t / ((x : ℝ) : ℂ)) ^ ((x : ℝ) : ℂ))
       (comap Subtype.val atTop) (𝓝 (exp t)) := by
   apply tendsto_one_add_cpow_exp_of_tendsto tendsto_comap
   apply tendsto_nhds_of_eventually_eq
@@ -403,14 +403,14 @@ lemma tendsto_one_add_pow_exp_of_tendsto {α : Type*} {l : Filter α} {n : α �
 
 /-- The limit of `(1 + t/n) ^ n` as `n → ∞` is `exp t` for `t : ℂ`. -/
 lemma tendsto_one_add_div_pow_exp (t : ℂ) :
-    Tendsto (fun n : {n : ℕ // n ≠ 0} ↦ (1 + t / (n : ℕ)) ^ (n : ℕ))
+    Tendsto (fun n : {n : ℕ // n ≠ 0} ↦ (1 + t / ((n : ℕ) : ℂ)) ^ (n : ℕ))
       (comap Subtype.val atTop) (𝓝 (exp t)) := by
   apply tendsto_one_add_pow_exp_of_tendsto tendsto_comap
   exact tendsto_const_nhds.congr (fun n ↦ (mul_div_cancel₀ t).symm)
 
 /-- `(1 + t/n + o(1/n)) ^ n → exp t` for `t ∈ ℂ`. -/
 lemma tendsto_pow_exp_of_isLittleO_sub_add_div {f : {n : ℕ // n ≠ 0} → ℂ} (t : ℂ)
-    (hf : (fun n ↦ f n - (1 + t / (n : ℕ))) =o[comap Subtype.val atTop]
+    (hf : (fun n ↦ f n - (1 + t / ((n : ℕ) : ℂ))) =o[comap Subtype.val atTop]
       fun n ↦ 1 / ((n : ℕ) : ℂ)) :
     Tendsto (fun n ↦ f n ^ (n : ℕ)) (comap Subtype.val atTop) (𝓝 (exp t)) := by
   rw [show (fun n ↦ f n ^ (n : ℕ)) = (fun n ↦ (1 + (f n - 1)) ^ (n : ℕ)) by ext; simp]
@@ -490,7 +490,7 @@ lemma tendsto_one_add_pow_exp_of_tendsto {α : Type*} {l : Filter α} {n : α �
 
 /-- The limit of `(1 + t/n) ^ n` as `n → ∞` is `exp t` for `t : ℝ`. -/
 lemma tendsto_one_add_div_pow_exp (t : ℝ) :
-    Tendsto (fun n : {n : ℕ // n ≠ 0} ↦ (1 + t / (n : ℕ)) ^ (n : ℕ))
+    Tendsto (fun n : {n : ℕ // n ≠ 0} ↦ (1 + t / ((n : ℕ) : ℝ)) ^ (n : ℕ))
       (comap Subtype.val atTop) (𝓝 (exp t)) := by
   apply tendsto_one_add_pow_exp_of_tendsto tendsto_comap
   exact tendsto_const_nhds.congr (fun n ↦ (mul_div_cancel₀ t).symm)

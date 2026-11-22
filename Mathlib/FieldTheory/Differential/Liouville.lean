@@ -136,7 +136,7 @@ private local instance isLiouville_of_finiteDimensional_galois [FiniteDimensiona
     -- We sum `e x` over all isomorphisms `e : K ≃ₐ[F] K`.
     -- Because this is a Galois extension each of the relevant values will be in `F`.
     -- We need to divide by `Fintype.card (K ≃ₐ[F] K)` to get the original answer.
-    let c₀ (i : ι) := (c i) / (Fintype.card (K ≃ₐ[F] K))
+    let c₀ (i : ι) := c i / (Fintype.card (K ≃ₐ[F] K) : F)
     -- logDeriv turns sums to products, so the new `u` will be the product of the old `u` over all
     -- isomorphisms
     let u₁ (i : ι) := ∏ x : (K ≃ₐ[F] K), x (u i)
@@ -157,7 +157,7 @@ private local instance isLiouville_of_finiteDimensional_galois [FiniteDimensiona
       rw [hu₀ i]
       exact prod_ne_zero_iff.2 fun σ _ ↦ hσ σ i
     -- We do almost the same thing for `v₁`, just with sum instead of product.
-    let v₁ := (∑ x : (K ≃ₐ[F] K), x v) / (Fintype.card ((K ≃ₐ[F] K)))
+    let v₁ := (∑ x : (K ≃ₐ[F] K), x v) / (Fintype.card (K ≃ₐ[F] K) : K)
     have : v₁ ∈ fixedField (⊤ : Subgroup (K ≃ₐ[F] K)) := by
       rintro ⟨e, _⟩
       change e v₁ = v₁

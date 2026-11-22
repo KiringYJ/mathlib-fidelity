@@ -353,7 +353,8 @@ If `G` is a `Kᵣ₊₂`-free graph with `n` vertices containing a `Wᵣ,ₖ` bu
 then `G.minDegree ≤ (2 * r + k) * n / (2 * r + k + 3)`
 -/
 lemma minDegree_le_of_cliqueFree_fiveWheelLikeFree_succ [Fintype α]
-    (hm : G.FiveWheelLikeFree r (k + 1)) : G.minDegree ≤ (2 * r + k) * ‖α‖ / (2 * r + k + 3) := by
+    (hm : G.FiveWheelLikeFree r (k + 1)) :
+    G.minDegree ≤ Nat.euclideanDiv ((2 * r + k) * ‖α‖) (2 * r + k + 3) := by
   let X : Finset α := {x | ∀ ⦃y⦄, y ∈ s ∩ t → G.Adj x y}
   let W := {v} ∪ ({w₁} ∪ ({w₂} ∪ (s ∪ t)))
   -- Any vertex in `X` has at least 3 non-neighbors in `W` (otherwise we could build a bigger wheel)
@@ -383,7 +384,7 @@ lemma minDegree_le_of_cliqueFree_fiveWheelLikeFree_succ [Fintype α]
   -- `∑ w ∈ s ∩ t, H.degree w ≤ #Xᶜ * (#(s ∩ t) - 1) + #X * #(s ∩ t)`
   have bdX := sum_degree_le_of_le_not_adj xcle (fun _ _ ↦ Nat.zero_le _)
   rw [compl_compl, tsub_zero, add_comm] at bdX
-  rw [Nat.le_div_iff_mul_le <| Nat.add_pos_right _ zero_lt_three]
+  rw [Nat.euclideanDiv_eq_core, Nat.le_div_iff_mul_le <| Nat.add_pos_right _ zero_lt_three]
   have Wc : #W + k = 2 * r + 3 := by grind
   -- The sum of the degree sum over `W` and twice the degree sum over `s ∩ t`
   -- is at least `G.minDegree * (#W + 2 * #(s ∩ t))` which implies the result
@@ -415,14 +416,16 @@ end IsFiveWheelLike
 
 If `G` is a `Kᵣ₊₁`-free graph with `n` vertices and `(3 * r - 4) * n / (3 * r - 1) < G.minDegree`
 then `G` is `r + 1`-colorable, e.g. if `G` is `K₃`-free and `2 * n / 5 < G.minDegree` then `G`
-is `2`-colorable.
+is `2`-colorable. For `r = 0`, clique-freeness alone suffices.
 -/
 theorem colorable_of_cliqueFree_lt_minDegree [Fintype α] [DecidableRel G.Adj]
-    (hf : G.CliqueFree (r + 1)) (hd : (3 * r - 4) * ‖α‖ / (3 * r - 1) < G.minDegree) :
+    (hf : G.CliqueFree (r + 1))
+    (hd : ∀ hr : 0 < r, Nat.euclideanDiv ((3 * r - 4) * ‖α‖) (3 * r - 1) (by omega) < G.minDegree) :
     G.Colorable r := by
   match r with
   | 0 | 1 => aesop
   | r + 2 =>
+    specialize hd (by omega)
     classical
     -- There is an edge maximal `Kᵣ₊₃`-free supergraph `H` of `G`
     obtain ⟨H, hle, hmcf⟩ := @Finite.exists_le_maximal _ _ _ (fun H ↦ H.CliqueFree (r + 3)) G hf
@@ -438,7 +441,9 @@ theorem colorable_of_cliqueFree_lt_minDegree [Fintype α] [DecidableRel G.Adj]
     -- But the minimum degree of `G`, and hence of `H`, is too large for it to be `Wᵣ₊₁,ₖ₊₁`-free,
     -- a contradiction.
     have hD := hw.minDegree_le_of_cliqueFree_fiveWheelLikeFree_succ hmcf.1 <| hm _ <| lt_add_one _
-    have : (2 * (r + 1) + k) * ‖α‖ / (2 * (r + 1) + k + 3) ≤ (3 * r + 2) * ‖α‖ / (3 * r + 5) := by
+    have : Nat.euclideanDiv ((2 * (r + 1) + k) * ‖α‖) (2 * (r + 1) + k + 3) ≤
+        Nat.euclideanDiv ((3 * r + 2) * ‖α‖) (3 * r + 5) := by
+      simp only [Nat.euclideanDiv_eq_core]
       apply (Nat.le_div_iff_mul_le <| Nat.succ_pos _).2
               <| (mul_le_mul_iff_right₀ (_ + 2).succ_pos).1 _
       rw [← mul_assoc, mul_comm (2 * r + 2 + k + 3), mul_comm _ (_ * ‖α‖)]

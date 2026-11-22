@@ -143,7 +143,9 @@ theorem eulerFunction_eq_tprod {x : R} (hx : ‖x‖ < 1) :
     · refine isBoundedUnder_le_mul_tendsto_zero ⟨1, by simp⟩ ?_
       apply (tendsto_pow_atTop_nhds_zero_of_norm_lt_one hx).comp
       rw [tendsto_atTop_atTop]
-      exact fun k ↦ ⟨k, fun n hn ↦ hn.trans (by grind)⟩
+      refine fun k ↦ ⟨k, fun n hn ↦ hn.trans ?_⟩
+      rw [Nat.euclideanDiv_eq_core, Nat.le_div_iff_mul_le (by decide)]
+      nlinarith
     · exact isBoundedUnder_of ⟨_, fun k ↦ Pentagonal.tsum_pow_mul_prod_bound k hx⟩
 
 /-- **Pentagonal number theorem** for Euler function, expressed as an infinite product.

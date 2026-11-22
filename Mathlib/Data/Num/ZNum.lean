@@ -8,6 +8,7 @@ module
 public import Mathlib.Algebra.Order.Ring.Cast
 public import Mathlib.Data.Int.Cast.Lemmas
 public import Mathlib.Data.Num.Lemmas
+public import Mathlib.Lean.Elab.NativeDivision
 
 /-!
 # Properties of the `ZNum` representation of integers
@@ -535,8 +536,9 @@ theorem divMod_to_nat_aux {n d : PosNum} {q r : Num} (h₁ : (r : ℕ) + d * ((q
     · rwa [this, two_mul, add_lt_add_iff_right] at h₂
 
 theorem divMod_to_nat (d n : PosNum) :
-    (n / d : ℕ) = (divMod d n).1 ∧ (n % d : ℕ) = (divMod d n).2 := by
-  rw [Nat.div_mod_unique (PosNum.cast_pos _)]
+    Nat.euclideanDiv (n : ℕ) (d : ℕ) (PosNum.cast_pos _).ne' = (divMod d n).1 ∧
+      (n % d : ℕ) = (divMod d n).2 := by
+  rw [Nat.euclideanDiv_eq_core, Nat.div_mod_unique (PosNum.cast_pos _)]
   induction n with
   | one =>
     exact divMod_to_nat_aux (by simp) (Nat.mul_le_mul_left 2 (PosNum.cast_pos d : (0 : ℕ) < d))
@@ -559,7 +561,8 @@ theorem divMod_to_nat (d n : PosNum) :
     · simpa using IH.2
 
 @[simp]
-theorem div'_to_nat (n d) : (div' n d : ℕ) = n / d :=
+theorem div'_to_nat (n d) :
+    (div' n d : ℕ) = Nat.euclideanDiv (n : ℕ) (d : ℕ) (PosNum.cast_pos _).ne' :=
   (divMod_to_nat _ _).1.symm
 
 @[simp]
@@ -570,19 +573,19 @@ end PosNum
 
 namespace Num
 
-@[simp]
-protected theorem div_zero (n : Num) : n / 0 = 0 :=
-  show n.div 0 = 0 by
-    cases n
-    · rfl
-    · simp [Num.div]
+@[simp, norm_cast]
+theorem divPos_to_nat (n : Num) (d : PosNum) :
+    (n.divPos d : ℕ) = Nat.euclideanDiv (n : ℕ) (d : ℕ) (PosNum.cast_pos _).ne' := by
+  cases n with
+  | zero => rw [Nat.euclideanDiv_eq_core]; exact (Nat.zero_div _).symm
+  | pos p => exact PosNum.div'_to_nat p d
 
 @[simp, norm_cast]
-theorem div_to_nat : ∀ n d, ((n / d : Num) : ℕ) = n / d
-  | 0, 0 => by simp
-  | 0, pos _ => (Nat.zero_div _).symm
-  | pos _, 0 => (Nat.div_zero _).symm
-  | pos _, pos _ => PosNum.div'_to_nat _ _
+theorem quotient_to_nat (n d : Num) (hd : d ≠ 0) :
+    (n.quotient d hd : ℕ) = Nat.euclideanDiv (n : ℕ) (d : ℕ) (fun h => hd (to_nat_inj.mp h)) := by
+  cases d with
+  | zero => exact (hd rfl).elim
+  | pos d => exact divPos_to_nat n d
 
 @[simp]
 protected theorem mod_zero (n : Num) : n % 0 = n :=
@@ -647,31 +650,38 @@ instance PosNum.decidableDvd : DecidableRel ((· ∣ ·) : PosNum → PosNum →
 
 namespace ZNum
 
-@[simp]
-protected theorem div_zero (n : ZNum) : n / 0 = 0 :=
-  show n.div 0 = 0 by cases n <;> rfl
-
 @[simp, norm_cast]
-theorem div_to_int : ∀ n d, ((n / d : ZNum) : ℤ) = n / d
-  | 0, 0 => by simp [Int.ediv_zero]
-  | 0, pos _ => (Int.zero_ediv _).symm
-  | 0, neg _ => (Int.zero_ediv _).symm
-  | pos _, 0 => (Int.ediv_zero _).symm
-  | neg _, 0 => (Int.ediv_zero _).symm
-  | pos n, pos d => (Num.cast_toZNum _).trans <| by rw [← Num.to_nat_to_int]; simp
-  | pos n, neg d => (Num.cast_toZNumNeg _).trans <| by rw [← Num.to_nat_to_int]; simp
-  | neg n, pos d =>
-    show -_ = -_ / (d : ℤ) by
-      rw [n.to_int_eq_succ_pred, d.to_int_eq_succ_pred, ← PosNum.to_nat_to_int, Num.succ'_to_nat,
-        Num.div_to_nat]
-      change -[n.pred' / ↑d+1] = -[n.pred' / (d.pred' + 1)+1]
-      rw [d.to_nat_eq_succ_pred]
-  | neg n, neg d =>
-    show ((PosNum.pred' n / Num.pos d).succ' : ℤ) = -_ / -(d : ℤ) by
-      rw [n.to_int_eq_succ_pred, d.to_int_eq_succ_pred, ← PosNum.to_nat_to_int, Num.succ'_to_nat,
-        Num.div_to_nat]
-      change (Nat.succ (_ / d) : ℤ) = Nat.succ (n.pred' / (d.pred' + 1))
-      rw [d.to_nat_eq_succ_pred]
+theorem quotient_to_int (n d : ZNum) (hd : d ≠ 0) :
+    (n.quotient d hd : ℤ) = Int.euclideanDiv (n : ℤ) (d : ℤ) (fun h => hd (to_int_inj.mp h)) := by
+  rw [Int.euclideanDiv_eq_core]
+  cases d with
+  | zero => exact (hd rfl).elim
+  | pos d =>
+    cases n with
+    | zero => exact (Int.zero_ediv _).symm
+    | pos n =>
+      apply (Num.cast_toZNum _).trans
+      rw [← Num.to_nat_to_int]
+      simp [Nat.euclideanDiv_eq_core]
+    | neg n =>
+      change -((Num.divPos n.pred' d).succ' : ℤ) = _
+      rw [cast_neg, cast_pos, n.to_int_eq_succ_pred, d.to_int_eq_succ_pred,
+        ← PosNum.to_nat_to_int, Num.succ'_to_nat, Num.divPos_to_nat, Nat.euclideanDiv_eq_core,
+        d.to_nat_eq_succ_pred]
+      rfl
+  | neg d =>
+    cases n with
+    | zero => exact (Int.zero_ediv _).symm
+    | pos n =>
+      apply (Num.cast_toZNumNeg _).trans
+      rw [← Num.to_nat_to_int]
+      simp [Nat.euclideanDiv_eq_core]
+    | neg n =>
+      change ((Num.divPos n.pred' d).succ' : ℤ) = _
+      rw [cast_neg, cast_neg, n.to_int_eq_succ_pred, d.to_int_eq_succ_pred,
+        ← PosNum.to_nat_to_int, Num.succ'_to_nat, Num.divPos_to_nat, Nat.euclideanDiv_eq_core,
+        d.to_nat_eq_succ_pred]
+      rfl
 
 @[simp, norm_cast]
 theorem mod_to_int : ∀ n d, ((n % d : ZNum) : ℤ) = n % d
@@ -685,6 +695,9 @@ theorem mod_to_int : ∀ n d, ((n % d : ZNum) : ℤ) = n % d
       rw [← Num.to_nat_to_int, cast_neg, ← Num.to_nat_to_int, Num.succ_to_nat, Num.mod_to_nat,
           abs_to_nat, ← Int.subNatNat_eq_coe, n.to_int_eq_succ_pred]
       rfl
+
+@[simp] protected theorem mod_zero (n : ZNum) : n % 0 = n :=
+  to_int_inj.mp ((mod_to_int n 0).trans (Int.emod_zero _))
 
 @[simp]
 theorem gcd_to_nat (a b) : (gcd a b : ℕ) = Int.gcd a b :=

@@ -66,7 +66,6 @@ class group, selmer group, unit group
 @[expose] public section
 
 set_option quotPrecheck false
-local notation K "/" n => Kˣ ⧸ (powMonoidHom n : Kˣ →* Kˣ).range
 
 namespace IsDedekindDomain
 
@@ -134,7 +133,8 @@ theorem valuation_of_unit_eq (x : Rˣ) :
     exact v.intValuation_le_one _
 
 /-- The multiplicative `v`-adic valuation on `Kˣ` modulo `n`-th powers. -/
-def valuationOfNeZeroMod (n : ℕ) : (K / n) →* Multiplicative (ZMod n) :=
+def valuationOfNeZeroMod (n : ℕ) :
+    (Kˣ ⧸ (powMonoidHom n : Kˣ →* Kˣ).range) →* Multiplicative (ZMod n) :=
   -- TODO: this definition does a lot of defeq abuse between `Multiplicative` and `Additive`,
   -- so we need `erw` below.
   (Int.quotientZMultiplesNatEquivZMod n).toMultiplicative.toMonoidHom.comp <|
@@ -148,7 +148,9 @@ def valuationOfNeZeroMod (n : ℕ) : (K / n) →* Multiplicative (ZMod n) :=
 
 @[simp]
 theorem valuation_of_unit_mod_eq (n : ℕ) (x : Rˣ) :
-    v.valuationOfNeZeroMod n (Units.map (algebraMap R K : R →* K) x : K / n) = 1 := by
+    v.valuationOfNeZeroMod n
+      (Units.map (algebraMap R K : R →* K) x : Kˣ ⧸ (powMonoidHom n : Kˣ →* Kˣ).range) =
+      1 := by
   -- This used to be `rw`, but we need `erw` after https://github.com/leanprover/lean4/pull/2644
   erw [valuationOfNeZeroMod, MonoidHom.comp_apply, ← QuotientGroup.coe_mk',
     QuotientGroup.map_mk' (G := Kˣ) (N := MonoidHom.range (powMonoidHom n)),
@@ -162,8 +164,8 @@ end HeightOneSpectrum
 variable {S S' : Set <| HeightOneSpectrum R} {n : ℕ}
 
 /-- The Selmer group `K⟮S, n⟯`. -/
-def selmerGroup : Subgroup <| K / n where
-  carrier := {x : K/n | ∀ (v) (_ : v ∉ S), (v : HeightOneSpectrum R).valuationOfNeZeroMod n x = 1}
+def selmerGroup : Subgroup (Kˣ ⧸ (powMonoidHom n : Kˣ →* Kˣ).range) where
+  carrier := {x | ∀ (v) (_ : v ∉ S), (v : HeightOneSpectrum R).valuationOfNeZeroMod n x = 1}
   one_mem' _ _ := by rw [map_one]
   mul_mem' hx hy v hv := by rw [map_mul, hx v hv, hy v hv, one_mul]
   inv_mem' hx v hv := by rw [map_inv, hx v hv, inv_one]
@@ -177,7 +179,7 @@ theorem monotone (hS : S ≤ S') : K⟮S,n⟯ ≤ K⟮S',n⟯ := fun _ hx v => h
 
 /-- The multiplicative `v`-adic valuations on `K⟮S, n⟯` for all `v ∈ S`. -/
 def valuation : K⟮S,n⟯ →* S → Multiplicative (ZMod n) where
-  toFun x v := (v : HeightOneSpectrum R).valuationOfNeZeroMod n (x : K / n)
+  toFun x v := (v : HeightOneSpectrum R).valuationOfNeZeroMod n x.1
   map_one' := funext fun _ => map_one _
   map_mul' x y := by simp only [Subgroup.coe_mul, map_mul]; rfl
 
@@ -228,7 +230,8 @@ theorem fromUnit_ker [hn : Fact <| 0 < n] :
       by simp only [powMonoidHom_apply, RingHom.toMonoidHom_eq_coe, map_pow]⟩
 
 /-- The injection induced by the natural homomorphism from `Rˣ` to `K⟮∅, n⟯`. -/
-def fromUnitLift [Fact <| 0 < n] : (R / n) →* K⟮(∅ : Set <| HeightOneSpectrum R),n⟯ :=
+def fromUnitLift [Fact <| 0 < n] :
+    (Rˣ ⧸ (powMonoidHom n : Rˣ →* Rˣ).range) →* K⟮(∅ : Set <| HeightOneSpectrum R),n⟯ :=
   (QuotientGroup.kerLift _).comp
     (QuotientGroup.quotientMulEquivOfEq (fromUnit_ker (R := R))).symm.toMonoidHom
 

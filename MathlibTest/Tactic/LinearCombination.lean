@@ -352,7 +352,9 @@ example {x y : ℤ} (h : x = y) : x ^ 2 = y ^ 2 := by linear_combination h * h
 
 /-- error: 'linear_combination' supports only linear operations -/
 #guard_msgs in
-example {x y : ℤ} (h : x = y) : 3 / x = 3 / y := by linear_combination 3 / h
+example {x y : ℚ} (h : x = y) (hx : x ≠ 0) (hy : y ≠ 0) :
+    (3 : ℚ) / x = (3 : ℚ) / y := by
+  linear_combination (3 : ℚ) / h
 
 /-! ### Cases with exponent -/
 

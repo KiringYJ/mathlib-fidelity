@@ -5,6 +5,7 @@ Authors: Johan Commelin
 -/
 module
 
+public import Mathlib.Algebra.Group.Pi.Basic
 public import Mathlib.Algebra.Notation.Indicator
 public import Mathlib.Topology.Connected.LocallyConnected
 public import Mathlib.Topology.Sets.Closeds
@@ -168,10 +169,14 @@ theorem mul [Mul Y] ⦃f g : X → Y⦄ (hf : IsLocallyConstant f) (hg : IsLocal
     IsLocallyConstant (f * g) :=
   hf.comp₂ hg (· * ·)
 
-@[to_additive]
-theorem div [Div Y] ⦃f g : X → Y⦄ (hf : IsLocallyConstant f) (hg : IsLocallyConstant g) :
-    IsLocallyConstant (f / g) :=
-  hf.comp₂ hg (· / ·)
+theorem sub [Sub Y] ⦃f g : X → Y⦄ (hf : IsLocallyConstant f) (hg : IsLocallyConstant g) :
+    IsLocallyConstant (f - g) :=
+  hf.comp₂ hg (· - ·)
+
+theorem div [Group Y] ⦃f g : X → Y⦄ (hf : IsLocallyConstant f) (hg : IsLocallyConstant g) :
+    IsLocallyConstant (f / g) := by
+  rw [Pi.div_def]
+  exact hf.comp₂ hg (· / ·)
 
 /-- If a composition of a function `f` followed by an injection `g` is locally
 constant, then the locally constant property descends to `f`. -/

@@ -197,8 +197,8 @@ open Zagier
 Every prime congruent to 1 mod 4 is the sum of two squares, proved using Zagier's involutions. -/
 theorem Nat.Prime.sq_add_sq' {p : ℕ} [h : Fact p.Prime] (hp : p % 4 = 1) :
     ∃ a b : ℕ, a ^ 2 + b ^ 2 = p := by
-  rw [← div_add_mod p 4, hp] at h ⊢
-  let k := p / 4
+  rw [← Nat.euclideanDiv_mul_add_mod p 4 (by decide), hp] at h ⊢
+  let k := p.euclideanDiv 4
   apply sq_add_sq_of_nonempty_fixedPoints
   have key := (Equiv.Perm.card_fixedPoints_modEq (p := 2) (n := 1) (obvInvo_sq k)).symm.trans
     (Equiv.Perm.card_fixedPoints_modEq (p := 2) (n := 1) (complexInvo_sq k))

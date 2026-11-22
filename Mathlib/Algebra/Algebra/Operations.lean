@@ -857,9 +857,10 @@ section Quotient
 In fact, we define `x ∈ I / J` to be `∀ y ∈ J, x * y ∈ I` (see `mem_div_iff_forall_mul_mem`),
 which is equivalent to `x • J ⊆ I` (see `mem_div_iff_smul_subset`), but nicer to use in proofs.
 
-This is the general form of the ideal quotient, traditionally written $I : J$.
+This right residual of submodule multiplication satisfies `K ≤ I / J ↔ K * J ≤ I`.
+It generalizes the ideal quotient, traditionally written $I : J$.
 -/
-instance : Div (Submodule R A) :=
+instance instDiv : Div (Submodule R A) :=
   ⟨fun I J =>
     { carrier := { x | ∀ y ∈ J, x * y ∈ I }
       zero_mem' := fun y _ => by
@@ -874,6 +875,10 @@ instance : Div (Submodule R A) :=
 
 theorem mem_div_iff_forall_mul_mem {x : A} {I J : Submodule R A} : x ∈ I / J ↔ ∀ y ∈ J, x * y ∈ I :=
   Iff.refl _
+
+@[simp] theorem div_bot (I : Submodule R A) : I / ⊥ = ⊤ := by
+  ext x
+  simp [mem_div_iff_forall_mul_mem]
 
 theorem mem_div_iff_smul_subset {x : A} {I J : Submodule R A} : x ∈ I / J ↔ x • (J : Set A) ⊆ I :=
   ⟨fun h y ⟨y', hy', xy'_eq_y⟩ => by rw [← xy'_eq_y]; exact h _ hy',

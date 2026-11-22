@@ -52,14 +52,14 @@ noncomputable def toCircle : AddChar (ZMod N) Circle :=
   (toCircle_addChar isUnit_one).compAddMonoidHom toAddCircle
 
 lemma toCircle_intCast (j : ℤ) :
-    toCircle (j : ZMod N) = exp (2 * π * I * j / N) := by
+    toCircle (j : ZMod N) = exp (2 * π * I * j / (N : ℂ)) := by
   rw [toCircle, AddChar.compAddMonoidHom_apply, toCircle_addChar, AddChar.coe_mk,
     toAddCircle_intCast, AddCircle.toCircle_apply_mk, Circle.coe_exp, div_one₀]
   push_cast
   ring_nf
 
 lemma toCircle_natCast (j : ℕ) :
-    toCircle (j : ZMod N) = exp (2 * π * I * j / N) := by
+    toCircle (j : ZMod N) = exp (2 * π * I * j / (N : ℂ)) := by
   simpa using toCircle_intCast (N := N) j
 
 /--
@@ -67,11 +67,11 @@ Explicit formula for `toCircle j`. Note that this is "evil" because it uses `ZMo
 possible, it is recommended to lift `j` to `ℤ` and use `toCircle_intCast` instead.
 -/
 lemma toCircle_apply (j : ZMod N) :
-    toCircle j = exp (2 * π * I * j.val / N) := by
+    toCircle j = exp (2 * π * I * j.val / (N : ℂ)) := by
   rw [← toCircle_natCast, natCast_zmod_val]
 
 lemma toCircle_eq_circleExp (j : ZMod N) :
-    toCircle j = Circle.exp (2 * π * (j.val / N)) := by
+    toCircle j = Circle.exp (2 * π * ((j.val : ℝ) / (N : ℝ))) := by
   ext
   rw [toCircle_apply, Circle.coe_exp]
   push_cast
@@ -86,7 +86,8 @@ noncomputable def stdAddChar : AddChar (ZMod N) ℂ := Circle.coeHom.compAddChar
 
 set_option backward.isDefEq.respectTransparency.types false in
 lemma stdAddChar_coe (j : ℤ) :
-    stdAddChar (j : ZMod N) = exp (2 * π * I * j / N) := by simp [stdAddChar, toCircle_intCast]
+    stdAddChar (j : ZMod N) = exp (2 * π * I * j / (N : ℂ)) := by
+  simp [stdAddChar, toCircle_intCast]
 
 lemma stdAddChar_apply (j : ZMod N) : stdAddChar j = ↑(toCircle j) := rfl
 
@@ -141,7 +142,7 @@ instance : HasEnoughRootsOfUnity Circle n := (rootsOfUnityCircleEquiv n).symm.ha
 open Real in
 lemma rootsOfUnityCircleEquiv_comp_rootsOfUnityAddChar_val (j : ZMod n) :
     (rootsOfUnityCircleEquiv n (ZMod.rootsOfUnityAddChar n j)).val
-      = Complex.exp (2 * π * I * j.val / n) := by
+      = Complex.exp (2 * π * I * j.val / (n : ℂ)) := by
   simp [← ZMod.toCircle_natCast, -ZMod.natCast_val, ZMod.natCast_zmod_val]
 
 theorem surjective_rootsOfUnityCircleEquiv_comp_rootsOfUnityAddChar (n : ℕ) [NeZero n] :

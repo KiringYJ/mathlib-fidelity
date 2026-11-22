@@ -214,7 +214,8 @@ variable [DecidableEq ι]
 lemma expect_ite_mem (s t : Finset ι) (f : ι → M)
     (hs : s.Nonempty := by first | assumption | exact Finset.univ_nonempty)
     (hst : (s ∩ t).Nonempty) :
-    𝔼 i ∈ s, (if i ∈ t then f i else 0) = (#(s ∩ t) / #s : ℚ≥0) • 𝔼 i ∈ s ∩ t, f i := by
+    𝔼 i ∈ s, (if i ∈ t then f i else 0) =
+      ((#(s ∩ t) : ℚ≥0) / (#s : ℚ≥0)) • 𝔼 i ∈ s ∩ t, f i := by
   rw [expect_def, expect_def, sum_ite_mem, smul_smul]
   congr 1
   rw [div_mul_eq_mul_div₀, mul_inv_cancel₀, one_div₀]
@@ -453,11 +454,11 @@ lemma expect_boole_mul' [Fintype ι] [Nonempty ι] [DecidableEq ι] (f : ι → 
   simp_rw [@eq_comm _ _ i, expect_boole_mul]
 
 lemma expect_eq_sum_div_card (s : Finset ι) (f : ι → K) (hs : s.Nonempty) :
-    𝔼 i ∈ s, f i = (∑ i ∈ s, f i) / #s := by
+    𝔼 i ∈ s, f i = (∑ i ∈ s, f i) / (#s : K) := by
   rw [eq_div_iff, mul_comm, card_mul_expect s f hs]
 
 lemma _root_.Fintype.expect_eq_sum_div_card [Fintype ι] [Nonempty ι] (f : ι → K) :
-    𝔼 i, f i = (∑ i, f i) / Fintype.card ι :=
+    𝔼 i, f i = (∑ i, f i) / (Fintype.card ι : K) :=
   Finset.expect_eq_sum_div_card _ _ univ_nonempty
 
 lemma expect_div (s : Finset ι) (f : ι → K) (a : K) {ha : IsUnit a} (hs : s.Nonempty) :

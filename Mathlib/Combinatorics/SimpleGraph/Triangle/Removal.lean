@@ -41,7 +41,8 @@ by `positivity` by default.
 The quantitative estimate uses the formula for `ε ≤ 1`. The factor `1 - min 1 ε / 4` stays
 positive for every `ε` in the domain. -/
 noncomputable def triangleRemovalBound (ε : ℝ) (hε : 0 < ε := by positivity) : ℝ :=
-  min (2 * ⌈4 / ε⌉₊ ^ 3)⁻¹ ((1 - min 1 ε / 4) * (ε / (16 * bound (ε / 8) ⌈4 / ε⌉₊)) ^ 3)
+  min (2 * ⌈4 / ε⌉₊ ^ 3)⁻¹
+    ((1 - min 1 ε / 4) * (ε / (16 * (bound (ε / 8) ⌈4 / ε⌉₊ : ℝ))) ^ 3)
 
 lemma triangleRemovalBound_pos {hε : 0 < ε} : 0 < triangleRemovalBound ε := by
   have : 0 < 1 - min 1 ε / 4 := by have := min_le_left 1 ε; linarith
@@ -56,10 +57,12 @@ lemma triangleRemovalBound_mul_cube_lt {hε : 0 < ε} :
     _ < 1 := by norm_num
 
 lemma triangleRemovalBound_le {hε : 0 < ε} (hε₁ : ε ≤ 1) :
-    triangleRemovalBound ε ≤ (1 - ε / 4) * (ε / (16 * bound (ε / 8) ⌈4 / ε⌉₊)) ^ 3 := by
+    triangleRemovalBound ε ≤ (1 - ε / 4) * (ε / (16 * (bound (ε / 8) ⌈4 / ε⌉₊ : ℝ))) ^ 3 := by
   simp [triangleRemovalBound, hε₁]
 
-private lemma aux {n k : ℕ} (hk : 0 < k) (hn : k ≤ n) : n < 2 * k * (n / k) := by
+private lemma aux {n k : ℕ} (hk : 0 < k) (hn : k ≤ n) :
+    n < 2 * k * Nat.euclideanDiv n k hk.ne' := by
+  rw [Nat.euclideanDiv_eq_core]
   rw [mul_assoc, two_mul, ← add_lt_add_iff_right (n % k), add_right_comm, add_assoc,
     mod_add_div n k, add_comm, add_lt_add_iff_right]
   apply (mod_lt n hk).trans_le
@@ -67,14 +70,14 @@ private lemma aux {n k : ℕ} (hk : 0 < k) (hn : k ≤ n) : n < 2 * k * (n / k) 
 
 private lemma card_bound (hε : 0 < ε) (hP₁ : P.IsEquipartition)
     (hP₃ : #P.parts ≤ bound (ε / 8) ⌈4 / ε⌉₊) (hX : s ∈ P.parts) :
-    card α / (2 * bound (ε / 8) ⌈4 / ε⌉₊ : ℝ) ≤ #s := by
+    (card α : ℝ) / (2 * bound (ε / 8) ⌈4 / ε⌉₊ : ℝ) ≤ #s := by
   cases isEmpty_or_nonempty α
   · simp [Fintype.card_eq_zero]
-  have := Finset.Nonempty.card_pos ⟨_, hX⟩
+  have hparts := Finset.Nonempty.card_pos ⟨_, hX⟩
   calc
-    _ ≤ card α / (2 * #P.parts : ℝ) := by gcongr
-    _ ≤ ↑(card α / #P.parts) :=
-      (div_le_iff₀' (by positivity)).2 <| mod_cast (aux ‹_› P.card_parts_le_card).le
+    _ ≤ (card α : ℝ) / (2 * #P.parts : ℝ) := by gcongr
+    _ ≤ (Nat.euclideanDiv (card α) #P.parts hparts.ne' : ℝ) :=
+      (div_le_iff₀' (by positivity)).2 <| mod_cast (aux hparts P.card_parts_le_card).le
     _ ≤ (#s : ℝ) := mod_cast hP₁.average_le_card_part hX
 
 private lemma triangle_removal_aux (hε : 0 < ε) (hε₁ : ε ≤ 1) (hP₁ : P.IsEquipartition)
@@ -96,10 +99,11 @@ private lemma triangle_removal_aux (hε : 0 < ε) (hε₁ : ε ≤ 1) (hP₁ : P
     have : ε / 4 ≤ 1 := ‹ε / 4 ≤ _›.trans (by exact mod_cast G.edgeDensity_le_one _ _ _ _)
     linarith
   calc
-    _ ≤ (1 - ε / 4) * (ε / (16 * bound (ε / 8) ⌈4 / ε⌉₊)) ^ 3 * card α ^ 3 := by
+    _ ≤ (1 - ε / 4) * (ε / (16 * (bound (ε / 8) ⌈4 / ε⌉₊ : ℝ))) ^ 3 * card α ^ 3 := by
       gcongr; exact triangleRemovalBound_le hε₁
-    _ = (1 - 2 * (ε / 8)) * (ε / 8) ^ 3 * (card α / (2 * bound (ε / 8) ⌈4 / ε⌉₊)) *
-          (card α / (2 * bound (ε / 8) ⌈4 / ε⌉₊)) * (card α / (2 * bound (ε / 8) ⌈4 / ε⌉₊)) := by
+    _ = (1 - 2 * (ε / 8)) * (ε / 8) ^ 3 * ((card α : ℝ) / (2 * (bound (ε / 8) ⌈4 / ε⌉₊ : ℝ))) *
+          ((card α : ℝ) / (2 * (bound (ε / 8) ⌈4 / ε⌉₊ : ℝ))) *
+          ((card α : ℝ) / (2 * (bound (ε / 8) ⌈4 / ε⌉₊ : ℝ))) := by
       ring
     _ ≤ (1 - 2 * (ε / 8)) * (ε / 8) ^ 3 * #s * #Y * #Z := by
       gcongr <;> exact card_bound hε hP₁ hP₃ ‹_›

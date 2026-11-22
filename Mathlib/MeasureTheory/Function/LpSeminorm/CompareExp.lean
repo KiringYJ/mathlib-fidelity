@@ -67,7 +67,8 @@ theorem eLpNorm'_le_eLpNormEssSup_mul_rpow_measure_univ {q : ℝ} (hq_pos : 0 < 
 
 theorem eLpNorm_le_eLpNorm_mul_rpow_measure_univ {p q : ℝ≥0∞} (hpq : p ≤ q)
     (hf : AEStronglyMeasurable f μ) :
-    eLpNorm f p μ ≤ eLpNorm f q μ * μ Set.univ ^ ((1 / p).toReal - (1 / q).toReal) := by
+    eLpNorm f p μ ≤ eLpNorm f q μ *
+      μ Set.univ ^ ((ENNReal.div 1 p).toReal - (ENNReal.div 1 q).toReal) := by
   obtain rfl | hp0 := eq_or_ne p 0
   · simp
   have hq0_lt : 0 < q := hp0.pos.trans_le hpq

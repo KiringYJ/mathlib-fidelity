@@ -93,7 +93,7 @@ with `0 < k ≤ n` and `|k*ξ - j| ≤ 1/(n+1)`.
 
 See also `Real.exists_nat_abs_mul_sub_round_le`. -/
 theorem exists_int_int_abs_mul_sub_le (ξ : ℝ) {n : ℕ} (n_pos : 0 < n) :
-    ∃ j k : ℤ, 0 < k ∧ k ≤ n ∧ |↑k * ξ - j| ≤ 1 / (n + 1) := by
+    ∃ j k : ℤ, 0 < k ∧ k ≤ n ∧ |↑k * ξ - j| ≤ 1 / ((n : ℝ) + 1) := by
   let f : ℤ → ℤ := fun m => ⌊fract (ξ * m) * (n + 1)⌋
   have hn : 0 < (n : ℝ) + 1 := mod_cast Nat.succ_pos _
   have hfu := fun m : ℤ => mul_lt_of_lt_one_left hn <| fract_lt_one (ξ * ↑m)
@@ -133,7 +133,7 @@ For any real number `ξ` and positive natural `n`, there is a natural number `k`
 with `0 < k ≤ n` such that `|k*ξ - round(k*ξ)| ≤ 1/(n+1)`.
 -/
 theorem exists_nat_abs_mul_sub_round_le (ξ : ℝ) {n : ℕ} (n_pos : 0 < n) :
-    ∃ k : ℕ, 0 < k ∧ k ≤ n ∧ |↑k * ξ - round (↑k * ξ)| ≤ 1 / (n + 1) := by
+    ∃ k : ℕ, 0 < k ∧ k ≤ n ∧ |↑k * ξ - round (↑k * ξ)| ≤ 1 / ((n : ℝ) + 1) := by
   obtain ⟨j, k, hk₀, hk₁, h⟩ := exists_int_int_abs_mul_sub_le ξ n_pos
   have hk := toNat_of_nonneg hk₀.le
   rw [← hk] at hk₀ hk₁ h
@@ -145,29 +145,29 @@ such that `q.den ≤ n` and `|ξ - q| ≤ 1/((n+1)*q.den)`.
 
 See also `AddCircle.exists_norm_nsmul_le`. -/
 theorem exists_rat_abs_sub_le_and_den_le (ξ : ℝ) {n : ℕ} (n_pos : 0 < n) :
-    ∃ q : ℚ, |ξ - q| ≤ 1 / ((n + 1) * q.den) ∧ q.den ≤ n := by
+    ∃ q : ℚ, |ξ - q| ≤ 1 / (((n : ℝ) + 1) * q.den) ∧ q.den ≤ n := by
   obtain ⟨j, k, hk₀, hk₁, h⟩ := exists_int_int_abs_mul_sub_le ξ n_pos
   have hk₀' : (0 : ℝ) < k := Int.cast_pos.mpr hk₀
-  have hden : ((j / k : ℚ).den : ℤ) ≤ k := by
+  have hden : (((j : ℚ) / (k : ℚ)).den : ℤ) ≤ k := by
     have hk : ((k.toNat : ℕ) : ℤ) = k := Int.toNat_of_nonneg hk₀.le
     have hkn : k.toNat ≠ 0 := by omega
-    have hq : (j / k : ℚ) = Rat.fraction j k.toNat hkn := by
+    have hq : ((j : ℚ) / (k : ℚ)) = Rat.fraction j k.toNat hkn := by
       rw [Rat.fraction_eq_div]
       congr 1
       exact_mod_cast hk.symm
     rw [hq]
     exact (Int.ofNat_le.mpr (Nat.le_of_dvd (by omega) (Rat.den_dvd j k.toNat hkn))).trans hk.le
-  refine ⟨j / k, ?_, Nat.cast_le.mp (hden.trans hk₁)⟩
-  have hd : (0 : ℝ) < ((j / k : ℚ).den : ℝ) := Nat.cast_pos.mpr (Rat.pos _)
-  have hdk : (((j / k : ℚ).den : ℕ) : ℝ) ≤ (k : ℝ) := by exact_mod_cast hden
+  refine ⟨(j : ℚ) / (k : ℚ), ?_, Nat.cast_le.mp (hden.trans hk₁)⟩
+  have hd : (0 : ℝ) < (((j : ℚ) / (k : ℚ)).den : ℝ) := Nat.cast_pos.mpr (Rat.pos _)
+  have hdk : ((((j : ℚ) / (k : ℚ)).den : ℕ) : ℝ) ≤ (k : ℝ) := by exact_mod_cast hden
   have hn : (0 : ℝ) < n + 1 := by positivity
   simp only [Rat.cast_div, Rat.cast_intCast]
-  calc |ξ - (j : ℝ) / k| = |(k : ℝ) * ξ - j| / k := by
-        have e : (k : ℝ) * ξ - j = k * (ξ - j / k) := by rw [mul_sub, mul_div_cancel₀]
+  calc |ξ - (j : ℝ) / (k : ℝ)| = |(k : ℝ) * ξ - j| / (k : ℝ) := by
+        have e : (k : ℝ) * ξ - j = k * (ξ - (j : ℝ) / (k : ℝ)) := by rw [mul_sub, mul_div_cancel₀]
         rw [e, abs_mul, abs_of_pos hk₀', mul_div_cancel_left₀]
-    _ ≤ 1 / (n + 1) / k := by gcongr
-    _ = 1 / ((n + 1) * k) := div_div₀
-    _ ≤ 1 / ((n + 1) * ((j / k : ℚ).den : ℝ)) := by gcongr
+    _ ≤ 1 / ((n : ℝ) + 1) / (k : ℝ) := by gcongr
+    _ = 1 / (((n : ℝ) + 1) * k) := div_div₀
+    _ ≤ 1 / (((n : ℝ) + 1) * (((j : ℚ) / (k : ℚ)).den : ℝ)) := by gcongr
 
 end Dirichlet
 
@@ -238,10 +238,10 @@ theorem den_le_and_le_num_le_of_sub_lt_one_div_den_sq {ξ q : ℚ}
     (h : |ξ - q| < 1 / (q.den : ℚ) ^ 2) :
     q.den ≤ ξ.den ∧ ⌈ξ * q.den⌉ - 1 ≤ q.num ∧ q.num ≤ ⌊ξ * q.den⌋ + 1 := by
   have hq₀ : (0 : ℚ) < q.den := Nat.cast_pos.mpr q.pos
-  replace h : |ξ * q.den - q.num| < 1 / q.den := by
+  replace h : |ξ * q.den - q.num| < 1 / (q.den : ℚ) := by
     rw [← mul_lt_mul_iff_left₀ hq₀] at h
     conv_lhs at h => rw [← abs_of_pos hq₀, ← abs_mul, sub_mul, mul_den_eq_num]
-    have e : (1 : ℚ) / (q.den : ℚ) ^ 2 * q.den = 1 / q.den := by field_simp
+    have e : (1 : ℚ) / (q.den : ℚ) ^ 2 * q.den = 1 / (q.den : ℚ) := by field_simp
     rwa [e] at h
   constructor
   · rcases eq_or_ne ξ q with (rfl | H)
@@ -258,9 +258,9 @@ theorem den_le_and_le_num_le_of_sub_lt_one_div_den_sq {ξ q : ℚ}
       refine Nat.cast_le.mp ((one_lt_div hq₀).mp ?_).le
       calc (1 : ℚ) ≤ |((ξ.num * q.den - q.num * ξ.den : ℤ) : ℚ)| := hnz
         _ = |ξ * q.den - q.num| * ξ.den := key
-        _ < 1 / q.den * ξ.den := by gcongr
-        _ = ξ.den / q.den := by rw [div_mul_eq_mul_div₀, one_mul]
-  · have h1 : (1 : ℚ) / q.den ≤ 1 := by
+        _ < 1 / (q.den : ℚ) * ξ.den := by gcongr
+        _ = (ξ.den : ℚ) / (q.den : ℚ) := by rw [div_mul_eq_mul_div₀, one_mul]
+  · have h1 : (1 : ℚ) / (q.den : ℚ) ≤ 1 := by
       rw [div_le_one hq₀]
       exact_mod_cast q.pos
     obtain ⟨h₁, h₂⟩ := abs_sub_lt_iff.mp (h.trans_le h1)
@@ -301,8 +301,9 @@ theorem Real.infinite_rat_abs_sub_lt_one_div_den_sq_iff_irrational (ξ : ℝ) :
     ⟨fun h => (irrational_iff_ne_rational ξ).mpr fun a b hb => ?_,
       Real.infinite_rat_abs_sub_lt_one_div_den_sq_of_irrational⟩
   contrapose! h
-  convert! Rat.finite_rat_abs_sub_lt_one_div_den_sq ((a : ℚ) / b) with q
-  have e₁ : (a : ℝ) / b = ((a / b : ℚ) : ℝ) := by simp only [Rat.cast_div, Rat.cast_intCast]
+  convert! Rat.finite_rat_abs_sub_lt_one_div_den_sq ((a : ℚ) / (b : ℚ)) with q
+  have e₁ : (a : ℝ) / (b : ℝ) = (((a : ℚ) / (b : ℚ)) : ℝ) := by
+    simp only [Rat.cast_div, Rat.cast_intCast]
   have e₂ : (1 : ℝ) / (q.den : ℝ) ^ 2 = ((1 / (q.den : ℚ) ^ 2 : ℚ) : ℝ) := by
     simp only [Rat.cast_div, Rat.cast_one, Rat.cast_pow, Rat.cast_natCast]
   rw [h, e₁, e₂, ← Rat.cast_sub, ← Rat.cast_abs, Rat.cast_lt]
@@ -431,7 +432,7 @@ open Int
 when `v ≠ 0`; this evidence is part of the condition. -/
 def ContfracLegendre.Ass (ξ : ℝ) (u v : ℤ) : Prop :=
   IsCoprime u v ∧ (v = 1 → (-(1 / 2) : ℝ) < ξ - u) ∧
-    ∃ _ : IsUnit ((v : ℝ) * (2 * v - 1)), |ξ - u / v| < ((v : ℝ) * (2 * v - 1))⁻¹
+    ∃ _ : IsUnit ((v : ℝ) * (2 * v - 1)), |ξ - (u : ℝ) / (v : ℝ)| < ((v : ℝ) * (2 * v - 1))⁻¹
 
 /-- The denominator `v` in the technical condition is nonzero. -/
 theorem ContfracLegendre.Ass.den_ne_zero {ξ : ℝ} {u v : ℤ} (h : ContfracLegendre.Ass ξ u v) :
@@ -460,7 +461,7 @@ private theorem aux₁ : 0 < fract ξ := by
   rw [hf] at h
   have H : (2 * v - 1 : ℝ) < 1 := by
     refine (mul_lt_iff_lt_one_right hv₀).1 ((inv_lt_inv₀ hv₀ (mul_pos hv₁ hv₂)).1 (h.trans_le' ?_))
-    have h' : (⌊ξ⌋ : ℝ) - u / v = (⌊ξ⌋ * v - u) / v := by field_simp
+    have h' : (⌊ξ⌋ : ℝ) - (u : ℝ) / (v : ℝ) = ((⌊ξ⌋ : ℝ) * v - u) / (v : ℝ) := by field_simp
     rw [h', abs_div]
     simp only [abs_of_pos hv₀]
     rw [← one_div₀, div_le_div_iff_of_pos_right hv₀]
@@ -521,11 +522,12 @@ private theorem aux₃ :
   refine ⟨(mul_pos Hu Hu').ne'.isUnit, ?_⟩
   have H₁ := div_pos (div_pos Hv Hu) hξ₀
   obtain ⟨-, -, -, h⟩ := h
-  have h' : |fract ξ - u' / v| < ((v : ℝ) * (2 * v - 1))⁻¹ := by
+  have h' : |fract ξ - (u' : ℝ) / (v : ℝ)| < ((v : ℝ) * (2 * v - 1))⁻¹ := by
     rwa [hu'ℝ, add_div, mul_div_cancel_right₀, ← sub_sub, sub_right_comm] at h
   have H : (2 * u' - 1 : ℝ) ≤ (2 * v - 1) * fract ξ := by
     replace h := (abs_lt.mp h).1
-    have : (2 * (v : ℝ) - 1) * (-((v : ℝ) * (2 * v - 1))⁻¹ + u' / v) = 2 * u' - (1 + u') / v := by
+    have : (2 * (v : ℝ) - 1) * (-((v : ℝ) * (2 * v - 1))⁻¹ + (u' : ℝ) / (v : ℝ)) =
+        2 * u' - (1 + (u' : ℝ)) / (v : ℝ) := by
       field
     rw [hu'ℝ, add_div, mul_div_cancel_right₀, ← sub_sub, sub_right_comm, self_sub_floor,
       lt_sub_iff_add_lt, ← mul_lt_mul_iff_right₀ Hv', this] at h
@@ -533,10 +535,12 @@ private theorem aux₃ :
     rw [sub_le_sub_iff_left, div_le_one Hv, add_comm]
     exact mod_cast huv
   calc
-    |(fract ξ)⁻¹ - v / u'| = |(fract ξ - u' / v) * (v / u' / fract ξ)| := by
+    |(fract ξ)⁻¹ - (v : ℝ) / (u' : ℝ)| =
+        |(fract ξ - (u' : ℝ) / (v : ℝ)) * ((v : ℝ) / (u' : ℝ) / fract ξ)| := by
       rw [abs_sub_comm]; congr 1; field
-    _ = |fract ξ - u' / v| * (v / u' / fract ξ) := by rw [abs_mul, abs_of_pos H₁]
-    _ < ((v : ℝ) * (2 * v - 1))⁻¹ * (v / u' / fract ξ) := by gcongr
+    _ = |fract ξ - (u' : ℝ) / (v : ℝ)| * ((v : ℝ) / (u' : ℝ) / fract ξ) := by
+      rw [abs_mul, abs_of_pos H₁]
+    _ < ((v : ℝ) * (2 * v - 1))⁻¹ * ((v : ℝ) / (u' : ℝ) / fract ξ) := by gcongr
     _ = (u' * ((2 * v - 1) * fract ξ))⁻¹ := by field
     _ ≤ (u' * (2 * u' - 1) : ℝ)⁻¹ := by gcongr
 
@@ -547,9 +551,9 @@ private theorem invariant :
   · rw [sub_eq_add_neg, ← neg_mul, isCoprime_comm, IsCoprime.add_mul_right_left_iff]
     exact h.1
   · obtain ⟨hv₀, hv₀'⟩ := aux₀ (zero_lt_two.trans_le hv)
-    have Hv : (v * (2 * v - 1) : ℝ)⁻¹ + (v : ℝ)⁻¹ = 2 / (2 * v - 1) := by
+    have Hv : (v * (2 * v - 1) : ℝ)⁻¹ + (v : ℝ)⁻¹ = 2 / (2 * (v : ℝ) - 1) := by
       field
-    have Huv : (u / v : ℝ) = ⌊ξ⌋ + (v : ℝ)⁻¹ := by
+    have Huv : ((u : ℝ) / (v : ℝ) : ℝ) = ⌊ξ⌋ + (v : ℝ)⁻¹ := by
       rw [sub_eq_iff_eq_add'.mp huv]
       field_simp
       push_cast
@@ -557,7 +561,7 @@ private theorem invariant :
     obtain ⟨_, h₂⟩ := h.2.2
     have h' := (abs_sub_lt_iff.mp h₂).1
     rw [Huv, ← sub_sub, sub_lt_iff_lt_add, self_sub_floor, Hv] at h'
-    rwa [lt_sub_iff_add_lt', (by ring : (v : ℝ) + -(1 / 2) = (2 * v - 1) / 2),
+    rwa [lt_sub_iff_add_lt', (by ring : (v : ℝ) + -(1 / 2) = (2 * (v : ℝ) - 1) / 2),
       lt_inv_comm₀ (div_pos hv₀' zero_lt_two) (aux₁ hv h), inv_div₀]
 
 end

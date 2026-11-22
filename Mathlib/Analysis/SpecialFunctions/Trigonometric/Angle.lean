@@ -138,11 +138,11 @@ theorem two_zsmul_coe_pi : (2 : ℤ) • (π : Angle) = 0 := by simp [← intCas
 theorem coe_pi_add_coe_pi : (π : Real.Angle) + π = 0 := by rw [← two_nsmul, two_nsmul_coe_pi]
 
 theorem zsmul_eq_iff {ψ θ : Angle} {z : ℤ} (hz : z ≠ 0) :
-    z • ψ = z • θ ↔ ∃ k : Fin z.natAbs, ψ = θ + (k : ℕ) • (2 * π / z : ℝ) :=
+    z • ψ = z • θ ↔ ∃ k : Fin z.natAbs, ψ = θ + (k : ℕ) • (2 * π / (z : ℝ)) :=
   QuotientAddGroup.zmultiples_zsmul_eq_zsmul_iff hz
 
 theorem nsmul_eq_iff {ψ θ : Angle} {n : ℕ} (hz : n ≠ 0) :
-    n • ψ = n • θ ↔ ∃ k : Fin n, ψ = θ + (k : ℕ) • (2 * π / n : ℝ) :=
+    n • ψ = n • θ ↔ ∃ k : Fin n, ψ = θ + (k : ℕ) • (2 * π / (n : ℝ)) :=
   QuotientAddGroup.zmultiples_nsmul_eq_nsmul_iff hz
 
 theorem two_zsmul_eq_iff {ψ θ : Angle} : (2 : ℤ) • ψ = (2 : ℤ) • θ ↔ ψ = θ ∨ ψ = θ + ↑π := by
@@ -558,7 +558,7 @@ theorem abs_toReal_eq_pi_div_two_iff {θ : Angle} :
     toReal_eq_neg_pi_div_two_iff]
 
 theorem nsmul_toReal_eq_mul {n : ℕ} (h : n ≠ 0) {θ : Angle} :
-    (n • θ).toReal = n * θ.toReal ↔ θ.toReal ∈ Set.Ioc (-π / n) (π / n) := by
+    (n • θ).toReal = n * θ.toReal ↔ θ.toReal ∈ Set.Ioc (-π / (n : ℝ)) (π / (n : ℝ)) := by
   nth_rw 1 [← coe_toReal θ]
   have h' : 0 < (n : ℝ) := mod_cast Nat.pos_of_ne_zero h
   rw [← coe_nsmul, nsmul_eq_mul, toReal_coe_eq_self_iff, Set.mem_Ioc, div_lt_iff₀' h',

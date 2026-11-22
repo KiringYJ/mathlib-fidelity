@@ -25,7 +25,7 @@ Possibly only of archaeological significance.
 
 namespace Int
 
-/-- `div2 n = n/2` -/
+/-- Divide an integer by two, rounding down. -/
 def div2 : ℤ → ℤ
   | (n : ℕ) => n.div2
   | -[n+1] => negSucc n.div2
@@ -161,7 +161,7 @@ theorem bodd_add_div2 : ∀ n, cond (bodd n) 1 0 + 2 * div2 n = n
     · rw [zero_add, add_comm]
       rfl
 
-theorem div2_val : ∀ n, div2 n = n / 2
+theorem div2_val : ∀ n, div2 n = Int.euclideanDiv n 2
   | (n : ℕ) => congr_arg ofNat n.div2_val
   | -[n+1] => congr_arg negSucc n.div2_val
 

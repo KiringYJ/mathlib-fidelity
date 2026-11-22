@@ -1048,10 +1048,16 @@ theorem EventuallyEq.pow_const {γ} [Pow β γ] {f g : α → β} {l : Filter α
 theorem EventuallyEq.inv [Inv β] {f g : α → β} {l : Filter α} (h : f =ᶠ[l] g) : f⁻¹ =ᶠ[l] g⁻¹ :=
   h.fun_comp Inv.inv
 
-@[to_additive (attr := gcongr, to_fun)]
-theorem EventuallyEq.div [Div β] {f f' g g' : α → β} {l : Filter α} (h : f =ᶠ[l] g)
+@[gcongr, to_fun]
+theorem EventuallyEq.sub [Sub β] {f f' g g' : α → β} {l : Filter α} (h : f =ᶠ[l] g)
+    (h' : f' =ᶠ[l] g') : f - f' =ᶠ[l] g - g' :=
+  h.comp₂ (· - ·) h'
+
+@[to_additive (attr := gcongr, to_fun) sub_of_addGroup]
+theorem EventuallyEq.div [Group β] {f f' g g' : α → β} {l : Filter α} (h : f =ᶠ[l] g)
     (h' : f' =ᶠ[l] g') : f / f' =ᶠ[l] g / g' :=
-  h.comp₂ (· / ·) h'
+  (h.and h').mono fun x hx ↦ by
+    rw [Pi.div_apply, Pi.div_apply, hx.1, hx.2]
 
 @[to_additive]
 theorem EventuallyEq.smul {𝕜} [SMul 𝕜 β] {l : Filter α} {f f' : α → 𝕜} {g g' : α → β}

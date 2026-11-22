@@ -69,7 +69,7 @@ Formally, these are numbers `p / q` such that `p • 1 < q • x`. -/
 abbrev ratLt (x : M) : Set ℚ := {r | r.num • 1 < r.den • x}
 
 theorem intCast_div_natCast_mem_ratLt {num : ℤ} {den : ℕ} {hden : IsUnit (den : ℚ)} {x : M} :
-    (num / den : ℚ) ∈ ratLt x ↔ num • 1 < den • x := by
+    (num : ℚ) / (den : ℚ) ∈ ratLt x ↔ num • 1 < den • x := by
   replace hden : den ≠ 0 := Nat.cast_ne_zero.1 hden.ne_zero
   rw [← Rat.fraction_eq_div num den hden, Set.mem_ofPred]
   obtain ⟨m, hnum, hdenm⟩ := Rat.num_den_mk (n := num) hden rfl
@@ -132,7 +132,9 @@ theorem ratLt_add (x y : M) : ratLt (x + y) = ratLt x + ratLt y := by
       simp [hk]
     have hka0 : k * a.den ≠ 0 := mul_ne_zero hk0 a.den_ne_zero
     obtain ⟨m, ⟨hm1, hm2⟩, _⟩ := existsUnique_add_zsmul_mem_Ico zero_lt_one 0 (k • a.den • x - 1)
-    refine ⟨(m / (k * a.den : ℕ) : ℚ), ?_, ((k * a.num - m : ℤ) / (k * a.den : ℕ) : ℚ), ?_, ?_⟩
+    have hden : IsUnit ((k * a.den : ℕ) : ℚ) := (Nat.cast_ne_zero.mpr hka0).isUnit
+    refine ⟨(m : ℚ) / ((k * a.den : ℕ) : ℚ), ?_,
+      ((k * a.num - m : ℤ) : ℚ) / ((k * a.den : ℕ) : ℚ), ?_, ?_⟩
     · rw [intCast_div_natCast_mem_ratLt, ← smul_smul]
       simpa using hm2
     · have hk' : 1 + (k • a.num • 1 - k • a.den • y) ≤ k • a.den • x - 1 := by

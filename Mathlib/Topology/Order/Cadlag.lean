@@ -65,19 +65,25 @@ lemma IsRightContinuous.mul [Mul Y] [ContinuousMul Y]
     IsRightContinuous (f * g) :=
   hf.continuous_comp₂ hg continuous_mul
 
-@[to_additive (attr := to_fun (attr := to_dual)) sub]
-lemma IsRightContinuous.div' [Div Y] [ContinuousDiv Y]
+@[to_fun (attr := to_dual)]
+lemma IsRightContinuous.sub [Sub Y] [ContinuousSub Y]
     (hf : IsRightContinuous f) (hg : IsRightContinuous g) :
-    IsRightContinuous (f / g) :=
-  hf.continuous_comp₂ hg continuous_div'
+    IsRightContinuous (f - g) :=
+  hf.continuous_comp₂ hg continuous_sub
 
-/-- The quotient of two right-continuous functions is right-continuous; the quotient `f / g`
-exists when `g` is invertible. -/
-@[to_dual /-- The quotient of two left-continuous functions is left-continuous; the quotient
-`f / g` exists when `g` is invertible. -/]
+@[to_fun (attr := to_dual)]
+lemma IsRightContinuous.div' [Group Y] [ContinuousDiv Y]
+    (hf : IsRightContinuous f) (hg : IsRightContinuous g) :
+    IsRightContinuous (f / g) := by
+  rw [Pi.div_def]
+  exact hf.continuous_comp₂ hg continuous_div'
+
+/-- Dividing a right-continuous function by an invertible right-continuous function preserves
+right continuity. -/
+@[to_dual /-- The quotient by an invertible left-continuous function preserves left continuity. -/]
 lemma IsRightContinuous.div [GroupWithZero Y] [ContinuousInv₀ Y] [ContinuousMul Y]
     {h : IsUnit g} (hf : IsRightContinuous f) (hg : IsRightContinuous g) :
-    IsRightContinuous (f / g) :=
+    IsRightContinuous (f /ₚ h.unit) :=
   fun x ↦ (hf x).div (hg x)
 
 /-- The quotient of two right-continuous functions is right-continuous where it is defined: the
@@ -86,7 +92,7 @@ denominator takes invertible values. -/
 the denominator takes invertible values. -/]
 lemma IsRightContinuous.fun_div [GroupWithZero Y] [ContinuousInv₀ Y] [ContinuousMul Y]
     {h : ∀ x, IsUnit (g x)} (hf : IsRightContinuous f) (hg : IsRightContinuous g) :
-    IsRightContinuous (fun x ↦ Checked.div (f x) (g x) (h x)) :=
+    IsRightContinuous (fun x ↦ f x /ₚ (h x).unit) :=
   fun x ↦ (hf x).div₀ (hg x)
 
 @[to_additive (attr := to_fun (attr := to_dual))]
@@ -162,10 +168,16 @@ lemma IsCadlag.mul [Mul Y] [ContinuousMul Y] (hf : IsCadlag f) (hg : IsCadlag g)
     IsCadlag (f * g) :=
   hf.continuous_comp₂ hg continuous_mul
 
-@[to_additive (attr := to_fun (attr := to_dual)) sub]
-lemma IsCadlag.div' [Div Y] [ContinuousDiv Y] (hf : IsCadlag f) (hg : IsCadlag g) :
-    IsCadlag (f / g) :=
-  hf.continuous_comp₂ hg continuous_div'
+@[to_fun (attr := to_dual)]
+lemma IsCadlag.sub [Sub Y] [ContinuousSub Y] (hf : IsCadlag f) (hg : IsCadlag g) :
+    IsCadlag (f - g) :=
+  hf.continuous_comp₂ hg continuous_sub
+
+@[to_fun (attr := to_dual)]
+lemma IsCadlag.div' [Group Y] [ContinuousDiv Y] (hf : IsCadlag f) (hg : IsCadlag g) :
+    IsCadlag (f / g) := by
+  rw [Pi.div_def]
+  exact hf.continuous_comp₂ hg continuous_div'
 
 @[to_fun (attr := to_dual (attr := to_additive))]
 lemma IsCadlag.const_smul {R : Type*} [SMul R Y] [ContinuousConstSMul R Y] (c : R)

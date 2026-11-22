@@ -174,8 +174,9 @@ theorem TendstoUniformlyOnFilter.mul (hf : TendstoUniformlyOnFilter f g l l')
 @[to_additive (attr := to_fun)]
 theorem TendstoUniformlyOnFilter.div (hf : TendstoUniformlyOnFilter f g l l')
     (hf' : TendstoUniformlyOnFilter f' g' l l') : TendstoUniformlyOnFilter (f / f') (g / g') l l' :=
-  fun u hu =>
-  ((uniformContinuous_div.comp_tendstoUniformlyOnFilter (hf.prodMk hf')) u hu).diag_of_prod_left
+  fun u hu => by
+    simpa only [Pi.div_def] using!
+      ((uniformContinuous_div.comp_tendstoUniformlyOnFilter (hf.prodMk hf')) u hu).diag_of_prod_left
 
 @[to_additive (attr := to_fun)]
 theorem TendstoUniformlyOnFilter.inv (hf : TendstoUniformlyOnFilter f g l l') :
@@ -189,8 +190,10 @@ theorem TendstoUniformlyOn.mul (hf : TendstoUniformlyOn f g l s)
 
 @[to_additive (attr := to_fun)]
 theorem TendstoUniformlyOn.div (hf : TendstoUniformlyOn f g l s)
-    (hf' : TendstoUniformlyOn f' g' l s) : TendstoUniformlyOn (f / f') (g / g') l s := fun u hu =>
-  ((uniformContinuous_div.comp_tendstoUniformlyOn (hf.prodMk hf')) u hu).diag_of_prod
+    (hf' : TendstoUniformlyOn f' g' l s) : TendstoUniformlyOn (f / f') (g / g') l s := by
+  intro u hu
+  simpa only [Pi.div_def] using!
+    ((uniformContinuous_div.comp_tendstoUniformlyOn (hf.prodMk hf')) u hu).diag_of_prod
 
 @[to_additive (attr := to_fun)]
 theorem TendstoUniformlyOn.inv (hf : TendstoUniformlyOn f g l s) :
@@ -204,8 +207,10 @@ theorem TendstoUniformly.mul (hf : TendstoUniformly f g l) (hf' : TendstoUniform
 
 @[to_additive (attr := to_fun)]
 theorem TendstoUniformly.div (hf : TendstoUniformly f g l) (hf' : TendstoUniformly f' g' l) :
-    TendstoUniformly (f / f') (g / g') l := fun u hu =>
-  ((uniformContinuous_div.comp_tendstoUniformly (hf.prodMk hf')) u hu).diag_of_prod
+    TendstoUniformly (f / f') (g / g') l := by
+  intro u hu
+  simpa only [Pi.div_def] using!
+    ((uniformContinuous_div.comp_tendstoUniformly (hf.prodMk hf')) u hu).diag_of_prod
 
 @[to_additive (attr := to_fun)]
 theorem TendstoUniformly.inv (hf : TendstoUniformly f g l) :
@@ -243,8 +248,8 @@ theorem TendstoLocallyUniformlyOn.mul
 @[to_additive (attr := to_fun)]
 theorem TendstoLocallyUniformlyOn.div
     (hf : TendstoLocallyUniformlyOn F f l s) (hg : TendstoLocallyUniformlyOn G g l s) :
-    TendstoLocallyUniformlyOn (F / G) (f / g) l s :=
-  uniformContinuous_div.comp_tendstoLocallyUniformlyOn (hf.prodMk hg)
+    TendstoLocallyUniformlyOn (F / G) (f / g) l s := by
+  simpa only [Pi.div_def] using! uniformContinuous_div.comp_tendstoLocallyUniformlyOn (hf.prodMk hg)
 
 @[to_additive (attr := to_fun)]
 theorem TendstoLocallyUniformlyOn.inv (hf : TendstoLocallyUniformlyOn F f l s) :
@@ -260,8 +265,8 @@ theorem TendstoLocallyUniformly.mul
 @[to_additive (attr := to_fun)]
 theorem TendstoLocallyUniformly.div
     (hf : TendstoLocallyUniformly F f l) (hg : TendstoLocallyUniformly G g l) :
-    TendstoLocallyUniformly (F / G) (f / g) l :=
-  uniformContinuous_div.comp_tendstoLocallyUniformly (hf.prodMk hg)
+    TendstoLocallyUniformly (F / G) (f / g) l := by
+  simpa only [Pi.div_def] using! uniformContinuous_div.comp_tendstoLocallyUniformly (hf.prodMk hg)
 
 @[to_additive (attr := to_fun)]
 theorem TendstoLocallyUniformly.inv (hf : TendstoLocallyUniformly F f l) :
@@ -271,7 +276,10 @@ theorem TendstoLocallyUniformly.inv (hf : TendstoLocallyUniformly F f l) :
 end LocalUniformConvergence
 
 
-@[to_additive]
+instance (priority := 100) IsUniformAddGroup.of_compactSpace [UniformSpace β] [AddGroup β]
+    [ContinuousSub β] [CompactSpace β] : IsUniformAddGroup β where
+  uniformContinuous_sub := CompactSpace.uniformContinuous_of_continuous continuous_sub
+
 instance (priority := 100) IsUniformGroup.of_compactSpace [UniformSpace β] [Group β]
     [ContinuousDiv β] [CompactSpace β] :
     IsUniformGroup β where
@@ -452,7 +460,10 @@ theorem tendsto_div_comap_self (de : IsDenseInducing e) (x₀ : α) :
     ext t
     simp
   have lim : Tendsto (fun x : α × α => x.2 / x.1) (𝓝 (x₀, x₀)) (𝓝 (e 1)) := by
-    simpa using! (continuous_div'.comp (@continuous_swap α α _ _)).tendsto (x₀, x₀)
+    have hc : Continuous (fun x : α × α => x.2 / x.1) := by
+      simp_rw [div_eq_mul_inv]
+      fun_prop
+    simpa using! hc.tendsto (x₀, x₀)
   simpa using! de.tendsto_comap_nhds_nhds lim comm
 
 end

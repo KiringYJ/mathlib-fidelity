@@ -253,9 +253,9 @@ expansion of the logarithm, in `hasSum_pow_div_log_of_abs_lt_1`.
 TODO: use one of generic theorems about Taylor's series to prove this estimate.
 -/
 theorem abs_log_sub_add_sum_range_le {x : ℝ} (h : |x| < 1) (n : ℕ) :
-    |(∑ i ∈ range n, x ^ (i + 1) / (i + 1)) + log (1 - x)| ≤ |x| ^ (n + 1) / (1 - |x|) := by
+    |(∑ i ∈ range n, x ^ (i + 1) / ((i : ℝ) + 1)) + log (1 - x)| ≤ |x| ^ (n + 1) / (1 - |x|) := by
   let I := Ioo (-1 : ℝ) 1
-  let F : ℝ → ℝ := fun y => (∑ i ∈ range n, y ^ (i + 1) / (i + 1)) + log (1 - y)
+  let F : ℝ → ℝ := fun y => (∑ i ∈ range n, y ^ (i + 1) / ((i : ℝ) + 1)) + log (1 - y)
   let F' : I → ℝ := fun y ↦ Checked.div (-(y : ℝ) ^ n) (1 - y)
     (sub_pos.mpr y.2.2).ne'.isUnit
   have hI : Icc (-|x|) |x| ⊆ I := Icc_subset_Ioo (neg_lt_neg h) h
@@ -264,17 +264,17 @@ theorem abs_log_sub_add_sum_range_le {x : ℝ} (h : |x| < 1) (n : ℕ) :
     have hy : -1 < (y : ℝ) ∧ (y : ℝ) < 1 := y.2
     have hden : IsUnit (1 - (y : ℝ)) := (sub_pos.mpr hy.2).ne'.isUnit
     have hd : HasDerivAt F
-        ((∑ i ∈ range n, ↑(i + 1) * (y : ℝ) ^ i / (↑i + 1)) + (-1) / (1 - y)) y :=
+        ((∑ i ∈ range n, ↑(i + 1) * (y : ℝ) ^ i / ((i : ℝ) + 1)) + (-1) / (1 - (y : ℝ))) y :=
       .add (.fun_sum fun i _ ↦
           (hasDerivAt_pow (i + 1) (y : ℝ)).div_const ((i : ℝ) + 1))
         (((hasDerivAt_id (y : ℝ)).const_sub 1).log (hx := hden))
     convert! hd using 1
     calc
-      -(y : ℝ) ^ n / (1 - y) = ∑ i ∈ range n, (y : ℝ) ^ i + -1 / (1 - y) := by
+      -(y : ℝ) ^ n / (1 - (y : ℝ)) = ∑ i ∈ range n, (y : ℝ) ^ i + -1 / (1 - (y : ℝ)) := by
         apply (div_eq_iff (hb := hden)).mpr
         rw [add_mul, geom_sum_mul_neg, div_mul_cancel₀]
         ring
-      _ = ∑ i ∈ range n, ↑(i + 1) * (y : ℝ) ^ i / (↑i + 1) + -1 / (1 - y) := by
+      _ = ∑ i ∈ range n, ↑(i + 1) * (y : ℝ) ^ i / ((i : ℝ) + 1) + -1 / (1 - (y : ℝ)) := by
         congr with i
         rw [Nat.cast_succ, mul_div_cancel_left₀]
   have B : ∀ y : I, (y : ℝ) ∈ Icc (-|x|) |x| → |F' y| ≤ |x| ^ n / (1 - |x|) := by
@@ -313,7 +313,7 @@ lemma hasDerivAt_half_log_one_add_div_one_sub_sub_sum_range
     HasDerivAt
       (fun x : Ioo (-1 : ℝ) 1 ↦
         1 / 2 * log (Checked.div (1 + (x : ℝ)) (1 - x) (sub_pos.mpr x.2.2).ne'.isUnit) -
-          ∑ i ∈ range n, (x : ℝ) ^ (2 * i + 1) / (2 * i + 1))
+          ∑ i ∈ range n, (x : ℝ) ^ (2 * i + 1) / (2 * (i : ℝ) + 1))
       (Checked.div ((y ^ 2) ^ n) (1 - y ^ 2)
         (sub_pos.mpr ((sq_lt_one_iff_abs_lt_one y).mpr (abs_lt.mpr ⟨hy₁, hy₂⟩))).ne'.isUnit)
       ⟨y, hy₁, hy₂⟩ (fun x ↦ (x : ℝ)) := by
@@ -331,7 +331,7 @@ lemma hasDerivAt_half_log_one_add_div_one_sub_sub_sum_range
     refine HasDerivAt.fun_sum fun i _ ↦ ?_
     simpa only [Nat.add_sub_cancel] using
       (hasDerivAt_pow (2 * i + 1) y).div_const (((2 * i + 1 : ℕ) : ℝ))
-  let dF : ℝ := 1 / 2 * (1 / (1 + y) - (-1) / (1 - y)) - dP
+  let dF : ℝ := 1 / 2 * (1 / (1 + y) - (-1) / (1 - (y : ℝ))) - dP
   have hF : HasDerivAt F dF y := by
     have h₁ := ((hasDerivAt_id y).const_add 1).log (hx := hplus)
     have h₂ := ((hasDerivAt_id y).const_sub 1).log (hx := hden)
@@ -353,7 +353,7 @@ lemma hasDerivAt_half_log_one_add_div_one_sub_sub_sum_range
   rw [hcoef] at hF
   have hf : (fun x : I ↦
       1 / 2 * log (Checked.div (1 + (x : ℝ)) (1 - x) (sub_pos.mpr x.2.2).ne'.isUnit) -
-        ∑ i ∈ range n, (x : ℝ) ^ (2 * i + 1) / (2 * i + 1)) = fun x : I ↦ F x := by
+        ∑ i ∈ range n, (x : ℝ) ^ (2 * i + 1) / (2 * (i : ℝ) + 1)) = fun x : I ↦ F x := by
     funext x
     have hnum : 1 + (x : ℝ) ≠ 0 := (show 0 < 1 + (x : ℝ) by linarith [x.2.1]).ne'
     rw [log_div hnum]
@@ -371,13 +371,13 @@ that it is more convenient to avoid Taylor's theorem for this proof.
 -/
 lemma sum_range_sub_log_div_le {x : ℝ} (h : |x| < 1) (n : ℕ) :
     |1 / 2 * log (Checked.div (1 + x) (1 - x) (sub_pos.mpr (abs_lt.mp h).2).ne'.isUnit) -
-        ∑ i ∈ range n, x ^ (2 * i + 1) / (2 * i + 1)| ≤
+        ∑ i ∈ range n, x ^ (2 * i + 1) / (2 * (i : ℝ) + 1)| ≤
       Checked.div (|x| ^ (2 * n + 1)) (1 - x ^ 2)
         (sub_pos.mpr ((sq_lt_one_iff_abs_lt_one x).mpr h)).ne'.isUnit := by
   let I := Ioo (-1 : ℝ) 1
   let F : I → ℝ := fun y ↦
     1 / 2 * log (Checked.div (1 + (y : ℝ)) (1 - y) (sub_pos.mpr y.2.2).ne'.isUnit) -
-      ∑ i ∈ range n, (y : ℝ) ^ (2 * i + 1) / (2 * i + 1)
+      ∑ i ∈ range n, (y : ℝ) ^ (2 * i + 1) / (2 * (i : ℝ) + 1)
   let F' : I → ℝ := fun y ↦ Checked.div (((y : ℝ) ^ 2) ^ n) (1 - (y : ℝ) ^ 2)
     (sub_pos.mpr ((sq_lt_one_iff_abs_lt_one (y : ℝ)).mpr (abs_lt.mpr y.2))).ne'.isUnit
   have hI : Icc (-|x|) |x| ⊆ I := Icc_subset_Ioo (neg_lt_neg h) h
@@ -415,9 +415,10 @@ lemma sum_range_sub_log_div_le {x : ℝ} (h : |x| < 1) (n : ℕ) :
 
 /-- Power series expansion of the logarithm around `1`. -/
 theorem hasSum_pow_div_log_of_abs_lt_one {x : ℝ} (h : |x| < 1) :
-    HasSum (fun n : ℕ => x ^ (n + 1) / (n + 1)) (-log (1 - x)) := by
+    HasSum (fun n : ℕ => x ^ (n + 1) / ((n : ℝ) + 1)) (-log (1 - x)) := by
   rw [Summable.hasSum_iff_tendsto_nat]
-  · change Tendsto (fun n : ℕ => ∑ i ∈ range n, x ^ (i + 1) / (i + 1)) atTop (𝓝 (-log (1 - x)))
+  · change Tendsto (fun n : ℕ => ∑ i ∈ range n, x ^ (i + 1) / ((i : ℝ) + 1))
+      atTop (𝓝 (-log (1 - x)))
     rw [tendsto_iff_norm_sub_tendsto_zero]
     simp only [norm_eq_abs, sub_neg_eq_add]
     refine squeeze_zero (fun n => abs_nonneg _) (abs_log_sub_add_sum_range_le h) ?_
@@ -425,10 +426,10 @@ theorem hasSum_pow_div_log_of_abs_lt_one {x : ℝ} (h : |x| < 1) :
     have hmul := (tendsto_const_nhds (x := |x|)).mul hpow
     simpa only [pow_succ', mul_zero, zero_div] using
       hmul.div_const₀ (1 - |x|) (hy := (sub_pos.mpr h).ne'.isUnit)
-  change Summable fun n : ℕ => x ^ (n + 1) / (n + 1)
+  change Summable fun n : ℕ => x ^ (n + 1) / ((n : ℝ) + 1)
   refine .of_norm_bounded (summable_geometric_of_lt_one (abs_nonneg _) h) fun i => ?_
   calc
-    ‖x ^ (i + 1) / (i + 1)‖ = |x| ^ (i + 1) / (i + 1) := by
+    ‖x ^ (i + 1) / ((i : ℝ) + 1)‖ = |x| ^ (i + 1) / ((i : ℝ) + 1) := by
       have : (0 : ℝ) ≤ i + 1 := le_of_lt (Nat.cast_add_one_pos i)
       simp only [norm_eq_abs, abs_div, ← pow_abs, abs_of_nonneg this]
     _ ≤ |x| ^ (i + 1) / (0 + 1) := by
@@ -439,11 +440,11 @@ theorem hasSum_pow_div_log_of_abs_lt_one {x : ℝ} (h : |x| < 1) :
 
 /-- Power series expansion of `log(1 + x) - log(1 - x)` for `|x| < 1`. -/
 theorem hasSum_log_sub_log_of_abs_lt_one {x : ℝ} (h : |x| < 1) :
-    HasSum (fun k : ℕ => (2 : ℝ) * (1 / (2 * k + 1)) * x ^ (2 * k + 1))
+    HasSum (fun k : ℕ => (2 : ℝ) * (1 / (2 * (k : ℝ) + 1)) * x ^ (2 * k + 1))
       (log (1 + x) - log (1 - x)) := by
-  set term := fun n : ℕ => -1 * ((-x) ^ (n + 1) / ((n : ℝ) + 1)) + x ^ (n + 1) / (n + 1)
+  set term := fun n : ℕ => -1 * ((-x) ^ (n + 1) / ((n : ℝ) + 1)) + x ^ (n + 1) / ((n : ℝ) + 1)
   have h_term_eq_goal :
-      term ∘ (2 * ·) = fun k : ℕ => 2 * (1 / (2 * k + 1)) * x ^ (2 * k + 1) := by
+      term ∘ (2 * ·) = fun k : ℕ => 2 * (1 / (2 * (k : ℝ) + 1)) * x ^ (2 * k + 1) := by
     ext n
     dsimp only [term, (· ∘ ·)]
     rw [Odd.neg_pow (⟨n, rfl⟩ : Odd (2 * n + 1)) x]
@@ -460,7 +461,7 @@ theorem hasSum_log_sub_log_of_abs_lt_one {x : ℝ} (h : |x| < 1) :
 
 /-- Expansion of `log (1 + a⁻¹)` as a series in powers of `1 / (2 * a + 1)`. -/
 theorem hasSum_log_one_add_inv {a : ℝ} (h : 0 < a) :
-    HasSum (fun k : ℕ => (2 : ℝ) * (1 / (2 * k + 1)) * (1 / (2 * a + 1)) ^ (2 * k + 1))
+    HasSum (fun k : ℕ => (2 : ℝ) * (1 / (2 * (k : ℝ) + 1)) * (1 / (2 * a + 1)) ^ (2 * k + 1))
       (log (1 + a⁻¹)) := by
   have h₁ : |1 / (2 * a + 1)| < 1 := by
     rw [abs_of_pos, div_lt_one]
@@ -480,7 +481,7 @@ theorem hasSum_log_one_add_inv {a : ℝ} (h : 0 < a) :
 
 /-- Expansion of `log (1 + a)` as a series in powers of `a / (a + 2)`. -/
 theorem hasSum_log_one_add {a : ℝ} (h : 0 ≤ a) :
-    HasSum (fun k : ℕ => (2 : ℝ) * (1 / (2 * k + 1)) * (a / (a + 2)) ^ (2 * k + 1))
+    HasSum (fun k : ℕ => (2 : ℝ) * (1 / (2 * (k : ℝ) + 1)) * (a / (a + 2)) ^ (2 * k + 1))
       (log (1 + a)) := by
   obtain (rfl | ha0) := eq_or_ne a 0
   · simp [hasSum_zero]
@@ -495,24 +496,24 @@ at `0` form a lower bound for it. This shows that the absolute value in `sum_ran
 can be dropped, and gives explicit lower bounds for logarithms.
 -/
 lemma sum_range_le_log_div {x : ℝ} (h₀ : 0 ≤ x) (h : x < 1) (n : ℕ) :
-    ∑ i ∈ range n, x ^ (2 * i + 1) / (2 * i + 1) ≤ 1 / 2 * log ((1 + x) / (1 - x)) := by
+    ∑ i ∈ range n, x ^ (2 * i + 1) / (2 * (i : ℝ) + 1) ≤ 1 / 2 * log ((1 + x) / (1 - x)) := by
   have hx : |x| < 1 := by simpa only [abs_of_nonneg h₀] using h
   have hnum : 0 < 1 + x := by linarith
   have hden : 0 < 1 - x := sub_pos.mpr h
-  have hsum : HasSum (fun k : ℕ ↦ x ^ (2 * k + 1) / (2 * k + 1))
+  have hsum : HasSum (fun k : ℕ ↦ x ^ (2 * k + 1) / (2 * (k : ℝ) + 1))
       (1 / 2 * log ((1 + x) / (1 - x))) := by
     convert (hasSum_log_sub_log_of_abs_lt_one hx).mul_left (1 / 2) using 1
     · funext k
       field_simp
     · rw [log_div hnum.ne']
   calc
-    _ ≤ ∑' k : ℕ, x ^ (2 * k + 1) / (2 * k + 1) :=
+    _ ≤ ∑' k : ℕ, x ^ (2 * k + 1) / (2 * (k : ℝ) + 1) :=
       hsum.summable.sum_le_tsum (range n) (fun k _ ↦ by positivity)
     _ = _ := hsum.tsum_eq
 
 lemma log_div_le_sum_range_add {x : ℝ} (h₀ : 0 ≤ x) (h : x < 1) (n : ℕ) :
     1 / 2 * log ((1 + x) / (1 - x)) ≤
-      (∑ i ∈ range n, x ^ (2 * i + 1) / (2 * i + 1)) +
+      (∑ i ∈ range n, x ^ (2 * i + 1) / (2 * (i : ℝ) + 1)) +
         Checked.div (x ^ (2 * n + 1)) (1 - x ^ 2)
           (sub_pos.mpr ((sq_lt_one_iff_abs_lt_one x).mpr
             (by simpa only [abs_of_nonneg h₀] using h))).ne'.isUnit := by

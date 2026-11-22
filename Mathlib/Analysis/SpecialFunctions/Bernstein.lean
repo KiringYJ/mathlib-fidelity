@@ -99,7 +99,7 @@ namespace bernstein
 in the unit interval.
 -/
 def z {n : ℕ} (k : Fin (n + 1)) (hn : n ≠ 0 := by checked_nonzero) : I :=
-  ⟨(k : ℝ) / n, by simp [div_nonneg, div_le_one_of_le₀, k.is_le]⟩
+  ⟨(k : ℝ) / (n : ℝ), by simp [div_nonneg, div_le_one_of_le₀, k.is_le]⟩
 
 local postfix:90 "/ₙ" => z
 
@@ -113,8 +113,8 @@ theorem probability (n : ℕ) (x : I) : (∑ k : Fin (n + 1), bernstein n k x) =
   simpa [Finset.sum_range]
 
 theorem variance {n : ℕ} (hn : n ≠ 0) (x : I) :
-    (∑ k : Fin (n + 1), (x - k/ₙ : ℝ) ^ 2 * bernstein n k x) = (x : ℝ) * (1 - x) / n := by
-  convert! congr(Polynomial.aeval (x : ℝ) $(bernsteinPolynomial.variance ℝ n) / n ^ 2) using 1
+    (∑ k : Fin (n + 1), (x - k/ₙ : ℝ) ^ 2 * bernstein n k x) = (x : ℝ) * (1 - x) / (n : ℝ) := by
+  convert! congr(Polynomial.aeval (x : ℝ) $(bernsteinPolynomial.variance ℝ n) / (n : ℝ) ^ 2) using 1
   · simp only [z, bernstein_apply, nsmul_eq_mul, bernsteinPolynomial, Finset.sum_range, map_sum,
       Polynomial.coe_aeval_eq_eval, Polynomial.eval_mul, Polynomial.eval_pow, Polynomial.eval_sub,
       Polynomial.eval_natCast, Polynomial.eval_X, Polynomial.eval_one]
@@ -270,6 +270,6 @@ theorem bernsteinApproximation_uniform [LocallyConvexSpace ℝ E] (f : C(I, E)) 
       _ = C * (∑ k : Fin (n.1 + 1), ((x : ℝ) - k/ₙ) ^ 2 * bernstein n.1 k x) / δ ^ 2 := by
         simp only [← mul_div_right_comm₀, ← mul_div_assoc₀, ← Finset.sum_div]
       -- `bernstein.variance` and `x ∈ [0,1]` gives the uniform bound
-      _ = C / δ ^ 2 * x * (1 - x) / n := by rw [variance hn₀]; ring
-      _ ≤ C / δ ^ 2 * 1 * 1 / n := by gcongr <;> unit_interval
+      _ = C / δ ^ 2 * x * (1 - x) / (n.1 : ℝ) := by rw [variance hn₀]; ring
+      _ ≤ C / δ ^ 2 * 1 * 1 / (n.1 : ℝ) := by gcongr <;> unit_interval
       _ < 1 / 2 := by simpa only [mul_one]

@@ -84,10 +84,18 @@ instance monoid [∀ i, Monoid (f i)] : Monoid (∀ i, f i) where
 @[to_additive]
 instance commMonoid [∀ i, CommMonoid (f i)] : CommMonoid (∀ i, f i) where
 
-@[to_additive Pi.subNegMonoid]
+instance subNegMonoid [∀ i, SubNegMonoid (f i)] : SubNegMonoid (∀ i, f i) where
+  zsmul := fun z x i => z • x i
+  sub_eq_add_neg := by intros; ext; exact sub_eq_add_neg _ _
+  zsmul_zero' := by intros; ext; exact SubNegMonoid.zsmul_zero' _
+  zsmul_succ' := by intros; ext; exact SubNegMonoid.zsmul_succ' _ _
+  zsmul_neg' := by intros; ext; exact SubNegMonoid.zsmul_neg' _ _
+
+@[to_additive existing subNegMonoid]
 instance divInvMonoid [∀ i, DivInvMonoid (f i)] : DivInvMonoid (∀ i, f i) where
   zpow := fun z x i => x i ^ z
-  div_eq_mul_inv := by intros; ext; exact div_eq_mul_inv _ _
+  div := DivInvMonoid.div'
+  div_eq_mul_inv _ _ := rfl
   zpow_zero' := by intros; ext; exact DivInvMonoid.zpow_zero' _
   zpow_succ' := by intros; ext; exact DivInvMonoid.zpow_succ' _ _
   zpow_neg' := by intros; ext; exact DivInvMonoid.zpow_neg' _ _
@@ -114,6 +122,26 @@ instance divisionCommMonoid [∀ i, DivisionCommMonoid (f i)] : DivisionCommMono
 @[to_additive]
 instance group [∀ i, Group (f i)] : Group (∀ i, f i) where
   inv_mul_cancel := by intros; ext; exact inv_mul_cancel _
+
+@[to_additive groupSub_apply, simp]
+lemma div_apply [∀ i, Group (f i)] (u v : ∀ i, f i) (i : I) : (u / v) i = u i / v i := by
+  rw [div_eq_mul_inv, div_eq_mul_inv]
+  rfl
+
+@[to_additive groupSub_def, push ←]
+lemma div_def [∀ i, Group (f i)] (u v : ∀ i, f i) : u / v = fun i ↦ u i / v i :=
+  funext (div_apply u v)
+
+@[to_additive groupSub_comp]
+lemma div_comp [Group γ] (u v : β → γ) (z : α → β) : (u / v) ∘ z = (u ∘ z) / (v ∘ z) := by
+  funext x
+  simp only [Function.comp_apply, div_apply]
+
+@[to_additive Function.const_groupSub, simp]
+lemma _root_.Function.const_div [Group γ] (a b : γ) :
+    Function.const α a / Function.const α b = Function.const α (a / b) := by
+  funext x
+  exact Pi.div_apply _ _ _
 
 @[to_additive]
 instance commGroup [∀ i, CommGroup (f i)] : CommGroup (∀ i, f i) := { group, commMonoid with }
@@ -177,12 +205,23 @@ theorem extend_inv [Inv γ] (f : α → β) (g : α → γ) (e : β → γ) :
   funext x
   simp [Function.extend_def, apply_dite Inv.inv]
 
-@[to_additive]
-theorem extend_div [Div γ] (f : α → β) (g₁ g₂ : α → γ) (e₁ e₂ : β → γ) :
-    Function.extend f (g₁ / g₂) (e₁ / e₂) = Function.extend f g₁ e₁ / Function.extend f g₂ e₂ := by
+theorem extend_sub [Sub γ] (f : α → β) (g₁ g₂ : α → γ) (e₁ e₂ : β → γ) :
+    Function.extend f (g₁ - g₂) (e₁ - e₂) = Function.extend f g₁ e₁ - Function.extend f g₂ e₂ := by
   classical
   funext x
   simp [Function.extend_def, apply_dite₂]
+
+theorem extend_op₂ {δ ε : Type*} (op : γ → δ → ε) (f : α → β) (g₁ : α → γ) (g₂ : α → δ)
+    (e₁ : β → γ) (e₂ : β → δ) :
+    Function.extend f (fun x ↦ op (g₁ x) (g₂ x)) (fun x ↦ op (e₁ x) (e₂ x)) =
+      fun x ↦ op (Function.extend f g₁ e₁ x) (Function.extend f g₂ e₂ x) := by
+  classical
+  funext x
+  simp [Function.extend_def, apply_dite₂]
+
+theorem extend_div [Group γ] (f : α → β) (g₁ g₂ : α → γ) (e₁ e₂ : β → γ) :
+    Function.extend f (g₁ / g₂) (e₁ / e₂) = Function.extend f g₁ e₁ / Function.extend f g₂ e₂ := by
+  simpa only [Pi.div_def] using extend_op₂ (fun a b : γ ↦ a / b) f g₁ g₂ e₁ e₂
 
 end Extend
 
@@ -241,9 +280,18 @@ theorem elim_mul_mul [Mul γ] : Sum.elim (a * a') (b * b') = Sum.elim a b * Sum.
   ext x
   cases x <;> rfl
 
-@[to_additive]
-theorem elim_div_div [Div γ] : Sum.elim (a / a') (b / b') = Sum.elim a b / Sum.elim a' b' := by
+theorem elim_sub_sub [Sub γ] : Sum.elim (a - a') (b - b') = Sum.elim a b - Sum.elim a' b' := by
   ext x
   cases x <;> rfl
+
+theorem elim_op₂ {δ ε : Type*} (op : γ → δ → ε) (a : α → γ) (b : β → γ)
+    (a' : α → δ) (b' : β → δ) :
+    Sum.elim (fun x ↦ op (a x) (a' x)) (fun y ↦ op (b y) (b' y)) =
+      fun z ↦ op (Sum.elim a b z) (Sum.elim a' b' z) := by
+  funext z
+  cases z <;> rfl
+
+theorem elim_div_div [Group γ] : Sum.elim (a / a') (b / b') = Sum.elim a b / Sum.elim a' b' := by
+  simpa only [Pi.div_def] using elim_op₂ (fun x y : γ ↦ x / y) a b a' b'
 
 end Sum

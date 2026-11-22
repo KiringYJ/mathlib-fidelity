@@ -38,7 +38,7 @@ open Real Polynomial Finset
 /-- Weighted sum of `P (x)` where `x` goes over `cos ((2 * i + 1) / (2 * n) * π)` for
   `0 ≤ i < n`. -/
 noncomputable def sumZeroes (n : ℕ) (P : ℝ[X]) (hn : n ≠ 0) : ℝ :=
-    (π / n) * ∑ i ∈ range n, P.eval (cos ((2 * i + 1) / (2 * n) * π))
+  (π / (n : ℝ)) * ∑ i ∈ range n, P.eval (cos ((2 * (i : ℝ) + 1) / (2 * (n : ℝ)) * π))
 
 @[simp]
 theorem sumZeroes_sum (n : ℕ) {ι : Type*} (s : Finset ι) (P : ι → ℝ[X]) {hn : n ≠ 0} :
@@ -56,7 +56,7 @@ theorem sumZeroes_T_zero {n : ℕ} (hn : n ≠ 0) : sumZeroes n (T ℝ 0) hn = �
 
 theorem sumZeroes_T_of_not_dvd {n : ℕ} {k : ℤ} {hn : n ≠ 0} (hk : ¬ (2 * n : ℤ) ∣ k) :
     sumZeroes n (T ℝ k) hn = 0 := by
-  let θ : ℝ := k * π / (2 * n)
+  let θ : ℝ := k * π / (2 * (n : ℝ))
   have hθ : θ * (2 * n) = k * π := div_mul_cancel₀ _
   have hsin : sin θ ≠ 0 := by
     intro hz
@@ -68,7 +68,7 @@ theorem sumZeroes_T_of_not_dvd {n : ℕ} {k : ℤ} {hn : n ≠ 0} (hk : ¬ (2 * 
     rw [← hθ, ← hm]
     ring
   have hangle (i : ℕ) :
-      (k : ℝ) * ((2 * i + 1) / (2 * n) * π) = (2 * i + 1) * θ := by
+      (k : ℝ) * ((2 * (i : ℝ) + 1) / (2 * (n : ℝ)) * π) = (2 * i + 1) * θ := by
     simp only [θ, div_eq_mul_inv₀]
     ring
   let f (i : ℕ) := sin (2 * i * θ)

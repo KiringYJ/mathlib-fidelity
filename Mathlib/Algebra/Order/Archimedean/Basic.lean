@@ -363,7 +363,7 @@ theorem exists_rat_lt (x : K) : ∃ q : ℚ, (q : K) < x :=
   ⟨n, by rwa [Rat.cast_intCast]⟩
 
 theorem exists_div_btwn {x y : K} {n : ℕ} (h : x < y) (nh : (y - x)⁻¹ < n) :
-    ∃ z : ℤ, x < (z : K) / n ∧ (z : K) / n < y := by
+    ∃ z : ℤ, x < (z : K) / (n : K) ∧ (z : K) / (n : K) < y := by
   obtain ⟨z, zh⟩ := exists_floor (x * n)
   refine ⟨z + 1, ?_⟩
   have n0' := (inv_pos.2 (sub_pos.2 h)).trans nh
@@ -377,7 +377,7 @@ theorem exists_rat_btwn {x y : K} (h : x < y) : ∃ q : ℚ, x < q ∧ q < y := 
   obtain ⟨n, nh⟩ := exists_nat_gt (y - x)⁻¹
   obtain ⟨z, zh, zh'⟩ := exists_div_btwn h nh
   have hn : 0 < n := by exact_mod_cast (inv_pos_of_pos (sub_pos.2 h)).trans nh
-  refine ⟨(z : ℚ) / n, ?_, ?_⟩ <;> simpa
+  refine ⟨(z : ℚ) / (n : ℚ), ?_, ?_⟩ <;> simpa
 
 theorem exists_rat_mem_uIoo {x y : K} (h : x ≠ y) : ∃ q : ℚ, ↑q ∈ Set.uIoo x y :=
   exists_rat_btwn (min_lt_max.mpr h)

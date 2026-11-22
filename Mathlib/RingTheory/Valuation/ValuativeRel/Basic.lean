@@ -959,7 +959,7 @@ instance {Γ₀ : Type*} [LinearOrderedCommMonoidWithZero Γ₀]
 
 lemma ValueGroupWithZero.mk_eq_valuation {K : Type*} [DivisionRing K] [ValuativeRel K]
     (x : K) (y : posSubmonoid K) :
-    ValueGroupWithZero.mk x y = valuation K (x / y) := by
+    ValueGroupWithZero.mk x y = valuation K (x / (y : K)) := by
   rw [Valuation.map_div, ValueGroupWithZero.mk_eq_div]
 
 lemma exists_valuation_div_valuation_eq (γ : ValueGroupWithZero R) :

@@ -35,6 +35,11 @@ noncomputable def mappingCocone [HasHomotopyCofiber φ] :
 
 namespace mappingCocone
 
+private lemma euclideanDiv_two_two : Int.euclideanDiv 2 2 = 1 :=
+  Int.euclideanDiv_eq_of_remainder (r := 0) (by decide) rfl (by decide) (by decide)
+
+attribute [local simp] euclideanDiv_two_two
+
 section
 
 variable [HasHomotopyCofiber φ]
@@ -315,6 +320,18 @@ noncomputable def triangle : Triangle (CochainComplex C ℤ) :=
 
 set_option backward.defeqAttrib.useBackward true in
 set_option backward.isDefEq.respectTransparency false in
+lemma rotateTriangleIso_comm₃ :
+    (triangle φ).rotate.mor₃ ≫ (𝟙 (triangle φ).rotate.obj₁)⟦(1 : ℤ)⟧' =
+      ((shiftFunctorCompIsoId _ (-1 : ℤ) 1 (by lia)).app (mappingCone φ)).hom ≫
+        (mappingCone.triangle φ).mor₃ := by
+  dsimp
+  ext n
+  simp [fst, mappingCone.triangle, Cochain.leftShift_v _ _ _ _ _ _ _ _ rfl,
+    Cochain.rightShift_v _ _ _ _ _ _ _ _ rfl,
+    shiftFunctorCompIsoId, shiftFunctorAdd'_inv_app_f', shiftFunctorZero_hom_app_f]
+
+set_option backward.defeqAttrib.useBackward true in
+set_option backward.isDefEq.respectTransparency false in
 /-- Rotating the triangle `mappingCocone.triangle φ` gives a triangle that is
 isomorphic to `mappingCone.triangle φ`. -/
 noncomputable def rotateTriangleIso :
@@ -322,11 +339,7 @@ noncomputable def rotateTriangleIso :
   refine Triangle.isoMk _ _ (Iso.refl _) (Iso.refl _)
     ((shiftFunctorCompIsoId _ (-1 : ℤ) 1 (by lia)).app _)
     (by simp) (by simp [triangle]) ?_
-  dsimp
-  ext n
-  simp [fst, mappingCone.triangle, Cochain.leftShift_v _ _ _ _ _ _ _ _ rfl,
-    Cochain.rightShift_v _ _ _ _ _ _ _ _ rfl,
-    shiftFunctorCompIsoId, shiftFunctorAdd'_inv_app_f', shiftFunctorZero_hom_app_f]
+  exact rotateTriangleIso_comm₃ φ
 
 end
 

@@ -21,10 +21,10 @@ open scoped Topology
 /-- **Leibniz's series for `π`**. The alternating sum of odd number reciprocals is `π / 4`,
 proved by using Abel's limit theorem to extend the Maclaurin series of `arctan` to 1. -/
 theorem tendsto_sum_pi_div_four :
-    Tendsto (fun k => ∑ i ∈ range k, (-1 : ℝ) ^ i / (2 * i + 1)) atTop (𝓝 (π / 4)) := by
+    Tendsto (fun k => ∑ i ∈ range k, (-1 : ℝ) ^ i / (2 * (i : ℝ) + 1)) atTop (𝓝 (π / 4)) := by
   -- The series is alternating with terms of decreasing magnitude, so it converges to some limit
   obtain ⟨l, h⟩ :
-      ∃ l, Tendsto (fun n ↦ ∑ i ∈ range n, (-1 : ℝ) ^ i / (2 * i + 1)) atTop (𝓝 l) := by
+      ∃ l, Tendsto (fun n ↦ ∑ i ∈ range n, (-1 : ℝ) ^ i / (2 * (i : ℝ) + 1)) atTop (𝓝 l) := by
     apply Antitone.tendsto_alternating_series_of_tendsto_zero
     · refine antitone_iff_forall_lt.mpr fun i j hij ↦ ?_
       exact (inv_le_inv₀ (by positivity) (by positivity)).mpr (by gcongr)

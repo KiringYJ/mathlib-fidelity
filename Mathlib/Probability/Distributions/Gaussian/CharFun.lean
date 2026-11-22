@@ -75,7 +75,7 @@ lemma isGaussian_iff_gaussian_charFunDual [IsFiniteMeasure μ] :
   simp_rw [charFun_map_eq_charFunDual_smul, h, charFun_gaussianReal,
     smul_apply, map_smul, smul_apply, smul_eq_mul]
   norm_cast
-  congrm exp (_ - ofReal ?_ / 2)
+  congrm exp (_ - ofReal (?_ / 2))
   have hnonneg : 0 ≤ f L L := hf.nonneg L
   rw [Real.coe_toNNReal _ hnonneg]
   ring
@@ -102,8 +102,8 @@ lemma gaussian_charFunDual_congr [IsFiniteMeasure μ] {m : E}
     rw [this 0, ← Int.cast_inj (α := ℂ)]
     simp [h]
   simp only [this, Int.cast_zero, zero_mul, add_zero, Complex.ext_iff, sub_re, mul_re, ofReal_re,
-    I_re, mul_zero, ofReal_im, I_im, mul_one, sub_self, div_ofNat_re, zero_sub, neg_inj,
-    div_left_inj', sub_im, mul_im, div_ofNat_im, zero_div, sub_zero] at hn
+    I_re, mul_zero, ofReal_im, I_im, mul_one, sub_self, zero_sub, neg_inj,
+    div_left_inj', sub_im, mul_im, sub_zero] at hn
   constructor
   · rw [SeparatingDual.eq_iff_forall_dual_eq (R := ℝ)]
     simp [hn]

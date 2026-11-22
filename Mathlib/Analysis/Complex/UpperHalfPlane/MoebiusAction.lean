@@ -378,7 +378,7 @@ theorem exists_SL2_smul_eq_of_apply_zero_one_ne_zero (g : SL(2, ℝ)) (hc : g 1 
     _ = (↑a * z + b) * (c : ℂ) := by
       rw [← mul_assoc, div_mul_eq_mul_div₀, div_mul_cancel₀]
     _ = (a : ℂ) * ((c : ℂ) * z + d) - 1 := by linear_combination -h
-    _ = _ := by rw [sub_mul, hinv, ← mul_assoc, div_mul_cancel₀]
+    _ = _ := by rw [Complex.ofReal_div, sub_mul, hinv, ← mul_assoc, div_mul_cancel₀]
 
 end SLAction
 
@@ -406,7 +406,7 @@ lemma toSL2R_apply (z : ℍ) : z.toSL2R =
   suffices z.re / √z.im + √z.im * Complex.I = z * (↑√z.im)⁻¹ by
     rw [coe_specialLinearGroup_apply, div_eq_iff]
     simpa [add_comm]
-  rw [div_add' (hc := this.isUnit), mul_right_comm, ← Complex.ofReal_mul,
+  rw [Complex.ofReal_div, div_add' (hc := this.isUnit), mul_right_comm, ← Complex.ofReal_mul,
     ← Real.sqrt_mul z.im_pos.le, Real.sqrt_mul_self z.im_pos.le, re_add_im, div_eq_mul_inv₀]
 
 /-- `SL(2, ℝ)` acts transitively on the upper half-plane. -/

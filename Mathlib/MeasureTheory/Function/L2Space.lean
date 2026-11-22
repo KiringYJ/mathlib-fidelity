@@ -47,7 +47,7 @@ theorem memLp_two_iff_integrable_sq_norm {f : α → F} (hf : AEStronglyMeasurab
   rw [← memLp_one_iff_integrable]
   convert! (memLp_norm_rpow_iff hf two_ne_zero ENNReal.ofNat_ne_top).symm
   · simp
-  · rw [div_eq_mul_inv, ENNReal.mul_inv_cancel two_ne_zero ENNReal.ofNat_ne_top]
+  · exact (ENNReal.div_self two_ne_zero ENNReal.ofNat_ne_top).symm
 
 theorem memLp_two_iff_integrable_sq {f : α → ℝ} (hf : AEStronglyMeasurable f μ) :
     MemLp f 2 μ ↔ Integrable (fun x => f x ^ 2) μ := by

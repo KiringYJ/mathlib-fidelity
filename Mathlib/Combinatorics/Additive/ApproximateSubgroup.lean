@@ -134,7 +134,7 @@ lemma of_small_tripling [DecidableEq G] {A : Finset G} (hA₁ : 1 ∈ A) (hAsymm
       _ ≤ K ^ 3 * #A := small_pow_of_small_tripling (by lia) hA hAsymm
     have hA₀ : A.Nonempty := ⟨1, hA₁⟩
     obtain ⟨F, -, hF, hAF⟩ := ruzsa_covering_mul hA₀ hA
-    exact ⟨F, hF, by norm_cast; simpa [div_eq_mul_inv, pow_succ, mul_assoc, hAsymm] using hAF⟩
+    exact ⟨F, hF, by norm_cast; simpa [pow_succ, mul_assoc, hAsymm] using hAF⟩
 
 open Set in
 @[to_additive]

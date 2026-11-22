@@ -370,7 +370,7 @@ open scoped algebraMap in
 `b` are coprime at `v`. -/
 theorem valuation_div_le_one_iff (a : R) {b : R} (hb : b ≠ 0)
     (h : b ∈ v.asIdeal → a ∉ v.asIdeal) :
-    v.valuation K (a / b) ≤ 1 ↔ b ∉ v.asIdeal := by
+    v.valuation K ((a : K) / (b : K)) ≤ 1 ↔ b ∉ v.asIdeal := by
   refine ⟨fun hv ↦ ?_, fun hb ↦ by
     simp [valuation_of_algebraMap, intValuation_eq_one_iff.2 hb, intValuation_le_one]⟩
   contrapose! hv
@@ -489,7 +489,7 @@ theorem valuationSubringAtPrime_le_valuation :
     valuationSubringAtPrime K v ≤ (valuation K v).valuationSubring := by
   rintro x ⟨a, s, hs, rfl⟩
   have hs0 : s ≠ 0 := fun h ↦ hs (h ▸ v.asIdeal.zero_mem)
-  suffices (valuation K v) (a / (s : K)) ≤ 1 by rwa [div_eq_mul_inv₀] at this
+  suffices (valuation K v) ((a : K) / (s : K)) ≤ 1 by rwa [div_eq_mul_inv₀] at this
   rwa [valuation_div_le_one_iff (K := K) v a hs0 (fun _ ↦ by contradiction)]
 
 instance : Algebra R (valuationSubringAtPrime K v) :=

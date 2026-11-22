@@ -147,7 +147,7 @@ the minimum cardinality can be exponentially smaller.
 noncomputable def cardM : ℕ :=
   have hdim : (Fintype.card ι : ℝ) ≠ 0 := by
     exact_mod_cast (Fintype.card_pos_iff.mpr bS.index_nonempty).ne'
-  adm.card (normBound abv bS ^ (-1 / Fintype.card ι : ℝ)) ^ Fintype.card ι
+  adm.card (normBound abv bS ^ (-1 / (Fintype.card ι : ℝ))) ^ Fintype.card ι
 
 variable [Infinite R]
 
@@ -195,7 +195,7 @@ theorem exists_mem_finsetApprox (a : S) {b} (hb : b ≠ (0 : R)) :
       abv (Algebra.norm R (algebraMap R S b)) := by
   have dim_pos := Fintype.card_pos_iff.mpr bS.index_nonempty
   have hdim : (Fintype.card ι : ℝ) ≠ 0 := by exact_mod_cast dim_pos.ne'
-  set ε : ℝ := normBound abv bS ^ (-1 / Fintype.card ι : ℝ) with ε_eq
+  set ε : ℝ := normBound abv bS ^ (-1 / (Fintype.card ι : ℝ)) with ε_eq
   have hε : 0 < ε := Real.rpow_pos_of_pos (Int.cast_pos.mpr (normBound_pos abv bS)) _
   have ε_le : (normBound abv bS : ℝ) * (abv b • ε) ^ (Fintype.card ι : ℝ)
                 ≤ abv b ^ (Fintype.card ι : ℝ) := by

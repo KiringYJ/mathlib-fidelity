@@ -540,7 +540,7 @@ theorem IsCycle.pow_iff [Finite β] {f : Perm β} (hf : IsCycle f) {n : ℕ} :
         refine h.ne_one ?_
         simp [pow_mul, pow_orderOf_eq_one]
       have : orderOf (f ^ n) = orderOf f := by rw [h.orderOf, hr, hf.orderOf]
-      rw [orderOf_pow, Nat.div_eq_self] at this
+      rw [orderOf_pow, Nat.euclideanDiv_eq_core, Nat.div_eq_self] at this
       rcases this with h | _
       · exact absurd h (orderOf_pos _).ne'
       · rwa [Nat.coprime_iff_gcd_eq_one, Nat.gcd_comm]
@@ -1057,31 +1057,10 @@ theorem zpow_eq_ofSubtype_subtypePerm_iff
 theorem cycle_zpow_mem_support_iff {g : Perm α}
     (hg : g.IsCycle) {n : ℤ} {x : α} (hx : g x ≠ x) :
     (g ^ n) x = x ↔ n % #g.support = 0 := by
-  set q := n / #g.support
-  set r := n % #g.support
-  have div_euc : r + #g.support * q = n ∧ 0 ≤ r ∧ r < #g.support := by
-    rw [← Int.ediv_emod_unique _]
-    · exact ⟨rfl, rfl⟩
-    simp only [Int.natCast_pos]
-    apply lt_of_lt_of_le _ (IsCycle.two_le_card_support hg); simp
-  simp only [← hg.orderOf] at div_euc
-  obtain ⟨m, hm⟩ := Int.eq_ofNat_of_zero_le div_euc.2.1
-  simp only [hm, Nat.cast_nonneg, Nat.cast_lt, true_and] at div_euc
-  rw [← div_euc.1, zpow_add g]
-  simp only [hm, Nat.cast_eq_zero, zpow_natCast, coe_mul, comp_apply, zpow_mul,
-    pow_orderOf_eq_one, one_zpow, coe_one, id_eq]
-  have : (g ^ m) x = x ↔ g ^ m = 1 := by
-    constructor
-    · intro hgm
-      simp only [IsCycle.pow_eq_one_iff hg]
-      use x
-    · intro hgm
-      simp only [hgm, coe_one, id_eq]
-  rw [this]
-  by_cases hm0 : m = 0
-  · simp only [hm0, pow_zero]
-  · simp only [hm0, iff_false]
-    exact pow_ne_one_of_lt_orderOf hm0 div_euc.2
+  have hs : g.IsCycleOn (g.support : Set α) := by
+    rw [coe_support_eq_set_support]
+    exact hg.isCycleOn
+  exact (hs.zpow_apply_eq (mem_support.mpr hx)).trans Int.dvd_iff_emod_eq_zero
 
 end Perm
 

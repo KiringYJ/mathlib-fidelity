@@ -423,15 +423,21 @@ theorem map_mul_eq_one [MonoidHomClass F M N] (f : F) {a b : M} (h : a * b = 1) 
 
 variable [FunLike F G H]
 
+/-- A multiplicative map preserving the unary inverse operation also preserves the product
+with that operation. -/
 @[to_additive]
-theorem map_div' [DivInvMonoid G] [DivInvMonoid H] [MulHomClass F G H]
-    (f : F) (hf : ∀ a, f a⁻¹ = (f a)⁻¹) (a b : G) : f (a / b) = f a / f b := by
-  grind [div_eq_mul_inv]
+theorem map_mul_inv_of_map_inv [Mul G] [Inv G] [Mul H] [Inv H] [MulHomClass F G H]
+    (f : F) (hf : ∀ a, f a⁻¹ = (f a)⁻¹) (a b : G) : f (a * b⁻¹) = f a * (f b)⁻¹ := by
+  rw [map_mul, hf]
 
-@[to_additive]
-lemma map_comp_div' [DivInvMonoid G] [DivInvMonoid H] [MulHomClass F G H] (f : F)
-    (hf : ∀ a, f a⁻¹ = (f a)⁻¹) (g h : ι → G) : f ∘ (g / h) = f ∘ g / f ∘ h := by
-  ext; simp [map_div' f hf]
+theorem map_sub' [SubNegMonoid G] [SubNegMonoid H] [AddHomClass F G H]
+    (f : F) (hf : ∀ a, f (-a) = -(f a)) (a b : G) : f (a - b) = f a - f b := by
+  simpa only [sub_eq_add_neg] using map_add_neg_of_map_neg f hf a b
+
+lemma map_comp_sub' [SubNegMonoid G] [SubNegMonoid H] [AddHomClass F G H] (f : F)
+    (hf : ∀ a, f (-a) = -(f a)) (g h : ι → G) : f ∘ (g - h) = (f ∘ g) - (f ∘ h) := by
+  funext i
+  exact map_sub' f hf (g i) (h i)
 
 /-- Group homomorphisms preserve inverse.
 
@@ -448,7 +454,7 @@ lemma map_comp_inv [Group G] [DivisionMonoid H] [MonoidHomClass F G H] (f : F) (
 /-- Group homomorphisms preserve division. -/
 @[to_additive /-- Additive group homomorphisms preserve subtraction. -/]
 theorem map_mul_inv [Group G] [DivisionMonoid H] [MonoidHomClass F G H] (f : F) (a b : G) :
-    f (a * b⁻¹) = f a * (f b)⁻¹ := by rw [map_mul, map_inv]
+    f (a * b⁻¹) = f a * (f b)⁻¹ := map_mul_inv_of_map_inv f (map_inv f) a b
 
 @[to_additive]
 lemma map_comp_mul_inv [Group G] [DivisionMonoid H] [MonoidHomClass F G H] (f : F) (g h : ι → G) :
@@ -457,13 +463,22 @@ lemma map_comp_mul_inv [Group G] [DivisionMonoid H] [MonoidHomClass F G H] (f : 
 /-- Group homomorphisms preserve division.
 
 See note [hom simp lemma priority] -/
-@[to_additive (attr := simp mid, grind =) /-- Additive group homomorphisms preserve subtraction. -/]
-theorem map_div [Group G] [DivisionMonoid H] [MonoidHomClass F G H] (f : F) :
-    ∀ a b, f (a / b) = f a / f b := map_div' _ <| map_inv f
+@[to_additive map_sub_group, simp mid, grind =]
+theorem map_div [Group G] [Group H] [MonoidHomClass F G H] (f : F) (a b : G) :
+    f (a / b) = f a / f b := by
+  simpa only [div_eq_mul_inv] using map_mul_inv f a b
 
-@[to_additive (attr := simp)]
-lemma map_comp_div [Group G] [DivisionMonoid H] [MonoidHomClass F G H] (f : F) (g h : ι → G) :
-    f ∘ (g / h) = f ∘ g / f ∘ h := by ext; simp
+/-- Additive group homomorphisms preserve subtraction. -/
+@[simp mid, grind =]
+theorem map_sub [AddGroup G] [SubtractionMonoid H] [AddMonoidHomClass F G H]
+    (f : F) (a b : G) : f (a - b) = f a - f b :=
+  map_sub' f (map_neg f) a b
+
+@[simp]
+lemma map_comp_sub [AddGroup G] [SubtractionMonoid H] [AddMonoidHomClass F G H]
+    (f : F) (g h : ι → G) : f ∘ (g - h) = (f ∘ g) - (f ∘ h) := by
+  funext i
+  exact map_sub f (g i) (h i)
 
 /-- See note [hom simp lemma priority] -/
 @[to_additive (attr := simp mid, grind =) (reorder := a n)]
@@ -1066,9 +1081,12 @@ protected theorem map_zpow [Group α] [DivisionMonoid β] (f : α →* β) (g : 
     f (g ^ n) = f g ^ n := map_zpow f g n
 
 /-- Group homomorphisms preserve division. -/
-@[to_additive /-- Additive group homomorphisms preserve subtraction. -/]
-protected theorem map_div [Group α] [DivisionMonoid β] (f : α →* β) (g h : α) :
+@[to_additive map_sub_group]
+protected theorem map_div [Group α] [Group β] (f : α →* β) (g h : α) :
     f (g / h) = f g / f h := map_div f g h
+
+protected theorem _root_.AddMonoidHom.map_sub [AddGroup α] [SubtractionMonoid β]
+    (f : α →+ β) (g h : α) : f (g - h) = f g - f h := _root_.map_sub f g h
 
 /-- Group homomorphisms preserve division. -/
 @[to_additive /-- Additive group homomorphisms preserve subtraction. -/]

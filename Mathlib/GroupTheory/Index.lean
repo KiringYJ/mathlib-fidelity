@@ -13,6 +13,7 @@ public import Mathlib.Data.Set.Card
 public import Mathlib.GroupTheory.Coset.Card
 public import Mathlib.GroupTheory.GroupAction.Quotient
 public import Mathlib.GroupTheory.QuotientGroup.Basic
+public import Mathlib.Lean.Elab.NativeDivision
 public import Mathlib.SetTheory.Cardinal.NatCard
 
 /-!
@@ -354,8 +355,9 @@ theorem index_mul_card : H.index * Nat.card H = Nat.card G := by
 
 /-- The index of a finite subgroup is the quotient of the cardinalities. -/
 @[to_additive /-- The index of a finite additive subgroup is the quotient of the cardinalities. -/]
-theorem index_eq_card_div [Finite H] : H.index = Nat.card G / Nat.card H := by
-  rw [← card_mul_index H, Nat.mul_div_cancel_left _ Nat.card_pos]
+theorem index_eq_card_div [Finite H] :
+    H.index = Nat.euclideanDiv (Nat.card G) (Nat.card H) Nat.card_pos.ne' := by
+  rw [← card_mul_index H, Nat.euclideanDiv_mul_left_cancel]
 
 @[to_additive]
 theorem index_dvd_card : H.index ∣ Nat.card G :=
@@ -925,7 +927,10 @@ namespace MonoidHom
 
 @[to_additive AddMonoidHom.surjective_of_card_ker_le_div]
 lemma surjective_of_card_ker_le_div {G M : Type*} [Group G] [Group M] [Finite G] [Finite M]
-    (f : G →* M) (h : Nat.card f.ker ≤ Nat.card G / Nat.card M) : Function.Surjective f := by
+    (f : G →* M)
+    (h : Nat.card f.ker ≤ Nat.euclideanDiv (Nat.card G) (Nat.card M) Nat.card_pos.ne') :
+    Function.Surjective f := by
+  rw [Nat.euclideanDiv_eq_core] at h
   refine range_eq_top.1 <| SetLike.ext' <| Set.eq_of_subset_of_ncard_le (Set.subset_univ _) ?_
   rw [Subgroup.coe_top, Set.ncard_univ, ← Nat.card_coe_set_eq, SetLike.coe_sort_coe,
     ← Nat.card_congr (QuotientGroup.quotientKerEquivRange f).toEquiv]

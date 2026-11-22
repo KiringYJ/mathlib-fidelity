@@ -122,22 +122,30 @@ private theorem aux_prod_coeff_eq_zero_of_notMem_range (f : ℕ → ℕ → R) {
     apply prod_eq_zero hi hi'
   contrapose! hg' with hprod
   rw [Set.mem_range]
-  have hgne0 (i : ℕ) : g i ≠ 0 ↔ i ≠ 0 ∧ i ≤ g i := by
-    refine ⟨fun h ↦ ⟨?_, ?_⟩, by grind⟩
-    · contrapose hs0 with rfl
-      exact mem_of_subset (mem_finsuppAntidiag.mp hg).2 (by simpa using h)
-    · exact Nat.le_of_dvd (Nat.pos_of_ne_zero h) <| aux_dvd_of_coeff_ne_zero hs0 hg hprod _
-  refine ⟨Nat.Partition.mk (Finsupp.mk g.support (fun i ↦ g i / i) ?_).toMultiset ?_ ?_, ?_⟩
-  · simpa using hgne0
+  have hg0 : g 0 = 0 := zero_dvd_iff.mp (aux_dvd_of_coeff_ne_zero hs0 hg hprod 0)
+  let count : ℕ → ℕ
+    | 0 => 0
+    | i + 1 => Nat.euclideanDiv (g (i + 1)) (i + 1)
+  have hcount (i : ℕ) : count i * i = g i := by
+    cases i with
+    | zero => simp [hg0]
+    | succ i =>
+      simpa [count, Nat.euclideanDiv_eq_core] using
+        Nat.div_mul_cancel (aux_dvd_of_coeff_ne_zero hs0 hg hprod (i + 1))
+  refine ⟨Nat.Partition.mk (Finsupp.mk g.support count ?_).toMultiset ?_ ?_, ?_⟩
+  · intro i
+    cases i with
+    | zero => simp [count, hg0]
+    | succ i => simp [← hcount (i + 1)]
   · suffices ∀ i, g i ≠ 0 → i ≠ 0 by simpa [Nat.pos_iff_ne_zero]
-    exact fun i h ↦ ((hgne0 i).mp h).1
+    exact fun i hi h ↦ hi (h ▸ hg0)
   · obtain ⟨h1, h2⟩ := mem_finsuppAntidiag.mp hg
     refine Eq.trans ?_ h1
-    suffices ∑ x ∈ g.support, g x / x * x = ∑ x ∈ s, g x by simpa [Finsupp.sum]
+    suffices ∑ x ∈ g.support, count x * x = ∑ x ∈ s, g x by simpa [Finsupp.sum]
     apply sum_subset_zero_on_sdiff h2 (by simp)
-    exact fun x hx ↦ Nat.div_mul_cancel <| aux_dvd_of_coeff_ne_zero hs0 hg hprod x
+    exact fun x _ ↦ hcount x
   · ext x
-    simpa [toFinsuppAntidiag] using Nat.div_mul_cancel <| aux_dvd_of_coeff_ne_zero hs0 hg hprod x
+    simpa [toFinsuppAntidiag] using hcount x
 
 private theorem aux_prod_f_eq_prod_coeff (f : ℕ → ℕ → R) {n : ℕ} (p : Partition n) {s : Finset ℕ}
     (hs : Icc 1 n ⊆ s) (hs0 : 0 ∉ s) :

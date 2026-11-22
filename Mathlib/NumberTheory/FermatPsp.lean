@@ -133,24 +133,33 @@ theorem fermatPsp_base_one {n : ℕ} (h₁ : 1 < n) (h₂ : ¬n.Prime) : FermatP
 -- pseudoprimes
 section HelperLemmas
 
-private theorem a_id_helper {a b : ℕ} (ha : 2 ≤ a) (hb : 2 < b) : b < (a ^ b - 1) / (a - 1) := by
-  rw [← Nat.geomSum_eq ha]
+private theorem a_id_helper {a b : ℕ} (ha : 2 ≤ a) (hb : 2 < b) :
+    b < Nat.euclideanDiv (a ^ b - 1) (a - 1) (by omega) := by
+  have hsum := Nat.geomSum_eq ha b
+  simp only [Nat.euclideanDiv_eq_core] at hsum ⊢
+  rw [← hsum]
   calc
     b = ∑ _ ∈ Finset.range b, (1 : ℕ) := by simp
     _ < _ := by
       refine Finset.sum_lt_sum (fun i hi => Nat.one_le_pow _ _ (by lia)) ?_
       exact ⟨1, Finset.mem_range.mpr (by lia), by simpa using! ha⟩
 
-private theorem b_id_helper {a b : ℕ} (ha : 2 ≤ a) (hb : 2 < b) : 2 ≤ (a ^ b + 1) / (a + 1) := by
-  rw [Nat.le_div_iff_mul_le (Nat.zero_lt_succ _)]
+private theorem b_id_helper {a b : ℕ} (ha : 2 ≤ a) (hb : 2 < b) :
+    2 ≤ Nat.euclideanDiv (a ^ b + 1) (a + 1) (Nat.succ_ne_zero _) := by
+  rw [Nat.euclideanDiv_eq_core, Nat.le_div_iff_mul_le (Nat.zero_lt_succ _)]
   apply Nat.succ_le_succ
   calc
     2 * a + 1 ≤ a ^ 2 * a := by nlinarith
     _ = a ^ 3 := by rw [Nat.pow_succ a 2]
     _ ≤ a ^ b := pow_right_mono₀ (Nat.le_of_succ_le ha) hb
 
-private theorem AB_id_helper (b p : ℕ) (_ : 2 ≤ b) (hp : Odd p) :
-    (b ^ p - 1) / (b - 1) * ((b ^ p + 1) / (b + 1)) = (b ^ (2 * p) - 1) / (b ^ 2 - 1) := by
+private theorem AB_id_helper (b p : ℕ) (hb : 2 ≤ b) (hp : Odd p) :
+    Nat.euclideanDiv (b ^ p - 1) (b - 1) (by omega) *
+      Nat.euclideanDiv (b ^ p + 1) (b + 1) (Nat.succ_ne_zero _) =
+      Nat.euclideanDiv (b ^ (2 * p) - 1) (b ^ 2 - 1) (by
+        have := Nat.pow_le_pow_left hb 2
+        omega) := by
+  simp only [Nat.euclideanDiv_eq_core]
   have q₁ : b - 1 ∣ b ^ p - 1 := by simpa only [one_pow] using Nat.sub_dvd_pow_sub_pow b 1 p
   have q₂ : b + 1 ∣ b ^ p + 1 := by simpa only [one_pow] using hp.nat_add_dvd_pow_add_pow b 1
   convert! Nat.div_mul_div_comm q₁ q₂ using 2 <;> rw [mul_comm (_ - 1), ← Nat.sq_sub_sq]
@@ -184,11 +193,12 @@ The primary purpose of this definition is to help prove `exists_infinite_pseudop
 that `n` is actually pseudoprime to base `b`, see `psp_from_prime_psp`, and for a proof that `n` is
 greater than `p`, see `psp_from_prime_gt_p`.
 
-This lemma is intended to be used when `2 ≤ b`, `2 < p`, `p` is prime, and `¬p ∣ b * (b ^ 2 - 1)`,
-because those are the hypotheses for `psp_from_prime_psp`.
+The base condition `2 ≤ b` ensures both denominators are nonzero. The construction gives a
+pseudoprime when `2 < p`, `p` is prime, and `¬p ∣ b * (b ^ 2 - 1)`.
 -/
-private def psp_from_prime (b : ℕ) (p : ℕ) : ℕ :=
-  (b ^ p - 1) / (b - 1) * ((b ^ p + 1) / (b + 1))
+private def psp_from_prime (b p : ℕ) (hb : 2 ≤ b) : ℕ :=
+  Nat.euclideanDiv (b ^ p - 1) (b - 1) (by omega) *
+    Nat.euclideanDiv (b ^ p + 1) (b + 1) (Nat.succ_ne_zero _)
 
 /--
 This is a proof that the number produced using `psp_from_prime` is actually pseudoprime to base `b`.
@@ -197,10 +207,11 @@ The primary purpose of this lemma is to help prove `exists_infinite_pseudoprimes
 We use <https://primes.utm.edu/notes/proofs/a_pseudoprimes.html> as a rough outline of the proof.
 -/
 private theorem psp_from_prime_psp {b : ℕ} (b_ge_two : 2 ≤ b) {p : ℕ} (p_prime : p.Prime)
-    (p_gt_two : 2 < p) (not_dvd : ¬p ∣ b * (b ^ 2 - 1)) : FermatPsp (psp_from_prime b p) b := by
+    (p_gt_two : 2 < p) (not_dvd : ¬p ∣ b * (b ^ 2 - 1)) :
+    FermatPsp (psp_from_prime b p b_ge_two) b := by
   unfold psp_from_prime
-  set A := (b ^ p - 1) / (b - 1)
-  set B := (b ^ p + 1) / (b + 1)
+  set A := Nat.euclideanDiv (b ^ p - 1) (b - 1) (by omega)
+  set B := Nat.euclideanDiv (b ^ p + 1) (b + 1) (Nat.succ_ne_zero _)
   -- Inequalities
   have hA : p < A := a_id_helper b_ge_two p_gt_two
   have hi_A : 1 < A := by lia
@@ -209,22 +220,21 @@ private theorem psp_from_prime_psp {b : ℕ} (b_ge_two : 2 ≤ b) {p : ℕ} (p_p
   have hi_bsquared : 0 < b ^ 2 - 1 := by
     have := Nat.pow_le_pow_left b_ge_two 2
     lia
-  have hi_bpowtwop : 1 ≤ b ^ (2 * p) := Nat.one_le_pow (2 * p) b hi_b
   have hi_bpowpsubone : 1 ≤ b ^ (p - 1) := Nat.one_le_pow (p - 1) b hi_b
   -- Other useful facts
   have p_odd : Odd p := p_prime.odd_of_ne_two p_gt_two.ne.symm
   have AB_not_prime : ¬Nat.Prime (A * B) := Nat.not_prime_mul hi_A.ne' hi_B.ne'
-  have AB_id : A * B = (b ^ (2 * p) - 1) / (b ^ 2 - 1) := AB_id_helper _ _ b_ge_two p_odd
   have hd : b ^ 2 - 1 ∣ b ^ (2 * p) - 1 := by
     simpa only [one_pow, pow_mul] using Nat.sub_dvd_pow_sub_pow _ 1 p
+  have AB_mul : A * B * (b ^ 2 - 1) = b ^ (2 * p) - 1 := by
+    rw [show A * B = _ from AB_id_helper _ _ b_ge_two p_odd, Nat.euclideanDiv_eq_core,
+      Nat.div_mul_cancel hd]
   -- We know that `A * B` is not prime, and that `1 < A * B`. Since two conditions of being
   -- pseudoprime are satisfied, we only need to show that `A * B` is probable prime to base `b`
   refine ⟨?_, AB_not_prime, one_lt_mul'' hi_A hi_B⟩
   -- Used to prove that `2 * p * (b ^ 2 - 1) ∣ (b ^ 2 - 1) * (A * B - 1)`.
   have ha₁ : (b ^ 2 - 1) * (A * B - 1) = b * (b ^ (p - 1) - 1) * (b ^ p + b) := by
-    apply_fun fun x => x * (b ^ 2 - 1) at AB_id
-    rw [Nat.div_mul_cancel hd] at AB_id
-    apply_fun fun x => x - (b ^ 2 - 1) at AB_id
+    have AB_id := congrArg (fun x : ℕ => x - (b ^ 2 - 1)) AB_mul
     nth_rw 2 [← one_mul (b ^ 2 - 1)] at AB_id
     rw [← Nat.mul_sub_right_distrib, mul_comm] at AB_id
     rw [AB_id]
@@ -272,12 +282,7 @@ private theorem psp_from_prime_psp {b : ℕ} (b_ge_two : 2 ≤ b) {p : ℕ} (p_p
     rw [mul_comm] at ha₅
     exact Nat.dvd_of_mul_dvd_mul_left hi_bsquared ha₅
   -- `A * B` divides `b ^ (2 * p) - 1` because `A * B * (b ^ 2 - 1) = b ^ (2 * p) - 1`.
-  -- This can be proven by multiplying both sides of `AB_id` by `b ^ 2 - 1`.
-  have ha₇ : A * B ∣ b ^ (2 * p) - 1 := by
-    use b ^ 2 - 1
-    have : A * B * (b ^ 2 - 1) = (b ^ (2 * p) - 1) / (b ^ 2 - 1) * (b ^ 2 - 1) :=
-      congr_arg (fun x : ℕ => x * (b ^ 2 - 1)) AB_id
-    simpa only [add_comm, Nat.div_mul_cancel hd, Nat.sub_add_cancel hi_bpowtwop] using this.symm
+  have ha₇ : A * B ∣ b ^ (2 * p) - 1 := ⟨b ^ 2 - 1, AB_mul.symm⟩
   -- Since `2 * p ∣ A * B - 1`, there is a number `q` such that `2 * p * q = A * B - 1`.
   -- By `Nat.sub_dvd_pow_sub_pow`, we know that `b ^ (2 * p) - 1 ∣ b ^ (2 * p * q) - 1`.
   -- This means that `b ^ (2 * p) - 1 ∣ b ^ (A * B - 1) - 1`.
@@ -293,10 +298,10 @@ This is a proof that the number produced using `psp_from_prime` is greater than 
 to create it. The primary purpose of this lemma is to help prove `exists_infinite_pseudoprimes`.
 -/
 private theorem psp_from_prime_gt_p {b : ℕ} (b_ge_two : 2 ≤ b) {p : ℕ} (p_gt_two : 2 < p) :
-    p < psp_from_prime b p := by
+    p < psp_from_prime b p b_ge_two := by
   unfold psp_from_prime
-  set A := (b ^ p - 1) / (b - 1)
-  set B := (b ^ p + 1) / (b + 1)
+  set A := Nat.euclideanDiv (b ^ p - 1) (b - 1) (by omega)
+  set B := Nat.euclideanDiv (b ^ p + 1) (b + 1) (Nat.succ_ne_zero _)
   have hA : p < A := a_id_helper b_ge_two p_gt_two
   have hB : 0 < B := by
     have : 1 < B := b_id_helper b_ge_two p_gt_two
@@ -328,7 +333,7 @@ theorem exists_infinite_pseudoprimes {b : ℕ} (h : 1 ≤ b) (m : ℕ) :
     have h₈ : 2 ≤ b * (b ^ 2 - 1) := le_trans b_ge_two h₇
     have h₉ : 2 < p := lt_of_le_of_lt h₈ h₅
     have h₁₀ := psp_from_prime_gt_p b_ge_two h₉
-    use psp_from_prime b p
+    use psp_from_prime b p b_ge_two
     constructor
     · exact psp_from_prime_psp b_ge_two hp₂ h₉ h₆
     · exact le_trans (show m ≤ p by lia) (le_of_lt h₁₀)

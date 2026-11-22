@@ -8,6 +8,7 @@ module
 public import Batteries.Data.List.Perm
 public import Mathlib.Data.List.OfFn
 public import Mathlib.Data.List.Nodup
+public import Mathlib.Lean.Elab.NativeDivision
 public import Mathlib.Order.Fin.Basic
 
 /-!
@@ -68,8 +69,11 @@ theorem insertionSort_nil : [].insertionSort r = [] := .refl _
 
 -- A quick check that insertionSort is stable:
 example :
-    insertionSort (fun m n => m / 10 ≤ n / 10) [5, 27, 221, 95, 17, 43, 7, 2, 98, 567, 23, 12] =
-      [5, 7, 2, 17, 12, 27, 23, 43, 95, 98, 221, 567] := rfl
+    insertionSort (fun m n : ℕ => m.euclideanDiv 10 ≤ n.euclideanDiv 10)
+        [5, 27, 221, 95, 17, 43, 7, 2, 98, 567, 23, 12] =
+      [5, 7, 2, 17, 12, 27, 23, 43, 95, 98, 221, 567] := by
+  simp only [Nat.euclideanDiv_eq_core]
+  rfl
 
 theorem orderedInsert_length (L : List α) (a : α) :
     (L.orderedInsert r a).length = L.length + 1 := by
@@ -288,7 +292,8 @@ use Mathlib order typeclasses instead.
 -/
 
 set_option linter.hashCommand false in
-#guard mergeSort [5, 27, 221, 95, 17, 43, 7, 2, 98, 567, 23, 12] (fun m n => m / 10 ≤ n / 10) =
+#guard mergeSort [5, 27, 221, 95, 17, 43, 7, 2, 98, 567, 23, 12]
+    (fun m n : ℕ => m.euclideanDiv 10 ≤ n.euclideanDiv 10) =
   [5, 7, 2, 17, 12, 27, 23, 43, 95, 98, 221, 567]
 
 section MergeSort

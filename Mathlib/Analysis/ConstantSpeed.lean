@@ -171,7 +171,7 @@ theorem HasConstantSpeedOnWith.ratio {l' : ℝ≥0} (hl' : l' ≠ 0) {φ : ℝ �
     (hfφ : HasConstantSpeedOnWith (f ∘ φ) s l) (hf : HasConstantSpeedOnWith f (φ '' s) l') ⦃x : ℝ⦄
     (xs : x ∈ s) : EqOn φ (fun y => l / l' * (y - x) + φ x) s := by
   rintro y ys
-  rw [← sub_eq_iff_eq_add, mul_comm, ← mul_div_assoc₀, eq_div_iff]
+  rw [NNReal.coe_div, ← sub_eq_iff_eq_add, mul_comm, ← mul_div_assoc₀, eq_div_iff]
   rw [hasConstantSpeedOnWith_iff_variationOnFromTo_eq] at hf
   rw [hasConstantSpeedOnWith_iff_variationOnFromTo_eq] at hfφ
   symm

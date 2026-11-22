@@ -49,14 +49,16 @@ theorem invOf_eq_inv (a : α) [Invertible a] : ⅟a = a⁻¹ :=
 instance invertibleInv {a : α} [Invertible a] : Invertible a⁻¹ :=
   ⟨a, mul_inv_cancel₀, inv_mul_cancel₀⟩
 
-/-- `b / a` is the inverse of `a / b` -/
+/-- The quotient of `b` by `a` is the inverse of the quotient of `a` by `b`. -/
 @[instance_reducible]
-noncomputable def invertibleDiv (a b : α) [Invertible a] [Invertible b] : Invertible (a / b) :=
-  ⟨b / a, by rw [← mul_div_assoc₀, div_mul_cancel₀, div_self],
+noncomputable def invertibleDiv (a b : α) [Invertible a] [Invertible b] :
+    Invertible (Checked.div a b (isUnit_of_invertible b)) :=
+  ⟨Checked.div b a (isUnit_of_invertible a), by rw [← mul_div_assoc₀, div_mul_cancel₀, div_self],
     by rw [← mul_div_assoc₀, div_mul_cancel₀, div_self]⟩
 
-theorem invOf_div (a b : α) [Invertible a] [Invertible b] [Invertible (a / b)] :
-    ⅟(a / b) = b / a :=
+theorem invOf_div (a b : α) [Invertible a] [Invertible b]
+    [Invertible (Checked.div a b (isUnit_of_invertible b))] :
+    ⅟(Checked.div a b (isUnit_of_invertible b)) = Checked.div b a (isUnit_of_invertible a) :=
   invOf_eq_right_inv (by rw [← mul_div_assoc₀, div_mul_cancel₀, div_self])
 
 end GroupWithZero

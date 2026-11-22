@@ -416,11 +416,11 @@ theorem doubling_lt_golden_ratio (hK₁ : 1 < K) (hKφ : K < φ)
   refine ⟨H, inferInstance, Z, ?_, mod_cast H_mul_Z⟩
   -- This is equivalent to showing that `|H| ≥ c(K)|S|` for some `c(K)` depending only on `K`.
   suffices ((φ - K) * (K - ψ)) / ((2 - K) * K) * #S ≤ Fintype.card H by
-    calc
-          (#Z : ℝ)
-      _ = (Fintype.card H / #S : ℝ)⁻¹ := by simp [← card_H_mul_card_Z]
-      _ ≤ (((φ - K) * (K - ψ) / ((2 - K) * K) * #S) / #S)⁻¹ := by gcongr
-      _ = (2 - K) * K / ((φ - K) * (K - ψ)) := by simp
+    have hcard : (Fintype.card H : ℝ) * #Z = #S := by exact_mod_cast card_H_mul_card_Z
+    rw [div_mul_eq_mul_div₀, div_le_iff₀ (mul_pos hK₂' K_pos), ← hcard] at this
+    rw [le_div_iff₀ (mul_pos hKφ' hKψ'), ← mul_le_mul_iff_right₀ (a := (Fintype.card H : ℝ))
+      (by positivity)]
+    nlinarith only [this]
   -- Write `r(z)` the number of representations of `z ∈ S` as `x * y⁻¹` for `x, y ∈ A`.
   let r z : ℕ := A.convolution A⁻¹ z
   -- `r` is invariant under inverses.
@@ -475,7 +475,7 @@ theorem doubling_lt_golden_ratio (hK₁ : 1 < K) (hKφ : K < φ)
         have := Real.goldenRatio_mul_goldenConj
         have := Real.goldenRatio_add_goldenConj
         rw [show (φ - K) * (K - ψ) = 1 - (K - 1) * K by grind]
-        gcongr ?_ / _
+        apply (div_le_div_iff_of_pos_right (mul_pos hK₂' K_pos)).2
         linarith [ineq]
       _ = l := by field
   -- Second, let's show that the `z ∈ S` with many representations are in `H`.
@@ -764,16 +764,18 @@ theorem card_mul_finset_lt_two {ε : ℝ} (hε₀ : 0 < ε) (hε₁ : ε ≤ 1) 
         _ = ε / 2 * ((2 / ε - 1) * #S)      := by field
   -- To show the bound on `#Z`, we note that `#Z = #(HS) / #H` and show `#(HS) ≤ (2 / ε - 1) * #H`.
   case cardZ =>
+    have hHpos : 0 < (#(H : Set G).toFinset : ℝ) := by
+      simpa only [Set.toFinset_card, SetLike.coe_sort_coe] using
+        (Nat.cast_pos.2 (Fintype.card_pos (α := H)) : (0 : ℝ) < Fintype.card H)
+    rw [← mul_le_mul_iff_right₀ (a := (#(H : Set G).toFinset : ℝ)) hHpos]
     calc
-          (#Z : ℝ)
-      _ = #(H : Set G).toFinset * #Z / #(H : Set G).toFinset          := by field
-      _ = #(Set.toFinset H * Z) / #(H : Set G).toFinset               := by
+      _ = (#(Set.toFinset H * Z) : ℝ) := by
         simp [← card_mul_eq_mul_card_of_injOn_opSMul hZinj, Nat.cast_mul]
-      _ = #(Set.toFinset H * S) / #(H : Set G).toFinset               := by
-        congr 3; simpa using congr(($hHZS).toFinset)
-      _ ≤ (2 / ε - 1) * #(H : Set G).toFinset / #(H : Set G).toFinset := ?_
-      _ = 2 / ε - 1                                                   := by field
-    gcongr
+      _ = (#(Set.toFinset H * S) : ℝ) := by
+        congr 2
+        simpa using congr(($hHZS).toFinset)
+      _ ≤ (2 / ε - 1) * #(H : Set G).toFinset := ?_
+      _ = _ := mul_comm _ _
     -- Finally, to show `#(HS) ≤ (2 / ε - 1) * #H`, we multiply both sides by `1 - K = ε / 2` and
     -- show `#(HS) = K * #H + ex H ≤ K * #H + (1 - ε / 2) * #S ≤ K * #H + (1 - ε / 2) * #(HS)`,
     -- where we used `calc₁` again.

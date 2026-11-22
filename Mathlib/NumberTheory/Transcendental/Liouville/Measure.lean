@@ -37,13 +37,13 @@ theorem setOfPred_liouvilleWith_subset_aux :
     { x : ℝ | ∃ p > 2, LiouvilleWith p x } ⊆
       ⋃ m : ℤ, (· + (m : ℝ)) ⁻¹' ⋃ n > (0 : ℕ),
         { x : ℝ | ∃ᶠ b : ℕ in atTop, ∃ (_ : 0 < b), ∃ a ∈ Finset.Icc (0 : ℤ) b,
-          |x - (a : ℤ) / b| < 1 / (b : ℝ) ^ (2 + 1 / n : ℝ) } := by
+          |x - (a : ℝ) / (b : ℝ)| < 1 / (b : ℝ) ^ (2 + 1 / (n : ℝ)) } := by
   rintro x ⟨p, hp, hxp⟩
   rcases exists_nat_one_div_lt (sub_pos.2 hp) with ⟨n, hn⟩
   rw [lt_sub_iff_add_lt'] at hn
   suffices ∀ y : ℝ, LiouvilleWith p y → y ∈ Ico (0 : ℝ) 1 → ∃ᶠ b : ℕ in atTop,
       ∃ (_ : 0 < b), ∃ a ∈ Finset.Icc (0 : ℤ) b,
-        |y - a / b| < 1 / (b : ℝ) ^ (2 + 1 / (n + 1 : ℕ) : ℝ) by
+        |y - (a : ℝ) / (b : ℝ)| < 1 / (b : ℝ) ^ (2 + 1 / ((n + 1 : ℕ) : ℝ)) by
     simp only [mem_iUnion, mem_preimage]
     have hx : x + ↑(-⌊x⌋) ∈ Ico (0 : ℝ) 1 := by
       simp only [Int.floor_le, Int.lt_floor_add_one, add_neg_lt_iff_le_add', zero_add, and_self_iff,
@@ -57,11 +57,11 @@ theorem setOfPred_liouvilleWith_subset_aux :
   simp only [← Nat.cast_succ] at hlt
   refine ⟨hb, a, ?_, hlt⟩
   have hb1 : (1 : ℝ) ≤ b := Nat.one_le_cast.2 hb
-  replace hlt : |x - a / b| < 1 / b := by
+  replace hlt : |x - (a : ℝ) / (b : ℝ)| < 1 / (b : ℝ) := by
     refine hlt.trans_le (one_div_le_one_div_of_le hb0 ?_)
     calc
       (b : ℝ) = (b : ℝ) ^ (1 : ℝ) := (rpow_one _).symm
-      _ ≤ (b : ℝ) ^ (2 + 1 / (n + 1 : ℕ) : ℝ) :=
+      _ ≤ (b : ℝ) ^ (2 + 1 / ((n + 1 : ℕ) : ℝ)) :=
         rpow_le_rpow_of_exponent_le hb1 (one_le_two.trans ?_)
     simpa using n.cast_add_one_pos.le
   rw [sub_div', abs_div] at hlt
@@ -81,21 +81,22 @@ alias setOf_liouvilleWith_subset_aux := setOfPred_liouvilleWith_subset_aux
 
 private theorem volume_frequently_rat_approx_eq_zero {r : ℝ} (hr : 2 < r) :
     volume {x : ℝ | ∃ᶠ b : ℕ in atTop, ∃ (_ : 0 < b), ∃ a ∈ Finset.Icc (0 : ℤ) b,
-      |x - a / b| < 1 / (b : ℝ) ^ r} = 0 := by
+      |x - (a : ℝ) / (b : ℝ)| < 1 / (b : ℝ) ^ r} = 0 := by
   refine measure_setOfPred_frequently_eq_zero ?_
-  let B (a : ℤ) (b : ℕ) (_ : 0 < b) : Set ℝ := ball (a / b) (1 / (b : ℝ) ^ r)
+  let B (a : ℤ) (b : ℕ) (_ : 0 < b) : Set ℝ :=
+    ball ((a : ℝ) / (b : ℝ)) (1 / (b : ℝ) ^ r)
   have hB (a : ℤ) (b : ℕ) (hb : 0 < b) :
       volume (B a b hb) = ↑((2 : ℝ≥0) / (b : ℝ≥0) ^ r) := by
-    change volume (ball ((a : ℝ) / b) (1 / (b : ℝ) ^ r)) = _
+    change volume (ball ((a : ℝ) / (b : ℝ)) (1 / (b : ℝ) ^ r)) = _
     rw [← ENNReal.ofReal_coe_nnreal, Real.volume_ball, mul_one_div₀]
     simp only [NNReal.coe_div, NNReal.coe_rpow, NNReal.coe_natCast, NNReal.coe_two]
   have hbound (b : ℕ) :
       volume {x : ℝ | ∃ (_ : 0 < b), ∃ a ∈ Finset.Icc (0 : ℤ) b,
-        |x - a / b| < 1 / (b : ℝ) ^ r} ≤
+        |x - (a : ℝ) / (b : ℝ)| < 1 / (b : ℝ) ^ r} ≤
       ↑(2 * ((b : ℝ≥0) ^ (1 - r) + (b : ℝ≥0) ^ (-r))) := by
     by_cases hb : 0 < b
     · have hset : {x : ℝ | ∃ (_ : 0 < b), ∃ a ∈ Finset.Icc (0 : ℤ) b,
-          |x - a / b| < 1 / (b : ℝ) ^ r} = ⋃ a ∈ Finset.Icc (0 : ℤ) b, B a b hb := by
+          |x - (a : ℝ) / (b : ℝ)| < 1 / (b : ℝ) ^ r} = ⋃ a ∈ Finset.Icc (0 : ℤ) b, B a b hb := by
         ext x
         simp only [mem_iUnion, mem_ofPred_eq, B, mem_ball, Real.dist_eq]
         exact ⟨fun ⟨_, a, ha, hxa⟩ => ⟨a, ha, hxa⟩, fun ⟨a, ha, hxa⟩ => ⟨hb, a, ha, hxa⟩⟩

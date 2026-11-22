@@ -214,7 +214,7 @@ TODO: should this be moved elsewhere? It uses none of the pi-specific definition
 -/
 private lemma is_integer {p : ℤ[X]} (a b : ℤ) (hb : IsUnit (b : ℝ))
     {k : ℕ} (hp : p.natDegree ≤ k) :
-    ∃ z : ℤ, p.eval₂ (Int.castRingHom ℝ) (a / b) * b ^ k = z := by
+    ∃ z : ℤ, p.eval₂ (Int.castRingHom ℝ) ((a : ℝ) / (b : ℝ)) * b ^ k = z := by
   refine ⟨∑ i ∈ p.support, p.coeff i * a ^ i * b ^ (k - i), ?_⟩
   conv => lhs; rw [← sum_monomial_eq p]
   rw [eval₂_sum, sum, Finset.sum_mul, Int.cast_sum]
@@ -224,8 +224,8 @@ private lemma is_integer {p : ℤ[X]} (a b : ℤ) (hb : IsUnit (b : ℝ))
   have hbk : (b : ℝ) ^ k = (b : ℝ) ^ i * (b : ℝ) ^ (k - i) := by
     rw [← pow_add, Nat.add_sub_of_le hik]
   calc
-    _ = (p.coeff i : ℝ) * (((a : ℝ) / b * b) ^ i * (b : ℝ) ^ (k - i)) := by
-      rw [hbk, mul_pow ((a : ℝ) / b) (b : ℝ) i]
+    _ = (p.coeff i : ℝ) * (((a : ℝ) / (b : ℝ) * b) ^ i * (b : ℝ) ^ (k - i)) := by
+      rw [hbk, mul_pow ((a : ℝ) / (b : ℝ)) (b : ℝ) i]
       ring
     _ = _ := by rw [div_mul_cancel₀, mul_assoc]
 
@@ -266,7 +266,7 @@ For any real `a`, we have that `a ^ (2n+1) / n!` tends to `0` as `n → ∞`.  T
 reformulation of tendsto_pow_div_factorial_atTop, which asserts the same for `a ^ n / n!`
 -/
 private lemma tendsto_pow_div_factorial_at_top_aux (a : ℝ) :
-    Tendsto (fun n => (a : ℝ) ^ (2 * n + 1) / n !) atTop (nhds 0) := by
+    Tendsto (fun n => (a : ℝ) ^ (2 * n + 1) / (n ! : ℝ)) atTop (nhds 0) := by
   rw [← mul_zero a]
   refine ((FloorSemiring.tendsto_pow_div_factorial_atTop (a ^ 2)).const_mul a).congr (fun x => ?_)
   rw [← pow_mul, _root_.pow_succ', mul_div₀]
@@ -292,15 +292,15 @@ private lemma not_irrational_exists_rep {x : ℝ} :
   have hab : π / 2 * (b : ℝ) = (a : ℝ) :=
     (congrArg (fun x : ℝ ↦ x * (b : ℝ)) h).trans (div_mul_cancel₀ _)
   have ha : (0 : ℝ) < a := by simpa only [hab] using mul_pos pi_div_two_pos hbR
-  have k (n : ℕ) : 0 < (a : ℝ) ^ (2 * n + 1) / n ! := by positivity
-  have j : ∀ᶠ n : ℕ in atTop, (a : ℝ) ^ (2 * n + 1) / n ! * I n (π / 2) < 1 := by
+  have k (n : ℕ) : 0 < (a : ℝ) ^ (2 * n + 1) / (n ! : ℝ) := by positivity
+  have j : ∀ᶠ n : ℕ in atTop, (a : ℝ) ^ (2 * n + 1) / (n ! : ℝ) * I n (π / 2) < 1 := by
     have := (tendsto_pow_div_factorial_at_top_aux a).eventually_lt_const
       (show (0 : ℝ) < 1 / 2 by simp)
     filter_upwards [this] with n hn
     rw [lt_div_iff₀ (zero_lt_two : (0 : ℝ) < 2)] at hn
     exact hn.trans_le' (mul_le_mul_of_nonneg_left (I_le _) (by positivity))
   obtain ⟨n, hn⟩ := j.exists
-  have hn' : 0 < a ^ (2 * n + 1) / n ! * I n (π / 2) := mul_pos (k _) I_pos
+  have hn' : 0 < (a : ℝ) ^ (2 * n + 1) / (n ! : ℝ) * I n (π / 2) := mul_pos (k _) I_pos
   have hunit : IsUnit ((b : ℤ) : ℝ) := by simpa only [Int.cast_natCast] using hbR.ne'.isUnit
   obtain ⟨z, hz⟩ := is_integer (p := sinPoly n) a b hunit (k := 2 * n + 1)
     ((sinPoly_natDegree_le n).trans (by omega))
@@ -308,10 +308,10 @@ private lemma not_irrational_exists_rep {x : ℝ} :
     simpa only [h, Int.cast_natCast] using hz
   have e := sinPoly_add_cosPoly_eval (π / 2) n
   rw [cos_pi_div_two, sin_pi_div_two, mul_zero, mul_one, add_zero] at e
-  have he : (a : ℝ) ^ (2 * n + 1) / n ! * I n (π / 2) = z := by
+  have he : (a : ℝ) ^ (2 * n + 1) / (n ! : ℝ) * I n (π / 2) = z := by
     apply mul_left_cancel₀ (show (n ! : ℝ) ≠ 0 by positivity)
     calc
-      _ = I n (π / 2) * (((a : ℝ) ^ (2 * n + 1) / n !) * (n ! : ℝ)) := by ac_rfl
+      _ = I n (π / 2) * (((a : ℝ) ^ (2 * n + 1) / (n ! : ℝ)) * (n ! : ℝ)) := by ac_rfl
       _ = (I n (π / 2) * (π / 2) ^ (2 * n + 1)) * (b : ℝ) ^ (2 * n + 1) := by
         rw [div_mul_cancel₀, ← hab, mul_pow, mul_assoc]
       _ = _ := by rw [e, mul_assoc, hz']

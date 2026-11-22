@@ -92,7 +92,8 @@ variable {K : Type*} [Field K] [NumberField K]
 variable {A : Type*} [NormedField A] [IsAlgClosed A] [NormedAlgebra ℚ A]
 
 theorem coeff_bdd_of_norm_le {B : ℝ} {x : K} (h : ∀ φ : K →+* A, ‖φ x‖ ≤ B) (i : ℕ) :
-    ‖(minpoly ℚ x).coeff i‖ ≤ max B 1 ^ finrank ℚ K * (finrank ℚ K).choose (finrank ℚ K / 2) := by
+    ‖(minpoly ℚ x).coeff i‖ ≤
+      max B 1 ^ finrank ℚ K * (finrank ℚ K).choose (Nat.euclideanDiv (finrank ℚ K) 2) := by
   have hx := Algebra.IsSeparable.isIntegral ℚ x
   rw [← norm_algebraMap' A, ← coeff_map (algebraMap ℚ A)]
   refine coeff_bdd_of_roots_le _ (minpoly.monic hx)
@@ -108,7 +109,8 @@ variable (K A)
 smaller in norm than `B` is finite. -/
 theorem finite_of_norm_le (B : ℝ) : {x : K | IsIntegral ℤ x ∧ ∀ φ : K →+* A, ‖φ x‖ ≤ B}.Finite := by
   classical
-  let C := Nat.ceil (max B 1 ^ finrank ℚ K * (finrank ℚ K).choose (finrank ℚ K / 2))
+  let C := Nat.ceil (max B 1 ^ finrank ℚ K *
+    (finrank ℚ K).choose (Nat.euclideanDiv (finrank ℚ K) 2))
   have := bUnion_roots_finite (algebraMap ℤ K) (finrank ℚ K) (finite_Icc (-C : ℤ) C)
   refine this.subset fun x hx => ?_; simp_rw [mem_iUnion]
   have h_map_ℚ_minpoly := minpoly.isIntegrallyClosed_eq_field_fractions' ℚ hx.1

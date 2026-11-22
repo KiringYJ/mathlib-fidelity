@@ -320,11 +320,11 @@ example : P (x * y * z) := by test_field_simp
 #guard_msgs in
 example : P (x * y + x * z) := by test_field_simp
 
-/-- info: P (1 / (y + z)) -/
+/-- info: P (Checked.div 1 (y + z) ⋯) -/
 #guard_msgs in
 example (hx : x ≠ 0) (hd : IsUnit (x * y + x * z)) : P (x / (x * y + x * z))  := by test_field_simp
 
-/-- info: P (1 / (y + z)) -/
+/-- info: P (Checked.div 1 (y + z) ⋯) -/
 #guard_msgs in
 example (hd : IsUnit (x * y + x * z)) : P (x / (x * y + x * z))  := by test_field_simp
 
@@ -748,7 +748,7 @@ example {x y z : ℚ} (hx : x ≠ 0) (hy : y ≠ 0) (hz : z ≠ 0) {f : ℚ → 
 open Finset in
 example (n : ℕ) : ∏ i ∈ range n, (1 - (i + 2 : ℚ)⁻¹) < 1 := by
   field_simp
-  guard_target = ∏ x ∈ range n, ((x:ℚ) + 2 - 1) / (x + 2) < 1
+  guard_target = ∏ x ∈ range n, ((x : ℚ) + 2 - 1) / ((x : ℚ) + 2) < 1
   exact test_sorry
 
 /-! ## Performance -/
@@ -788,6 +788,7 @@ example (x : ℚ) (h₀ : x ≠ 0) :
 
 /-- warning: Custom field_simp dischargers do not use the arguments list -/
 #guard_msgs in
+set_option warningAsError false in
 example (x : ℚ) (h₀ : x ≠ 0) :
     (4 / x)⁻¹ * ((3 * x ^ 3) / x) ^ 2 * ((1 / (2 * x))⁻¹) ^ 3 = 18 * x ^ 8 := by
   field_simp (discharger := simp; assumption) [h₀]
@@ -852,7 +853,7 @@ example (n : ℕ) (h : n ≠ 0) : 1 / (n : ℝ) * n = 1 := by
 
 -- Minimised from `Mathlib/Analysis/Fourier/AddCircle.lean`
 example (n : ℕ) (T : ℝ) {hT : T ≠ 0} (hn : n ≠ 0) {a : ℝ} :
-    (2 * a / T * (n * (T / 2 / n))) = a := by
+    (2 * a / T * (n * (T / 2 / (n : ℝ)))) = a := by
   field_simp
 
 end
@@ -866,7 +867,7 @@ simprocs and a discharger.
 -/
 
 example (m n : ℕ) (h : m ≤ n) (hm : (2 : ℚ) < n - m) :
-    (n : ℚ) / (n - m) = (Checked.div 1 ((n - m : ℕ) : ℚ) (by
+    (n : ℚ) / ((n : ℚ) - m) = (Checked.div 1 ((n - m : ℕ) : ℚ) (by
     rw [Nat.cast_sub h]
     exact (lt_trans (by norm_num) hm).ne'.isUnit)) * n := by
   simp [field]
@@ -874,7 +875,7 @@ example (m n : ℕ) (h : m ≤ n) (hm : (2 : ℚ) < n - m) :
   exact Or.inl (Nat.cast_sub h)
 
 example (m n : ℕ) (h : m ≤ n) (hm : (2 : ℚ) < n - m) :
-    (n : ℚ) / (n - m) = (Checked.div 1 ((n - m : ℕ) : ℚ) (by
+    (n : ℚ) / ((n : ℚ) - m) = (Checked.div 1 ((n - m : ℕ) : ℚ) (by
     rw [Nat.cast_sub h]
     exact (lt_trans (by norm_num) hm).ne'.isUnit)) * n := by
   simp (disch := assumption) [field, div_eq_inv_mul₀]

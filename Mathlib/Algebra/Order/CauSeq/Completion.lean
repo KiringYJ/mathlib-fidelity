@@ -268,7 +268,7 @@ theorem ofRat_inv (x : β) {hx : IsUnit x} :
   map_inv₀ (ofRatRingHom (abv := abv)) x
 
 lemma ofRat_div (x y : β) {hy : IsUnit y} :
-    ofRat (x / y) =
+    ofRat (Checked.div x y hy) =
       Checked.div (ofRat x) (ofRat y : Cauchy abv) (hy.map (ofRatRingHom (abv := abv))) :=
   map_div₀ (ofRatRingHom (abv := abv)) x y
 

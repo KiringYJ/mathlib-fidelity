@@ -175,9 +175,9 @@ theorem isLittleO_of_lt_radius (h : ↑r < p.radius) :
   rw [← div_lt_one this] at rt
   refine ⟨_, rt, C, Or.inr zero_lt_one, fun n => ?_⟩
   calc
-    |‖p n‖ * (r : ℝ) ^ n| = ‖p n‖ * (t : ℝ) ^ n * (r / t : ℝ) ^ n := by
+    |‖p n‖ * (r : ℝ) ^ n| = ‖p n‖ * (t : ℝ) ^ n * ((r : ℝ) / (t : ℝ)) ^ n := by
       simp [field, abs_mul, div_pow₀]
-    _ ≤ C * (r / t : ℝ) ^ n := by gcongr; apply hC
+    _ ≤ C * ((r : ℝ) / (t : ℝ)) ^ n := by gcongr; apply hC
 
 /-- For `r` strictly smaller than the radius of `p`, then `‖pₙ‖ rⁿ = o(1)`. -/
 theorem isLittleO_one_of_lt_radius (h : ↑r < p.radius) :
@@ -202,7 +202,7 @@ theorem lt_radius_of_isBigO (h₀ : r ≠ 0) {a : ℝ} (ha : a ∈ Ioo (-1 : ℝ
   rw [← pos_iff_ne_zero, ← NNReal.coe_pos] at h₀
   lift a to ℝ≥0 using ha.1.le
   have ha₀ : (0 : ℝ) < a := ha.1
-  have : (r : ℝ) < r / a := by
+  have : (r : ℝ) < (r : ℝ) / (a : ℝ) := by
     simpa only [div_one₀] using (div_lt_div_iff_of_pos_left h₀ zero_lt_one ha.1).2 ha.2
   have haN : a ≠ 0 := NNReal.coe_ne_zero.mp ha₀.ne'
   have hrat : r < r / a := by
@@ -358,7 +358,7 @@ lemma nnnorm_compContinuousLinearMap_le (p : FormalMultilinearSeries 𝕜 F G)
   norm_compContinuousLinearMap_le p u n
 
 theorem div_le_radius_compContinuousLinearMap (p : FormalMultilinearSeries 𝕜 F G) (u : E →L[𝕜] F) :
-    p.radius / ‖u‖ₑ ≤ (p.compContinuousLinearMap u).radius := by
+    ENNReal.div p.radius ‖u‖ₑ ≤ (p.compContinuousLinearMap u).radius := by
   obtain (rfl | h_zero) := eq_zero_or_nnnorm_pos u
   · simp
   have huₑ : ‖u‖ₑ ≠ 0 := by
@@ -383,7 +383,7 @@ theorem le_radius_compContinuousLinearMap (p : FormalMultilinearSeries 𝕜 F G)
     p.radius ≤ (p.compContinuousLinearMap u.toContinuousLinearMap).radius := by
   obtain (h | h) := subsingleton_or_nontrivial E
   · simp [Subsingleton.elim u.toContinuousLinearMap 0]
-  · simpa [u.norm_toContinuousLinearMap]
+  · simpa [u.norm_toContinuousLinearMap, ENNReal.div_eq_mul_inv]
       using div_le_radius_compContinuousLinearMap p u.toContinuousLinearMap
 
 theorem radius_compContinuousLinearMap_le [Nontrivial F]
@@ -449,7 +449,7 @@ theorem radius_shift (p : FormalMultilinearSeries 𝕜 E F) : p.shift.radius = p
     gcongr; apply h
   · apply iSup_mono'
     intro C
-    use ‖p 1‖ ⊔ C / r
+    use ‖p 1‖ ⊔ C / (r : ℝ)
     apply iSup_mono'
     intro h
     simp only [le_refl, le_sup_iff, exists_prop, and_true]

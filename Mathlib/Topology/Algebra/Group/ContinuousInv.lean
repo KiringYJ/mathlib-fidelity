@@ -110,13 +110,19 @@ instance (priority := 100) continuousInv_of_indiscreteTopology [TopologicalSpace
     [IndiscreteTopology H] : ContinuousInv H :=
   ⟨continuous_of_indiscreteTopology⟩
 
-@[to_additive]
-instance (priority := 100) continuousDiv_of_discreteTopology [TopologicalSpace H] [Div H]
+instance (priority := 100) continuousSub_of_discreteTopology [TopologicalSpace H] [Sub H]
+    [DiscreteTopology H] : ContinuousSub H :=
+  ⟨continuous_of_discreteTopology⟩
+
+instance (priority := 100) continuousSub_of_indiscreteTopology [TopologicalSpace H] [Sub H]
+    [IndiscreteTopology H] : ContinuousSub H :=
+  ⟨continuous_of_indiscreteTopology⟩
+
+instance (priority := 100) continuousDiv_of_discreteTopology [TopologicalSpace H] [Group H]
     [DiscreteTopology H] : ContinuousDiv H :=
   ⟨continuous_of_discreteTopology⟩
 
-@[to_additive]
-instance (priority := 100) continuousDiv_of_indiscreteTopology [TopologicalSpace H] [Div H]
+instance (priority := 100) continuousDiv_of_indiscreteTopology [TopologicalSpace H] [Group H]
     [IndiscreteTopology H] : ContinuousDiv H :=
   ⟨continuous_of_indiscreteTopology⟩
 

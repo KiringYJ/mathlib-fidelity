@@ -189,7 +189,8 @@ lemma cpow_ofNat_mul' {x : ℂ} {n : ℕ} [n.AtLeastTwo] (hlt : -π < OfNat.ofNa
     x ^ (OfNat.ofNat n * y) = (x ^ ofNat(n)) ^ y :=
   cpow_nat_mul' hlt hle y
 
-lemma pow_cpow_nat_inv {x : ℂ} {n : ℕ} (h₀ : n ≠ 0) (hlt : -(π / n) < x.arg) (hle : x.arg ≤ π / n) :
+lemma pow_cpow_nat_inv {x : ℂ} {n : ℕ} (h₀ : n ≠ 0)
+    (hlt : -(π / (n : ℝ)) < x.arg) (hle : x.arg ≤ π / (n : ℝ)) :
     (x ^ n) ^ (n⁻¹ : ℂ) = x := by
   rw [← cpow_nat_mul', mul_inv_cancel₀, cpow_one]
   · rwa [← div_lt_iff₀' (Nat.cast_pos.2 h₀.bot_lt), neg_div₀]

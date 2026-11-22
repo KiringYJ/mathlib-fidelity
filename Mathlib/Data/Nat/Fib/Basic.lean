@@ -231,10 +231,13 @@ theorem gcd_fib_add_mul_self (m n : ℕ) : ∀ k, gcd (fib m) (fib (n + k * m)) 
 theorem fib_gcd (m n : ℕ) : fib (gcd m n) = gcd (fib m) (fib n) := by
   induction m, n using Nat.gcd.induction with
   | H0 => simp
-  | H1 m n _ h' =>
+  | H1 m n hm h' =>
     rw [← gcd_rec m n] at h'
-    conv_rhs => rw [← mod_add_div' n m]
-    rwa [gcd_fib_add_mul_self m (n % m) (n / m), gcd_comm (fib m) _]
+    have hq : n % m + Nat.euclideanDiv n m (Nat.ne_of_gt hm) * m = n := by
+      rw [Nat.add_comm, Nat.mul_comm]
+      exact Nat.euclideanDiv_mul_add_mod n m (Nat.ne_of_gt hm)
+    conv_rhs => rw [← hq]
+    rwa [gcd_fib_add_mul_self, gcd_comm (fib m) _]
 
 theorem isStrongDvdSequence_fib : IsStrongDvdSequence fib :=
   fun m n ↦ (fib_gcd m n).symm

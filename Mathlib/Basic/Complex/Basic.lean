@@ -770,7 +770,7 @@ theorem conj_inv (x : ℂ) {hx : IsUnit x} : conj x⁻¹ = (conj x)⁻¹ :=
   star_inv₀ x
 
 @[simp, norm_cast]
-theorem ofReal_div (r s : ℝ) {hs : IsUnit s} : ((r / s : ℝ) : ℂ) = r / s :=
+theorem ofReal_div (r s : ℝ) {hs : IsUnit s} : ((r / s : ℝ) : ℂ) = (r : ℂ) / (s : ℂ) :=
   map_div₀ ofRealHom r s
 
 @[simp, norm_cast]
@@ -810,44 +810,55 @@ theorem normSq_inv (z : ℂ) {hz : IsUnit z} : normSq z⁻¹ = (normSq z)⁻¹ :
 theorem normSq_div (z w : ℂ) {hw : IsUnit w} : normSq (z / w) = normSq z / normSq w :=
   map_div₀ normSq z w
 
-lemma div_ofReal (z : ℂ) (x : ℝ) {hx : IsUnit (x : ℂ)} : z / x = ⟨z.re / x, z.im / x⟩ :=
+lemma div_ofReal (z : ℂ) (x : ℝ) {hx : IsUnit (x : ℂ)} : z / (x : ℂ) = ⟨z.re / x, z.im / x⟩ :=
   div_eq_iff_mul_eq.2 <| Complex.ext (by simp) (by simp)
 
-lemma div_natCast (z : ℂ) (n : ℕ) {hn : IsUnit (n : ℂ)} : z / n = ⟨z.re / n, z.im / n⟩ :=
+lemma div_natCast (z : ℂ) (n : ℕ) {hn : IsUnit (n : ℂ)} :
+    z / (n : ℂ) = ⟨z.re / (n : ℝ), z.im / (n : ℝ)⟩ :=
   div_ofReal z n
 
-lemma div_intCast (z : ℂ) (n : ℤ) {hn : IsUnit (n : ℂ)} : z / n = ⟨z.re / n, z.im / n⟩ :=
+lemma div_intCast (z : ℂ) (n : ℤ) {hn : IsUnit (n : ℂ)} :
+    z / (n : ℂ) = ⟨z.re / (n : ℝ), z.im / (n : ℝ)⟩ :=
   div_ofReal z n
 
-lemma div_ratCast (z : ℂ) (x : ℚ) {hx : IsUnit (x : ℂ)} : z / x = ⟨z.re / x, z.im / x⟩ :=
+lemma div_ratCast (z : ℂ) (x : ℚ) {hx : IsUnit (x : ℂ)} :
+    z / (x : ℂ) = ⟨z.re / (x : ℝ), z.im / (x : ℝ)⟩ :=
   div_ofReal z x
 
 lemma div_ofNat (z : ℂ) (n : ℕ) [n.AtLeastTwo] :
     z / ofNat(n) = ⟨z.re / ofNat(n), z.im / ofNat(n)⟩ :=
   div_natCast z n
 
-@[simp] lemma div_ofReal_re (z : ℂ) (x : ℝ) {hx : IsUnit (x : ℂ)} : (z / x).re = z.re / x := by
+@[simp] lemma div_ofReal_re (z : ℂ) (x : ℝ) {hx : IsUnit (x : ℂ)} :
+    (z / (x : ℂ)).re = z.re / x := by
   rw [div_ofReal]
 
-@[simp] lemma div_ofReal_im (z : ℂ) (x : ℝ) {hx : IsUnit (x : ℂ)} : (z / x).im = z.im / x := by
+@[simp] lemma div_ofReal_im (z : ℂ) (x : ℝ) {hx : IsUnit (x : ℂ)} :
+    (z / (x : ℂ)).im = z.im / x := by
   rw [div_ofReal]
 
-@[simp] lemma div_natCast_re (z : ℂ) (n : ℕ) {hn : IsUnit (n : ℂ)} : (z / n).re = z.re / n := by
+@[simp] lemma div_natCast_re (z : ℂ) (n : ℕ) {hn : IsUnit (n : ℂ)} :
+    (z / (n : ℂ)).re = z.re / (n : ℝ) := by
   rw [div_natCast]
 
-@[simp] lemma div_natCast_im (z : ℂ) (n : ℕ) {hn : IsUnit (n : ℂ)} : (z / n).im = z.im / n := by
+@[simp] lemma div_natCast_im (z : ℂ) (n : ℕ) {hn : IsUnit (n : ℂ)} :
+    (z / (n : ℂ)).im = z.im / (n : ℝ) := by
   rw [div_natCast]
 
-@[simp] lemma div_intCast_re (z : ℂ) (n : ℤ) {hn : IsUnit (n : ℂ)} : (z / n).re = z.re / n := by
+@[simp] lemma div_intCast_re (z : ℂ) (n : ℤ) {hn : IsUnit (n : ℂ)} :
+    (z / (n : ℂ)).re = z.re / (n : ℝ) := by
   rw [div_intCast]
 
-@[simp] lemma div_intCast_im (z : ℂ) (n : ℤ) {hn : IsUnit (n : ℂ)} : (z / n).im = z.im / n := by
+@[simp] lemma div_intCast_im (z : ℂ) (n : ℤ) {hn : IsUnit (n : ℂ)} :
+    (z / (n : ℂ)).im = z.im / (n : ℝ) := by
   rw [div_intCast]
 
-@[simp] lemma div_ratCast_re (z : ℂ) (x : ℚ) {hx : IsUnit (x : ℂ)} : (z / x).re = z.re / x := by
+@[simp] lemma div_ratCast_re (z : ℂ) (x : ℚ) {hx : IsUnit (x : ℂ)} :
+    (z / (x : ℂ)).re = z.re / (x : ℝ) := by
   rw [div_ratCast]
 
-@[simp] lemma div_ratCast_im (z : ℂ) (x : ℚ) {hx : IsUnit (x : ℂ)} : (z / x).im = z.im / x := by
+@[simp] lemma div_ratCast_im (z : ℂ) (x : ℚ) {hx : IsUnit (x : ℂ)} :
+    (z / (x : ℂ)).im = z.im / (x : ℝ) := by
   rw [div_ratCast]
 
 @[simp]

@@ -91,7 +91,7 @@ lemma strictAnti_eulerMascheroniSeq' : StrictAnti eulerMascheroniSeq' := by
   rcases Nat.eq_zero_or_pos n with rfl | hn
   · simp [eulerMascheroniSeq']
   have hden : IsUnit (n : ℝ) := (Nat.cast_pos.mpr hn).ne'.isUnit
-  have hquot : IsUnit (((n + 1 : ℕ) : ℝ) / n) :=
+  have hquot : IsUnit (((n + 1 : ℕ) : ℝ) / (n : ℝ)) :=
     (div_pos (Nat.cast_pos.mpr (Nat.succ_pos n)) (Nat.cast_pos.mpr hn)).ne'.isUnit
   simp_rw [eulerMascheroniSeq', eq_false_intro hn.ne', reduceCtorEq, ite_false]
   rw [← sub_pos, sub_sub_sub_comm,

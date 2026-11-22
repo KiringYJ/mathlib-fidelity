@@ -191,7 +191,7 @@ section FiniteOrderPoints
 variable {p} [hp : Fact (0 < p)]
 
 theorem norm_div_natCast {m n : ℕ} {hn : IsUnit (n : ℝ)} :
-    ‖(↑(↑m / ↑n * p) : AddCircle p)‖ = p * (↑(min (m % n) (n - m % n)) / n) := by
+    ‖(↑(↑m / ↑n * p) : AddCircle p)‖ = p * (↑(min (m % n) (n - m % n)) / (n : ℝ)) := by
   have : p⁻¹ * (↑m / ↑n * p) = ↑m / ↑n := by rw [mul_comm _ p, inv_mul_cancel_left₀]
   rw [norm_eq' p hp.out, this, abs_sub_round_div_natCast_eq]
 
@@ -201,7 +201,7 @@ theorem exists_norm_eq_of_isOfFinAddOrder {u : AddCircle p} (hu : IsOfFinAddOrde
   let n := addOrderOf u
   have hn : IsUnit (n : ℝ) :=
     (Nat.cast_ne_zero.mpr (addOrderOf_pos_iff.mpr hu).ne').isUnit
-  change ∃ k : ℕ, ‖u‖ = p * (k / n)
+  change ∃ k : ℕ, ‖u‖ = p * ((k : ℝ) / (n : ℝ))
   obtain ⟨m, -, -, hm⟩ := exists_gcd_eq_one_of_isOfFinAddOrder hu
   refine ⟨min (m % n) (n - m % n), ?_⟩
   rw [← hm, norm_div_natCast (hn := hn)]

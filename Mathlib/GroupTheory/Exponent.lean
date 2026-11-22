@@ -157,9 +157,12 @@ theorem pow_exponent_eq_one (g : G) : g ^ exponent G = 1 := by
   · simp_rw [exponent, dite_eq_right h, pow_zero]
 
 @[to_additive]
-theorem pow_eq_mod_exponent {n : ℕ} (g : G) : g ^ n = g ^ (n % exponent G) :=
+theorem pow_eq_mod_exponent {n : ℕ} (g : G) : g ^ n = g ^ (n % exponent G) := by
+  by_cases he : exponent G = 0
+  · simp [he]
   calc
-    g ^ n = g ^ (n % exponent G + exponent G * (n / exponent G)) := by rw [Nat.mod_add_div]
+    g ^ n = g ^ (exponent G * Nat.euclideanDiv n (exponent G) he + n % exponent G) := by
+      rw [Nat.euclideanDiv_mul_add_mod]
     _ = g ^ (n % exponent G) := by simp [pow_add, pow_mul, pow_exponent_eq_one]
 
 @[to_additive]
@@ -249,9 +252,10 @@ theorem _root_.Nat.Prime.exists_orderOf_eq_pow_factorization_exponent {p : ℕ} 
       apply h
       rw [bot_eq_zero, Nat.factorization_zero, Finsupp.zero_apply]
   rw [← Finsupp.mem_support_iff] at h
-  obtain ⟨g, hg⟩ : ∃ g : G, g ^ (exponent G / p) ≠ 1 := by
-    suffices key : ¬exponent G ∣ exponent G / p by
+  obtain ⟨g, hg⟩ : ∃ g : G, g ^ Nat.euclideanDiv (exponent G) p hp.ne_zero ≠ 1 := by
+    suffices key : ¬exponent G ∣ Nat.euclideanDiv (exponent G) p hp.ne_zero by
       rwa [exponent_dvd_iff_forall_pow_eq_one, not_forall] at key
+    simp only [Nat.euclideanDiv_eq_core]
     exact fun hd =>
       hp.one_lt.not_ge
         ((mul_le_iff_le_one_left he).mp <|
@@ -261,7 +265,8 @@ theorem _root_.Nat.Prime.exists_orderOf_eq_pow_factorization_exponent {p : ℕ} 
   refine ⟨g ^ k, ?_⟩
   rw [ht]
   apply orderOf_eq_prime_pow
-  · rwa [hk, mul_comm, ht, pow_succ, ← mul_assoc, Nat.mul_div_cancel _ hp.pos, pow_mul] at hg
+  · rwa [Nat.euclideanDiv_eq_core, hk, mul_comm, ht, pow_succ, ← mul_assoc,
+      Nat.mul_div_cancel _ hp.pos, pow_mul] at hg
   · rw [← Nat.succ_eq_add_one, ← ht, ← pow_mul, mul_comm, ← hk]
     exact pow_exponent_eq_one g
 
@@ -277,8 +282,10 @@ element, written as the sum of a multiple of `x` and a multiple of `y`. See also
 if you don't need the explicit formula. -/]
 lemma _root_.Commute.orderOf_mul_pow_eq_lcm {x y : G} (h : Commute x y) (hx : orderOf x ≠ 0)
     (hy : orderOf y ≠ 0) :
-    orderOf (x ^ (orderOf x / (factorizationLCMLeft (orderOf x) (orderOf y))) *
-      y ^ (orderOf y / factorizationLCMRight (orderOf x) (orderOf y))) =
+    orderOf (x ^ Nat.euclideanDiv (orderOf x) (factorizationLCMLeft (orderOf x) (orderOf y))
+        (factorizationLCMLeft_pos _ _).ne' *
+      y ^ Nat.euclideanDiv (orderOf y) (factorizationLCMRight (orderOf x) (orderOf y))
+        (factorizationLCMRight_pos _ _).ne') =
       Nat.lcm (orderOf x) (orderOf y) := by
   rw [(h.pow_pow _ _).orderOf_mul_eq_mul_orderOf_of_coprime]
   all_goals iterate 2 rw [orderOf_pow_orderOf_div]; try rw [Coprime]
@@ -458,21 +465,22 @@ theorem exists_orderOf_eq_exponent (hG : ExponentExists G) : ∃ g : G, orderOf 
     rw [ht] at this
     exact this.not_ge (le_csSup hfin.bddAbove <| Set.mem_range_self _)
   have hpk : p ^ k ∣ orderOf t := Nat.ordProj_dvd _ _
-  have hpk' : orderOf (t ^ p ^ k) = orderOf t / p ^ k := by
-    rw [orderOf_pow' t (pow_ne_zero k hp.ne_zero), Nat.gcd_eq_right hpk]
+  have hpk' : orderOf (t ^ p ^ k) =
+      Nat.euclideanDiv (orderOf t) (p ^ k) (pow_ne_zero k hp.ne_zero) :=
+    orderOf_pow_of_dvd (pow_ne_zero k hp.ne_zero) hpk
   obtain ⟨a, ha⟩ := Nat.exists_eq_add_of_lt hpe
   have hcoprime : (orderOf (t ^ p ^ k)).Coprime (orderOf g) := by
     rw [hg, Nat.coprime_pow_right_iff (pos_of_gt hpe), Nat.coprime_comm]
     apply Or.resolve_right (Nat.coprime_or_dvd_of_prime hp _)
     nth_rw 1 [← pow_one p]
     have : 1 = (Nat.factorization (orderOf (t ^ p ^ k))) p + 1 := by
-      rw [hpk', Nat.factorization_div hpk]
+      rw [hpk', Nat.factorization_div hpk (pow_ne_zero k hp.ne_zero)]
       simp [k, hp]
     rw [this]
     -- Porting note: convert made to_additive complain
     exact Nat.pow_succ_factorization_not_dvd (hG.orderOf_pos <| t ^ p ^ k).ne' hp
   rw [(Commute.all _ g).orderOf_mul_eq_mul_orderOf_of_coprime hcoprime, hpk',
-    hg, ha, hk, pow_add, pow_add, pow_one, ← mul_assoc, ← mul_assoc,
+    Nat.euclideanDiv_eq_core, hg, ha, hk, pow_add, pow_add, pow_one, ← mul_assoc, ← mul_assoc,
     Nat.div_mul_cancel, mul_assoc, lt_mul_iff_one_lt_right <| hG.orderOf_pos t, ← pow_succ]
   · exact one_lt_pow₀ hp.one_lt a.succ_ne_zero
   · exact hpk

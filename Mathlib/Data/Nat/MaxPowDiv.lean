@@ -32,11 +32,14 @@ def maxPowDvdDiv (p n : ℕ) (hpn : 1 < p ∧ n ≠ 0) : ℕ × ℕ :=
   go (p : ℕ) (hp : 1 < p ∧ n ≠ 0) :=
     if hmod : n % p = 0 then
       let (e, q) := go (p * p) <| by simp [Nat.one_lt_mul_iff, hp, Nat.lt_trans Nat.one_pos]
-      if q % p = 0 then (2 * e + 1, q / p) else (2 * e, q)
+      if q % p = 0 then
+        (2 * e + 1, Nat.euclideanDiv q p (Nat.ne_of_gt (Nat.lt_trans Nat.one_pos hp.1)))
+      else (2 * e, q)
     else
       (0, n)
-  termination_by n / p
+  termination_by Nat.euclideanDiv n p (Nat.ne_of_gt (Nat.lt_trans Nat.one_pos hp.1))
   decreasing_by
+    simp only [Nat.euclideanDiv_eq_core]
     rw [← Nat.dvd_iff_mod_eq_zero] at hmod
     rcases hmod with ⟨m, rfl⟩
     have hp₀ : 0 < p := Nat.lt_trans Nat.one_pos hp.1
@@ -54,8 +57,8 @@ theorem maxPowDvdDiv.go_spec {n p : ℕ} (hnp) :
     rw [heq] at ih
     rcases ih with ⟨rfl, hdvd⟩
     have hp₀ : 0 < p := Nat.lt_trans Nat.one_pos hp.1
-    simp_all [← Nat.dvd_iff_mod_eq_zero, Nat.pow_add', ← Nat.mul_assoc, Nat.div_mul_cancel,
-      Nat.two_mul, Nat.mul_pow]
+    simp_all [Nat.euclideanDiv_eq_core, ← Nat.dvd_iff_mod_eq_zero, Nat.pow_add', ← Nat.mul_assoc,
+      Nat.div_mul_cancel, Nat.two_mul, Nat.mul_pow]
   | case2 p hp hmod e q heq hqp ih =>
     rw [heq] at ih
     rcases ih with ⟨rfl, hdvd⟩

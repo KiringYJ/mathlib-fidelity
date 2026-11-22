@@ -182,17 +182,18 @@ theorem coeff_hermite_explicit :
     · rw [(by ring : 2 * (n + 1) + k = 2 * n + (k + 2)), coeff_hermite_explicit n (k + 2)]
 
 theorem coeff_hermite_of_even_add {n k : ℕ} (hnk : Even (n + k)) :
-    coeff (hermite n) k = (-1) ^ ((n - k) / 2) * (n - k - 1)‼ * Nat.choose n k := by
+    coeff (hermite n) k = (-1) ^ (Nat.euclideanDiv (n - k) 2) * (n - k - 1)‼ * Nat.choose n k := by
   rcases le_or_gt k n with h_le | h_lt
   · rw [Nat.even_add, ← Nat.even_sub h_le] at hnk
     obtain ⟨m, hm⟩ := hnk
     rw [(by lia : n = 2 * m + k),
-      Nat.add_sub_cancel, Nat.mul_div_cancel_left _ (Nat.succ_pos 1), coeff_hermite_explicit]
+      Nat.add_sub_cancel, Nat.euclideanDiv_mul_left_cancel, coeff_hermite_explicit]
   · simp [Nat.choose_eq_zero_of_lt h_lt, coeff_hermite_of_lt h_lt]
 
 theorem coeff_hermite (n k : ℕ) :
     coeff (hermite n) k =
-      if Even (n + k) then (-1 : ℤ) ^ ((n - k) / 2) * (n - k - 1)‼ * Nat.choose n k else 0 := by
+      if Even (n + k) then
+        (-1 : ℤ) ^ (Nat.euclideanDiv (n - k) 2) * (n - k - 1)‼ * Nat.choose n k else 0 := by
   split_ifs with h
   · exact coeff_hermite_of_even_add h
   · exact coeff_hermite_of_odd_add (Nat.not_even_iff_odd.1 h)

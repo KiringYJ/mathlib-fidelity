@@ -41,7 +41,9 @@ theorem mapClusterPt_self_zpow_atTop_pow (x : G) (m : ℤ) :
     exists_clusterPt_of_compactSpace _
   rw [← mapClusterPt_atTop_zpow_iff_pow]
   have H : MapClusterPt (x ^ m) (atTop.curry atTop) ↿(fun a b ↦ x ^ (m + b - a)) := by
-    have : ContinuousAt (fun yz ↦ x ^ m * yz.2 / yz.1) (y, y) := by fun_prop
+    have : ContinuousAt (fun yz ↦ x ^ m * yz.2 / yz.1) (y, y) := by
+      simp_rw [div_eq_mul_inv]
+      fun_prop
     simpa only [comp_def, ← zpow_sub, ← zpow_add, div_eq_mul_inv, Prod.map, mul_inv_cancel_right]
       using! (hy.curry_prodMap hy).continuousAt_comp this
   suffices Tendsto ↿(fun a b ↦ m + b - a) (atTop.curry atTop) atTop from H.of_comp this

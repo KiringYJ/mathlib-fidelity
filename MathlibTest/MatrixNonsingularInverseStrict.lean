@@ -10,7 +10,7 @@ import Mathlib.LinearAlgebra.Matrix.ZPow
 # Exact-domain matrix inverses
 
 These tests ensure that square matrices do not acquire a total inverse, quotient or integer power.
-`A⁻¹`, `A / B` and `A ^ (-1 : ℤ)` are operations of the group of units of the matrix ring: they
+`A⁻¹`, `Checked.div A B` and `A ^ (-1 : ℤ)` are operations of the group of units of the matrix ring: they
 require invertibility evidence, which is found from `IsUnit A` or `IsUnit A.det`, and over a field
 also from `A.det ≠ 0`. An invertible matrix has its canonical inverse, its unique linear-system
 solution, Cramer's rule, and integer powers.
@@ -62,7 +62,8 @@ A B : Matrix (Fin 1) (Fin 1) ℚ
 ⊢ IsUnit B
 -/
 #guard_msgs in
-noncomputable example (A B : Matrix (Fin 1) (Fin 1) ℚ) : Matrix (Fin 1) (Fin 1) ℚ := A / B
+noncomputable example (A B : Matrix (Fin 1) (Fin 1) ℚ) : Matrix (Fin 1) (Fin 1) ℚ :=
+  Checked.div A B
 
 /--
 error: unsolved goals

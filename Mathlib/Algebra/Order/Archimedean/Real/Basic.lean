@@ -64,19 +64,19 @@ theorem exists_isLUB (hne : s.Nonempty) (hbdd : BddAbove s) : ∃ x, IsLUB s x :
     exact (hU yS).trans hk.le
   choose f hf using fun d : ℕ =>
     Int.exists_greatest_of_bdd (this d) ⟨⌊L * d⌋, L, hL, Int.floor_le _⟩
-  have hf₁ : ∀ n (n0 : 0 < n), ∃ y ∈ s, ((f n / n : ℚ) : ℝ) ≤ y := fun n n0 =>
+  have hf₁ : ∀ n (n0 : 0 < n), ∃ y ∈ s, (((f n : ℚ) / (n : ℚ)) : ℝ) ≤ y := fun n n0 =>
     let ⟨y, yS, hy⟩ := (hf n).1
     ⟨y, yS, by simpa using (div_le_iff₀ (Nat.cast_pos.2 n0 : (_ : ℝ) < _)).2 hy⟩
-  have hf₂ : ∀ n (n0 : 0 < n), ∀ y ∈ s, (y - ((n : ℕ) : ℝ)⁻¹) < (f n / n : ℚ) := by
+  have hf₂ : ∀ n (n0 : 0 < n), ∀ y ∈ s, (y - ((n : ℕ) : ℝ)⁻¹) < ((f n : ℚ) / (n : ℚ)) := by
     intro n n0 y yS
     have := (Int.sub_one_lt_floor _).trans_le (Int.cast_le.2 <| (hf n).2 _ ⟨y, yS, Int.floor_le _⟩)
     simp only [Rat.cast_div, Rat.cast_intCast, Rat.cast_natCast, gt_iff_lt]
     rwa [lt_div_iff₀ (Nat.cast_pos.2 n0 : (_ : ℝ) < _), sub_mul, inv_mul_cancel₀]
   -- The approximations `f d / d` are indexed by the positive denominators `d = n + 1`.
-  have hg : IsCauSeq abs (fun n => f (n + 1) / (n + 1 : ℕ) : ℕ → ℚ) := by
+  have hg : IsCauSeq abs (fun n => (f (n + 1) : ℚ) / ((n + 1 : ℕ) : ℚ) : ℕ → ℚ) := by
     intro ε ε0
     suffices ∀ j ≥ ⌈ε⁻¹⌉₊, ∀ k ≥ ⌈ε⁻¹⌉₊,
-        (f (j + 1) / (j + 1 : ℕ) - f (k + 1) / (k + 1 : ℕ) : ℚ) < ε by
+        ((f (j + 1) : ℚ) / ((j + 1 : ℕ) : ℚ) - (f (k + 1) : ℚ) / ((k + 1 : ℕ) : ℚ) : ℚ) < ε by
       refine ⟨_, fun j ij => abs_lt.2 ⟨?_, this _ ij _ le_rfl⟩⟩
       rw [neg_lt, neg_sub]
       exact this _ le_rfl _ ij
@@ -87,7 +87,7 @@ theorem exists_isLUB (hne : s.Nonempty) (hbdd : BddAbove s) : ∃ x, IsLUB s x :
       ((inv_le_comm₀ ε0 (Nat.cast_pos.2 k.succ_pos)).1 ik)
     simpa using sub_lt_iff_lt_add'.2
       (lt_of_le_of_lt hy <| sub_lt_iff_lt_add.1 <| hf₂ _ k.succ_pos _ yS)
-  let g : CauSeq ℚ abs := ⟨fun n => f (n + 1) / (n + 1 : ℕ), hg⟩
+  let g : CauSeq ℚ abs := ⟨fun n => (f (n + 1) : ℚ) / ((n + 1 : ℕ) : ℚ), hg⟩
   refine ⟨mk g, ⟨fun x xS => ?_, fun y h => ?_⟩⟩
   · refine le_of_forall_lt_imp_le_of_dense fun z xz => ?_
     obtain ⟨K, hK⟩ := exists_nat_gt (x - z)⁻¹
@@ -394,9 +394,11 @@ lemma exists_natCast_add_one_lt_pow_of_one_lt (ha : 1 < a) : ∃ m : ℕ, (m + 1
   use 2 * k ^ 2
   calc
     ((2 * k ^ 2 : ℕ) + 1 : ℝ) ≤ 2 ^ (2 * k) := mod_cast Nat.two_mul_sq_add_one_le_two_pow_two_mul _
-    _ = (1 / k * k + 1 : ℝ) ^ (2 * k) := by simp [posk.ne']; norm_num
-    _ ≤ ((1 / k + 1) ^ k : ℝ) ^ (2 * k) := by gcongr; exact mul_add_one_le_add_one_pow (by simp) _
-    _ = (1 / k + 1 : ℝ) ^ (2 * k ^ 2) := by rw [← pow_mul, mul_left_comm, sq]
+    _ = (1 / (k : ℝ) * k + 1 : ℝ) ^ (2 * k) := by simp [posk.ne']; norm_num
+    _ ≤ ((1 / (k : ℝ) + 1) ^ k : ℝ) ^ (2 * k) := by
+      gcongr
+      exact mul_add_one_le_add_one_pow (by simp) _
+    _ = (1 / (k : ℝ) + 1 : ℝ) ^ (2 * k ^ 2) := by rw [← pow_mul, mul_left_comm, sq]
     _ < a ^ (2 * k ^ 2) := by gcongr
 
 lemma exists_nat_pos_inv_lt {b : ℝ} (hb : 0 < b) :

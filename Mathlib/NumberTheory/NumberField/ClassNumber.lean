@@ -49,7 +49,7 @@ open Module NumberField InfinitePlace Ideal Nat
 variable (K : Type*) [Field K] [NumberField K]
 
 local notation "M " K:70 => (4 / π) ^ nrComplexPlaces K *
-  ((finrank ℚ K)! / (finrank ℚ K) ^ (finrank ℚ K) * √|discr K|)
+  (((finrank ℚ K)! : ℝ) / (finrank ℚ K : ℝ) ^ (finrank ℚ K) * √|discr K|)
 
 namespace NumberField
 
@@ -199,7 +199,7 @@ theorem isPrincipalIdealRing_of_isPrincipal_of_lt_or_isPrincipal_of_mem_primesOv
 
 theorem isPrincipalIdealRing_of_abs_discr_lt
     (h : |discr K| < (2 * (π / 4) ^ nrComplexPlaces K *
-      ((finrank ℚ K) ^ (finrank ℚ K) / (finrank ℚ K)!)) ^ 2) :
+      ((finrank ℚ K : ℝ) ^ (finrank ℚ K) / ((finrank ℚ K)! : ℝ))) ^ 2) :
     IsPrincipalIdealRing (𝓞 K) := by
   have : 0 < finrank ℚ K := finrank_pos -- Lean needs to know this for `positivity` to succeed
   have hpi4 : IsUnit (π / 4 : ℝ) := (show 0 < (π / 4 : ℝ) by positivity).ne'.isUnit

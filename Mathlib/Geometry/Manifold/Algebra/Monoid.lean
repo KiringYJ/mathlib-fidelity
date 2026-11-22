@@ -500,28 +500,49 @@ section DivConst
 variable {𝕜 : Type*} [NontriviallyNormedField 𝕜] {n : ℕ∞ω}
   {H : Type*} [TopologicalSpace H] {E : Type*}
   [NormedAddCommGroup E] [NormedSpace 𝕜 E] {I : ModelWithCorners 𝕜 E H}
-  {G : Type*} [DivInvMonoid G] [TopologicalSpace G] [ChartedSpace H G] [ContMDiffMul I n G]
+  {G : Type*} [TopologicalSpace G] [ChartedSpace H G]
   {E' : Type*} [NormedAddCommGroup E']
   [NormedSpace 𝕜 E'] {H' : Type*} [TopologicalSpace H'] {I' : ModelWithCorners 𝕜 E' H'}
   {M : Type*} [TopologicalSpace M] [ChartedSpace H' M]
 
 variable {f : M → G} {s : Set M} {x : M} (c : G)
 
-@[to_additive]
+section Add
+
+variable [SubNegMonoid G] [ContMDiffAdd I n G]
+
+theorem ContMDiffWithinAt.sub_const (hf : CMDiffAt[s] n f x) :
+    CMDiffAt[s] n (fun x ↦ f x - c) x := by
+  simpa only [sub_eq_add_neg] using! hf.add contMDiffWithinAt_const
+
+nonrec theorem ContMDiffAt.sub_const (hf : CMDiffAt n f x) :
+    CMDiffAt n (fun x ↦ f x - c) x := hf.sub_const c
+
+theorem ContMDiffOn.sub_const (hf : CMDiff[s] n f) :
+    CMDiff[s] n (fun x ↦ f x - c) := fun x hx ↦ (hf x hx).sub_const c
+
+theorem ContMDiff.sub_const (hf : CMDiff n f) :
+    CMDiff n (fun x ↦ f x - c) := fun x ↦ (hf x).sub_const c
+
+end Add
+
+variable [Group G] [ContMDiffMul I n G]
+
+@[to_additive ContMDiffWithinAt.sub_const_of_addGroup]
 theorem ContMDiffWithinAt.div_const (hf : CMDiffAt[s] n f x) :
     CMDiffAt[s] n (fun x ↦ f x / c) x := by
   simpa only [div_eq_mul_inv] using! hf.mul contMDiffWithinAt_const
 
-@[to_additive]
+@[to_additive ContMDiffAt.sub_const_of_addGroup]
 nonrec theorem ContMDiffAt.div_const (hf : CMDiffAt n f x) :
     CMDiffAt n (fun x ↦ f x / c) x :=
   hf.div_const c
 
-@[to_additive]
+@[to_additive ContMDiffOn.sub_const_of_addGroup]
 theorem ContMDiffOn.div_const (hf : CMDiff[s] n f) :
     CMDiff[s] n (fun x ↦ f x / c) := fun x hx ↦ (hf x hx).div_const c
 
-@[to_additive]
+@[to_additive ContMDiff.sub_const_of_addGroup]
 theorem ContMDiff.div_const (hf : CMDiff n f) :
     CMDiff n (fun x ↦ f x / c) := fun x ↦ (hf x).div_const c
 

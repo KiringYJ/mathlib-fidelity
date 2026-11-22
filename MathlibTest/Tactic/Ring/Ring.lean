@@ -27,7 +27,7 @@ example (x y : ℕ) : (x + y) ^ 3 = x ^ 3 + y ^ 3 + 3 * (x * y ^ 2 + x ^ 2 * y) 
 example (x y : ℕ+) : (x + y) ^ 3 = x ^ 3 + y ^ 3 + 3 * (x * y ^ 2 + x ^ 2 * y) := by ring
 example (x y : ℝ) : (x + y) ^ 3 = x ^ 3 + y ^ 3 + 3 * (x * y ^ 2 + x ^ 2 * y) := by ring
 example {α} [CommSemiring α] (x : α) : (x + 1) ^ 6 = (1 + x) ^ 6 := by ring
-example (n : ℕ) : (n / 2) + (n / 2) = 2 * (n / 2) := by ring
+example (n : ℕ) : Nat.euclideanDiv n 2 + Nat.euclideanDiv n 2 = 2 * Nat.euclideanDiv n 2 := by ring
 example {α} [Field α] [CharZero α] (a : α) : a / 2 = a / 2 := by ring
 example {α} [Field α] [LinearOrder α] [IsStrictOrderedRing α] (a b c : α) (hb : IsUnit b) :
   a * (-c / b) * (-c / b) + -c + c = a * (c / b * (c / b)) := by ring

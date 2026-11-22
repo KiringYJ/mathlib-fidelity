@@ -60,21 +60,32 @@ lemma natCard_inv (s : Set G) : Nat.card ↥(s⁻¹) = Nat.card s := by simp
 
 end InvolutiveInv
 
-section DivInvMonoid
-variable [DivInvMonoid M] {s t : Set M}
+section SubNegMonoid
+variable [SubNegMonoid M] {s t : Set M}
 
-@[to_additive]
+lemma _root_.Cardinal.mk_sub_le : #(s - t) ≤ #s * #t := by
+  rw [← image2_sub]; exact Cardinal.mk_image2_le
+
+end SubNegMonoid
+
+section CommGroup
+variable [CommGroup M] {s t : Set M}
+
 lemma _root_.Cardinal.mk_div_le : #(s / t) ≤ #s * #t := by
   rw [← image2_div]; exact Cardinal.mk_image2_le
 
-end DivInvMonoid
+end CommGroup
 
 section Group
 variable [Group G] {s t : Set G}
 
-@[to_additive]
-lemma natCard_div_le : Nat.card (s / t) ≤ Nat.card s * Nat.card t := by
-  rw [div_eq_mul_inv, ← natCard_inv t]; exact natCard_mul_le
+@[to_additive natCard_add_neg_le]
+lemma natCard_div_le : Nat.card (s * t⁻¹) ≤ Nat.card s * Nat.card t := by
+  simpa only [natCard_inv] using natCard_mul_le (s := s) (t := t⁻¹)
+
+lemma natCard_sub_le {A : Type*} [AddGroup A] {s t : Set A} :
+    Nat.card (s - t) ≤ Nat.card s * Nat.card t := by
+  simpa only [sub_eq_add_neg] using natCard_add_neg_le (s := s) (t := t)
 
 variable [MulAction G α]
 

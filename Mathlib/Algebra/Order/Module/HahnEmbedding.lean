@@ -484,6 +484,12 @@ theorem coeff_ne_zero [IsOrderedAddMonoid R] [Archimedean R] {x : f.val.domain} 
     (ofLex (f.val x)).coeff (FiniteArchimedeanClass.mk x.val hx0) ≠ 0 :=
   HahnSeries.coeff_orderTop_ne <| f.orderTop_eq_finiteArchimedeanClassMk hx0
 
+private theorem coeff_val_sub (y z : f.val.domain) (d : FiniteArchimedeanClass M) :
+    (ofLex (f.val (y - z))).coeff d = (ofLex (f.val y)).coeff d - (ofLex (f.val z)).coeff d := by
+  rw [LinearPMap.map_sub]
+  change (ofLex (f.val y) - ofLex (f.val z)).coeff d = _
+  rw [HahnSeries.coeff_sub]
+
 /-- When `y` and `z` are both near `x` (the difference is in a ball),
 initial coefficients of `f.val y` and `f.val z` agree. -/
 theorem coeff_eq_of_mem [IsOrderedAddMonoid R] [Archimedean R] (x : M) {y z : f.val.domain}
@@ -491,7 +497,7 @@ theorem coeff_eq_of_mem [IsOrderedAddMonoid R] [Archimedean R] (x : M) {y z : f.
     {d : FiniteArchimedeanClass M} (hd : d ≤ c) :
     (ofLex (f.val y)).coeff d = (ofLex (f.val z)).coeff d := by
   apply eq_of_sub_eq_zero
-  rw [← HahnSeries.coeff_sub, ← ofLex_sub, ← LinearPMap.map_sub]
+  rw [← coeff_val_sub]
   refine coeff_eq_zero_of_mem f ?_ hd
   have : (y - z).val = (y.val - x) - (z.val - x) := by
     push_cast
@@ -612,7 +618,7 @@ theorem archimedeanClassMk_le_of_eval_eq [IsOrderedAddMonoid R] [Archimedean R] 
   have h2 : ∀ c : FiniteArchimedeanClass M, c.val < .mk (x - z.val) →
       (ofLex (f.val (z - y))).coeff c = 0 := by
     intro c hc
-    rw [LinearPMap.map_sub, ofLex_sub, HahnSeries.coeff_sub, sub_eq_zero, ← h]
+    rw [coeff_val_sub, sub_eq_zero, ← h]
     exact (h1 c hc).symm
   contrapose! h2
   exact ⟨FiniteArchimedeanClass.mk (z.val - y.val) hyz, h2, coeff_ne_zero _ _⟩
@@ -732,7 +738,7 @@ theorem eval_lt [IsOrderedAddMonoid R] [Archimedean R] {x : M} (hx : x ∉ f.val
     · by_contra! hlt
       obtain hj := sub_eq_zero_of_eq (hj (mk _ hxy0) hlt)
       contrapose! hj
-      rw [← HahnSeries.coeff_sub, ← ofLex_sub, ← LinearPMap.map_sub, hzyclass]
+      rw [← coeff_val_sub, hzyclass]
       apply f.coeff_ne_zero
     · contrapose! hi
       rw [hzyclass] at hi

@@ -8,6 +8,7 @@ module
 public import Mathlib.Algebra.Ring.Parity
 public import Mathlib.Algebra.Ring.Int.Defs
 public import Mathlib.Algebra.Group.Int.Even
+public import Mathlib.Lean.Elab.NativeDivision
 
 /-!
 # Basic parity lemmas for the ring `ℤ`
@@ -28,7 +29,8 @@ variable {m n : ℤ}
 @[grind =]
 lemma odd_iff : Odd n ↔ n % 2 = 1 where
   mp := fun ⟨m, hm⟩ ↦ by grind
-  mpr h := ⟨n / 2, by grind⟩
+  mpr h := ⟨n.euclideanDiv 2, by
+    simpa only [h] using (Int.euclideanDiv_mul_add_mod n 2 (by decide)).symm⟩
 
 lemma not_odd_iff : ¬Odd n ↔ n % 2 = 0 := by grind
 
@@ -102,13 +104,17 @@ lemma four_dvd_add_or_sub_of_odd {a b : ℤ} (ha : Odd a) (hb : Odd b) :
 lemma two_dvd_mul_add_one (k : ℤ) : 2 ∣ k * (k + 1) :=
   even_iff_two_dvd.mp (even_mul_succ_self k)
 
-lemma two_mul_ediv_two_add_one_of_odd : Odd n → 2 * (n / 2) + 1 = n := by grind
+lemma two_mul_ediv_two_add_one_of_odd (h : Odd n) : 2 * n.euclideanDiv 2 + 1 = n := by
+  simpa only [odd_iff.mp h] using Int.euclideanDiv_mul_add_mod n 2 (by decide)
 
-lemma ediv_two_mul_two_add_one_of_odd : Odd n → n / 2 * 2 + 1 = n := by grind
+lemma ediv_two_mul_two_add_one_of_odd (h : Odd n) : n.euclideanDiv 2 * 2 + 1 = n := by
+  simpa only [mul_comm] using two_mul_ediv_two_add_one_of_odd h
 
-lemma add_one_ediv_two_mul_two_of_odd : Odd n → 1 + n / 2 * 2 = n := by grind
+lemma add_one_ediv_two_mul_two_of_odd (h : Odd n) : 1 + n.euclideanDiv 2 * 2 = n := by
+  simpa only [add_comm] using ediv_two_mul_two_add_one_of_odd h
 
-lemma two_mul_ediv_two_of_odd (h : Odd n) : 2 * (n / 2) = n - 1 := by grind
+lemma two_mul_ediv_two_of_odd (h : Odd n) : 2 * n.euclideanDiv 2 = n - 1 :=
+  eq_sub_of_add_eq (two_mul_ediv_two_add_one_of_odd h)
 
 @[simp]
 theorem even_sign_iff {z : ℤ} : Even z.sign ↔ z = 0 := by grind

@@ -221,60 +221,112 @@ protected abbrev invOneClass [InvOneClass β] [IsOneApply F α β] [IsInvApply F
     InvOneClass F :=
   DFunLike.coe_injective.invOneClass (fun (f : F) ↦ (f : α → β)) coe_one coe_inv
 
-variable [Div F] [Pow F ℤ]
+variable [Pow F ℤ]
 
-/-- A `FunLike` type is a `DivInvMonoid` if `β` is a `DivInvMonoid`. -/
-@[to_additive subNegMonoid /-- A `FunLike` type is a `SubNegMonoid` if `β` is a `SubNegMonoid`. -/]
+/-- Pointwise multiplication by the inverse gives the division instance used in transport. -/
+local instance : Div F := ⟨fun f g ↦ f * g⁻¹⟩
+
+/-- Transfer the `DivInvMonoid` structure using pointwise multiplication and inverse. -/
 protected abbrev divInvMonoid [DivInvMonoid β] [IsOneApply F α β] [IsMulApply F α β]
-    [IsInvApply F α β] [IsDivApply F α β] [IsPowApply ℕ F α β] [IsPowApply ℤ F α β] :
-    DivInvMonoid F :=
-  DFunLike.coe_injective.divInvMonoid (fun (f : F) ↦ (f : α → β)) coe_one coe_mul coe_inv coe_div
-    coe_pow coe_pow
+    [IsInvApply F α β] [IsPowApply ℕ F α β] [IsPowApply ℤ F α β] : DivInvMonoid F :=
+  DFunLike.coe_injective.divInvMonoid (fun (f : F) ↦ (f : α → β)) coe_one coe_mul coe_inv
+    coe_mul_inv coe_pow coe_pow
 
-/-- A `FunLike` type is a `DivInvOneMonoid` if `β` is a `DivInvOneMonoid`. -/
-@[to_additive
-/-- A `FunLike` type is a `SubNegOneMonoid` if `β` is a `SubNegOneMonoid`. -/]
+/-- Transfer the `DivInvOneMonoid` structure using pointwise multiplication and inverse. -/
 protected abbrev divInvOneMonoid [DivInvOneMonoid β] [IsOneApply F α β] [IsMulApply F α β]
-    [IsInvApply F α β] [IsDivApply F α β] [IsPowApply ℕ F α β] [IsPowApply ℤ F α β] :
-    DivInvOneMonoid F :=
-  DFunLike.coe_injective.divInvOneMonoid (fun (f : F) ↦ (f : α → β)) coe_one coe_mul
-    coe_inv coe_div coe_pow coe_pow
+    [IsInvApply F α β] [IsPowApply ℕ F α β] [IsPowApply ℤ F α β] : DivInvOneMonoid F :=
+  DFunLike.coe_injective.divInvOneMonoid (fun (f : F) ↦ (f : α → β)) coe_one coe_mul coe_inv
+    coe_mul_inv coe_pow coe_pow
 
-/-- A `FunLike` type is a division monoid if `β` is a division monoid. -/
-@[to_additive /-- A `FunLike` type is a subtraction monoid if `β` is a subtraction monoid. -/]
+/-- Transfer the `DivisionMonoid` structure using pointwise multiplication and inverse. -/
 protected abbrev divisionMonoid [DivisionMonoid β] [IsOneApply F α β] [IsMulApply F α β]
-    [IsInvApply F α β] [IsDivApply F α β] [IsPowApply ℕ F α β] [IsPowApply ℤ F α β] :
-    DivisionMonoid F :=
-  DFunLike.coe_injective.divisionMonoid (fun (f : F) ↦ (f : α → β)) coe_one coe_mul
-    coe_inv coe_div coe_pow coe_pow
+    [IsInvApply F α β] [IsPowApply ℕ F α β] [IsPowApply ℤ F α β] : DivisionMonoid F :=
+  DFunLike.coe_injective.divisionMonoid (fun (f : F) ↦ (f : α → β)) coe_one coe_mul coe_inv
+    coe_mul_inv coe_pow coe_pow
 
-/-- A `FunLike` type is a division commutative monoid if `β` is a division commutative monoid. -/
-@[to_additive subtractionCommMonoid /-- A `FunLike` type is a subtraction commutative monoid if `β`
-is a subtraction commutative monoid. -/]
+/-- Transfer the `DivisionCommMonoid` structure using pointwise multiplication and inverse. -/
 protected abbrev divisionCommMonoid [DivisionCommMonoid β] [IsOneApply F α β] [IsMulApply F α β]
-    [IsInvApply F α β] [IsDivApply F α β] [IsPowApply ℕ F α β] [IsPowApply ℤ F α β] :
-    DivisionCommMonoid F :=
+    [IsInvApply F α β] [IsPowApply ℕ F α β] [IsPowApply ℤ F α β] : DivisionCommMonoid F :=
   DFunLike.coe_injective.divisionCommMonoid (fun (f : F) ↦ (f : α → β)) coe_one coe_mul coe_inv
-    coe_div coe_pow coe_pow
+    coe_mul_inv coe_pow coe_pow
 
-/-- A `FunLike` type is a group if `β` is a group. -/
-@[to_additive /-- A `FunLike` type is an additive group if `β` is an additive group. -/]
-protected abbrev group [Group β] [IsOneApply F α β] [IsMulApply F α β] [IsInvApply F α β]
-    [IsDivApply F α β] [IsPowApply ℕ F α β] [IsPowApply ℤ F α β] :
-    Group F :=
-  DFunLike.coe_injective.group (fun (f : F) ↦ (f : α → β)) coe_one coe_mul coe_inv coe_div coe_pow
-    coe_pow
+/-- Transfer the `Group` structure using pointwise multiplication and inverse. -/
+protected abbrev group [Group β] [IsOneApply F α β] [IsMulApply F α β]
+    [IsInvApply F α β] [IsPowApply ℕ F α β] [IsPowApply ℤ F α β] : Group F :=
+  DFunLike.coe_injective.group (fun (f : F) ↦ (f : α → β)) coe_one coe_mul coe_inv
+    coe_mul_inv coe_pow coe_pow
 
-/-- A `FunLike` type is a commutative group if `β` is a commutative group. -/
-@[to_additive /-- A `FunLike` type is an additive commutative group if `β` is an additive
-commutative group. -/]
-protected abbrev commGroup [CommGroup β] [IsOneApply F α β] [IsMulApply F α β] [IsInvApply F α β]
-    [IsDivApply F α β] [IsPowApply ℕ F α β] [IsPowApply ℤ F α β] :
-    CommGroup F :=
-  DFunLike.coe_injective.commGroup (fun (f : F) ↦ (f : α → β)) coe_one coe_mul coe_inv coe_div
-    coe_pow coe_pow
+/-- Transfer the `CommGroup` structure using pointwise multiplication and inverse. -/
+protected abbrev commGroup [CommGroup β] [IsOneApply F α β] [IsMulApply F α β]
+    [IsInvApply F α β] [IsPowApply ℕ F α β] [IsPowApply ℤ F α β] : CommGroup F :=
+  DFunLike.coe_injective.commGroup (fun (f : F) ↦ (f : α → β)) coe_one coe_mul coe_inv
+    coe_mul_inv coe_pow coe_pow
 
 end GroupInstances
+
+section AddGroupInstances
+
+variable [Add F] [Zero F] [SMul ℕ F] [Neg F] [Sub F] [SMul ℤ F]
+
+/-- Transfer the `SubNegMonoid` structure using the supplied pointwise operations. -/
+protected abbrev subNegMonoid [SubNegMonoid β] [IsZeroApply F α β] [IsAddApply F α β]
+    [IsNegApply F α β] [IsSubApply F α β] [IsSMulApply ℕ F α β] [IsSMulApply ℤ F α β] :
+    SubNegMonoid F :=
+  DFunLike.coe_injective.subNegMonoid (fun (f : F) ↦ (f : α → β)) coe_zero coe_add coe_neg
+    coe_sub (fun f n ↦ coe_smul n f) (fun f z ↦ coe_smul z f)
+
+/-- Transfer the `SubNegZeroMonoid` structure using the supplied pointwise operations. -/
+protected abbrev subNegZeroMonoid [SubNegZeroMonoid β] [IsZeroApply F α β] [IsAddApply F α β]
+    [IsNegApply F α β] [IsSubApply F α β] [IsSMulApply ℕ F α β] [IsSMulApply ℤ F α β] :
+    SubNegZeroMonoid F :=
+  DFunLike.coe_injective.subNegZeroMonoid (fun (f : F) ↦ (f : α → β)) coe_zero coe_add coe_neg
+    coe_sub (fun f n ↦ coe_smul n f) (fun f z ↦ coe_smul z f)
+
+/-- Transfer the `SubtractionMonoid` structure using the supplied pointwise operations. -/
+protected abbrev subtractionMonoid [SubtractionMonoid β] [IsZeroApply F α β] [IsAddApply F α β]
+    [IsNegApply F α β] [IsSubApply F α β] [IsSMulApply ℕ F α β] [IsSMulApply ℤ F α β] :
+    SubtractionMonoid F :=
+  DFunLike.coe_injective.subtractionMonoid (fun (f : F) ↦ (f : α → β)) coe_zero coe_add coe_neg
+    coe_sub (fun f n ↦ coe_smul n f) (fun f z ↦ coe_smul z f)
+
+/-- Transfer the `SubtractionCommMonoid` structure using the supplied pointwise operations. -/
+protected abbrev subtractionCommMonoid [SubtractionCommMonoid β] [IsZeroApply F α β]
+    [IsAddApply F α β] [IsNegApply F α β] [IsSubApply F α β] [IsSMulApply ℕ F α β]
+    [IsSMulApply ℤ F α β] :
+    SubtractionCommMonoid F :=
+  DFunLike.coe_injective.subtractionCommMonoid (fun (f : F) ↦ (f : α → β)) coe_zero coe_add coe_neg
+    coe_sub (fun f n ↦ coe_smul n f) (fun f z ↦ coe_smul z f)
+
+/-- Transfer the `AddGroup` structure using the supplied pointwise operations. -/
+protected abbrev addGroup [AddGroup β] [IsZeroApply F α β] [IsAddApply F α β]
+    [IsNegApply F α β] [IsSubApply F α β] [IsSMulApply ℕ F α β] [IsSMulApply ℤ F α β] :
+    AddGroup F :=
+  DFunLike.coe_injective.addGroup (fun (f : F) ↦ (f : α → β)) coe_zero coe_add coe_neg
+    coe_sub (fun f n ↦ coe_smul n f) (fun f z ↦ coe_smul z f)
+
+/-- Transfer the `AddCommGroup` structure using the supplied pointwise operations. -/
+protected abbrev addCommGroup [AddCommGroup β] [IsZeroApply F α β] [IsAddApply F α β]
+    [IsNegApply F α β] [IsSubApply F α β] [IsSMulApply ℕ F α β] [IsSMulApply ℤ F α β] :
+    AddCommGroup F :=
+  DFunLike.coe_injective.addCommGroup (fun (f : F) ↦ (f : α → β)) coe_zero coe_add coe_neg
+    coe_sub (fun f n ↦ coe_smul n f) (fun f z ↦ coe_smul z f)
+
+end AddGroupInstances
+
+section Group
+
+variable [Group F] [Group β] [IsMulApply F α β] [IsInvApply F α β]
+
+@[simp, grind =]
+theorem _root_.div_apply (f g : F) (x : α) : (f / g) x = f x / g x := by
+  rw [div_eq_mul_inv, div_eq_mul_inv, mul_apply, inv_apply]
+
+@[simp, norm_cast]
+theorem coe_div (f g : F) : ↑(f / g) = (f : α → β) / (g : α → β) := by
+  funext x
+  rw [Pi.div_apply, div_apply]
+
+end Group
 
 section TorsionFree
 

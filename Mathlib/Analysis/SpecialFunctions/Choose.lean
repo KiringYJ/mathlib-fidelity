@@ -47,7 +47,8 @@ lemma isEquivalent_descFactorial (k : ℕ) :
 
 /-- `n.choose k` is asymptotically equivalent to `n^k / k!`. -/
 theorem isEquivalent_choose (k : ℕ) :
-    (fun (n : ℕ) ↦ (n.choose k : ℝ)) ~[atTop] (fun (n : ℕ) ↦ (n ^ k / k.factorial : ℝ)) := by
+    (fun (n : ℕ) ↦ (n.choose k : ℝ)) ~[atTop]
+      (fun (n : ℕ) ↦ (n : ℝ) ^ k / (k.factorial : ℝ)) := by
   conv_lhs =>
     intro n
     rw [choose_eq_descFactorial_div_factorial,

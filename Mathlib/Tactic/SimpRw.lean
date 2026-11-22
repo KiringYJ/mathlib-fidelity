@@ -6,6 +6,7 @@ Authors: Anne Baanen, Mario Carneiro, Alex J. Best
 module
 
 public import Mathlib.Init
+public meta import Mathlib.Lean.Elab.NativeDivision
 
 /-!
 # The `simp_rw` tactic
@@ -29,7 +30,7 @@ def withSimpRWRulesSeq (rwRulesSeqStx : Syntax)
   let rules := rwRulesSeqStx[1].getArgs
   -- show initial state up to (incl.) `[`
   withTacticInfoContext lbrak (pure ())
-  let numRules := (rules.size + 1) / 2
+  let numRules := Nat.euclideanDiv (rules.size + 1) 2
   for i in [:numRules] do
     let rule := rules[i * 2]!
     let sep  := rules.getD (i * 2 + 1) Syntax.missing

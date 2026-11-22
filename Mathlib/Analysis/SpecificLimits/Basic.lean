@@ -73,14 +73,18 @@ theorem tendsto_inv_atTop_nhds_zero_nat {𝕜 : Type*} [DivisionSemiring 𝕜] [
 
 theorem tendsto_const_div_atTop_nhds_zero_nat {𝕜 : Type*} [DivisionSemiring 𝕜] [CharZero 𝕜]
     [TopologicalSpace 𝕜] [ContinuousSMul ℚ≥0 𝕜] [ContinuousMul 𝕜] (C : 𝕜) :
-    Tendsto (fun n : {n : ℕ // n ≠ 0} ↦ C / ((n : ℕ) : 𝕜)) (comap Subtype.val atTop) (𝓝 0) := by
+    Tendsto (fun n : {n : ℕ // n ≠ 0} ↦
+      Checked.div C ((n : ℕ) : 𝕜) (Nat.cast_ne_zero.2 n.2).isUnit)
+      (comap Subtype.val atTop) (𝓝 0) := by
   simpa only [mul_zero, div_eq_mul_inv₀] using
     (tendsto_const_nhds (x := C)).mul tendsto_inv_atTop_nhds_zero_nat
 
 theorem tendsto_one_div_atTop_nhds_zero_nat {𝕜 : Type*} [DivisionSemiring 𝕜] [CharZero 𝕜]
     [TopologicalSpace 𝕜] [ContinuousSMul ℚ≥0 𝕜] :
-    Tendsto (fun n : {n : ℕ // n ≠ 0} ↦ 1 / ((n : ℕ) : 𝕜)) (comap Subtype.val atTop) (𝓝 0) := by
-  simp [tendsto_inv_atTop_nhds_zero_nat]
+    Tendsto (fun n : {n : ℕ // n ≠ 0} ↦
+      Checked.div 1 ((n : ℕ) : 𝕜) (Nat.cast_ne_zero.2 n.2).isUnit)
+      (comap Subtype.val atTop) (𝓝 0) := by
+  simpa only [one_div₀] using tendsto_inv_atTop_nhds_zero_nat (𝕜 := 𝕜)
 
 theorem EReal.tendsto_const_div_atTop_nhds_zero_nat {C : EReal} (h : C ≠ ⊥) (h' : C ≠ ⊤) :
     Tendsto (fun n : {n : ℕ // n ≠ 0} ↦ C / ((n : ℕ) : EReal)) (comap Subtype.val atTop)
@@ -95,7 +99,8 @@ theorem EReal.tendsto_const_div_atTop_nhds_zero_nat {C : EReal} (h : C ≠ ⊥) 
 
 theorem tendsto_one_div_add_atTop_nhds_zero_nat {𝕜 : Type*} [DivisionSemiring 𝕜] [CharZero 𝕜]
     [TopologicalSpace 𝕜] [ContinuousSMul ℚ≥0 𝕜] :
-    Tendsto (fun n : ℕ ↦ 1 / ((n : 𝕜) + 1)) atTop (𝓝 0) := by
+    Tendsto (fun n : ℕ ↦ Checked.div 1 ((n : 𝕜) + 1) (Nat.cast_add_one_ne_zero n).isUnit)
+      atTop (𝓝 0) := by
   have h : Tendsto (fun n : ℕ ↦ (⟨n + 1, n.succ_ne_zero⟩ : {n : ℕ // n ≠ 0})) atTop
       (comap Subtype.val atTop) := tendsto_comap_iff.2 (tendsto_add_atTop_nat 1)
   simpa [Function.comp_def] using (tendsto_one_div_atTop_nhds_zero_nat (𝕜 := 𝕜)).comp h
@@ -559,47 +564,59 @@ theorem cauchySeq_of_edist_le_geometric : CauchySeq f := by
 
 include hu in
 /-- If `edist (f n) (f (n+1))` is bounded by `C * r^n`, then the distance from
-`f n` to the limit of `f` is bounded above by `C * r^n / (1 - r)`. -/
+`f n` to the limit of `f` is bounded by the sum of the geometric tail. -/
 theorem edist_le_of_edist_le_geometric_of_tendsto {a : α} (ha : Tendsto f atTop (𝓝 a)) (n : ℕ) :
-    edist (f n) a ≤ C * r ^ n / (1 - r) := by
-  convert! edist_le_tsum_of_edist_le_of_tendsto _ hu ha _
-  simp only [pow_add, ENNReal.tsum_mul_left, ENNReal.tsum_geometric, div_eq_mul_inv, mul_assoc]
+    edist (f n) a ≤ C * r ^ n * ∑' m : ℕ, r ^ m := by
+  simpa only [pow_add, ← mul_assoc, ENNReal.tsum_mul_left] using
+    edist_le_tsum_of_edist_le_of_tendsto _ hu ha n
 
 include hu in
 /-- If `edist (f n) (f (n+1))` is bounded by `C * r^n`, then the distance from
-`f 0` to the limit of `f` is bounded above by `C / (1 - r)`. -/
+`f 0` to the limit of `f` is bounded by the sum of the geometric series. -/
 theorem edist_le_of_edist_le_geometric_of_tendsto₀ {a : α} (ha : Tendsto f atTop (𝓝 a)) :
-    edist (f 0) a ≤ C / (1 - r) := by
+    edist (f 0) a ≤ C * ∑' m : ℕ, r ^ m := by
   simpa only [_root_.pow_zero, mul_one] using edist_le_of_edist_le_geometric_of_tendsto r C hu ha 0
 
 end EDistLeGeometric
 
 section EDistLeGeometricTwo
 
+theorem ENNReal.isUnit_two_pow (n : ℕ) : IsUnit ((2 : ℝ≥0∞) ^ n) :=
+  (ENNReal.isUnit_iff.2 ⟨two_ne_zero, ENNReal.ofNat_ne_top⟩ : IsUnit (2 : ℝ≥0∞)).pow n
+
+private theorem ennreal_checkedDiv_eq_mul_inv (a b : ℝ≥0∞) (hb : IsUnit b) :
+    Checked.div a b hb = a * b⁻¹ := by
+  exact congrArg (a * ·) (ENNReal.eq_inv_of_mul_eq_one_left hb.val_inv_mul)
+
 variable [PseudoEMetricSpace α] (C : ℝ≥0∞) (hC : C ≠ ⊤) {f : ℕ → α}
-  (hu : ∀ n, edist (f n) (f (n + 1)) ≤ C / 2 ^ n) {a : α} (ha : Tendsto f atTop (𝓝 a))
+  (hu : ∀ n, edist (f n) (f (n + 1)) ≤ Checked.div C (2 ^ n) (ENNReal.isUnit_two_pow n))
+  {a : α} (ha : Tendsto f atTop (𝓝 a))
 
 include hC hu in
 /-- If `edist (f n) (f (n+1))` is bounded by `C * 2^-n`, then `f` is a Cauchy sequence. -/
 theorem cauchySeq_of_edist_le_geometric_two : CauchySeq f := by
-  simp only [div_eq_mul_inv, ENNReal.inv_pow] at hu
+  simp only [ennreal_checkedDiv_eq_mul_inv, ENNReal.inv_pow] at hu
   refine cauchySeq_of_edist_le_geometric 2⁻¹ C ?_ hC hu
   simp
 
 include hu ha in
 /-- If `edist (f n) (f (n+1))` is bounded by `C * 2^-n`, then the distance from
 `f n` to the limit of `f` is bounded above by `2 * C * 2^-n`. -/
-theorem edist_le_of_edist_le_geometric_two_of_tendsto (n : ℕ) : edist (f n) a ≤ 2 * C / 2 ^ n := by
-  simp only [div_eq_mul_inv, ENNReal.inv_pow] at *
-  rw [mul_assoc, mul_comm]
-  convert! edist_le_of_edist_le_geometric_of_tendsto 2⁻¹ C hu ha n using 1
-  rw [ENNReal.one_sub_inv_two, div_eq_mul_inv, inv_inv]
+theorem edist_le_of_edist_le_geometric_two_of_tendsto (n : ℕ) :
+    edist (f n) a ≤ Checked.div (2 * C) (2 ^ n) (ENNReal.isUnit_two_pow n) := by
+  simp only [ennreal_checkedDiv_eq_mul_inv, ENNReal.inv_pow] at hu
+  calc
+    _ ≤ C * (2⁻¹ : ℝ≥0∞) ^ n * ∑' m : ℕ, (2⁻¹ : ℝ≥0∞) ^ m :=
+      edist_le_of_edist_le_geometric_of_tendsto 2⁻¹ C hu ha n
+    _ = _ := by
+      rw [ENNReal.tsum_geometric_two, ennreal_checkedDiv_eq_mul_inv, ENNReal.inv_pow]
+      ac_rfl
 
 include hu ha in
 /-- If `edist (f n) (f (n+1))` is bounded by `C * 2^-n`, then the distance from
 `f 0` to the limit of `f` is bounded above by `2 * C`. -/
 theorem edist_le_of_edist_le_geometric_two_of_tendsto₀ : edist (f 0) a ≤ 2 * C := by
-  simpa only [_root_.pow_zero, div_eq_mul_inv, inv_one, mul_one] using
+  simpa only [_root_.pow_zero, ennreal_checkedDiv_eq_mul_inv, inv_one, mul_one] using
     edist_le_of_edist_le_geometric_two_of_tendsto C hu ha 0
 
 end EDistLeGeometricTwo
@@ -768,8 +785,14 @@ end ENNReal
 theorem factorial_tendsto_atTop : Tendsto Nat.factorial atTop atTop :=
   tendsto_atTop_atTop_of_monotone (fun _ _ ↦ Nat.factorial_le) fun n ↦ ⟨n, n.self_le_factorial⟩
 
+private theorem real_self_pow_ne_zero (n : ℕ) : (n : ℝ) ^ n ≠ 0 := by
+  cases n with
+  | zero => simp
+  | succ n => exact pow_ne_zero _ (Nat.cast_ne_zero.2 n.succ_ne_zero)
+
 theorem tendsto_factorial_div_pow_self_atTop :
-    Tendsto (fun n ↦ n ! / (n : ℝ) ^ n : ℕ → ℝ) atTop (𝓝 0) := by
+    Tendsto (fun n : ℕ ↦ Checked.div (n ! : ℝ) ((n : ℝ) ^ n)
+      (by exact (real_self_pow_ne_zero n).isUnit)) atTop (𝓝 0) := by
   -- On the nonzero indices, `n ! / n ^ n ≤ 1 / n`.
   refine (tendsto_comap'_iff (i := (Subtype.val : {n : ℕ // n ≠ 0} → ℕ)) (by
     rw [Subtype.range_coe_subtype]
@@ -865,7 +888,8 @@ theorem tendsto_nat_ceil_div_atTop :
       (comap Subtype.val atTop) (𝓝 1) := by
   simpa using tendsto_nat_ceil_mul_div_atTop (zero_le_one' R)
 
-lemma Nat.tendsto_div_const_atTop {n : ℕ} (hn : n ≠ 0) : Tendsto (· / n) atTop atTop := by
+lemma Nat.tendsto_div_const_atTop {n : ℕ} (hn : n ≠ 0) :
+    Tendsto (fun a => Nat.euclideanDiv a n hn) atTop atTop := by
   rw [Tendsto, map_div_atTop_eq_nat n hn.bot_lt]
 
 end

@@ -161,10 +161,7 @@ theorem ofReal_arctan (x : ℝ) :
   simp only [ofReal_tan]
   rw [arctan_tan]
   all_goals norm_cast
-  · intro h
-    have he : (↑(π / (2 : ℝ)) : ℂ) = (↑π : ℂ) / 2 := by
-      simpa only [ofReal_ofNat] using ofReal_div π 2
-    exact (Real.arctan_lt_pi_div_two x).ne (ofReal_injective (h.trans he.symm))
+  · exact (Real.arctan_lt_pi_div_two x).ne
   · exact Real.neg_pi_div_two_lt_arctan _
   · exact (Real.arctan_lt_pi_div_two _).le
 

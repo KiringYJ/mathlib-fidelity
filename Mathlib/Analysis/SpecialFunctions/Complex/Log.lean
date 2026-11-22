@@ -159,7 +159,7 @@ theorem exp_eq_one_iff_of_im_nonneg {x : ℂ} (hx : 0 ≤ x.im) :
   exact ⟨n, hn⟩
 
 theorem exp_two_pi_mul_I_mul_div_eq_one_iff {k N : ℕ} (hN : N ≠ 0) :
-    exp (2 * π * I * k / N) = 1 ↔ N ∣ k := by
+    exp (2 * π * I * k / (N : ℂ)) = 1 ↔ N ∣ k := by
   rw [exp_eq_one_iff]
   conv in _ = _ => rw [← mul_comm (2 * π * I), mul_div_assoc₀, mul_right_inj' (by simp)]
   field_simp [Nat.cast_ne_zero.mpr hN]

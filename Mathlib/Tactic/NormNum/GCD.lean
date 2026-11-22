@@ -6,6 +6,7 @@ Authors: Mario Carneiro, Kyle Miller, Eric Wieser
 module
 
 public meta import Mathlib.Data.Int.GCD
+public meta import Mathlib.Lean.Elab.NativeDivision
 public import Mathlib.Algebra.Ring.Divisibility.Basic
 public import Mathlib.Tactic.NormNum
 
@@ -151,10 +152,14 @@ def proveNatLCM (ex ey : Q(ℕ)) : (ed : Q(ℕ)) × Q(Nat.lcm $ex $ey = $ed) :=
     show (ed : Q(ℕ)) × Q(Nat.lcm $ex 0 = $ed) from ⟨q(nat_lit 0), q(Nat.lcm_zero_right $ex)⟩
   | 1, _ => show (ed : Q(ℕ)) × Q(Nat.lcm 1 $ey = $ed) from ⟨ey, q(Nat.lcm_one_left $ey)⟩
   | _, 1 => show (ed : Q(ℕ)) × Q(Nat.lcm $ex 1 = $ed) from ⟨ex, q(Nat.lcm_one_right $ex)⟩
-  | x, y =>
+  | x + 2, y + 2 =>
     let ⟨ed, pd⟩ := proveNatGCD ex ey
+    let x := x + 2
+    let y := y + 2
+    let d := Nat.gcd x y
+    have hd : d ≠ 0 := Nat.ne_of_gt (Nat.gcd_pos_of_pos_left y (Nat.succ_pos _))
     have p0 : Q(Nat.beq $ed 0 = false) := (q(Eq.refl false) : Expr)
-    have em : Q(ℕ) := mkRawNatLit (x * y / ed.natLit!)
+    have em : Q(ℕ) := mkRawNatLit (Nat.euclideanDiv (x * y) d hd)
     have pm : Q($ex * $ey = $ed * $em) := (q(Eq.refl ($ex * $ey)) : Expr)
     ⟨em, q(nat_lcm_helper $ex $ey $ed $em $pd $p0 $pm)⟩
 

@@ -382,7 +382,8 @@ theorem evariance_def' [IsProbabilityMeasure μ] {X : Ω → ℝ} (hX : AEStrong
 
 /-- **Chebyshev's inequality** for `ℝ≥0∞`-valued variance. -/
 theorem meas_ge_le_evariance_div_sq {X : Ω → ℝ} (hX : AEStronglyMeasurable X μ) {c : ℝ≥0}
-    (hc : c ≠ 0) : μ {ω | ↑c ≤ |X ω - ∫ x, X x ∂μ|} ≤ evariance X μ / c ^ 2 := by
+    (hc : c ≠ 0) : μ {ω | ↑c ≤ |X ω - ∫ x, X x ∂μ|} ≤
+      ENNReal.div (evariance X μ) ((c : ℝ≥0∞) ^ 2) := by
   have A : (c : ℝ≥0∞) ≠ 0 := by rwa [Ne, ENNReal.coe_eq_zero]
   have B : AEStronglyMeasurable (fun _ : Ω => ∫ ω, X ω ∂μ) μ := aestronglyMeasurable_const
   convert!
@@ -391,7 +392,7 @@ theorem meas_ge_le_evariance_div_sq {X : Ω → ℝ} (hX : AEStronglyMeasurable 
   · norm_cast
   rw [eLpNorm_eq_lintegral_rpow_enorm_toReal two_ne_zero ENNReal.ofNat_ne_top]
   simp only [ENNReal.toReal_ofNat, Pi.sub_apply]
-  rw [div_eq_mul_inv, ENNReal.inv_pow, mul_comm, ENNReal.rpow_two]
+  rw [ENNReal.div_eq_mul_inv, ENNReal.inv_pow, mul_comm, ENNReal.rpow_two]
   congr
   simp_rw [← ENNReal.rpow_mul,
     div_mul_cancel₀ (1 : ℝ) (hb := (two_ne_zero : (2 : ℝ) ≠ 0).isUnit),

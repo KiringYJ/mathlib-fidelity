@@ -145,8 +145,8 @@ lemma prodMk {m𝓨 : SigmaAlgebra 𝓨} [TopologicalSpace 𝓨] {μ : Set (Meas
     IsTightMeasureSet μ := by
   rw [isTightMeasureSet_iff_exists_isCompact_measure_compl_le] at hμ₁ hμ₂ ⊢
   intro ε hε
-  obtain ⟨K₁, hK₁_compact, hK₁_le⟩ := hμ₁ (ε / 2) (by aesop)
-  obtain ⟨K₂, hK₂_compact, hK₂_le⟩ := hμ₂ (ε / 2) (by aesop)
+  obtain ⟨K₁, hK₁_compact, hK₁_le⟩ := hμ₁ (ENNReal.div ε 2) (ENNReal.half_pos hε.ne')
+  obtain ⟨K₂, hK₂_compact, hK₂_le⟩ := hμ₂ (ENNReal.div ε 2) (ENNReal.half_pos hε.ne')
   refine ⟨K₁ ×ˢ K₂, hK₁_compact.prod hK₂_compact, fun κ hκ_mem ↦ ?_⟩
   grw [compl_prod_eq_union, measure_union_le, ← ENNReal.add_halves (a := ε)]
   apply add_le_add

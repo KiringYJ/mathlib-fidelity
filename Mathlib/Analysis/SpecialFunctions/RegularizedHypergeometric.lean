@@ -66,7 +66,7 @@ variable {a : Multiset ℂ} {b : Multiset ℂ} {n m : ℕ} {j k : ℂ}
 
 /-- The coefficients of the regularized hypergeometric series. -/
 def regularizedHGFunCoeff (a : Multiset ℂ) (b : Multiset ℂ) (n : ℕ) : ℂ :=
-  (a.map (ascPochhammer ℂ n).eval).prod * (b.map (reciprocalGamma <| · + n)).prod / n !
+  (a.map (ascPochhammer ℂ n).eval).prod * (b.map (reciprocalGamma <| · + n)).prod / (n ! : ℂ)
 
 attribute [grind .] Nat.factorial_ne_zero
 
@@ -439,7 +439,8 @@ theorem regularizedGaussHGFun_symm
 
 theorem coeff_regularizedGaussHGFunSeries :
     (a.regularizedGaussHGFunSeries b c).coeff n =
-    (ascPochhammer ℂ n).eval a * (ascPochhammer ℂ n).eval b * reciprocalGamma (c + n) / n ! := by
+    (ascPochhammer ℂ n).eval a * (ascPochhammer ℂ n).eval b * reciprocalGamma (c + n) /
+      (n ! : ℂ) := by
   simp [regularizedGaussHGFunSeries, regularizedHGFunCoeff]
 
 theorem reciprocalGamma_mul_ordinaryHypergeometricSeries_eq (hc : ∀ k : ℕ, c ≠ -k) {n : ℕ} :

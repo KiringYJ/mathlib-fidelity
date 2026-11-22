@@ -385,7 +385,7 @@ private lemma pow_totalWeight_sub_one_eq [DecidableEq (InfinitePlace K)] {n : �
 
 private lemma infinitePlace_apply_le_of_prod_le {n : ℕ} (hn : n ≠ 0) (B : ℝ) {x : 𝓞 K}
     (h : ∏ v : InfinitePlace K, (⨆ i, v (![(x : K), n] i)) ^ v.mult ≤ B) (v : InfinitePlace K) :
-    v x ≤ B / n ^ (totalWeight K - 1) := by
+    v x ≤ B / (n : ℝ) ^ (totalWeight K - 1) := by
   classical
   rw [le_div_iff₀' (by positivity)]
   calc
@@ -405,7 +405,7 @@ end withFinset
 
 lemma finite_setOfPred_prod_infinitePlace_iSup_le {n : ℕ} (hn : n ≠ 0) (B : ℝ) :
     {x : 𝓞 K | ∏ v : InfinitePlace K, (⨆ i, v (![(x : K), n] i)) ^ v.mult ≤ B}.Finite := by
-  set B' := B / n ^ (totalWeight K - 1)
+  set B' := B / (n : ℝ) ^ (totalWeight K - 1)
   suffices Set.BijOn ((↑) : 𝓞 K → K) {x | ∀ (v : InfinitePlace K), v x ≤ B'}
       {x | IsIntegral ℤ x ∧ ∀ (φ : K →+* ℂ), ‖φ x‖ ≤ B'} from
     this.finite_iff_finite.mpr (Embeddings.finite_of_norm_le K ℂ B') |>.subset

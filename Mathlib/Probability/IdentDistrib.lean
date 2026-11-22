@@ -272,13 +272,19 @@ theorem const_mul [Mul γ] [MeasurableMul γ] (h : IdentDistrib f g μ ν) (c : 
     IdentDistrib (fun x => c * f x) (fun x => c * g x) μ ν :=
   h.comp (measurable_const_mul c)
 
-@[to_additive]
-theorem div_const [Div γ] [MeasurableDiv γ] (h : IdentDistrib f g μ ν) (c : γ) :
+theorem sub_const [Sub γ] [MeasurableSub γ] (h : IdentDistrib f g μ ν) (c : γ) :
+    IdentDistrib (fun x => f x - c) (fun x => g x - c) μ ν :=
+  h.comp (MeasurableSub.measurable_sub_const c)
+
+theorem div_const [Group γ] [MeasurableDiv γ] (h : IdentDistrib f g μ ν) (c : γ) :
     IdentDistrib (fun x => f x / c) (fun x => g x / c) μ ν :=
   h.comp (MeasurableDiv.measurable_div_const c)
 
-@[to_additive]
-theorem const_div [Div γ] [MeasurableDiv γ] (h : IdentDistrib f g μ ν) (c : γ) :
+theorem const_sub [Sub γ] [MeasurableSub γ] (h : IdentDistrib f g μ ν) (c : γ) :
+    IdentDistrib (fun x => c - f x) (fun x => c - g x) μ ν :=
+  h.comp (MeasurableSub.measurable_const_sub c)
+
+theorem const_div [Group γ] [MeasurableDiv γ] (h : IdentDistrib f g μ ν) (c : γ) :
     IdentDistrib (fun x => c / f x) (fun x => c / g x) μ ν :=
   h.comp (MeasurableDiv.measurable_const_div c)
 

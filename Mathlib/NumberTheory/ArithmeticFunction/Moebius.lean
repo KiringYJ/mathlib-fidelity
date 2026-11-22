@@ -287,11 +287,11 @@ theorem sum_eq_iff_sum_smul_moebius_eq_on [AddCommGroup R] {f g : ℕ → R}
   · intro h
     let G := fun (n : ℕ) => (∑ i ∈ n.divisors, f i)
     intro n hn hnP
-    suffices ∑ d ∈ n.divisors, μ (n / d) • G d = f n by
-      rw [sum_divisorsAntidiagonal' (f := fun x y => μ x • g y), ← this, sum_congr rfl]
-      intro d hd
-      rw [← h d (pos_of_mem_divisors hd) <| hs d n (dvd_of_mem_divisors hd) hnP]
-    rw [← sum_divisorsAntidiagonal' (f := fun x y => μ x • G y)]
+    suffices ∑ x ∈ n.divisorsAntidiagonal, μ x.1 • G x.2 = f n by
+      rw [← this]
+      refine sum_congr rfl fun x hx => ?_
+      have hd := snd_mem_divisors_of_mem_antidiagonal hx
+      rw [← h x.2 (pos_of_mem_divisors hd) (hs x.2 n (dvd_of_mem_divisors hd) hnP)]
     apply sum_eq_iff_sum_smul_moebius_eq.mp _ n hn
     intro _ _; rfl
   · intro h

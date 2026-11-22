@@ -45,7 +45,7 @@ theorem isPrimitiveRoot_neg_I : IsPrimitiveRoot (-I) 4 := by
   simpa only [Units.val_inv_eq_inv_val₀, IsUnit.unit_spec, inv_I] using h
 
 theorem isPrimitiveRoot_exp_of_isCoprime (i : ℤ) (n : ℕ) (h0 : n ≠ 0) (hi : IsCoprime i n) :
-    IsPrimitiveRoot (exp (2 * π * I * (i / n))) n := by
+    IsPrimitiveRoot (exp (2 * π * I * ((i : ℂ) / (n : ℂ)))) n := by
   rw [IsPrimitiveRoot.iff_def]
   simp only [← exp_nat_mul, exp_eq_one_iff]
   constructor
@@ -60,7 +60,7 @@ theorem isPrimitiveRoot_exp_of_isCoprime (i : ℤ) (n : ℕ) (h0 : n ≠ 0) (hi 
     exact Int.natCast_dvd_natCast.mp (hi.symm.dvd_of_dvd_mul_right hdvd)
 
 theorem isPrimitiveRoot_exp_of_coprime (i n : ℕ) (h0 : n ≠ 0) (hi : i.Coprime n) :
-    IsPrimitiveRoot (exp (2 * π * I * (i / n))) n :=
+    IsPrimitiveRoot (exp (2 * π * I * ((i : ℂ) / (n : ℂ)))) n :=
   isPrimitiveRoot_exp_of_isCoprime _ _ h0 hi.isCoprime
 
 theorem isPrimitiveRoot_exp_rat (q : ℚ) : IsPrimitiveRoot (exp (2 * π * I * q)) q.den := by
@@ -72,7 +72,7 @@ theorem isPrimitiveRoot_exp_rat (q : ℚ) : IsPrimitiveRoot (exp (2 * π * I * q
 theorem isPrimitiveRoot_exp_rat_of_even_num (q : ℚ) (h : Even q.num) :
     IsPrimitiveRoot (exp (π * I * q)) q.den := by
   have ⟨n, hn⟩ := even_iff_exists_two_nsmul _ |>.mp h
-  convert! isPrimitiveRoot_exp_rat (n / q.den) using 1
+  convert! isPrimitiveRoot_exp_rat ((n : ℚ) / (q.den : ℚ)) using 1
   · nth_rw 1 [← q.num_div_den, hn, Int.nsmul_eq_mul]
     push_cast
     ring_nf
@@ -99,12 +99,14 @@ theorem isPrimitiveRoot_exp_rat_of_odd_num (q : ℚ) (h : Odd q.num) :
     change q.den * 2 = (Rat.normalize q.num (q.den * 2) hd).den
     rw [Rat.normalize_eq_mk' _ _ _ hred]
 
-theorem isPrimitiveRoot_exp (n : ℕ) (h0 : n ≠ 0) : IsPrimitiveRoot (exp (2 * π * I / n)) n := by
+theorem isPrimitiveRoot_exp (n : ℕ) (h0 : n ≠ 0) :
+    IsPrimitiveRoot (exp (2 * π * I / (n : ℂ))) n := by
   simpa only [Nat.cast_one, mul_one_div₀] using!
     isPrimitiveRoot_exp_of_coprime 1 n h0 n.coprime_one_left
 
 theorem isPrimitiveRoot_iff (ζ : ℂ) (n : ℕ) (hn : n ≠ 0) :
-    IsPrimitiveRoot ζ n ↔ ∃ i < n, ∃ _ : i.Coprime n, exp (2 * π * I * (i / n)) = ζ := by
+    IsPrimitiveRoot ζ n ↔
+      ∃ i < n, ∃ _ : i.Coprime n, exp (2 * π * I * ((i : ℂ) / (n : ℂ))) = ζ := by
   have hn0 : (n : ℂ) ≠ 0 := mod_cast hn
   constructor; swap
   · rintro ⟨i, -, hi, rfl⟩; exact isPrimitiveRoot_exp_of_coprime i n hn hi
@@ -120,12 +122,12 @@ theorem isPrimitiveRoot_iff (ζ : ℂ) (n : ℕ) (hn : n ≠ 0) :
 /-- The complex `n`-th roots of unity are exactly the
 complex numbers of the form `exp (2 * Real.pi * Complex.I * (i / n))` for some `i < n`. -/
 nonrec theorem mem_rootsOfUnity (n : ℕ) [NeZero n] (x : Units ℂ) :
-    x ∈ rootsOfUnity n ℂ ↔ ∃ i < n, exp (2 * π * I * (i / n)) = x := by
+    x ∈ rootsOfUnity n ℂ ↔ ∃ i < n, exp (2 * π * I * ((i : ℂ) / (n : ℂ))) = x := by
   rw [mem_rootsOfUnity, Units.ext_iff, Units.val_pow_eq_pow_val, Units.val_one]
   have hn0 : (n : ℂ) ≠ 0 := mod_cast NeZero.out
   constructor
   · intro h
-    obtain ⟨i, hi, H⟩ : ∃ i < (n : ℕ), exp (2 * π * I / n) ^ i = x :=
+    obtain ⟨i, hi, H⟩ : ∃ i < (n : ℕ), exp (2 * π * I / (n : ℂ)) ^ i = x :=
       (isPrimitiveRoot_exp n NeZero.out).eq_pow_of_pow_eq_one h
     refine ⟨i, hi, ?_⟩
     rw [← H, ← exp_nat_mul]
@@ -169,7 +171,8 @@ theorem IsPrimitiveRoot.arg_eq_pi_iff {n : ℕ} {ζ : ℂ} (hζ : IsPrimitiveRoo
     fun h => h.symm ▸ Complex.arg_neg_one⟩
 
 theorem IsPrimitiveRoot.arg {n : ℕ} {ζ : ℂ} (h : IsPrimitiveRoot ζ n) (hn : n ≠ 0) :
-    ∃ i : ℤ, ζ.arg = i / n * (2 * Real.pi) ∧ IsCoprime i n ∧ i.natAbs < n := by
+    ∃ i : ℤ, ζ.arg = (i : ℝ) / (n : ℝ) * (2 * Real.pi) ∧
+      IsCoprime i n ∧ i.natAbs < n := by
   rw [Complex.isPrimitiveRoot_iff _ _ hn] at h
   obtain ⟨i, h, hin, rfl⟩ := h
   rw [mul_comm, ← mul_assoc, Complex.exp_mul_I]
@@ -188,7 +191,7 @@ theorem IsPrimitiveRoot.arg {n : ℕ} {ζ : ℂ} (h : IsPrimitiveRoot ζ n) (hn 
     refine ⟨(neg_lt_neg Real.pi_pos).trans_le ?_, ?_⟩
     · rw [neg_zero]
       positivity
-    refine Eq.trans_le (b := Real.pi * (i * 2 / n)) (by ring) ?_
+    refine Eq.trans_le (b := Real.pi * ((i : ℝ) * 2 / (n : ℝ))) (by ring) ?_
     rw [← mul_one n] at h₂
     exact mul_le_of_le_one_right Real.pi_pos.le
       ((div_le_iff₀' <| mod_cast pos_of_gt h).mpr <| mod_cast h₂)
@@ -202,9 +205,9 @@ theorem IsPrimitiveRoot.arg {n : ℕ} {ζ : ℂ} (h : IsPrimitiveRoot ζ n) (hn 
   have hn' : 0 < (n : ℝ) := by exact_mod_cast Nat.pos_of_ne_zero hn
   have hi₁ : (n : ℝ) < (i : ℝ) * 2 := by exact_mod_cast Nat.lt_of_not_ge h₂
   have hi₂ : (i : ℝ) < (n : ℝ) := by exact_mod_cast h
-  have hl : -(1 / 2 : ℝ) < ((i : ℝ) - n) / n :=
+  have hl : -(1 / 2 : ℝ) < ((i : ℝ) - n) / (n : ℝ) :=
     (lt_div_iff₀' hn').2 (by linarith)
-  have hu : ((i : ℝ) - n) / n ≤ 0 := by
+  have hu : ((i : ℝ) - n) / (n : ℝ) ≤ 0 := by
     exact div_nonpos_of_nonpos_of_nonneg (sub_nonpos.mpr hi₂.le) hn'.le
   constructor
   · have hmul := mul_lt_mul_of_pos_right hl (by positivity : 0 < 2 * Real.pi)

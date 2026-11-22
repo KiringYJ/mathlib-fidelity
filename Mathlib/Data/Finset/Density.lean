@@ -70,7 +70,8 @@ lemma dens_card_cast_ne_zero : (Fintype.card α : ℚ≥0) ≠ 0 :=
 private lemma card_cast_pos : (0 : ℚ≥0) < Fintype.card α :=
   Nat.cast_pos.mpr Fintype.card_pos
 
-lemma dens_eq_card_div_card (s : Finset α) : dens s = s.card / Fintype.card α :=
+lemma dens_eq_card_div_card (s : Finset α) :
+    dens s = (s.card : ℚ≥0) / (Fintype.card α : ℚ≥0) :=
   NNRat.divNat_eq_div _ _ _
 
 @[simp] lemma dens_mul_card (s : Finset α) : s.dens * Fintype.card α = s.card :=
@@ -161,7 +162,8 @@ variable [Semifield 𝕜] [CharZero 𝕜]
   have h := congrArg (fun q : ℚ≥0 => (q : 𝕜)) (dens_mul_card s)
   simpa only [NNRat.cast_mul, NNRat.cast_natCast] using h
 
-@[norm_cast] lemma nnratCast_dens (s : Finset α) : (s.dens : 𝕜) = s.card / Fintype.card α :=
+@[norm_cast] lemma nnratCast_dens (s : Finset α) :
+    (s.dens : 𝕜) = (s.card : 𝕜) / (Fintype.card α : 𝕜) :=
   eq_div_iff.mpr (nnratCast_dens_mul_natCast_card s)
 
 end Semifield

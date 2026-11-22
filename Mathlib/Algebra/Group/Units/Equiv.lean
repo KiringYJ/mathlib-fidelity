@@ -138,7 +138,7 @@ theorem mulRight_symm_apply (a : G) : ((Equiv.mulRight a).symm : G → G) = fun 
 theorem _root_.Group.mulRight_bijective (a : G) : Function.Bijective (· * a) :=
   (Equiv.mulRight a).bijective
 
-/-- A version of `Equiv.mulLeft a b⁻¹` that is defeq to `a / b`. -/
+/-- Left multiplication by `a` after inversion. Its value at `b` is `a / b`. -/
 @[to_additive (attr := simps) /-- A version of `Equiv.addLeft a (-b)` that is defeq to `a - b`. -/]
 protected def divLeft (a : G) : G ≃ G where
   toFun b := a / b
@@ -151,7 +151,7 @@ theorem divLeft_eq_inv_trans_mulLeft (a : G) :
     Equiv.divLeft a = (Equiv.inv G).trans (Equiv.mulLeft a) :=
   ext fun _ => div_eq_mul_inv _ _
 
-/-- A version of `Equiv.mulRight a⁻¹ b` that is defeq to `b / a`. -/
+/-- Right multiplication by the inverse of `a`. Its value at `b` is `b / a`. -/
 @[to_additive (attr := simps) /-- A version of `Equiv.addRight (-a) b` that is defeq to `b - a`. -/]
 protected def divRight (a : G) : G ≃ G where
   toFun b := b / a

@@ -157,7 +157,8 @@ over ℤ. -/
 theorem isIntegral_of_mahlerMeasure_eq_one : IsIntegral ℤ z := by
   have : p.leadingCoeff = 1 ∨ p.leadingCoeff = -1 := abs_eq_abs.mp <|
     abs_leadingCoeff_eq_one_of_mahlerMeasure_eq_one h
-  have : (C (1 / p.leadingCoeff) * p).Monic := by aesop (add safe (by simp [Monic.def]))
+  have : (C p.leadingCoeff * p).Monic := by
+    rcases this with h | h <;> simp [Monic.def, h]
   have hz' : (p.map (algebraMap ℤ ℂ)).IsRoot z := (mem_roots hpz).mp hz
   grind [IsIntegral, RingHom.IsIntegralElem, IsRoot.def, eval₂_mul, eval_map]
 

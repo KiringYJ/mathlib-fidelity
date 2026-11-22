@@ -261,22 +261,22 @@ variable {𝕂 𝔸 : Type*} [Field 𝕂] [CharZero 𝕂] [DivisionRing 𝔸] [A
 
 theorem expSeries_apply_eq_div (x : 𝔸) (n : ℕ) :
     let _ : CharZero 𝔸 := Algebra.charZero_of_charZero 𝕂 𝔸
-    (expSeries 𝕂 𝔸 n fun _ => x) = x ^ n / n ! := by
+    (expSeries 𝕂 𝔸 n fun _ => x) = x ^ n / (n ! : 𝔸) := by
   let _ : CharZero 𝔸 := Algebra.charZero_of_charZero 𝕂 𝔸
   rw [div_eq_mul_inv₀, ← (Nat.cast_commute n ! (x ^ n)).inv_left₀.eq, ← smul_eq_mul,
     expSeries_apply_eq, inv_natCast_smul_eq 𝕂 𝔸]
 
 theorem expSeries_apply_eq_div' (x : 𝔸) :
     let _ : CharZero 𝔸 := Algebra.charZero_of_charZero 𝕂 𝔸
-    (fun n => expSeries 𝕂 𝔸 n fun _ => x) = fun n => x ^ n / n ! :=
+    (fun n => expSeries 𝕂 𝔸 n fun _ => x) = fun n => x ^ n / (n ! : 𝔸) :=
   funext (expSeries_apply_eq_div x)
 
 theorem expSeries_sum_eq_div (x : 𝔸) :
     let _ : CharZero 𝔸 := Algebra.charZero_of_charZero 𝕂 𝔸
-    (expSeries 𝕂 𝔸).sum x = ∑' n : ℕ, x ^ n / n ! :=
+    (expSeries 𝕂 𝔸).sum x = ∑' n : ℕ, x ^ n / (n ! : 𝔸) :=
   tsum_congr (expSeries_apply_eq_div x)
 
-theorem exp_eq_tsum_div [CharZero 𝔸] : exp = fun x : 𝔸 => ∑' n : ℕ, x ^ n / n ! := by
+theorem exp_eq_tsum_div [CharZero 𝔸] : exp = fun x : 𝔸 => ∑' n : ℕ, x ^ n / (n ! : 𝔸) := by
   rw [exp_eq_expSeries_sum ℚ]
   ext x
   exact expSeries_sum_eq_div x
@@ -437,7 +437,7 @@ variable (𝕂)
 theorem norm_expSeries_div_summable_of_mem_ball (x : 𝔸)
     (hx : x ∈ Metric.eball (0 : 𝔸) (expSeries 𝕂 𝔸).radius) :
     let _ : CharZero 𝔸 := Algebra.charZero_of_charZero 𝕂 𝔸
-    Summable fun n => ‖x ^ n / (n !)‖ := by
+    Summable fun n => ‖x ^ n / (n ! : 𝔸)‖ := by
   let _ : CharZero 𝔸 := Algebra.charZero_of_charZero 𝕂 𝔸
   change Summable (norm ∘ _)
   rw [← expSeries_apply_eq_div' (𝕂 := 𝕂) x]
@@ -446,13 +446,13 @@ theorem norm_expSeries_div_summable_of_mem_ball (x : 𝔸)
 theorem expSeries_div_summable_of_mem_ball [CompleteSpace 𝔸] (x : 𝔸)
     (hx : x ∈ Metric.eball (0 : 𝔸) (expSeries 𝕂 𝔸).radius) :
     let _ : CharZero 𝔸 := Algebra.charZero_of_charZero 𝕂 𝔸
-    Summable fun n => x ^ n / n ! :=
+    Summable fun n => x ^ n / (n ! : 𝔸) :=
   (norm_expSeries_div_summable_of_mem_ball 𝕂 x hx).of_norm
 
 theorem expSeries_div_hasSum_exp_of_mem_ball [CompleteSpace 𝔸] (x : 𝔸)
     (hx : x ∈ Metric.eball (0 : 𝔸) (expSeries 𝕂 𝔸).radius) :
     let _ : CharZero 𝔸 := Algebra.charZero_of_charZero 𝕂 𝔸
-    HasSum (fun n => x ^ n / n !) (exp x) := by
+    HasSum (fun n => x ^ n / (n ! : 𝔸)) (exp x) := by
   let _ : CharZero 𝔸 := Algebra.charZero_of_charZero 𝕂 𝔸
   rw [← expSeries_apply_eq_div' (𝕂 := 𝕂) x]
   exact expSeries_hasSum_exp_of_mem_ball x hx
@@ -675,16 +675,16 @@ variable {𝔸 : Type*} [NormedDivisionRing 𝔸] [NormedAlgebra ℚ 𝔸]
 
 local instance : CharZero 𝔸 := Algebra.charZero_of_charZero ℚ 𝔸
 
-theorem norm_expSeries_div_summable (x : 𝔸) : Summable fun n => ‖(x ^ n / n ! : 𝔸)‖ :=
+theorem norm_expSeries_div_summable (x : 𝔸) : Summable fun n => ‖x ^ n / (n ! : 𝔸)‖ :=
   norm_expSeries_div_summable_of_mem_ball ℚ x
     ((expSeries_radius_eq_top ℚ 𝔸).symm ▸ edist_lt_top _ _)
 
 variable [CompleteSpace 𝔸]
 
-theorem expSeries_div_summable (x : 𝔸) : Summable fun n => x ^ n / n ! :=
+theorem expSeries_div_summable (x : 𝔸) : Summable fun n => x ^ n / (n ! : 𝔸) :=
   (norm_expSeries_div_summable x).of_norm
 
-theorem expSeries_div_hasSum_exp (x : 𝔸) : HasSum (fun n => x ^ n / n !) (exp x) :=
+theorem expSeries_div_hasSum_exp (x : 𝔸) : HasSum (fun n => x ^ n / (n ! : 𝔸)) (exp x) :=
   expSeries_div_hasSum_exp_of_mem_ball ℚ x ((expSeries_radius_eq_top ℚ 𝔸).symm ▸ edist_lt_top _ _)
 
 

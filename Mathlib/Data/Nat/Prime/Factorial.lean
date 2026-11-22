@@ -43,8 +43,8 @@ lemma Prime.coprime_factorial_of_lt {p n : ℕ} (hp : p.Prime) (hn : n < p) :
 
 lemma Prime.coprime_descFactorial_of_lt_of_le {p n k : ℕ} (hp : p.Prime) (hn : n < p) (hk : k ≤ n) :
     p.Coprime (n.descFactorial k) := by
-  rw [Nat.descFactorial_eq_div hk]
-  refine (hp.coprime_factorial_of_lt hn).coprime_div_right ?_
-  simp [Nat.factorial_dvd_factorial]
+  have h := hp.coprime_factorial_of_lt hn
+  rw [← Nat.factorial_mul_descFactorial hk] at h
+  exact h.coprime_mul_left_right
 
 end Nat

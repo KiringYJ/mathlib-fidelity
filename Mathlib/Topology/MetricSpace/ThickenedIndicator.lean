@@ -52,14 +52,14 @@ these values using `infEDist _ E`.
 `thickenedIndicatorAux` is the unbundled `ℝ≥0∞`-valued function. See `thickenedIndicator`
 for the (bundled) bounded continuous function with `ℝ≥0`-values. -/
 def thickenedIndicatorAux (δ : ℝ) (E : Set α) : α → ℝ≥0∞ :=
-  fun x : α => (1 : ℝ≥0∞) - infEDist x E / ENNReal.ofReal δ
+  fun x : α => (1 : ℝ≥0∞) - ENNReal.div (infEDist x E) (ENNReal.ofReal δ)
 
 theorem continuous_thickenedIndicatorAux {δ : ℝ} (δ_pos : 0 < δ) (E : Set α) :
     Continuous (thickenedIndicatorAux δ E) := by
   unfold thickenedIndicatorAux
-  let f := fun x : α => (⟨1, infEDist x E / ENNReal.ofReal δ⟩ : ℝ≥0 × ℝ≥0∞)
+  let f := fun x : α => (⟨1, ENNReal.div (infEDist x E) (ENNReal.ofReal δ)⟩ : ℝ≥0 × ℝ≥0∞)
   let sub := fun p : ℝ≥0 × ℝ≥0∞ => (p.1 : ℝ≥0∞) - p.2
-  rw [show (fun x : α => (1 : ℝ≥0∞) - infEDist x E / ENNReal.ofReal δ) = sub ∘ f by rfl]
+  change Continuous (sub ∘ f)
   apply (@ENNReal.continuous_nnreal_sub 1).comp
   apply (ENNReal.continuous_div_const (ENNReal.ofReal δ) _).comp continuous_infEDist
   norm_num [δ_pos]
@@ -114,7 +114,7 @@ lemma thickenedIndicatorAux_mono_infEDist (δ : ℝ) {E : Set α} {x y : α}
     (h : infEDist x E ≤ infEDist y E) :
     thickenedIndicatorAux δ E y ≤ thickenedIndicatorAux δ E x := by
   simp only [thickenedIndicatorAux]
-  rcases le_total (infEDist x E / ENNReal.ofReal δ) 1 with hle | hle
+  rcases le_total (ENNReal.div (infEDist x E) (ENNReal.ofReal δ)) 1 with hle | hle
   · rw [ENNReal.sub_le_sub_iff_left hle (by simp)]
     gcongr
   · rw [tsub_eq_zero_of_le hle, tsub_eq_zero_of_le]
@@ -265,7 +265,7 @@ lemma lipschitzWith_thickenedIndicator {δ : ℝ} (δ_pos : 0 < δ) (E : Set α)
   rw [← ENNReal.toReal_sub_of_le (thickenedIndicatorAux_mono_infEDist _ h) (by finiteness)]
   simp only [thickenedIndicatorAux, abs_toReal, ne_eq, sub_eq_top_iff, one_ne_top, false_and,
     not_false_eq_true, and_true, ofReal_toReal]
-  rw [ENNReal.coe_inv, ENNReal.ofReal, div_eq_mul_inv, div_eq_mul_inv]
+  rw [ENNReal.coe_inv, ENNReal.ofReal, ENNReal.div_eq_mul_inv, ENNReal.div_eq_mul_inv]
   by_cases h_le : infEDist y E * (↑δ.toNNReal)⁻¹ ≤ 1
   · calc 1 - infEDist x E * (↑δ.toNNReal)⁻¹ - (1 - infEDist y E * (↑δ.toNNReal)⁻¹)
     _ ≤ infEDist y E * (↑δ.toNNReal)⁻¹ - infEDist x E * (↑δ.toNNReal)⁻¹ := by

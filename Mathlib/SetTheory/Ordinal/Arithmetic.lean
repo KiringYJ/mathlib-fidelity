@@ -15,7 +15,8 @@ public import Mathlib.SetTheory.Ordinal.Basic
 
 Ordinals have an addition (corresponding to the disjoint union) that turns them into an additive
 monoid, and a multiplication (corresponding to the lexicographic order on the product) that turns
-them into a monoid. One can also define (truncated) subtraction and division operators.
+them into a monoid. There is also truncated subtraction and a Euclidean quotient by a nonzero
+ordinal.
 
 Ordinal powers and logarithms are defined in `Mathlib.SetTheory.Ordinal.Exponential`.
 
@@ -24,8 +25,8 @@ Ordinal powers and logarithms are defined in `Mathlib.SetTheory.Ordinal.Exponent
 * `a + b` is the order type of the lexicographic sum `a ⊕ₗ b`.
 * `a - b` is the unique ordinal `c` such that `b + c = a`, when `b ≤ a`.
 * `a * b` is the order type of the lexicographic product `b ×ₗ a`.
-* `a / b` is the ordinal `q` such that `a = b * q + r` with `r < b`. We also define the
-  divisibility predicate, and a modulo operation.
+* `quotient a b hb`, for `hb : b ≠ 0`, is the ordinal `q` such that `a = b * q + r` with
+  `r < b`. The remainder is `a % b`, with `a % 0 = a`.
 * `limitRecOn` is limit recursion on ordinals, i.e. well-founded recursion separating out the zero,
   successor, and limit cases.
 
@@ -559,61 +560,57 @@ protected theorem mul_two (o : Ordinal) : o * 2 = o + o := by
 
 /-! ### Division on ordinals -/
 
-/-- `a / b` is the unique ordinal `q` satisfying `a = b * q + r` with `r < b`. -/
+/-- The left Euclidean quotient by a nonzero ordinal. It is the greatest ordinal `q`
+for which `b * q ≤ a`, so that `a = b * q + r` for some `r < b`. -/
 @[no_expose]
-instance div : Div Ordinal where
-  div a b := sSup ((b * ·) ⁻¹' Iic a)
-
-@[simp]
-theorem div_zero (a : Ordinal) : a / 0 = 0 := by
-  change sSup _ = _
-  simp
+def quotient (a b : Ordinal) (hb : b ≠ 0) : Ordinal :=
+  sSup (OrderEmbedding.ofStrictMono (b * ·) (isNormal_mul_right hb.pos).strictMono ⁻¹' Iic a)
 
 /-- Multiplication and division by a non-zero ordinal form a Galois connection. -/
-theorem mul_div_gc {a : Ordinal} (ha : a ≠ 0) : GaloisConnection (a * ·) (· / a) :=
+theorem mul_div_gc {a : Ordinal} (ha : a ≠ 0) :
+    GaloisConnection (a * ·) (fun c ↦ quotient c a ha) :=
   fun b c ↦ (isNormal_mul_right ha.pos).le_iff_le_sSup' ⟨0, by simp⟩
 
-theorem mul_le_iff_le_div {a b c : Ordinal} (ha : a ≠ 0) : a * b ≤ c ↔ b ≤ c / a :=
+theorem mul_le_iff_le_div {a b c : Ordinal} (ha : a ≠ 0) : a * b ≤ c ↔ b ≤ quotient c a ha :=
   (mul_div_gc ha).le_iff_le
 
-theorem lt_mul_iff_div_lt {a b c : Ordinal} (ha : a ≠ 0) : c < a * b ↔ c / a < b :=
+theorem lt_mul_iff_div_lt {a b c : Ordinal} (ha : a ≠ 0) : c < a * b ↔ quotient c a ha < b :=
   (mul_div_gc ha).lt_iff_lt
 
-theorem lt_mul_succ_div (a) {b : Ordinal} (h : b ≠ 0) : a < b * succ (a / b) := by
+theorem lt_mul_succ_div (a) {b : Ordinal} (h : b ≠ 0) : a < b * succ (quotient a b h) := by
   rw [lt_mul_iff_div_lt h, lt_succ_iff]
 
-theorem lt_mul_div_add (a) {b : Ordinal} (h : b ≠ 0) : a < b * (a / b) + b := by
+theorem lt_mul_div_add (a) {b : Ordinal} (h : b ≠ 0) : a < b * quotient a b h + b := by
   simpa only [mul_succ] using lt_mul_succ_div a h
 
-theorem div_le {a b c : Ordinal} (b0 : b ≠ 0) : a / b ≤ c ↔ a < b * succ c := by
+theorem div_le {a b c : Ordinal} (b0 : b ≠ 0) : quotient a b b0 ≤ c ↔ a < b * succ c := by
   rw [← lt_succ_iff, ← lt_mul_iff_div_lt b0]
 
-theorem lt_div {a b c : Ordinal} (h : c ≠ 0) : a < b / c ↔ c * succ a ≤ b := by
+theorem lt_div {a b c : Ordinal} (h : c ≠ 0) : a < quotient b c h ↔ c * succ a ≤ b := by
   rw [← not_le, div_le h, not_lt]
 
-theorem div_pos {b c : Ordinal} (h : c ≠ 0) : 0 < b / c ↔ c ≤ b := by simp [lt_div h]
+theorem div_pos {b c : Ordinal} (h : c ≠ 0) : 0 < quotient b c h ↔ c ≤ b := by simp [lt_div h]
 
-theorem div_le_of_le_mul {a b c : Ordinal} (h : a ≤ b * c) : a / b ≤ c := by
-  obtain rfl | b0 := eq_or_ne b 0
-  · simp
-  · exact (div_le b0).2 <| h.trans_lt <| mul_lt_mul_of_pos_left (lt_succ c) (pos_iff_ne_zero.2 b0)
+theorem div_le_of_le_mul {a b c : Ordinal} (hb : b ≠ 0) (h : a ≤ b * c) :
+    quotient a b hb ≤ c :=
+  (div_le hb).2 <| h.trans_lt <| mul_lt_mul_of_pos_left (lt_succ c) hb.pos
 
-theorem mul_lt_of_lt_div {a b c : Ordinal} : a < b / c → c * a < b :=
-  lt_imp_lt_of_le_imp_le div_le_of_le_mul
+theorem mul_lt_of_lt_div {a b c : Ordinal} (hc : c ≠ 0) : a < quotient b c hc → c * a < b :=
+  lt_imp_lt_of_le_imp_le (div_le_of_le_mul hc)
 
 @[simp]
-theorem zero_div (a : Ordinal) : 0 / a = 0 := nonpos_iff_eq_zero.1 <| div_le_of_le_mul zero_le
+theorem zero_div (a : Ordinal) (ha : a ≠ 0) : quotient 0 a ha = 0 :=
+  nonpos_iff_eq_zero.1 <| div_le_of_le_mul ha zero_le
 
-theorem mul_div_le (a b : Ordinal) : b * (a / b) ≤ a :=
-  if b0 : b = 0 then by simp [b0] else (mul_le_iff_le_div b0).2 le_rfl
+theorem mul_div_le (a b : Ordinal) (hb : b ≠ 0) : b * quotient a b hb ≤ a :=
+  (mul_le_iff_le_div hb).2 le_rfl
 
-theorem div_le_left {a b : Ordinal} (h : a ≤ b) (c : Ordinal) : a / c ≤ b / c := by
-  obtain rfl | hc := eq_or_ne c 0
-  · rw [div_zero, div_zero]
-  · rw [← mul_le_iff_le_div hc]
-    exact (mul_div_le a c).trans h
+theorem div_le_left {a b : Ordinal} (h : a ≤ b) (c : Ordinal) (hc : c ≠ 0) :
+    quotient a c hc ≤ quotient b c hc :=
+  (mul_div_gc hc).monotone_u h
 
-theorem mul_add_div (a) {b : Ordinal} (b0 : b ≠ 0) (c) : (b * a + c) / b = a + c / b := by
+theorem mul_add_div (a) {b : Ordinal} (b0 : b ≠ 0) (c) :
+    quotient (b * a + c) b b0 = a + quotient c b b0 := by
   apply le_antisymm
   · apply (div_le b0).2
     rw [mul_succ, mul_add, add_assoc, add_lt_add_iff_left]
@@ -621,57 +618,53 @@ theorem mul_add_div (a) {b : Ordinal} (b0 : b ≠ 0) (c) : (b * a + c) / b = a +
   · rw [← mul_le_iff_le_div b0, mul_add, add_le_add_iff_left]
     apply mul_div_le
 
-theorem div_eq_zero_of_lt {a b : Ordinal} (h : a < b) : a / b = 0 := by
+theorem div_eq_zero_of_lt {a b : Ordinal} (h : a < b) : quotient a b h.ne_bot = 0 := by
   rw [← nonpos_iff_eq_zero, div_le h.ne_bot]
   simpa
 
 @[simp]
-theorem mul_div_cancel (a) {b : Ordinal} (b0 : b ≠ 0) : b * a / b = a := by
+theorem mul_div_cancel (a) {b : Ordinal} (b0 : b ≠ 0) : quotient (b * a) b b0 = a := by
   simpa using mul_add_div a b0 0
 
-theorem mul_add_div_mul {a c : Ordinal} (hc : c < a) (b d : Ordinal) :
-    (a * b + c) / (a * d) = b / d := by
-  obtain rfl | hd := eq_or_ne d 0
-  · rw [mul_zero, div_zero, div_zero]
-  · have H := mul_ne_zero hc.ne_zero hd
-    apply le_antisymm
-    · rw [← lt_succ_iff, ← lt_mul_iff_div_lt H, mul_assoc]
-      · grw [hc, ← mul_succ]
-        gcongr
-        rw [succ_le_iff]
-        exact lt_mul_succ_div b hd
-    · grw [← mul_le_iff_le_div H, mul_assoc, mul_div_le b d, ← le_self_add]
+theorem mul_add_div_mul {a c : Ordinal} (hc : c < a) (b d : Ordinal) (hd : d ≠ 0) :
+    quotient (a * b + c) (a * d) (mul_ne_zero hc.ne_zero hd) = quotient b d hd := by
+  have H := mul_ne_zero hc.ne_zero hd
+  apply le_antisymm
+  · rw [← lt_succ_iff, ← lt_mul_iff_div_lt H, mul_assoc]
+    grw [hc, ← mul_succ]
+    gcongr
+    rw [succ_le_iff]
+    exact lt_mul_succ_div b hd
+  · grw [← mul_le_iff_le_div H, mul_assoc, mul_div_le b d hd, ← le_self_add]
 
-theorem mul_div_mul_cancel {a : Ordinal} (ha : a ≠ 0) (b c) : a * b / (a * c) = b / c := by
-  convert! mul_add_div_mul (pos_iff_ne_zero.2 ha) b c using 1
-  rw [add_zero]
+theorem mul_div_mul_cancel {a : Ordinal} (ha : a ≠ 0) (b c : Ordinal) (hc : c ≠ 0) :
+    quotient (a * b) (a * c) (mul_ne_zero ha hc) = quotient b c hc := by
+  simpa using mul_add_div_mul ha.pos b c hc
 
-theorem div_eq {a b c : Ordinal} (hle : b * c ≤ a) (hlt : a < b * (c + 1)) : a / b = c := by
-  rcases eq_or_ne b 0 with (rfl | hb)
-  · simp at hlt
-  exact le_antisymm (div_le hb |>.mpr hlt) (mul_le_iff_le_div hb |>.mp hle)
+theorem div_eq {a b c : Ordinal} (hle : b * c ≤ a) (hlt : a < b * (c + 1)) :
+    quotient a b (left_ne_zero_of_mul hlt.ne_bot) = c :=
+  le_antisymm ((div_le _).mpr hlt) ((mul_le_iff_le_div _).mp hle)
 
-/-- Characterization of `a / b = c` assuming `b ≠ 0`.
-See `div_eq_iff'` for a version assuming `c ≠ 0` instead. -/
-theorem div_eq_iff {a b c : Ordinal} (hb : b ≠ 0) : a / b = c ↔ b * c ≤ a ∧ a < b * (c + 1) :=
-  ⟨fun h ↦ h ▸ ⟨mul_div_le a b, lt_mul_succ_div a hb⟩, fun ⟨hle, hlt⟩ ↦ div_eq hle hlt⟩
+/-- The quotient is determined by two successive left multiples of its nonzero divisor. -/
+theorem div_eq_iff {a b c : Ordinal} (hb : b ≠ 0) :
+    quotient a b hb = c ↔ b * c ≤ a ∧ a < b * (c + 1) :=
+  ⟨fun h ↦ h ▸ ⟨mul_div_le a b hb, lt_mul_succ_div a hb⟩, fun ⟨hle, hlt⟩ ↦ div_eq hle hlt⟩
 
-/-- Characterization of `a / b = c` assuming `c ≠ 0`.
-See `div_eq_iff` for a version assuming `b ≠ 0` instead. -/
-theorem div_eq_iff' {a b c : Ordinal} (hc : c ≠ 0) : a / b = c ↔ b * c ≤ a ∧ a < b * (c + 1) := by
-  rcases eq_or_ne b 0 with (rfl | hb)
-  · simp [hc.symm]
-  exact div_eq_iff hb
+/-- Reconstruction with a remainder smaller than the divisor identifies the quotient. -/
+theorem quotient_eq_of_remainder {a b q r : Ordinal} (hb : b ≠ 0)
+    (ha : a = b * q + r) (hr : r < b) : quotient a b hb = q := by
+  rw [ha, mul_add_div _ hb, div_eq_zero_of_lt hr, add_zero]
 
-theorem div_eq_one_iff {a b : Ordinal} : a / b = 1 ↔ b ≤ a ∧ a < b * 2 := by
-  rw [div_eq_iff' one_ne_zero, mul_one, one_add_one_eq_two]
+theorem div_eq_one_iff {a b : Ordinal} (hb : b ≠ 0) :
+    quotient a b hb = 1 ↔ b ≤ a ∧ a < b * 2 := by
+  rw [div_eq_iff hb, mul_one, one_add_one_eq_two]
 
 @[simp]
-theorem div_one (a : Ordinal) : a / 1 = a := by
+theorem div_one (a : Ordinal) : quotient a 1 one_ne_zero = a := by
   simpa only [one_mul] using mul_div_cancel a one_ne_zero
 
 @[simp]
-theorem div_self {a : Ordinal} (h : a ≠ 0) : a / a = 1 := by
+theorem div_self {a : Ordinal} (h : a ≠ 0) : quotient a a h = 1 := by
   simpa only [mul_one] using mul_div_cancel 1 h
 
 theorem mul_sub (a b c : Ordinal) : a * (b - c) = a * b - a * c := by
@@ -701,8 +694,9 @@ theorem dvd_add_iff : ∀ {a b c : Ordinal}, a ∣ b → (a ∣ b + c ↔ a ∣ 
       rw [e, ← mul_add]
       apply dvd_mul_right⟩
 
-theorem div_mul_cancel : ∀ {a b : Ordinal}, a ≠ 0 → a ∣ b → a * (b / a) = b
-  | a, _, a0, ⟨b, rfl⟩ => by rw [mul_div_cancel _ a0]
+theorem div_mul_cancel {a b : Ordinal} (ha : a ≠ 0) (h : a ∣ b) : a * quotient b a ha = b := by
+  obtain ⟨c, rfl⟩ := h
+  rw [mul_div_cancel _ ha]
 
 theorem le_of_dvd {a b : Ordinal} (b0 : b ≠ 0) (h : a ∣ b) : a ≤ b := by
   rcases h with ⟨b, rfl⟩
@@ -719,27 +713,31 @@ instance : IsPartialOrder Ordinal (· ∣ ·) where
   trans _ _ _ := dvd_trans
   antisymm := @dvd_antisymm
 
-/-- `a % b` is the unique ordinal `r` satisfying `a = b * q + r` with `r < b`. -/
+/-- The left Euclidean remainder, with `a % 0 = a` as required by reconstruction at zero. -/
 instance mod : Mod Ordinal where
-  mod a b := a - b * (a / b)
+  mod a b := if hb : b = 0 then a else a - b * quotient a b hb
 
-theorem mod_def (a b : Ordinal) : a % b = a - b * (a / b) :=
-  rfl
-
-theorem mod_le (a b : Ordinal) : a % b ≤ a :=
-  sub_le_self a _
+theorem mod_def (a b : Ordinal) (hb : b ≠ 0) : a % b = a - b * quotient a b hb :=
+  dite_eq_right hb
 
 @[simp]
-theorem mod_zero (a : Ordinal) : a % 0 = a := by simp [mod_def]
+theorem mod_zero (a : Ordinal) : a % 0 = a := dite_eq_left rfl
+
+theorem mod_le (a b : Ordinal) : a % b ≤ a := by
+  obtain rfl | hb := eq_or_ne b 0
+  · simp
+  · rw [mod_def _ _ hb]
+    exact sub_le_self a _
 
 theorem mod_eq_of_lt {a b : Ordinal} (h : a < b) : a % b = a := by
-  simp [mod_def, div_eq_zero_of_lt h]
+  simp [mod_def _ _ h.ne_bot, div_eq_zero_of_lt h]
 
 @[simp]
-theorem zero_mod (b : Ordinal) : 0 % b = 0 := by simp [mod_def]
+theorem zero_mod (b : Ordinal) : 0 % b = 0 := nonpos_iff_eq_zero.1 (mod_le 0 b)
 
-theorem div_add_mod (a b : Ordinal) : b * (a / b) + a % b = a :=
-  Ordinal.add_sub_cancel_of_le <| mul_div_le _ _
+theorem div_add_mod (a b : Ordinal) (hb : b ≠ 0) : b * quotient a b hb + a % b = a := by
+  rw [mod_def _ _ hb]
+  exact Ordinal.add_sub_cancel_of_le (mul_div_le a b hb)
 
 theorem mod_lt (a) {b : Ordinal} (h : b ≠ 0) : a % b < b := by
   rw [← add_lt_add_iff_left, div_add_mod]
@@ -749,19 +747,21 @@ theorem mod_lt (a) {b : Ordinal} (h : b ≠ 0) : a % b < b := by
 theorem mod_self (a : Ordinal) : a % a = 0 := by
   obtain rfl | ha := eq_or_ne a 0
   · simp
-  · simp [mod_def, ha]
+  · simp [mod_def _ _ ha]
 
 @[simp]
-theorem mod_one (a : Ordinal) : a % 1 = 0 := by simp [mod_def]
+theorem mod_one (a : Ordinal) : a % 1 = 0 := by simp [mod_def _ _ one_ne_zero]
 
-theorem dvd_of_mod_eq_zero {a b : Ordinal} (H : a % b = 0) : b ∣ a :=
-  ⟨a / b, by simpa [H] using (div_add_mod a b).symm⟩
+theorem dvd_of_mod_eq_zero {a b : Ordinal} (H : a % b = 0) : b ∣ a := by
+  obtain rfl | hb := eq_or_ne b 0
+  · simpa using H
+  · exact ⟨quotient a b hb, by simpa [H] using (div_add_mod a b hb).symm⟩
 
 theorem mod_eq_zero_of_dvd {a b : Ordinal} (H : b ∣ a) : a % b = 0 := by
   rcases H with ⟨c, rfl⟩
   rcases eq_or_ne b 0 with (rfl | hb)
   · simp
-  · simp [mod_def, hb]
+  · simp [mod_def _ _ hb]
 
 theorem dvd_iff_mod_eq_zero {a b : Ordinal} : b ∣ a ↔ a % b = 0 :=
   ⟨mod_eq_zero_of_dvd, dvd_of_mod_eq_zero⟩
@@ -770,7 +770,7 @@ theorem dvd_iff_mod_eq_zero {a b : Ordinal} : b ∣ a ↔ a % b = 0 :=
 theorem mul_add_mod_self (x y z : Ordinal) : (x * y + z) % x = z % x := by
   rcases eq_or_ne x 0 with rfl | hx
   · simp
-  · rwa [mod_def, mul_add_div, mul_add, ← sub_sub, add_sub_cancel, mod_def]
+  · rw [mod_def _ _ hx, mul_add_div, mul_add, ← sub_sub, add_sub_cancel, mod_def _ _ hx]
 
 @[simp]
 theorem mul_mod (x y : Ordinal) : x * y % x = 0 := by
@@ -778,7 +778,9 @@ theorem mul_mod (x y : Ordinal) : x * y % x = 0 := by
 
 theorem mul_add_mod_mul {w x : Ordinal} (hw : w < x) (y z : Ordinal) :
     (x * y + w) % (x * z) = x * (y % z) + w := by
-  rw [mod_def, mul_add_div_mul hw]
+  obtain rfl | hz := eq_or_ne z 0
+  · simp
+  rw [mod_def _ _ (mul_ne_zero hw.ne_bot hz), mul_add_div_mul hw y z hz]
   apply sub_eq_of_add_eq
   rw [← add_assoc, mul_assoc, ← mul_add, div_add_mod]
 
@@ -789,7 +791,9 @@ theorem mul_mod_mul (x y z : Ordinal) : (x * y) % (x * z) = x * (y % z) := by
     rw [add_zero]
 
 theorem mod_mod_of_dvd (a : Ordinal) {b c : Ordinal} (h : c ∣ b) : a % b % c = a % c := by
-  nth_rw 2 [← div_add_mod a b]
+  obtain rfl | hb := eq_or_ne b 0
+  · simp
+  nth_rw 2 [← div_add_mod a b hb]
   rcases h with ⟨d, rfl⟩
   rw [mul_assoc, mul_add_mod_self]
 
@@ -799,7 +803,7 @@ theorem mod_mod (a b : Ordinal) : a % b % b = a % b :=
 
 theorem lt_mul_iff {a b c : Ordinal} : a < b * c ↔ ∃ q < c, ∃ r < b, a = b * q + r := by
   obtain rfl | hb₀ := eq_or_ne b 0; · simp
-  refine ⟨fun h ↦ ⟨_, (lt_mul_iff_div_lt hb₀).1 h, _, mod_lt a hb₀, (div_add_mod ..).symm⟩, ?_⟩
+  refine ⟨fun h ↦ ⟨_, (lt_mul_iff_div_lt hb₀).1 h, _, mod_lt a hb₀, (div_add_mod a b hb₀).symm⟩, ?_⟩
   rintro ⟨q, hq, r, hr, rfl⟩
   grw [hr, ← mul_add_one, add_one_le_iff.2 hq]
 
@@ -839,21 +843,20 @@ theorem natCast_sub (m n : ℕ) : ((m - n : ℕ) : Ordinal) = m - n := by
       Ordinal.add_sub_cancel_of_le (Nat.cast_le.2 h)]
 
 @[simp, norm_cast]
-theorem natCast_div (m n : ℕ) : ((m / n : ℕ) : Ordinal) = m / n := by
-  rcases eq_or_ne n 0 with (rfl | hn)
-  · simp
-  · have hn' : (n : Ordinal) ≠ 0 := Nat.cast_ne_zero.2 hn
-    apply le_antisymm
-    · rw [← mul_le_iff_le_div hn', ← natCast_mul, Nat.cast_le, mul_comm]
-      apply Nat.div_mul_le_self
-    · rw [div_le hn', succ_eq_add_one, ← Nat.cast_succ, ← natCast_mul, Nat.cast_lt, mul_comm,
-        ← Nat.div_lt_iff_lt_mul (Nat.pos_of_ne_zero hn)]
-      apply Nat.lt_succ_self
+theorem natCast_div (m n : ℕ) (hn : n ≠ 0) :
+    ((Nat.euclideanDiv m n hn : ℕ) : Ordinal) = quotient m n (Nat.cast_ne_zero.2 hn) := by
+  symm
+  refine quotient_eq_of_remainder (r := (m % n : ℕ)) (Nat.cast_ne_zero.2 hn) ?_ ?_
+  · exact_mod_cast (Nat.euclideanDiv_mul_add_mod m n hn).symm
+  · exact_mod_cast Nat.mod_lt m (Nat.pos_of_ne_zero hn)
 
 @[simp, norm_cast]
 theorem natCast_mod (m n : ℕ) : ((m % n : ℕ) : Ordinal) = m % n := by
-  rw [← add_left_cancel_iff, div_add_mod, ← natCast_div, ← natCast_mul, ← Nat.cast_add,
-    Nat.div_add_mod]
+  obtain rfl | hn := eq_or_ne n 0
+  · simp
+  · have hn' : (n : Ordinal) ≠ 0 := Nat.cast_ne_zero.2 hn
+    rw [← add_left_cancel_iff (a := (n : Ordinal) * quotient m n hn'), div_add_mod,
+      ← natCast_div m n hn, ← natCast_mul, ← Nat.cast_add, Nat.euclideanDiv_mul_add_mod]
 
 @[simp]
 theorem lift_natCast : ∀ n : ℕ, lift.{u, v} n = n
@@ -966,7 +969,8 @@ theorem one_add_of_omega0_le {o} (h : ω ≤ o) : 1 + o = o :=
 open Ordinal
 
 theorem isSuccPrelimit_iff_omega0_dvd {a : Ordinal} : IsSuccPrelimit a ↔ ω ∣ a := by
-  refine ⟨fun l => ⟨a / ω, le_antisymm ?_ (mul_div_le _ _)⟩, fun h => ?_⟩
+  refine ⟨fun l => ⟨quotient a ω omega0_ne_zero, le_antisymm ?_ (mul_div_le _ _ omega0_ne_zero)⟩,
+    fun h => ?_⟩
   · refine l.le_iff_forall_le.2 fun x hx => le_of_lt ?_
     rw [lt_mul_iff_div_lt omega0_ne_zero, ← succ_le_iff, ← mul_le_iff_le_div omega0_ne_zero,
       mul_succ, add_le_iff_of_isSuccLimit isSuccLimit_omega0]

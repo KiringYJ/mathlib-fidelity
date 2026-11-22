@@ -242,15 +242,16 @@ theorem exists_Gamma_le_conj (g : GL (Fin 2) ℚ) (M : ℕ) [NeZero M] :
     replace hy' : y.map (Int.cast : ℤ → ZMod (a₁ * a₂ * M)) = 1 := by
       rw [CongruenceSubgroup.Gamma_mem', Subtype.ext_iff] at hy'
       simpa using! hy'
-    use Matrix.of fun i j ↦ (y - 1) i j / (a₁ * a₂ * M)
-    rw [← sub_eq_iff_eq_add']
-    ext i j
-    simp_rw [Matrix.smul_apply, Matrix.of_apply, nsmul_eq_mul, Nat.cast_mul]
-    refine (Int.mul_ediv_cancel_of_dvd ?_).symm
     rw [← Matrix.map_one Int.cast (by simp) (by simp), ← sub_eq_zero,
       ← Matrix.map_sub _ (by simp)] at hy'
-    simpa only [Matrix.zero_apply, Matrix.map_apply, ZMod.intCast_zmod_eq_zero_iff_dvd,
-      Nat.cast_mul] using! congr_fun₂ hy' i j
+    have hdvd (i j : Fin 2) : ((a₁ * a₂ * M : ℕ) : ℤ) ∣ (y - 1) i j := by
+      simpa only [Matrix.zero_apply, Matrix.map_apply, ZMod.intCast_zmod_eq_zero_iff_dvd] using!
+        congr_fun₂ hy' i j
+    choose k hk using hdvd
+    refine ⟨Matrix.of k, ?_⟩
+    rw [← sub_eq_iff_eq_add']
+    ext i j
+    simpa only [Matrix.smul_apply, Matrix.of_apply, nsmul_eq_mul] using hk i j
   -- use this `k` to cook up a new integer matrix, which we will show comes from `SL(2, ℤ)`
   let z := 1 + M • (A₁.num * k * A₂.num)
   have hz_coe : z.map Int.cast = A₁ * (y.map Int.cast) * A₂ := by

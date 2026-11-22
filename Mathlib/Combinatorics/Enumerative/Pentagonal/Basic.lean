@@ -29,19 +29,27 @@ convention, but implicitly shows the monotonicity in `pentagonal_lt_pentagonal_n
 public section
 
 /-- Pentagonal numbers $k(3k-1)/2$ for integer $k$. -/
-def pentagonal (k : ℤ) : ℕ := (k * (3 * k - 1) / 2).toNat
+def pentagonal (k : ℤ) : ℕ :=
+  (Int.exactQuotient (k * (3 * k - 1)) 2 (even_iff_two_dvd.mp (by grind))).toNat
 
-theorem pentagonal_def (k : ℤ) : pentagonal k = (k * (3 * k - 1) / 2).toNat := by rfl
+theorem pentagonal_def (k : ℤ) :
+    pentagonal k =
+      (Int.exactQuotient (k * (3 * k - 1)) 2 (even_iff_two_dvd.mp (by grind))).toNat := by rfl
 
-theorem pentagonal_neg (k : ℤ) : pentagonal (-k) = (k * (3 * k + 1) / 2).toNat := by
-  grind [pentagonal_def]
+theorem pentagonal_neg (k : ℤ) :
+    pentagonal (-k) =
+      (Int.exactQuotient (k * (3 * k + 1)) 2 (even_iff_two_dvd.mp (by grind))).toNat := by
+  simp only [pentagonal_def, Int.exactQuotient, Int.euclideanDiv_eq_core]
+  grind
 
-theorem natCast_pentagonal (k : ℤ) : (pentagonal k : ℤ) = k * (3 * k - 1) / 2 := by
-  rcases k with (_ | _) | _ <;> grind [pentagonal_def]
+theorem natCast_pentagonal (k : ℤ) :
+    (pentagonal k : ℤ) =
+      Int.exactQuotient (k * (3 * k - 1)) 2 (even_iff_two_dvd.mp (by grind)) := by
+  simp only [pentagonal_def, Int.exactQuotient, Int.euclideanDiv_eq_core]
+  rcases k with (_ | _) | _ <;> grind
 
 theorem two_mul_natCast_pentagonal (k : ℤ) : 2 * (pentagonal k : ℤ) = k * (3 * k - 1) := by
-  rw [natCast_pentagonal]
-  exact Int.two_mul_ediv_two_of_even (by grind)
+  rw [natCast_pentagonal, Int.mul_exactQuotient]
 
 theorem two_mul_natCast_pentagonal_neg (k : ℤ) : 2 * (pentagonal (-k) : ℤ) = k * (3 * k + 1) := by
   grind [two_mul_natCast_pentagonal]
@@ -56,16 +64,16 @@ theorem pentagonal_inj {x y : ℤ} : pentagonal x = pentagonal y ↔ x = y :=
   pentagonal_injective.eq_iff
 
 theorem pentagonal_lt_pentagonal_neg {k : ℤ} (h : 0 < k) : pentagonal k < pentagonal (-k) := by
-  grind [natCast_pentagonal]
+  grind [two_mul_natCast_pentagonal]
 
 theorem pentagonal_neg_lt_pentagonal_add_one {k : ℤ} (h : 0 ≤ k) :
     pentagonal (-k) < pentagonal (k + 1) := by
-  grind [natCast_pentagonal]
+  grind [two_mul_natCast_pentagonal]
 
 theorem pentagonal_strictMonoOn : StrictMonoOn pentagonal (Set.Ici 0) := by
   apply strictMonoOn_of_lt_add_one Set.ordConnected_Ici
-  grind [natCast_pentagonal]
+  grind [two_mul_natCast_pentagonal]
 
 theorem pentagonal_strictAntiOn : StrictAntiOn pentagonal (Set.Iic 0) := by
   apply strictAntiOn_of_add_one_lt Set.ordConnected_Iic
-  grind [natCast_pentagonal]
+  grind [two_mul_natCast_pentagonal]

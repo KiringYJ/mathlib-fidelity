@@ -27,7 +27,7 @@ For finsets `s` and `t`:
 * `s + t` (`Finset.add`): Addition, finset of all `x + y` where `x ∈ s` and `y ∈ t`.
 * `s * t` (`Finset.mul`): Multiplication, finset of all `x * y` where `x ∈ s` and `y ∈ t`.
 * `s - t` (`Finset.sub`): Subtraction, finset of all `x - y` where `x ∈ s` and `y ∈ t`.
-* `s / t` (`Finset.div`): Division, finset of all `x / y` where `x ∈ s` and `y ∈ t`.
+* `s / t` (`Finset.div`): the product `s * t⁻¹` for finsets in a commutative group.
 
 For `α` a semigroup/monoid, `Finset α` is a semigroup/monoid.
 As an unfortunate side effect, this means that `n • s`, where `n : ℕ`, is ambiguous between
@@ -530,162 +530,271 @@ end Mul
 
 /-! ### Finset subtraction/division -/
 
-section Div
+section Sub
 
-variable [DecidableEq α] [Div α] {s s₁ s₂ t t₁ t₂ u : Finset α} {a b : α}
+variable [DecidableEq α] [Sub α] {s s₁ s₂ t t₁ t₂ u : Finset α} {a b : α}
 
-/-- The pointwise division of finsets `s / t` is defined as `{x / y | x ∈ s, y ∈ t}` in locale
-`Pointwise`. -/
-@[to_additive (attr := instance_reducible)
-  /-- The pointwise subtraction of finsets `s - t` is defined as `{x - y | x ∈ s, y ∈ t}`
-  in scope `Pointwise`. -/]
-protected def div : Div (Finset α) :=
-  ⟨image₂ (· / ·)⟩
+/-- The pointwise subtraction of finsets is the image of their product under subtraction. -/
+@[instance_reducible]
+protected def sub : Sub (Finset α) :=
+  ⟨image₂ (· - ·)⟩
 
-scoped[Pointwise] attribute [instance] Finset.div Finset.sub
+scoped[Pointwise] attribute [instance] Finset.sub
 
-@[to_additive]
-theorem div_def : s / t = (s ×ˢ t).image fun p : α × α => p.1 / p.2 :=
+theorem sub_def : s - t = (s ×ˢ t).image fun p : α × α => p.1 - p.2 :=
   rfl
 
-@[to_additive]
-theorem image_div_product : ((s ×ˢ t).image fun x : α × α => x.fst / x.snd) = s / t :=
+theorem image_sub_product : ((s ×ˢ t).image fun x : α × α => x.fst - x.snd) = s - t :=
   rfl
 
-@[to_additive]
-theorem mem_div : a ∈ s / t ↔ ∃ b ∈ s, ∃ c ∈ t, b / c = a :=
+theorem mem_sub : a ∈ s - t ↔ ∃ b ∈ s, ∃ c ∈ t, b - c = a :=
   mem_image₂
 
-@[to_additive (attr := simp, norm_cast)]
-theorem coe_div (s t : Finset α) : (↑(s / t) : Set α) = ↑s / ↑t :=
+@[simp, norm_cast]
+theorem coe_sub (s t : Finset α) : (↑(s - t) : Set α) = ↑s - ↑t :=
   coe_image₂ _ _ _
 
-@[to_additive]
-theorem div_mem_div : a ∈ s → b ∈ t → a / b ∈ s / t :=
+theorem sub_mem_sub : a ∈ s → b ∈ t → a - b ∈ s - t :=
   mem_image₂_of_mem
 
-@[to_additive]
-theorem card_div_le : #(s / t) ≤ #s * #t :=
+theorem card_sub_le : #(s - t) ≤ #s * #t :=
   card_image₂_le _ _ _
 
-@[to_additive (attr := simp)]
-theorem empty_div (s : Finset α) : ∅ / s = ∅ :=
+@[simp]
+theorem empty_sub (s : Finset α) : ∅ - s = ∅ :=
   image₂_empty_left
 
-@[to_additive (attr := simp)]
-theorem div_empty (s : Finset α) : s / ∅ = ∅ :=
+@[simp]
+theorem sub_empty (s : Finset α) : s - ∅ = ∅ :=
   image₂_empty_right
 
-@[to_additive (attr := simp)]
-theorem div_eq_empty : s / t = ∅ ↔ s = ∅ ∨ t = ∅ :=
+@[simp]
+theorem sub_eq_empty : s - t = ∅ ↔ s = ∅ ∨ t = ∅ :=
   image₂_eq_empty_iff
 
-@[to_additive (attr := simp)]
-theorem div_nonempty : (s / t).Nonempty ↔ s.Nonempty ∧ t.Nonempty :=
+@[simp]
+theorem sub_nonempty : (s - t).Nonempty ↔ s.Nonempty ∧ t.Nonempty :=
   image₂_nonempty_iff
 
-@[to_additive (attr := aesop safe apply (rule_sets := [finsetNonempty]))]
-theorem Nonempty.div : s.Nonempty → t.Nonempty → (s / t).Nonempty :=
+@[aesop safe apply (rule_sets := [finsetNonempty])]
+theorem Nonempty.sub : s.Nonempty → t.Nonempty → (s - t).Nonempty :=
   Nonempty.image₂
 
-@[to_additive]
-theorem Nonempty.of_div_left : (s / t).Nonempty → s.Nonempty :=
+theorem Nonempty.of_sub_left : (s - t).Nonempty → s.Nonempty :=
   Nonempty.of_image₂_left
 
-@[to_additive]
-theorem Nonempty.of_div_right : (s / t).Nonempty → t.Nonempty :=
+theorem Nonempty.of_sub_right : (s - t).Nonempty → t.Nonempty :=
   Nonempty.of_image₂_right
 
-@[to_additive (attr := simp)]
-theorem div_singleton (a : α) : s / {a} = s.image (· / a) :=
+@[simp]
+theorem sub_singleton (a : α) : s - {a} = s.image (· - a) :=
   image₂_singleton_right
 
-@[to_additive (attr := simp)]
-theorem singleton_div (a : α) : {a} / s = s.image (a / ·) :=
+@[simp]
+theorem singleton_sub (a : α) : {a} - s = s.image (a - ·) :=
   image₂_singleton_left
 
-@[to_additive]
-theorem singleton_div_singleton (a b : α) : ({a} : Finset α) / {b} = {a / b} :=
+theorem singleton_sub_singleton (a b : α) : ({a} : Finset α) - {b} = {a - b} :=
   image₂_singleton
 
-@[to_additive (attr := mono, gcongr)]
-theorem div_subset_div : s₁ ⊆ s₂ → t₁ ⊆ t₂ → s₁ / t₁ ⊆ s₂ / t₂ :=
+@[mono, gcongr]
+theorem sub_subset_sub : s₁ ⊆ s₂ → t₁ ⊆ t₂ → s₁ - t₁ ⊆ s₂ - t₂ :=
   image₂_subset
 
-@[to_additive]
-theorem div_subset_div_left : t₁ ⊆ t₂ → s / t₁ ⊆ s / t₂ :=
+theorem sub_subset_sub_left : t₁ ⊆ t₂ → s - t₁ ⊆ s - t₂ :=
   image₂_subset_left
 
-@[to_additive]
-theorem div_subset_div_right : s₁ ⊆ s₂ → s₁ / t ⊆ s₂ / t :=
+theorem sub_subset_sub_right : s₁ ⊆ s₂ → s₁ - t ⊆ s₂ - t :=
   image₂_subset_right
 
-@[to_additive]
-theorem div_subset_iff : s / t ⊆ u ↔ ∀ x ∈ s, ∀ y ∈ t, x / y ∈ u :=
+theorem sub_subset_iff : s - t ⊆ u ↔ ∀ x ∈ s, ∀ y ∈ t, x - y ∈ u :=
   image₂_subset_iff
 
-@[to_additive]
-theorem union_div : (s₁ ∪ s₂) / t = s₁ / t ∪ s₂ / t :=
+theorem union_sub : (s₁ ∪ s₂) - t = (s₁ - t) ∪ (s₂ - t) :=
   image₂_union_left
 
-@[to_additive]
-theorem div_union : s / (t₁ ∪ t₂) = s / t₁ ∪ s / t₂ :=
+theorem sub_union : s - (t₁ ∪ t₂) = (s - t₁) ∪ (s - t₂) :=
   image₂_union_right
 
-@[to_additive]
-theorem inter_div_subset : s₁ ∩ s₂ / t ⊆ s₁ / t ∩ (s₂ / t) :=
+theorem inter_sub_subset : (s₁ ∩ s₂) - t ⊆ (s₁ - t) ∩ (s₂ - t) :=
   image₂_inter_subset_left
 
-@[to_additive]
-theorem div_inter_subset : s / (t₁ ∩ t₂) ⊆ s / t₁ ∩ (s / t₂) :=
+theorem sub_inter_subset : s - (t₁ ∩ t₂) ⊆ (s - t₁) ∩ (s - t₂) :=
   image₂_inter_subset_right
 
-@[to_additive]
-theorem inter_div_union_subset_union : s₁ ∩ s₂ / (t₁ ∪ t₂) ⊆ s₁ / t₁ ∪ s₂ / t₂ :=
+theorem inter_sub_union_subset_union : (s₁ ∩ s₂) - (t₁ ∪ t₂) ⊆ (s₁ - t₁) ∪ (s₂ - t₂) :=
   image₂_inter_union_subset_union
 
-@[to_additive]
-theorem union_div_inter_subset_union : (s₁ ∪ s₂) / (t₁ ∩ t₂) ⊆ s₁ / t₁ ∪ s₂ / t₂ :=
+theorem union_sub_inter_subset_union : (s₁ ∪ s₂) - (t₁ ∩ t₂) ⊆ (s₁ - t₁) ∪ (s₂ - t₂) :=
   image₂_union_inter_subset_union
 
-/-- If a finset `u` is contained in the product of two sets `s / t`, we can find two finsets `s'`,
-`t'` such that `s' ⊆ s`, `t' ⊆ t` and `u ⊆ s' / t'`. -/
-@[to_additive
-  /-- If a finset `u` is contained in the sum of two sets `s - t`, we can find two finsets
-  `s'`, `t'` such that `s' ⊆ s`, `t' ⊆ t` and `u ⊆ s' - t'`. -/]
-theorem subset_div {s t : Set α} :
-    ↑u ⊆ s / t → ∃ s' t' : Finset α, ↑s' ⊆ s ∧ ↑t' ⊆ t ∧ u ⊆ s' / t' :=
+/-- A finite subset of a pointwise difference is contained in the difference of finite subsets. -/
+theorem subset_sub {s t : Set α} :
+    ↑u ⊆ s - t → ∃ s' t' : Finset α, ↑s' ⊆ s ∧ ↑t' ⊆ t ∧ u ⊆ s' - t' :=
   subset_set_image₂
 
-@[to_additive (attr := simp (default + 1))]
-lemma sup_div_le [SemilatticeSup β] [OrderBot β] {s t : Finset α} {f : α → β} {a : β} :
-    sup (s / t) f ≤ a ↔ ∀ x ∈ s, ∀ y ∈ t, f (x / y) ≤ a :=
+@[simp (default + 1)]
+lemma sup_sub_le [SemilatticeSup β] [OrderBot β] {s t : Finset α} {f : α → β} {a : β} :
+    sup (s - t) f ≤ a ↔ ∀ x ∈ s, ∀ y ∈ t, f (x - y) ≤ a :=
   sup_image₂_le
 
-@[to_additive]
-lemma sup_div_left [SemilatticeSup β] [OrderBot β] (s t : Finset α) (f : α → β) :
-    sup (s / t) f = sup s fun x ↦ sup t (f <| x / ·) :=
+lemma sup_sub_left [SemilatticeSup β] [OrderBot β] (s t : Finset α) (f : α → β) :
+    sup (s - t) f = sup s fun x ↦ sup t (f <| x - ·) :=
   sup_image₂_left ..
 
-@[to_additive]
-lemma sup_div_right [SemilatticeSup β] [OrderBot β] (s t : Finset α) (f : α → β) :
-    sup (s / t) f = sup t fun y ↦ sup s (f <| · / y) :=
+lemma sup_sub_right [SemilatticeSup β] [OrderBot β] (s t : Finset α) (f : α → β) :
+    sup (s - t) f = sup t fun y ↦ sup s (f <| · - y) :=
   sup_image₂_right ..
 
-@[to_additive (attr := simp (default + 1))]
-lemma le_inf_div [SemilatticeInf β] [OrderTop β] {s t : Finset α} {f : α → β} {a : β} :
-    a ≤ inf (s / t) f ↔ ∀ x ∈ s, ∀ y ∈ t, a ≤ f (x / y) :=
+@[simp (default + 1)]
+lemma le_inf_sub [SemilatticeInf β] [OrderTop β] {s t : Finset α} {f : α → β} {a : β} :
+    a ≤ inf (s - t) f ↔ ∀ x ∈ s, ∀ y ∈ t, a ≤ f (x - y) :=
   le_inf_image₂
 
-@[to_additive]
-lemma inf_div_left [SemilatticeInf β] [OrderTop β] (s t : Finset α) (f : α → β) :
-    inf (s / t) f = inf s fun x ↦ inf t (f <| x / ·) :=
+lemma inf_sub_left [SemilatticeInf β] [OrderTop β] (s t : Finset α) (f : α → β) :
+    inf (s - t) f = inf s fun x ↦ inf t (f <| x - ·) :=
   inf_image₂_left ..
 
-@[to_additive]
-lemma inf_div_right [SemilatticeInf β] [OrderTop β] (s t : Finset α) (f : α → β) :
-    inf (s / t) f = inf t fun y ↦ inf s (f <| · / y) :=
+lemma inf_sub_right [SemilatticeInf β] [OrderTop β] (s t : Finset α) (f : α → β) :
+    inf (s - t) f = inf t fun y ↦ inf s (f <| · - y) :=
   inf_image₂_right ..
+
+end Sub
+
+section Div
+variable [DecidableEq α] [CommGroup α] {s s₁ s₂ t t₁ t₂ u : Finset α} {a b : α}
+
+/-- Pointwise subtraction with the binder shape needed by `to_additive` for Finset.div. -/
+protected abbrev addCommGroupSub [AddCommGroup α] : Sub (Finset α) := Finset.sub
+/-- The pointwise quotient of finsets consists of the products of an element of the first
+finset with the inverse of an element of the second. -/
+@[to_additive existing Finset.addCommGroupSub, instance_reducible]
+protected def div : Div (Finset α) :=
+  ⟨fun s t ↦ s * t⁻¹⟩
+scoped[Pointwise] attribute [instance] Finset.div
+
+theorem image₂_div : image₂ (fun x y : α ↦ x / y) s t = s / t := by
+  change image₂ (fun x y : α ↦ x / y) s t = image₂ (· * ·) s (t.image fun x ↦ x⁻¹)
+  rw [image₂_image_right]
+  simp only [div_eq_mul_inv]
+
+theorem div_def : s / t = (s ×ˢ t).image fun p : α × α => p.1 / p.2 :=
+  (image₂_div (s := s) (t := t)).symm
+
+theorem image_div_product : ((s ×ˢ t).image fun x : α × α => x.fst / x.snd) = s / t :=
+  image₂_div (s := s) (t := t)
+
+theorem mem_div : a ∈ s / t ↔ ∃ b ∈ s, ∃ c ∈ t, b / c = a := by
+  simp only [← image₂_div]; exact mem_image₂
+
+@[simp, norm_cast]
+theorem coe_div (s t : Finset α) : (↑(s / t) : Set α) = (s : Set α) / (t : Set α) := by
+  change ((s * t⁻¹ : Finset α) : Set α) = (s : Set α) * (t : Set α)⁻¹
+  rw [coe_mul, coe_inv]
+
+theorem div_mem_div : a ∈ s → b ∈ t → a / b ∈ s / t := by
+  simp only [← image₂_div]; exact mem_image₂_of_mem
+
+theorem card_div_le : #(s / t) ≤ #s * #t := by
+  simp only [← image₂_div]; exact card_image₂_le _ _ _
+
+@[simp]
+theorem empty_div (s : Finset α) : ∅ / s = ∅ := by
+  simp only [← image₂_div]; exact image₂_empty_left
+@[simp]
+theorem div_empty (s : Finset α) : s / ∅ = ∅ := by
+  simp only [← image₂_div]; exact image₂_empty_right
+
+@[simp]
+theorem div_eq_empty : s / t = ∅ ↔ s = ∅ ∨ t = ∅ := by
+  simp only [← image₂_div]; exact image₂_eq_empty_iff
+@[simp]
+theorem div_nonempty : (s / t).Nonempty ↔ s.Nonempty ∧ t.Nonempty := by
+  simp only [← image₂_div]; exact image₂_nonempty_iff
+
+@[aesop safe apply (rule_sets := [finsetNonempty])]
+theorem Nonempty.div : s.Nonempty → t.Nonempty → (s / t).Nonempty := by
+  simp only [← image₂_div]; exact Nonempty.image₂
+
+theorem Nonempty.of_div_left : (s / t).Nonempty → s.Nonempty := by
+  simp only [← image₂_div]; exact Nonempty.of_image₂_left
+
+theorem Nonempty.of_div_right : (s / t).Nonempty → t.Nonempty := by
+  simp only [← image₂_div]; exact Nonempty.of_image₂_right
+
+@[simp]
+theorem div_singleton (a : α) : s / {a} = s.image (· / a) := by
+  simp only [← image₂_div]; exact image₂_singleton_right
+
+@[simp]
+theorem singleton_div (a : α) : {a} / s = s.image (a / ·) := by
+  simp only [← image₂_div]; exact image₂_singleton_left
+
+theorem singleton_div_singleton (a b : α) : ({a} : Finset α) / {b} = {a / b} := by
+  simp only [← image₂_div]; exact image₂_singleton
+
+@[mono, gcongr]
+theorem div_subset_div : s₁ ⊆ s₂ → t₁ ⊆ t₂ → s₁ / t₁ ⊆ s₂ / t₂ := by
+  simp only [← image₂_div]; exact image₂_subset
+
+theorem div_subset_div_left : t₁ ⊆ t₂ → s / t₁ ⊆ s / t₂ := by
+  simp only [← image₂_div]; exact image₂_subset_left
+
+theorem div_subset_div_right : s₁ ⊆ s₂ → s₁ / t ⊆ s₂ / t := by
+  simp only [← image₂_div]; exact image₂_subset_right
+
+theorem div_subset_iff : s / t ⊆ u ↔ ∀ x ∈ s, ∀ y ∈ t, x / y ∈ u := by
+  simp only [← image₂_div]; exact image₂_subset_iff
+
+theorem union_div : (s₁ ∪ s₂) / t = s₁ / t ∪ s₂ / t := by
+  simp only [← image₂_div]; exact image₂_union_left
+
+theorem div_union : s / (t₁ ∪ t₂) = s / t₁ ∪ s / t₂ := by
+  simp only [← image₂_div]; exact image₂_union_right
+
+theorem inter_div_subset : s₁ ∩ s₂ / t ⊆ s₁ / t ∩ (s₂ / t) := by
+  simp only [← image₂_div]; exact image₂_inter_subset_left
+
+theorem div_inter_subset : s / (t₁ ∩ t₂) ⊆ s / t₁ ∩ (s / t₂) := by
+  simp only [← image₂_div]; exact image₂_inter_subset_right
+
+theorem inter_div_union_subset_union : s₁ ∩ s₂ / (t₁ ∪ t₂) ⊆ s₁ / t₁ ∪ s₂ / t₂ := by
+  simp only [← image₂_div]; exact image₂_inter_union_subset_union
+
+theorem union_div_inter_subset_union : (s₁ ∪ s₂) / (t₁ ∩ t₂) ⊆ s₁ / t₁ ∪ s₂ / t₂ := by
+  simp only [← image₂_div]; exact image₂_union_inter_subset_union
+
+/-- A finite subset of a pointwise quotient is contained in the quotient of finite subsets. -/
+theorem subset_div {s t : Set α} :
+    ↑u ⊆ s / t → ∃ s' t' : Finset α, ↑s' ⊆ s ∧ ↑t' ⊆ t ∧ u ⊆ s' / t' := by
+  simp only [← Set.image2_div, ← image₂_div]
+  exact subset_set_image₂
+
+@[simp (default + 1)]
+lemma sup_div_le [SemilatticeSup β] [OrderBot β] {s t : Finset α} {f : α → β} {a : β} :
+    sup (s / t) f ≤ a ↔ ∀ x ∈ s, ∀ y ∈ t, f (x / y) ≤ a := by
+  simp only [← image₂_div]; exact sup_image₂_le
+
+lemma sup_div_left [SemilatticeSup β] [OrderBot β] (s t : Finset α) (f : α → β) :
+    sup (s / t) f = sup s fun x ↦ sup t (f <| x / ·) := by
+  simp only [← image₂_div]; exact sup_image₂_left ..
+
+lemma sup_div_right [SemilatticeSup β] [OrderBot β] (s t : Finset α) (f : α → β) :
+    sup (s / t) f = sup t fun y ↦ sup s (f <| · / y) := by
+  simp only [← image₂_div]; exact sup_image₂_right ..
+
+@[simp (default + 1)]
+lemma le_inf_div [SemilatticeInf β] [OrderTop β] {s t : Finset α} {f : α → β} {a : β} :
+    a ≤ inf (s / t) f ↔ ∀ x ∈ s, ∀ y ∈ t, a ≤ f (x / y) := by
+  simp only [← image₂_div]; exact le_inf_image₂
+
+lemma inf_div_left [SemilatticeInf β] [OrderTop β] (s t : Finset α) (f : α → β) :
+    inf (s / t) f = inf s fun x ↦ inf t (f <| x / ·) := by
+  simp only [← image₂_div]; exact inf_image₂_left ..
+
+lemma inf_div_right [SemilatticeInf β] [OrderTop β] (s t : Finset α) (f : α → β) :
+    inf (s / t) f = inf t fun y ↦ inf s (f <| · / y) := by
+  simp only [← image₂_div]; exact inf_image₂_right ..
 
 end Div
 
@@ -943,28 +1052,44 @@ scoped[Pointwise] attribute [instance] Finset.commMonoid Finset.addCommMonoid
 
 end CommMonoid
 
-section DivisionMonoid
-
-variable [DivisionMonoid α] {s t : Finset α} {n : ℤ}
-
 @[to_additive (attr := simp)]
-theorem coe_zpow (s : Finset α) : ∀ n : ℤ, ↑(s ^ n) = (s : Set α) ^ n
+theorem coe_zpow [DivisionMonoid α] (s : Finset α) : ∀ n : ℤ, ↑(s ^ n) = (s : Set α) ^ n
   | Int.ofNat _ => coe_pow _ _
   | Int.negSucc n => by
     refine (coe_inv _).trans ?_
     exact congr_arg Inv.inv (coe_pow _ _)
+
+section SubtractionMonoid
+variable [SubtractionMonoid α]
+
+/-- `Finset α` is a subtraction monoid under pointwise operations if `α` is. -/
+@[instance_reducible]
+protected def subtractionMonoid : SubtractionMonoid (Finset α) :=
+  coe_injective.subtractionMonoid _ coe_zero coe_add coe_neg coe_sub coe_nsmul coe_zsmul
+
+scoped[Pointwise] attribute [instance] Finset.subtractionMonoid
+
+end SubtractionMonoid
+
+section DivisionMonoid
+
+variable [DivisionMonoid α] {s t : Finset α} {n : ℤ}
 
 @[to_additive]
 protected theorem mul_eq_one_iff : s * t = 1 ↔ ∃ a b, s = {a} ∧ t = {b} ∧ a * b = 1 := by
   simp_rw [← coe_inj, coe_mul, coe_one, Set.mul_eq_one_iff, coe_singleton]
 
 /-- `Finset α` is a division monoid under pointwise operations if `α` is. -/
-@[to_additive (attr := instance_reducible)
-  /-- `Finset α` is a subtraction monoid under pointwise operations if `α` is. -/]
+@[instance_reducible]
 protected def divisionMonoid : DivisionMonoid (Finset α) :=
-  coe_injective.divisionMonoid _ coe_one coe_mul coe_inv coe_div coe_pow coe_zpow
+  letI : Div (Finset α) := ⟨fun s t ↦ s * t⁻¹⟩
+  coe_injective.divisionMonoid _ coe_one coe_mul coe_inv
+    (fun s t ↦ by
+      change ((s * t⁻¹ : Finset α) : Set α) = (s : Set α) * (t : Set α)⁻¹
+      rw [coe_mul, coe_inv]) coe_pow coe_zpow
 
-scoped[Pointwise] attribute [instance] Finset.divisionMonoid Finset.subtractionMonoid
+attribute [to_additive existing] Finset.divisionMonoid
+scoped[Pointwise] attribute [instance] Finset.divisionMonoid
 
 @[to_additive (attr := simp)]
 theorem isUnit_iff : IsUnit s ↔ ∃ a, s = {a} ∧ IsUnit a := by
@@ -981,14 +1106,14 @@ theorem isUnit_iff : IsUnit s ↔ ∃ a, s = {a} ∧ IsUnit a := by
 theorem isUnit_coe : IsUnit (s : Set α) ↔ IsUnit s := by
   simp_rw [isUnit_iff, Set.isUnit_iff, coe_eq_singleton]
 
-@[to_additive (attr := simp)]
-lemma univ_div_univ [Fintype α] : (univ / univ : Finset α) = univ := by simp [div_eq_mul_inv]
+lemma univ_div_univ [Fintype α] : (univ : Finset α) * univ⁻¹ = univ := by
+  simp
 
-@[to_additive] lemma subset_div_left (ht : 1 ∈ t) : s ⊆ s / t := by
-  rw [div_eq_mul_inv]; exact subset_mul_left _ <| by simpa
+lemma subset_div_left (ht : 1 ∈ t) : s ⊆ s * t⁻¹ :=
+  subset_mul_left _ <| by simpa
 
-@[to_additive] lemma inv_subset_div_right (hs : 1 ∈ s) : t⁻¹ ⊆ s / t := by
-  rw [div_eq_mul_inv]; exact subset_mul_right _ hs
+lemma inv_subset_div_right (hs : 1 ∈ s) : t⁻¹ ⊆ s * t⁻¹ :=
+  subset_mul_right _ hs
 
 @[to_additive (attr := simp) zsmul_empty]
 lemma empty_zpow (hn : n ≠ 0) : (∅ : Finset α) ^ n = ∅ := by cases n <;> simp_all
@@ -1012,42 +1137,67 @@ lemma singleton_zpow (a : α) (n : ℤ) : ({a} : Finset α) ^ n = {a ^ n} := by 
 
 end DivisionMonoid
 
-/-- `Finset α` is a commutative division monoid under pointwise operations if `α` is. -/
-@[to_additive (attr := instance_reducible) subtractionCommMonoid
-  /-- `Finset α` is a commutative subtraction monoid under pointwise operations if `α` is. -/]
-protected def divisionCommMonoid [DivisionCommMonoid α] :
-    DivisionCommMonoid (Finset α) :=
-  coe_injective.divisionCommMonoid _ coe_one coe_mul coe_inv coe_div coe_pow coe_zpow
+section SubtractionMonoid
 
+variable [SubtractionMonoid α] {s t : Finset α}
+
+@[simp]
+lemma univ_sub_univ [Fintype α] : (univ : Finset α) - univ = univ := by
+  simp [sub_eq_add_neg]
+
+lemma subset_sub_left (ht : 0 ∈ t) : s ⊆ s - t := by
+  rw [sub_eq_add_neg]
+  exact subset_add_left _ <| by simpa
+
+lemma neg_subset_sub_right (hs : 0 ∈ s) : -t ⊆ s - t := by
+  rw [sub_eq_add_neg]
+  exact subset_add_right _ hs
+
+end SubtractionMonoid
+
+/-- `Finset α` is a commutative division monoid under pointwise operations if `α` is. -/
+@[instance_reducible]
+protected def divisionCommMonoid [DivisionCommMonoid α] : DivisionCommMonoid (Finset α) :=
+  { Finset.divisionMonoid, Finset.commMonoid with }
+
+/-- `Finset α` is a commutative subtraction monoid under pointwise operations if `α` is. -/
+@[instance_reducible]
+protected def subtractionCommMonoid [SubtractionCommMonoid α] : SubtractionCommMonoid (Finset α) :=
+  coe_injective.subtractionCommMonoid _ coe_zero coe_add coe_neg coe_sub coe_nsmul coe_zsmul
+
+attribute [to_additive existing Finset.subtractionCommMonoid] Finset.divisionCommMonoid
 scoped[Pointwise] attribute [instance] Finset.divisionCommMonoid Finset.subtractionCommMonoid
 section Group
 
 variable [Group α] [DivisionMonoid β] [FunLike F α β] [MonoidHomClass F α β]
 variable (f : F) {s t : Finset α} {a b : α}
 
-/-! Note that `Finset` is not a `Group` because `s / s ≠ 1` in general. -/
+/-! The pointwise product `s * s⁻¹` can contain more than just the identity. -/
 
-
-@[to_additive (attr := simp)]
-theorem one_mem_div_iff : (1 : α) ∈ s / t ↔ ¬Disjoint s t := by
-  rw [← mem_coe, ← disjoint_coe, coe_div, Set.one_mem_div_iff]
+@[simp]
+theorem one_mem_div_iff : (1 : α) ∈ s * t⁻¹ ↔ ¬Disjoint s t := by
+  simp only [mem_mul, mem_inv', mul_eq_one_iff_eq_inv, not_disjoint_iff_nonempty_inter,
+    Finset.Nonempty, mem_inter]
+  constructor
+  · rintro ⟨a, ha, b, hb, hab⟩
+    exact ⟨a, ha, hab.symm ▸ hb⟩
+  · rintro ⟨a, ha, hb⟩
+    exact ⟨a, ha, a⁻¹, by simpa only [inv_inv] using hb, (inv_inv a).symm⟩
 
 @[to_additive (attr := simp)]
 lemma one_mem_inv_mul_iff : (1 : α) ∈ t⁻¹ * s ↔ ¬Disjoint s t := by
   aesop (add simp [not_disjoint_iff_nonempty_inter, mem_mul, mul_eq_one_iff_eq_inv,
     Finset.Nonempty])
 
-@[to_additive]
-theorem one_notMem_div_iff : (1 : α) ∉ s / t ↔ Disjoint s t :=
+theorem one_notMem_div_iff : (1 : α) ∉ s * t⁻¹ ↔ Disjoint s t :=
   one_mem_div_iff.not_left
 
 @[to_additive]
 lemma one_notMem_inv_mul_iff : (1 : α) ∉ t⁻¹ * s ↔ Disjoint s t := one_mem_inv_mul_iff.not_left
 
-@[to_additive]
-theorem Nonempty.one_mem_div (h : s.Nonempty) : (1 : α) ∈ s / s :=
+theorem Nonempty.one_mem_div (h : s.Nonempty) : (1 : α) ∈ s * s⁻¹ :=
   let ⟨a, ha⟩ := h
-  mem_div.2 ⟨a, ha, a, ha, div_self' _⟩
+  mul_inv_cancel a ▸ mul_mem_mul ha (inv_mem_inv ha)
 
 @[to_additive]
 theorem isUnit_singleton (a : α) : IsUnit ({a} : Finset α) :=
@@ -1082,10 +1232,28 @@ theorem image_mul_right' :
 @[to_additive]
 lemma image_inv (f : F) (s : Finset α) : s⁻¹.image f = (s.image f)⁻¹ := image_comm (map_inv _)
 
-theorem image_div : (s / t).image (f : α → β) = s.image f / t.image f :=
-  image_image₂_distrib <| map_div f
+theorem image_div : (s * t⁻¹).image (f : α → β) = s.image f * (t.image f)⁻¹ := by
+  rw [image_mul, image_inv]
 
 end Group
+
+section AddGroup
+
+variable [AddGroup α] {s t : Finset α}
+
+@[simp]
+theorem zero_mem_sub_iff : (0 : α) ∈ s - t ↔ ¬Disjoint s t := by
+  rw [← mem_coe, ← disjoint_coe, coe_sub]
+  simpa only [sub_eq_add_neg] using (Set.zero_mem_sub_iff (s := (s : Set α)) (t := (t : Set α)))
+
+theorem zero_notMem_sub_iff : (0 : α) ∉ s - t ↔ Disjoint s t :=
+  zero_mem_sub_iff.not_left
+
+theorem Nonempty.zero_mem_sub (h : s.Nonempty) : (0 : α) ∈ s - s :=
+  let ⟨a, ha⟩ := h
+  mem_sub.2 ⟨a, ha, a, ha, sub_self _⟩
+
+end AddGroup
 
 end Instances
 
@@ -1237,16 +1405,31 @@ end CancelMonoid
 section Group
 variable [Group α] [DecidableEq α] {s t : Finset α}
 
-@[to_additive] lemma card_le_card_div_left (hs : s.Nonempty) : #t ≤ #(s / t) :=
-  have ⟨_, ha⟩ := hs; card_le_card_image₂_left _ ha div_right_injective
+lemma card_le_card_div_left (hs : s.Nonempty) : #t ≤ #(s * t⁻¹) := by
+  simpa only [card_inv] using (card_le_card_mul_left (t := t⁻¹) hs)
 
-@[to_additive] lemma card_le_card_div_right (ht : t.Nonempty) : #s ≤ #(s / t) :=
-  have ⟨_, ha⟩ := ht; card_le_card_image₂_right _ ha div_left_injective
+lemma card_le_card_div_right (ht : t.Nonempty) : #s ≤ #(s * t⁻¹) :=
+  card_le_card_mul_right (by simpa using ht)
 
-@[to_additive] lemma card_le_card_div_self : #s ≤ #(s / s) := by
+lemma card_le_card_div_self : #s ≤ #(s * s⁻¹) := by
   cases s.eq_empty_or_nonempty <;> simp [card_le_card_div_left, *]
 
 end Group
+
+section AddGroup
+
+variable [AddGroup α] [DecidableEq α] {s t : Finset α}
+
+lemma card_le_card_sub_left (hs : s.Nonempty) : #t ≤ #(s - t) :=
+  have ⟨_, ha⟩ := hs; card_le_card_image₂_left _ ha sub_right_injective
+
+lemma card_le_card_sub_right (ht : t.Nonempty) : #s ≤ #(s - t) :=
+  have ⟨_, ha⟩ := ht; card_le_card_image₂_right _ ha sub_left_injective
+
+lemma card_le_card_sub_self : #s ≤ #(s - s) := by
+  cases s.eq_empty_or_nonempty <;> simp [card_le_card_sub_left, *]
+
+end AddGroup
 
 end Finset
 
@@ -1258,13 +1441,17 @@ variable {ι : Type*} {α : ι → Type*} [Fintype ι] [DecidableEq ι]
 lemma piFinset_mul [∀ i, Mul (α i)] (s t : ∀ i, Finset (α i)) :
     piFinset (fun i ↦ s i * t i) = piFinset s * piFinset t := piFinset_image₂ _ _ _
 
-@[to_additive]
-lemma piFinset_div [∀ i, Div (α i)] (s t : ∀ i, Finset (α i)) :
-    piFinset (fun i ↦ s i / t i) = piFinset s / piFinset t := piFinset_image₂ _ _ _
+lemma piFinset_sub [∀ i, Sub (α i)] (s t : ∀ i, Finset (α i)) :
+    piFinset (fun i ↦ s i - t i) = piFinset s - piFinset t :=
+  piFinset_image₂ _ _ _
 
 @[to_additive (attr := simp)]
 lemma piFinset_inv [∀ i, Inv (α i)] (s : ∀ i, Finset (α i)) :
     piFinset (fun i ↦ (s i)⁻¹) = (piFinset s)⁻¹ := piFinset_image _ _
+
+lemma piFinset_div [∀ i, Group (α i)] (s t : ∀ i, Finset (α i)) :
+    piFinset (fun i ↦ s i * (t i)⁻¹) = piFinset s * (piFinset t)⁻¹ := by
+  rw [← piFinset_inv, ← piFinset_mul]
 
 end Fintype
 

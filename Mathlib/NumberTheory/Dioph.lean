@@ -592,8 +592,10 @@ theorem mod_dioph {f g : (α → ℕ) → ℕ} (df : DiophFn f) (dg : DiophFn g)
               · rw [x0, mod_zero]
               exact mod_eq_of_lt hl, fun e => by
                 rw [← e]
-                exact ⟨or_iff_not_imp_left.2 fun h => mod_lt _ (Nat.pos_of_ne_zero h), x / y,
-                  mod_add_div _ _⟩⟩
+                rcases eq_or_ne y 0 with rfl | hy
+                · exact ⟨Or.inl rfl, 0, by simp⟩
+                · exact ⟨Or.inr (mod_lt x (Nat.pos_of_ne_zero hy)), x.euclideanDiv y hy,
+                    (Nat.add_comm _ _).trans (Nat.euclideanDiv_mul_add_mod x y hy)⟩⟩
 
 local infixl:80 " D% " => Dioph.mod_dioph
 
@@ -605,21 +607,19 @@ theorem modEq_dioph {f g : (α → ℕ) → ℕ} (df : DiophFn f) (dg : DiophFn 
 
 local notation "D≡ " => Dioph.modEq_dioph
 
-/-- Diophantine functions are closed under integer division. -/
-theorem div_dioph {f g : (α → ℕ) → ℕ} (df : DiophFn f) (dg : DiophFn g) :
-    DiophFn fun v => f v / g v :=
-  have :
-    Dioph {v : Vector3 ℕ 3 | v &2 = 0 ∧ v &0 = 0 ∨ v &0 * v &2 ≤ v &1 ∧ v &1 < (v &0 + 1) * v &2} :=
-    (D&2 D= D.0 D∧ D&0 D= D.0) D∨ D&0 D* D&2 D≤ D&1 D∧ D&1 D< (D&0 D+ D.1) D* D&2
-  diophFn_comp2 df dg <|
-    (diophFn_vec _).2 <|
-      ext this <|
-        (vectorAll_iff_forall _).1 fun z x y =>
-          show y = 0 ∧ z = 0 ∨ z * y ≤ x ∧ x < (z + 1) * y ↔ x / y = z by
-            rcases y.eq_zero_or_pos with rfl | hy
-            · simp [eq_comm]
-            · rw [Nat.div_eq_iff hy, Nat.succ_mul]
-              grind
+/-- The natural Euclidean quotient of two Diophantine functions is Diophantine when the divisor
+function is everywhere nonzero. -/
+theorem euclideanDiv_dioph {f g : (α → ℕ) → ℕ} (df : DiophFn f) (dg : DiophFn g)
+    (hg : ∀ v, g v ≠ 0) : DiophFn fun v => (f v).euclideanDiv (g v) (hg v) := by
+  let df' := reindex_diophFn some df
+  let dg' := reindex_diophFn some dg
+  let dq : DiophFn (fun v : Option α → ℕ => v none) := proj_dioph none
+  refine ext ((dq D* dg' D≤ df') D∧ (df' D< (dq D+ D.1) D* dg')) fun v => ?_
+  change v none * g (v ∘ some) ≤ f (v ∘ some) ∧
+    f (v ∘ some) < (v none + 1) * g (v ∘ some) ↔
+      Nat.euclideanDiv (f (v ∘ some)) (g (v ∘ some)) (hg _) = v none
+  rw [Nat.euclideanDiv_eq_core, Nat.div_eq_iff (Nat.pos_of_ne_zero (hg (v ∘ some))), Nat.succ_mul]
+  grind
 
 open Pell
 

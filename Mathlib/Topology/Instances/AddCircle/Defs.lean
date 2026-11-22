@@ -577,7 +577,8 @@ section FiniteOrderPoints
 
 variable {p}
 
-theorem addOrderOf_period_div {n : ℕ} (h : 0 < n) : addOrderOf ((p / n : 𝕜) : AddCircle p) = n := by
+theorem addOrderOf_period_div {n : ℕ} (h : 0 < n) :
+    addOrderOf ((p / (n : 𝕜)) : AddCircle p) = n := by
   rw [addOrderOf_eq_iff h]
   replace h : 0 < (n : 𝕜) := Nat.cast_pos.2 h
   refine ⟨?_, fun m hn h0 => ?_⟩ <;> simp only [Ne, ← coe_nsmul, nsmul_eq_mul]
@@ -592,7 +593,8 @@ variable (p) in
 theorem gcd_mul_addOrderOf_div_eq {n : ℕ} (m : ℕ) (hn : 0 < n) :
     m.gcd n * addOrderOf (↑(↑m / ↑n * p) : AddCircle p) = n := by
   rw [natCast_div_mul_eq_nsmul, IsOfFinAddOrder.addOrderOf_nsmul]
-  · rw [addOrderOf_period_div hn, Nat.gcd_comm, Nat.mul_div_cancel']
+  · simp only [Nat.euclideanDiv_eq_core, addOrderOf_period_div hn]
+    rw [Nat.gcd_comm, Nat.mul_div_cancel']
     exact n.gcd_dvd_left m
   · rwa [← addOrderOf_pos_iff, addOrderOf_period_div hn]
 
@@ -644,7 +646,8 @@ theorem addOrderOf_eq_pos_iff {u : AddCircle p} {n : ℕ} (h : 0 < n) :
   · apply one_mul
 
 theorem exists_gcd_eq_one_of_isOfFinAddOrder {u : AddCircle p} (h : IsOfFinAddOrder u) :
-    ∃ m : ℕ, m.gcd (addOrderOf u) = 1 ∧ m < addOrderOf u ∧ ↑((m : 𝕜) / addOrderOf u * p) = u :=
+    ∃ m : ℕ, m.gcd (addOrderOf u) = 1 ∧ m < addOrderOf u ∧
+      ↑((m : 𝕜) / (addOrderOf u : 𝕜) * p) = u :=
   let ⟨m, hl, hg, he⟩ := (addOrderOf_eq_pos_iff h.addOrderOf_pos).1 rfl
   ⟨m, hg, hl, he⟩
 
@@ -666,7 +669,8 @@ satisfies `0 ≤ m < n`. -/
 def setAddOrderOfEquiv {n : ℕ} (hn : 0 < n) :
     { u : AddCircle p | addOrderOf u = n } ≃ { m | m < n ∧ m.gcd n = 1 } :=
   Equiv.symm <|
-    Equiv.ofBijective (fun m => ⟨↑((m : 𝕜) / n * p), addOrderOf_div_of_gcd_eq_one hn m.prop.2⟩)
+    Equiv.ofBijective (fun m => ⟨↑((m : 𝕜) / (n : 𝕜) * p),
+      addOrderOf_div_of_gcd_eq_one hn m.prop.2⟩)
       (by
         refine ⟨fun m₁ m₂ h => Subtype.ext ?_, fun u => ?_⟩
         · simp_rw [Subtype.mk_eq_mk, natCast_div_mul_eq_nsmul] at h

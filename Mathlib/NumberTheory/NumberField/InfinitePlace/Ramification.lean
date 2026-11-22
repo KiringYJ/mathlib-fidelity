@@ -497,7 +497,8 @@ open Finset in
 open scoped Classical in
 lemma card_isUnramified_compl [NumberField k] [IsGalois k K] :
     #({w : InfinitePlace K | w.IsUnramified k} : Finset _)ᶜ =
-      #({w : InfinitePlace k | w.IsUnramifiedIn K} : Finset _)ᶜ * (finrank k K / 2) := by
+      #({w : InfinitePlace k | w.IsUnramifiedIn K} : Finset _)ᶜ *
+        Nat.euclideanDiv (finrank k K) 2 := by
   rw [← IsGalois.card_aut_eq_finrank,
     Finset.card_eq_sum_card_fiberwise (f := (comap · (algebraMap k K)))
     (t := ({w : InfinitePlace k | w.IsUnramifiedIn K} : Finset _)ᶜ), ← smul_eq_mul, ← sum_const]
@@ -512,7 +513,7 @@ lemma card_isUnramified_compl [NumberField k] [IsGalois k K] :
     · rw [Nat.card_eq_fintype_card,
         ← MulAction.card_orbit_mul_card_stabilizer_eq_card_group _ w,
         ← Nat.card_eq_fintype_card (α := Stab w), InfinitePlace.card_stabilizer, ite_eq_right,
-        Nat.mul_div_cancel _ zero_lt_two, Set.toFinset_card]
+        Nat.euclideanDiv_mul_right_cancel, Set.toFinset_card]
       rwa [← isUnramifiedIn_comap]
   · simp [Set.MapsTo, isUnramifiedIn_comap]
 
@@ -520,7 +521,8 @@ open scoped Classical in
 lemma card_eq_card_isUnramifiedIn [NumberField k] [IsGalois k K] :
     Fintype.card (InfinitePlace K) =
       #{w : InfinitePlace k | w.IsUnramifiedIn K} * finrank k K +
-      #({w : InfinitePlace k | w.IsUnramifiedIn K} : Finset _)ᶜ * (finrank k K / 2) := by
+      #({w : InfinitePlace k | w.IsUnramifiedIn K} : Finset _)ᶜ *
+        Nat.euclideanDiv (finrank k K) 2 := by
   rw [← card_isUnramified, ← card_isUnramified_compl, Finset.card_add_card_compl]
 
 end NumberField.InfinitePlace

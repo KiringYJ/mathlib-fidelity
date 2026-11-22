@@ -202,21 +202,31 @@ lemma of_mul_right (m : ℤ) : a ≡ b [ZMOD n * m] → a ≡ b [ZMOD n] :=
 
 /-- To cancel a common factor `c` from a `ModEq` we must divide the modulus `m` by `gcd m c`. -/
 theorem cancel_right_div_gcd (hm : 0 < m) (h : a * c ≡ b * c [ZMOD m]) :
-    a ≡ b [ZMOD m / gcd m c] := by
+    a ≡ b [ZMOD Int.euclideanDiv m (gcd m c)
+      (Int.ofNat_ne_zero.2 (gcd_pos_of_ne_zero_left c hm.ne').ne')] := by
   let d := gcd m c
+  have hd : (d : ℤ) ≠ 0 := Int.ofNat_ne_zero.2 (gcd_pos_of_ne_zero_left c hm.ne').ne'
   rw [modEq_iff_dvd] at h ⊢
-  refine Int.dvd_of_dvd_mul_right_of_gcd_one (?_ : m / d ∣ c / d * (b - a)) ?_
-  · rw [mul_comm, ← Int.mul_ediv_assoc (b - a) (gcd_dvd_right ..), Int.sub_mul]
+  refine Int.dvd_of_dvd_mul_right_of_gcd_one
+    (?_ : Int.euclideanDiv m d hd ∣ Int.euclideanDiv c d hd * (b - a)) ?_
+  · simp only [Int.euclideanDiv_eq_core]
+    rw [mul_comm, ← Int.mul_ediv_assoc (b - a) (gcd_dvd_right ..), Int.sub_mul]
     exact Int.ediv_dvd_ediv (gcd_dvd_left ..) h
-  · rw [gcd_div (gcd_dvd_left ..) (gcd_dvd_right ..), natAbs_natCast,
+  · rw [gcd_div hd (gcd_dvd_left ..) (gcd_dvd_right ..), Nat.euclideanDiv_eq_core, natAbs_natCast,
       Nat.div_self (gcd_pos_of_ne_zero_left c hm.ne')]
 
 /-- To cancel a common factor `c` from a `ModEq` we must divide the modulus `m` by `gcd m c`. -/
-theorem cancel_left_div_gcd (hm : 0 < m) (h : c * a ≡ c * b [ZMOD m]) : a ≡ b [ZMOD m / gcd m c] :=
+theorem cancel_left_div_gcd (hm : 0 < m) (h : c * a ≡ c * b [ZMOD m]) :
+    a ≡ b [ZMOD Int.euclideanDiv m (gcd m c)
+      (Int.ofNat_ne_zero.2 (gcd_pos_of_ne_zero_left c hm.ne').ne')] :=
   cancel_right_div_gcd hm <| by simpa [mul_comm] using h
 
-theorem of_div (h : a / c ≡ b / c [ZMOD m / c]) (ha : c ∣ a) (ha : c ∣ b) (ha : c ∣ m) :
-    a ≡ b [ZMOD m] := by convert! h.mul_left' <;> rwa [Int.mul_ediv_cancel']
+theorem of_div (hc : c ≠ 0)
+    (h : Int.euclideanDiv a c hc ≡ Int.euclideanDiv b c hc [ZMOD Int.euclideanDiv m c hc])
+    (ha : c ∣ a) (hb : c ∣ b) (hm : c ∣ m) :
+    a ≡ b [ZMOD m] := by
+  simp only [Int.euclideanDiv_eq_core] at h
+  convert! h.mul_left' <;> rwa [Int.mul_ediv_cancel']
 
 /-- Cancel left multiplication on both sides of the `≡` and in the modulus.
 
@@ -394,13 +404,17 @@ theorem mod_mul_right_mod (a b c : ℤ) : a % (b * c) % b = a % b :=
 theorem mod_mul_left_mod (a b c : ℤ) : a % (b * c) % c = a % c :=
   (mod_modEq _ _).of_mul_left _
 
-theorem ext_ediv_modEq {n a b : ℤ} (h0 : a / n = b / n) (h1 : a ≡ b [ZMOD n]) : a = b :=
-  ext_ediv_emod h0 h1
+theorem ext_ediv_modEq {n a b : ℤ} (hn : n ≠ 0)
+    (h0 : Int.euclideanDiv a n hn = Int.euclideanDiv b n hn)
+    (h1 : a ≡ b [ZMOD n]) : a = b :=
+  ext_ediv_emod (by simpa only [Int.euclideanDiv_eq_core] using h0) h1
 
-theorem ext_ediv_modEq_iff (n a b : ℤ) : a = b ↔ a / n = b / n ∧ a ≡ b [ZMOD n] :=
-  ext_ediv_emod_iff _ _ _
+theorem ext_ediv_modEq_iff (n a b : ℤ) (hn : n ≠ 0) :
+    a = b ↔ Int.euclideanDiv a n hn = Int.euclideanDiv b n hn ∧ a ≡ b [ZMOD n] := by
+  simpa only [Int.euclideanDiv_eq_core, ModEq] using ext_ediv_emod_iff n a b
 
-theorem modEq_iff_eq_of_div_eq {n a b : ℤ} (h : a / n = b / n) :
-    a ≡ b [ZMOD n] ↔ a = b := by grind [ext_ediv_modEq_iff]
+theorem modEq_iff_eq_of_div_eq {n a b : ℤ} (hn : n ≠ 0)
+    (h : Int.euclideanDiv a n hn = Int.euclideanDiv b n hn) : a ≡ b [ZMOD n] ↔ a = b :=
+  ⟨ext_ediv_modEq hn h, fun e => e ▸ ModEq.refl _⟩
 
 end Int

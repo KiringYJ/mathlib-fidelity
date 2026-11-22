@@ -280,11 +280,22 @@ variable [DivisionMonoid α]
 @[to_additive (attr := simp, norm_cast)] lemma val_inv_eq_inv_val (u : αˣ) : ↑u⁻¹ = (u⁻¹ : α) :=
   Eq.symm <| inv_eq_of_mul_eq_one_right u.mul_inv
 
-@[to_additive (attr := simp, norm_cast)]
-lemma val_div_eq_div_val : ∀ u₁ u₂ : αˣ, ↑(u₁ / u₂) = (u₁ / u₂ : α) := by simp [div_eq_mul_inv]
+@[simp, norm_cast]
+lemma val_div_eq_mul_inv (u₁ u₂ : αˣ) : ↑(u₁ / u₂) = (u₁ : α) * (u₂ : α)⁻¹ := by
+  simp [div_eq_mul_inv]
 
 end DivisionMonoid
+
+@[simp high, norm_cast]
+lemma val_div_eq_div_val [Group α] (u₁ u₂ : αˣ) : ↑(u₁ / u₂) = (u₁ : α) / (u₂ : α) := by
+  rw [val_div_eq_mul_inv, div_eq_mul_inv]
+
 end Units
+
+@[simp, norm_cast]
+lemma AddUnits.val_sub_eq_sub_val [SubtractionMonoid α] (u₁ u₂ : AddUnits α) :
+    ↑(u₁ - u₂) = (u₁ : α) - (u₂ : α) := by
+  simp [sub_eq_add_neg]
 
 /-- For `a, b` in a Dedekind-finite monoid such that `a * b = 1`, makes a unit out of `a`. -/
 @[to_additive /-- For `a, b` in a Dedekind-finite additive monoid such that `a + b = 0`,
@@ -511,6 +522,12 @@ theorem unit_one (h : IsUnit (1 : M)) : h.unit = 1 :=
 theorem unit_mul (ha : IsUnit a) (hb : IsUnit b) : (ha.mul hb).unit = ha.unit * hb.unit :=
   Units.ext rfl
 
+lemma div (ha : IsUnit a) (hb : IsUnit b) : IsUnit (a /ₚ hb.unit) :=
+  ⟨ha.unit / hb.unit, rfl⟩
+
+lemma unit_div (ha : IsUnit a) (hb : IsUnit b) : (ha.div hb).unit = ha.unit / hb.unit :=
+  Units.ext rfl
+
 @[to_additive]
 theorem unit_pow (h : IsUnit a) (n : ℕ) : (h.pow n).unit = h.unit ^ n :=
   Units.ext rfl
@@ -576,9 +593,6 @@ protected lemma inv_mul_cancel_left (h : IsUnit a) : ∀ b, a⁻¹ * (a * b) = b
   h.unit'.inv_mul_cancel_left
 
 @[to_additive]
-protected lemma div_self (h : IsUnit a) : a / a = 1 := by rw [div_eq_mul_inv, h.mul_inv_cancel]
-
-@[to_additive]
 lemma inv (h : IsUnit a) : IsUnit a⁻¹ := by
   obtain ⟨u, hu⟩ := h
   rw [← hu, ← Units.val_inv_eq_inv_val]
@@ -588,40 +602,65 @@ lemma inv (h : IsUnit a) : IsUnit a⁻¹ := by
 lemma unit_inv (h : IsUnit a) : h.inv.unit = h.unit⁻¹ :=
   Units.ext h.unit.val_inv_eq_inv_val.symm
 
-@[to_additive]
-lemma div (ha : IsUnit a) (hb : IsUnit b) : IsUnit (a / b) := by
-  rw [div_eq_mul_inv]; exact ha.mul hb.inv
+protected lemma mul_inv_mul_cancel_right (h : IsUnit b) (a : α) : b * (a * b)⁻¹ = a⁻¹ := by
+  rw [mul_inv_rev, h.mul_inv_cancel_left]
 
-@[to_additive]
-lemma unit_div (ha : IsUnit a) (hb : IsUnit b) : (ha.div hb).unit = ha.unit / hb.unit :=
-  Units.ext (ha.unit.val_div_eq_div_val hb.unit).symm
-
-@[to_additive]
-protected lemma div_mul_cancel_right (h : IsUnit b) (a : α) : b / (a * b) = a⁻¹ := by
-  rw [div_eq_mul_inv, mul_inv_rev, h.mul_inv_cancel_left]
-
-@[to_additive]
-protected lemma mul_div_mul_right (h : IsUnit c) (a b : α) : a * c / (b * c) = a / b := by
-  simp only [div_eq_mul_inv, mul_inv_rev, mul_assoc, h.mul_inv_cancel_left]
+protected lemma mul_mul_inv_mul_cancel_right (h : IsUnit c) (a b : α) :
+    a * c * (b * c)⁻¹ = a * b⁻¹ := by
+  simp only [mul_inv_rev, mul_assoc, h.mul_inv_cancel_left]
 
 end DivisionMonoid
 
 section DivisionCommMonoid
 variable [DivisionCommMonoid α] {a c : α}
 
-@[to_additive]
-protected lemma div_mul_cancel_left (h : IsUnit a) (b : α) : a / (a * b) = b⁻¹ := by
-  rw [mul_comm, h.div_mul_cancel_right]
+protected lemma mul_inv_mul_cancel_left (h : IsUnit a) (b : α) : a * (a * b)⁻¹ = b⁻¹ := by
+  rw [mul_comm a b, h.mul_inv_mul_cancel_right]
 
-@[to_additive]
-protected lemma mul_div_mul_left (h : IsUnit c) (a b : α) : c * a / (c * b) = a / b := by
-  rw [mul_comm c, mul_comm c, h.mul_div_mul_right]
+protected lemma mul_mul_inv_mul_cancel_left (h : IsUnit c) (a b : α) :
+    c * a * (c * b)⁻¹ = a * b⁻¹ := by
+  rw [mul_comm c a, mul_comm c b, h.mul_mul_inv_mul_cancel_right]
 
 end DivisionCommMonoid
 end IsUnit
 
-lemma divp_eq_div [DivisionMonoid α] (a : α) (u : αˣ) : a /ₚ u = a / u := by
-  rw [div_eq_mul_inv, divp, u.val_inv_eq_inv_val]
+namespace IsAddUnit
+section SubtractionMonoid
+variable [SubtractionMonoid α] {a b c : α}
+
+protected lemma sub_self (h : IsAddUnit a) : a - a = 0 := by
+  rw [sub_eq_add_neg, h.add_neg_cancel]
+
+protected lemma sub_add_cancel_right (h : IsAddUnit b) (a : α) : b - (a + b) = -a := by
+  rw [sub_eq_add_neg, neg_add_rev, h.add_neg_cancel_left]
+
+lemma sub (ha : IsAddUnit a) (hb : IsAddUnit b) : IsAddUnit (a - b) := by
+  rw [sub_eq_add_neg]
+  exact ha.add hb.neg
+
+lemma addUnit_sub (ha : IsAddUnit a) (hb : IsAddUnit b) :
+    (ha.sub hb).addUnit = ha.addUnit - hb.addUnit :=
+  AddUnits.ext (ha.addUnit.val_sub_eq_sub_val hb.addUnit).symm
+
+protected lemma add_sub_add_right (h : IsAddUnit c) (a b : α) : a + c - (b + c) = a - b := by
+  simp only [sub_eq_add_neg, neg_add_rev, add_assoc, h.add_neg_cancel_left]
+
+end SubtractionMonoid
+
+section SubtractionCommMonoid
+variable [SubtractionCommMonoid α] {a c : α}
+
+protected lemma sub_add_cancel_left (h : IsAddUnit a) (b : α) : a - (a + b) = -b := by
+  rw [add_comm a b, h.sub_add_cancel_right]
+
+protected lemma add_sub_add_left (h : IsAddUnit c) (a b : α) : c + a - (c + b) = a - b := by
+  rw [add_comm c a, add_comm c b, h.add_sub_add_right]
+
+end SubtractionCommMonoid
+end IsAddUnit
+
+lemma divp_eq_mul_inv [DivisionMonoid α] (a : α) (u : αˣ) : a /ₚ u = a * (u : α)⁻¹ := by
+  rw [divp, u.val_inv_eq_inv_val]
 
 @[to_additive]
 lemma Group.isUnit [Group α] (a : α) : IsUnit a :=

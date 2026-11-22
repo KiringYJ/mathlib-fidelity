@@ -64,7 +64,7 @@ private theorem tendsto_divp_iff {F : Filter ℝ} :
     apply eventually_comap.mpr
     filter_upwards [h s hs] with x hx y hy
     subst x
-    exact hx _ y.property.ne_zero (by simpa using divp_mul_cancel (f y) y.property.unit)
+    exact hx _ y.property.ne_zero (by simp)
 
 namespace HasDerivAt
 
@@ -93,8 +93,7 @@ theorem lhopital_zero_right_on_Ioo (hab : a < b) (hff' : ∀ x ∈ Ioo a b, HasD
   have hcb : c < b := hc.2.trans (hx.2.trans_le (min_le_left ..))
   have hcd : c < d := hc.2.trans (hx.2.trans_le (min_le_right ..))
   apply hd ⟨hc.1, hcd⟩ _ (hg' c ⟨hc.1, hcb⟩)
-  have hq : f y /ₚ y.property.unit * g y = f y := by
-    simpa using divp_mul_cancel (f y) y.property.unit
+  have hq : f y /ₚ y.property.unit * g y = f y := by simp
   exact mul_right_cancel₀ y.property.ne_zero (by linear_combination (g' c) * hq + heq)
 
 theorem lhopital_zero_right_on_Ico (hab : a < b) (hff' : ∀ x ∈ Ioo a b, HasDerivAt f (f' x) x)

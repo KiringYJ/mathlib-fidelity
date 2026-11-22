@@ -183,7 +183,7 @@ theorem mk_sub_mk [Sub R] (x1 y1 x2 y2 : R) :
 @[simp]
 theorem C_sub (r1 r2 : R) [SubNegZeroMonoid R] :
     (.C (r1 - r2) : QuadraticAlgebra R a b) = .C r1 - .C r2 :=
-  QuadraticAlgebra.ext rfl zero_sub_zero.symm
+  QuadraticAlgebra.ext rfl (sub_zero (0 : R)).symm
 
 end AddGroup
 

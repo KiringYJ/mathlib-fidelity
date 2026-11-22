@@ -925,7 +925,7 @@ lemma circleIntegral_one_div_sub_center_pow_smul_of_differentiable_on_off_counta
     (hc : ContinuousOn f (closedBall c R)) (hd : ∀ z ∈ ball c R \ s, DifferentiableAt ℂ f z) :
     circleIntegralOn (fun z : sphere c |R| ↦ Checked.div 1 ((z.val - c) ^ (n + 1))
       ((isUnit_sub_center_of_mem_sphere h0.ne'.isUnit z).pow _) • f z.val) c R =
-      (2 * π * I / n.factorial) • iteratedDeriv n f c := by
+      (2 * π * I / (n.factorial : ℂ)) • iteratedDeriv n f c := by
   have := hasFPowerSeriesOnBall_of_differentiable_off_countable (R := .mk R h0.le) hs hc hd h0
       |>.factorial_smul 1 n
   rw [iteratedFDeriv_apply_eq_iteratedDeriv_mul_prod, Finset.prod_const_one, one_smul] at this
@@ -953,7 +953,7 @@ lemma _root_.DiffContOnCl.circleIntegral_one_div_sub_center_pow_smul
     (h0 : 0 < R) (n : ℕ) (hc : DiffContOnCl ℂ f (ball c R)) :
     circleIntegralOn (fun z : sphere c |R| ↦ Checked.div 1 ((z.val - c) ^ (n + 1))
       ((isUnit_sub_center_of_mem_sphere h0.ne'.isUnit z).pow _) • f z.val) c R =
-      (2 * π * I / n.factorial) • iteratedDeriv n f c :=
+      (2 * π * I / (n.factorial : ℂ)) • iteratedDeriv n f c :=
   c.circleIntegral_one_div_sub_center_pow_smul_of_differentiable_on_off_countable h0 n
     Set.countable_empty hc.continuousOn_ball fun _ hx ↦ hc.differentiableAt isOpen_ball hx.1
 
@@ -971,7 +971,7 @@ lemma _root_.DifferentiableOn.circleIntegral_one_div_sub_center_pow_smul (h0 : 0
     (hc : DifferentiableOn ℂ f (closedBall c R)) :
     circleIntegralOn (fun z : sphere c |R| ↦ Checked.div 1 ((z.val - c) ^ (n + 1))
       ((isUnit_sub_center_of_mem_sphere h0.ne'.isUnit z).pow _) • f z.val) c R =
-      (2 * π * I / n.factorial) • iteratedDeriv n f c :=
+      (2 * π * I / (n.factorial : ℂ)) • iteratedDeriv n f c :=
   (hc.mono closure_ball_subset_closedBall).diffContOnCl
     |>.circleIntegral_one_div_sub_center_pow_smul h0 n
 

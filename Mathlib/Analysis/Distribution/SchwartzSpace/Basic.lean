@@ -697,7 +697,8 @@ def bilinLeftCLM (B : E →L[𝕜] F →L[𝕜] G) {g : D → F} (hg : g.HasTemp
   rintro ⟨k, n⟩
   rcases hg.norm_iteratedFDeriv_le_uniform n with ⟨l, C, hC, hgrowth⟩
   use
-    Finset.Iic (l + k, n), ‖B‖ * ((n : ℝ) + (1 : ℝ)) * n.choose (n / 2) * (C * 2 ^ (l + k)),
+    Finset.Iic (l + k, n),
+    ‖B‖ * ((n : ℝ) + (1 : ℝ)) * n.choose (Nat.euclideanDiv n 2) * (C * 2 ^ (l + k)),
     by positivity
   intro f x
   have hxk : 0 ≤ ‖x‖ ^ k := by positivity
@@ -715,7 +716,7 @@ def bilinLeftCLM (B : E →L[𝕜] F →L[𝕜] G) {g : D → F} (hg : g.HasTemp
   rw [← this, Finset.sum_mul]
   refine Finset.sum_le_sum fun i hi => ?_
   simp only [one_mul]
-  move_mul [(Nat.choose n i : ℝ), (Nat.choose n (n / 2) : ℝ)]
+  move_mul [(Nat.choose n i : ℝ), (Nat.choose n (Nat.euclideanDiv n 2) : ℝ)]
   gcongr ?_ * ?_
   swap
   · norm_cast
@@ -1351,7 +1352,7 @@ theorem norm_toLp {f : 𝓢(E, F)} {p : ℝ≥0∞} {μ : Measure E} [hμ : μ.H
 
 theorem norm_toLp' {f : 𝓢(E, F)} {p : ℝ≥0∞} {μ : Measure E} (hp₁ : p ≠ 0) (hp₂ : p ≠ ⊤)
     [hμ : μ.HasTemperateGrowth] :
-    ‖f.toLp p μ‖ = (∫ x, ‖f x‖ ^ p.toReal ∂μ) ^ (1 / p).toReal := by
+    ‖f.toLp p μ‖ = (∫ x, ‖f x‖ ^ p.toReal ∂μ) ^ (ENNReal.div 1 p).toReal := by
   rw [norm_toLp, MeasureTheory.MemLp.eLpNorm_eq_integral_rpow_norm hp₁ hp₂ (f.memLp p μ),
     ENNReal.toReal_ofReal (by positivity)]
 

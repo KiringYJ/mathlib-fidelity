@@ -52,12 +52,13 @@ lemma tendsto_zero_of_tendsto_mul_atTop (hr : Tendsto (fun n => n * p n) atTop (
 
 open Asymptotics in
 lemma tendsto_choose_mul_pow_atTop (hr : Tendsto (fun n => n * p n) atTop (𝓝 r)) :
-    Tendsto (fun n => n.choose k * (p n) ^ k) atTop (𝓝 (r ^ k / k.factorial)) := by
-  have : (fun n => n.choose k * (p n) ^ k) ~[atTop] (fun n ↦ ((n * p n) ^ k) / k.factorial) :=
+    Tendsto (fun n => n.choose k * (p n) ^ k) atTop (𝓝 (r ^ k / (k.factorial : ℝ))) := by
+  have : (fun n => n.choose k * (p n) ^ k) ~[atTop]
+      (fun n ↦ ((n * p n) ^ k) / (k.factorial : ℝ)) :=
     calc
-    _ ~[atTop] (fun n => (n ^ k / k.factorial) * (p n) ^ k) :=
+    _ ~[atTop] (fun n : ℕ => ((n : ℝ) ^ k / (k.factorial : ℝ)) * (p n) ^ k) :=
       (isEquivalent_choose k).mul IsEquivalent.refl
-    _ ~[atTop] (fun n ↦ ((n * p n) ^ k) / k.factorial) :=
+    _ ~[atTop] (fun n : ℕ ↦ ((n * p n) ^ k) / (k.factorial : ℝ)) :=
       EventuallyEq.isEquivalent (.of_eq (by ext; field))
   refine (IsEquivalent.tendsto_nhds_iff this).mpr ?_
   simpa [div_eq_mul_inv₀] using (hr.pow k).mul_const ((k.factorial : ℝ)⁻¹)
@@ -68,7 +69,7 @@ lemma tendsto_choose_mul_pow_atTop (hr : Tendsto (fun n => n * p n) atTop (𝓝 
 -/
 theorem tendsto_choose_mul_pow_of_tendsto_mul_atTop (hr : Tendsto (fun n => n * p n) atTop (𝓝 r)) :
     Tendsto (fun n => n.choose k * (p n) ^ k * (1 - p n) ^ (n - k))
-    atTop (𝓝 (Real.exp (-r) * (r ^ k) / k.factorial)) := by
+    atTop (𝓝 (Real.exp (-r) * (r ^ k) / (k.factorial : ℝ))) := by
   rw [mul_div_assoc₀, mul_comm]
   refine (tendsto_choose_mul_pow_atTop k hr).mul ?_
   have hp_lt_half : ∀ᶠ n in atTop, p n < 1 / 2 :=

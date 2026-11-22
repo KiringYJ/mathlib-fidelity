@@ -88,9 +88,9 @@ variable [DivisionSemiring α] [CharZero α]
 example : (0.1 : ℚ) = 1 / 10 := by norm_num1
 example : (3.14 : ℚ) = 157 / 50 := by norm_num1
 example : (3.14159 : ℚ) = 314159 / 100000 := by norm_num1
-example : (0.1 : α) = 1 / 10 := by norm_num1
-example : (3.14 : α) = 157 / 50 := by norm_num1
-example : (3.14159 : α) = 314159 / 100000 := by norm_num1
+example : (0.1 : α) = Checked.div 1 10 (OfNat.ofNat_ne_zero 10).isUnit := by norm_num1
+example : (3.14 : α) = Checked.div 157 50 (OfNat.ofNat_ne_zero 50).isUnit := by norm_num1
+example : (3.14159 : α) = Checked.div 314159 100000 (OfNat.ofNat_ne_zero 100000).isUnit := by norm_num1
 
 example : (42e7 : ℚ) = 420000000 := by norm_num1
 example : (42e7 : α) = 420000000 := by norm_num1
@@ -181,25 +181,30 @@ variable [DivisionSemiring α] [CharZero α]
 example : (1 : ℚ≥0) = 1 := by norm_num1
 example : (1/2 : ℚ≥0) = 1/2 := by norm_num1
 example : (1 : α) = 1 := by norm_num1
-example : (1/2 : α) = 1/2 := by norm_num1
+example : Checked.div (1 : α) 2 (OfNat.ofNat_ne_zero 2).isUnit =
+    Checked.div (1 : α) 2 (OfNat.ofNat_ne_zero 2).isUnit := by norm_num1
 example : (1 : ℚ≥0) ≠ 2 := by norm_num1
 example : (1/2 : ℚ≥0) ≠ 1 := by norm_num1
 example : (1/2 : ℚ≥0) ≠ 1/3 := by norm_num1
 example : (1/2 : ℚ≥0) ≠ 5/2 := by norm_num1
-example : (1/2 : α) ≠ 1/3 := by norm_num1
-example : (1/2 : α) ≠ 5/2 := by norm_num1
-example : (1 : α) / 3 ≠ 0 := by norm_num1
-example : (1 : α) / 3 ≠ 2 / 7 := by norm_num1
+example : Checked.div (1 : α) 2 (OfNat.ofNat_ne_zero 2).isUnit ≠
+    Checked.div (1 : α) 3 (OfNat.ofNat_ne_zero 3).isUnit := by norm_num1
+example : Checked.div (1 : α) 2 (OfNat.ofNat_ne_zero 2).isUnit ≠
+    Checked.div (5 : α) 2 (OfNat.ofNat_ne_zero 2).isUnit := by norm_num1
+example : Checked.div (1 : α) 3 (OfNat.ofNat_ne_zero 3).isUnit ≠ 0 := by norm_num1
+example : Checked.div (1 : α) 3 (OfNat.ofNat_ne_zero 3).isUnit ≠
+    Checked.div (2 : α) 7 (OfNat.ofNat_ne_zero 7).isUnit := by norm_num1
 
 -- Normalize to False
 example : ((1 : ℚ≥0) = 2) = False := by norm_num1
 example : ((1/2 : ℚ≥0) = 2) = False := by norm_num1
 example : ((1 : α) = 2) = False := by norm_num1
-example : ((1/2 : α) = 2) = False := by norm_num1
+example : (Checked.div (1 : α) 2 (OfNat.ofNat_ne_zero 2).isUnit = 2) = False := by norm_num1
 
 example : ((1 : ℚ≥0) ≠ 1) = False := by norm_num1
 example : ((1/2 : ℚ≥0) ≠ 1/2) = False := by norm_num1
-example : ((1/2 : α) ≠ 1/2) = False := by norm_num1
+example : (Checked.div (1 : α) 2 (OfNat.ofNat_ne_zero 2).isUnit ≠
+    Checked.div (1 : α) 2 (OfNat.ofNat_ne_zero 2).isUnit) = False := by norm_num1
 
 end NNRat
 
@@ -381,9 +386,9 @@ example : (1:ℂ) / 3 ≠ 2 / 7 := by norm_num1
 
 example : (1:ℝ) ≠ 2 := by norm_num1
 
-example : (5 / 2:ℕ) = 2 := by norm_num1
-example : (5 / -2:ℤ) < -1 := by norm_num1
-example : (0 + 1) / 2 < 0 + 1 := by norm_num1
+example : Nat.euclideanDiv 5 2 = 2 := by norm_num1
+example : Int.euclideanDiv 5 (-2) < -1 := by norm_num1
+example : Nat.euclideanDiv (0 + 1) 2 < 0 + 1 := by norm_num1
 example : Nat.succ (Nat.succ (2 ^ 3)) = 10 := by norm_num1
 example : 10 = (-1 : ℤ) % 11 := by norm_num1
 example : (12321 - 2 : ℤ) = 12319 := by norm_num1
@@ -452,16 +457,16 @@ example : 1 % 1 = 0 := by norm_num1
 
 end Nat.mod
 
-section Nat.div
+section Nat.euclideanDiv
 
-example : 10 / 1 = 10 := by norm_num1
-example : 5 / 4 = 1 := by norm_num1
-example : 9 / 4 = 2 := by norm_num1
-example : 0 / 1 = 0 := by norm_num1
-example : 10 / 9 = 1 := by norm_num1
-example : 1099 / 100 = 10 := by norm_num1
+example : Nat.euclideanDiv 10 1 = 10 := by norm_num1
+example : Nat.euclideanDiv 5 4 = 1 := by norm_num1
+example : Nat.euclideanDiv 9 4 = 2 := by norm_num1
+example : Nat.euclideanDiv 0 1 = 0 := by norm_num1
+example : Nat.euclideanDiv 10 9 = 1 := by norm_num1
+example : Nat.euclideanDiv 1099 100 = 10 := by norm_num1
 
-end Nat.div
+end Nat.euclideanDiv
 
 /-!
 ## Numbers in algebraic structures
@@ -632,22 +637,29 @@ macro_rules
   | `(tactic| checked_nonzero) => `(tactic| norm_num)
 
 variable [Field α] [LinearOrder α] [IsStrictOrderedRing α]
+
+-- Fix the field before elaborating the operands of nested generated quotients.
+local macro:70 lhs:term:70 " /ₙ " rhs:term:71 : term => do
+  let carrier := Lean.mkIdent `α
+  `(Checked.div ($lhs : $carrier) ($rhs : $carrier)
+    (by apply GroupWithZero.isUnit_of_ne_zero; norm_num1))
+
 example : ((25 * (1 / 1)) + (30 - 16)) = (39 : α) := by norm_num1
 example : ((19 * (- 2 - 3)) / 6) = (-95/6 : α) := by norm_num1
 example : - (3 * 28) = (-84 : α) := by norm_num1
-example : - - (16 / ((11 / (- - (6 * 19) + 12)) * 21)) = (96/11 : α) := by norm_num1
+example : - - (16 /ₙ ((11 /ₙ (- - (6 * 19) + 12)) * 21)) = (96 /ₙ 11 : α) := by norm_num1
 example : (- (- 21 + 24) - - (- - (28 + (- 21 / - (16 / ((1 * 26) * ((0 * - 11) + 13))))) * 21)) =
   (79209/8 : α) := by norm_num1
 example : (27 * (((16 + - (12 + 4)) + (22 - - 19)) - 23)) = (486 : α) := by norm_num1
-example : - (13 * (- 30 / ((7 / 24) + - 7))) = (-9360/161 : α) := by norm_num1
+example : - (13 * (- 30 /ₙ ((7 /ₙ 24) + - 7))) = (-9360 /ₙ 161 : α) := by norm_num1
 example : - (0 + 20) = (-20 : α) := by norm_num1
 example : (- 2 - (27 + (((2 / 14) - (7 + 21)) + (16 - - - 14)))) = (-22/7 : α) := by norm_num1
 example : (25 + ((8 - 2) + 16)) = (47 : α) := by norm_num1
 example : (- - 26 / 27) = (26/27 : α) := by norm_num1
-example : ((((16 * (22 / 14)) - 18) / 11) + 30) = (2360/77 : α) := by norm_num1
+example : ((((16 * (22 /ₙ 14)) - 18) /ₙ 11) + 30) = (2360 /ₙ 77 : α) := by norm_num1
 example : (((- 28 * 28) / (29 - 24)) * 24) = (-18816/5 : α) := by norm_num1
-example : ((- (18 - ((- - (10 + - 2) - - (23 / 5)) / 5)) - (21 * 22)) -
-  (((20 / - ((((19 + 18) + 15) + 3) + - 22)) + 14) / 17)) = (-394571/825 : α) := by norm_num1
+example : ((- (18 - ((- - (10 + - 2) - - (23 /ₙ 5)) /ₙ 5)) - (21 * 22)) -
+  (((20 /ₙ - ((((19 + 18) + 15) + 3) + - 22)) + 14) /ₙ 17)) = (-394571 /ₙ 825 : α) := by norm_num1
 example : ((3 + 25) - - 4) = (32 : α) := by norm_num1
 example : ((1 - 0) - 22) = (-21 : α) := by norm_num1
 example : (((- (8 / 7) / 14) + 20) + 22) = (2054/49 : α) := by norm_num1
@@ -663,7 +675,7 @@ example : (- 9 - - 0) = (-9 : α) := by norm_num1
 example : (- 10 / (30 + 10)) = (-1/4 : α) := by norm_num1
 example : (22 - (6 * (28 * - 8))) = (1366 : α) := by norm_num1
 example : ((- - 2 * (9 * - 3)) + (22 / 30)) = (-799/15 : α) := by norm_num1
-example : - (26 / ((3 + 7) / - (27 * (12 / - 16)))) = (-1053/20 : α) := by norm_num1
+example : - (26 /ₙ ((3 + 7) /ₙ - (27 * (12 /ₙ - 16)))) = (-1053 /ₙ 20 : α) := by norm_num1
 example : ((- 29 / 1) + 28) = (-1 : α) := by norm_num1
 example : ((21 * ((10 - (((17 + 28) - - 0) + 20)) + 26)) + ((17 + - 16) * 7)) = (-602 : α) := by
   norm_num1
@@ -678,17 +690,20 @@ example : (29 * - 8) = (-232 : α) := by norm_num1
 example : ((22 / 9) - 29) = (-239/9 : α) := by norm_num1
 example : (3 + (19 / 12)) = (55/12 : α) := by norm_num1
 example : - (13 + 30) = (-43 : α) := by norm_num1
-example : - - - (((21 * - - ((- 25 - (- (30 - 5) / (- 5 - 5))) /
-  (((6 + ((25 * - 13) + 22)) - 3) / 2))) / (- 3 / 10)) * (- 8 - 0)) = (-308/3 : α) := by norm_num1
+example : - - - (((21 * - - ((- 25 - (- (30 - 5) /ₙ (- 5 - 5))) /ₙ
+    (((6 + ((25 * - 13) + 22)) - 3) /ₙ 2))) /ₙ (- 3 /ₙ 10)) * (- 8 - 0)) =
+    (-308 /ₙ 3 : α) := by
+  norm_num1
 example : - (2 * - (- 24 * 22)) = (-1056 : α) := by norm_num1
-example : - - (((28 / - ((- 13 * - 5) / - (((7 - 30) / 16) + 6))) * 0) - 24) = (-24 : α) := by
+example : - - (((28 /ₙ - ((- 13 * - 5) /ₙ - (((7 - 30) /ₙ 16) + 6))) * 0) - 24) = (-24 : α) := by
   norm_num1
 example : ((13 + 24) - (27 / (21 * 13))) = (3358/91 : α) := by norm_num1
 example : ((3 / - 21) * 25) = (-25/7 : α) := by norm_num1
 example : (17 - (29 - 18)) = (6 : α) := by norm_num1
 example : ((28 / 20) * 15) = (21 : α) := by norm_num1
-example : ((((26 * (- (23 - 13) - 3)) / 20) / (14 - (10 + 20))) / ((16 / 6) / (16 * - (3 / 28)))) =
-(-1521/2240 : α) := by norm_num1
+example : ((((26 * (- (23 - 13) - 3)) /ₙ 20) /ₙ (14 - (10 + 20))) /ₙ
+    ((16 /ₙ 6) /ₙ (16 * - (3 /ₙ 28)))) = (-1521 /ₙ 2240 : α) := by
+  norm_num1
 
 example : (46 / (- ((- 17 * 28) - 77) + 87)) = (23/320 : α) := by norm_num1
 example : (73 * - (67 - (74 * - - 11))) = (54531 : α) := by norm_num1
@@ -711,15 +726,16 @@ example : - ((94 * 89) + (79 - (23 - (((- 1 / 55) + 95) * (28 - (54 / - - - 22))
 (-1369070/121 : α) := by norm_num1
 example : (- 23 + 61) = (38 : α) := by norm_num1
 example : - (93 / 69) = (-31/23 : α) := by norm_num1
-example : (- - ((68 / (39 + (((45 * - (59 - (37 + 35))) / (53 - 75)) -
-    - (100 + - (50 / (- 30 - 59)))))) - (69 - (23 * 30))) / (57 + 17)) = (137496481/16368578 : α) := by
+example : (- - ((68 /ₙ (39 + (((45 * - (59 - (37 + 35))) /ₙ (53 - 75)) -
+    - (100 + - (50 /ₙ (- 30 - 59)))))) - (69 - (23 * 30))) /ₙ (57 + 17)) =
+    (137496481 /ₙ 16368578 : α) := by
   norm_num1
 example : (- 19 * - - (75 * - - 41)) = (-58425 : α) := by norm_num1
 example : ((3 / ((- 28 * 45) * (19 + ((- (- 88 - (- (- 1 + 90) + 8)) + 87) * 48)))) + 1) =
   (1903019/1903020 : α) := by norm_num1
 example : ((- - (28 + 48) / 75) + ((- 59 - 14) - 0)) = (-5399/75 : α) := by norm_num1
-example : (- ((- (((66 - 86) - 36) / 94) - 3) / - - (77 / (56 - - - 79))) + 87) =
-  (312254/3619 : α) := by norm_num1
+example : (- ((- (((66 - 86) - 36) /ₙ 94) - 3) /ₙ - - (77 /ₙ (56 - - - 79))) + 87) =
+  (312254 /ₙ 3619 : α) := by norm_num1
 
 example : 2 ^ 13 - 1 = Int.ofNat 8191 := by norm_num1
 

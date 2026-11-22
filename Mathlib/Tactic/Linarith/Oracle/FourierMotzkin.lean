@@ -8,6 +8,7 @@ module
 public meta import Std.Data.HashMap.AdditionalOperations
 public meta import Batteries.Lean.HashMap
 public import Mathlib.Tactic.Linarith.Datatypes
+public meta import Mathlib.Lean.Elab.NativeDivision
 public import Batteries.Lean.HashMap
 public meta import Mathlib.Tactic.Linarith.Datatypes
 public import Std.Data.HashMap
@@ -218,9 +219,11 @@ produces `v1` and `v2` such that `a` has been cancelled in `v1*c1 + v2*c2`. -/
 def elimVar (c1 c2 : Comp) (a : ℕ) : Option (ℕ × ℕ) :=
   let v1 := c1.coeffOf a
   let v2 := c2.coeffOf a
-  if v1 * v2 < 0 then
+  if h : v1 * v2 < 0 then
+    have hv1 : v1.natAbs ≠ 0 := Int.natAbs_ne_zero.mpr fun hz => by simp [hz] at h
+    have hv2 : v2.natAbs ≠ 0 := Int.natAbs_ne_zero.mpr fun hz => by simp [hz] at h
     let vlcm := Nat.lcm v1.natAbs v2.natAbs
-    some ⟨vlcm / v1.natAbs, vlcm / v2.natAbs⟩
+    some ⟨Nat.euclideanDiv vlcm v1.natAbs hv1, Nat.euclideanDiv vlcm v2.natAbs hv2⟩
   else none
 
 /--

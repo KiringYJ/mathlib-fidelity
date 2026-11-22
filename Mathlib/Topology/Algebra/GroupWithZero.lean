@@ -59,26 +59,26 @@ variable [DivInvMonoid G₀] [TopologicalSpace G₀] [SeparatelyContinuousMul G�
   {f : α → G₀} {s : Set α} {l : Filter α}
 
 theorem Filter.Tendsto.div_const {x : G₀} (hf : Tendsto f l (𝓝 x)) (y : G₀) :
-    Tendsto (fun a => f a / y) l (𝓝 (x / y)) := by
-  simpa only [div_eq_mul_inv] using hf.mul_const _
+    Tendsto (fun a => f a * y⁻¹) l (𝓝 (x * y⁻¹)) :=
+  hf.mul_const _
 
 variable [TopologicalSpace α]
 
 nonrec theorem ContinuousAt.div_const {a : α} (hf : ContinuousAt f a) (y : G₀) :
-    ContinuousAt (fun x => f x / y) a :=
+    ContinuousAt (fun x => f x * y⁻¹) a :=
   hf.div_const y
 
 nonrec theorem ContinuousWithinAt.div_const {a} (hf : ContinuousWithinAt f s a) (y : G₀) :
-    ContinuousWithinAt (fun x => f x / y) s a :=
+    ContinuousWithinAt (fun x => f x * y⁻¹) s a :=
   hf.div_const _
 
 theorem ContinuousOn.div_const (hf : ContinuousOn f s) (y : G₀) :
-    ContinuousOn (fun x => f x / y) s := by
-  simpa only [div_eq_mul_inv] using hf.mul_const _
+    ContinuousOn (fun x => f x * y⁻¹) s :=
+  hf.mul_const _
 
 @[continuity, fun_prop]
-theorem Continuous.div_const (hf : Continuous f) (y : G₀) : Continuous fun x => f x / y := by
-  simpa only [div_eq_mul_inv] using hf.mul_const _
+theorem Continuous.div_const (hf : Continuous f) (y : G₀) : Continuous fun x => f x * y⁻¹ :=
+  hf.mul_const _
 
 end DivConst
 
@@ -95,26 +95,26 @@ variable [Monoid G₀] [TopologicalSpace G₀] [SeparatelyContinuousMul G₀]
   {f : α → G₀} {s : Set α} {l : Filter α}
 
 theorem Filter.Tendsto.div_const₀ {x : G₀} (hf : Tendsto f l (𝓝 x)) (y : G₀) {hy : IsUnit y} :
-    Tendsto (fun a => f a / y) l (𝓝 (x / y)) :=
+    Tendsto (fun a => Checked.div (f a) y hy) l (𝓝 (Checked.div x y hy)) :=
   hf.mul_const _
 
 variable [TopologicalSpace α]
 
 nonrec theorem ContinuousAt.div_const₀ {a : α} (hf : ContinuousAt f a) (y : G₀)
-    {hy : IsUnit y} : ContinuousAt (fun x => f x / y) a :=
+    {hy : IsUnit y} : ContinuousAt (fun x => Checked.div (f x) y hy) a :=
   hf.div_const₀ y
 
 nonrec theorem ContinuousWithinAt.div_const₀ {a} (hf : ContinuousWithinAt f s a) (y : G₀)
-    {hy : IsUnit y} : ContinuousWithinAt (fun x => f x / y) s a :=
+    {hy : IsUnit y} : ContinuousWithinAt (fun x => Checked.div (f x) y hy) s a :=
   hf.div_const₀ _
 
 theorem ContinuousOn.div_const₀ (hf : ContinuousOn f s) (y : G₀) {hy : IsUnit y} :
-    ContinuousOn (fun x => f x / y) s :=
+    ContinuousOn (fun x => Checked.div (f x) y hy) s :=
   hf.mul_const _
 
 @[continuity, fun_prop]
 theorem Continuous.div_const₀ (hf : Continuous f) (y : G₀) {hy : IsUnit y} :
-    Continuous fun x => f x / y :=
+    Continuous fun x => Checked.div (f x) y hy :=
   hf.mul_const _
 
 end DivConst₀
@@ -290,7 +290,7 @@ variable [GroupWithZero G₀] [TopologicalSpace G₀] [ContinuousInv₀ G₀] [C
 
 theorem Filter.Tendsto.div₀ {l : Filter α} {a b : G₀} {h₀ : ∀ x, IsUnit (g x)} {hb : IsUnit b}
     (hf : Tendsto f l (𝓝 a)) (hg : Tendsto g l (𝓝 b)) :
-    Tendsto (fun x ↦ Checked.div (f x) (g x) (h₀ x)) l (𝓝 (a / b)) := by
+    Tendsto (fun x ↦ Checked.div (f x) (g x) (h₀ x)) l (𝓝 (Checked.div a b hb)) := by
   simpa only [div_eq_mul_inv₀] using hf.mul (hg.inv₀ (h0 := h₀) (ha := hb))
 
 /-- The pointwise quotient converges on the subtype where the denominator is invertible,
@@ -303,7 +303,8 @@ theorem Filter.Tendsto.div₀_restrict {l : Filter α} {a b : G₀} {hb : IsUnit
     (hf.comp tendsto_comap).mul (hg.inv₀_restrict (hb := hb))
 
 theorem Filter.Tendsto.div {l : Filter α} {a b : G₀} {h₀ : IsUnit g} {hb : IsUnit b}
-    (hf : Tendsto f l (𝓝 a)) (hg : Tendsto g l (𝓝 b)) : Tendsto (f / g) l (𝓝 (a / b)) := by
+    (hf : Tendsto f l (𝓝 a)) (hg : Tendsto g l (𝓝 b)) :
+    Tendsto (Checked.div f g h₀) l (𝓝 (Checked.div a b hb)) := by
   rw [funext (Pi.div_apply₀ f g)]
   exact hf.div₀ hg
 
@@ -314,7 +315,7 @@ theorem tendsto_div_nhds_one_iff_eq₀
     {l : Filter α} [l.NeBot] [T2Space G₀] {a b : G₀} {h₀ : ∀ x, IsUnit (g x)}
     (hf : Tendsto f l (𝓝 a)) (hg : Tendsto g l (𝓝 b)) (hb : b ≠ 0) :
     Tendsto (fun x ↦ Checked.div (f x) (g x) (h₀ x)) l (𝓝 1) ↔ a = b := by
-  have hab : Tendsto (fun x ↦ Checked.div (f x) (g x) (h₀ x)) l (𝓝 (a / b)) :=
+  have hab : Tendsto (fun x ↦ Checked.div (f x) (g x) (h₀ x)) l (𝓝 (Checked.div a b hb.isUnit)) :=
     hf.div₀ hg (hb := hb.isUnit)
   refine ⟨fun hfg => (div_eq_one_iff_eq (hb := hb.isUnit)).mp (tendsto_nhds_unique hab hfg),
     fun h => ?_⟩
@@ -355,7 +356,7 @@ theorem ContinuousWithinAt.div₀_restrict (hf : ContinuousWithinAt f s a)
     h.mul (hg.fun_inv₀_restrict ha)
 
 theorem ContinuousWithinAt.div {h₀ : IsUnit g} (hf : ContinuousWithinAt f s a)
-    (hg : ContinuousWithinAt g s a) : ContinuousWithinAt (f / g) s a := by
+    (hg : ContinuousWithinAt g s a) : ContinuousWithinAt (Checked.div f g h₀) s a := by
   rw [funext (Pi.div_apply₀ f g)]
   exact hf.div₀ hg
 
@@ -373,7 +374,7 @@ theorem ContinuousOn.div₀_restrict (hf : ContinuousOn f s) (hg : ContinuousOn 
   exact (hf x hxs).div₀_restrict (hg x hxs) hx
 
 theorem ContinuousOn.div {h₀ : IsUnit g} (hf : ContinuousOn f s) (hg : ContinuousOn g s) :
-    ContinuousOn (f / g) s := by
+    ContinuousOn (Checked.div f g h₀) s := by
   rw [funext (Pi.div_apply₀ f g)]
   exact hf.div₀ hg
 
@@ -385,7 +386,7 @@ nonrec theorem ContinuousAt.div₀ {h₀ : ∀ x, IsUnit (g x)} (hf : Continuous
   hf.div₀ hg (hb := h₀ a)
 
 theorem ContinuousAt.div {h₀ : IsUnit g} (hf : ContinuousAt f a) (hg : ContinuousAt g a) :
-    ContinuousAt (f / g) a := by
+    ContinuousAt (Checked.div f g h₀) a := by
   rw [funext (Pi.div_apply₀ f g)]
   exact hf.div₀ hg
 
@@ -396,7 +397,7 @@ theorem Continuous.div₀ {h₀ : ∀ x, IsUnit (g x)} (hf : Continuous f) (hg :
 
 @[continuity]
 theorem Continuous.div {h₀ : IsUnit g} (hf : Continuous f) (hg : Continuous g) :
-    Continuous (f / g) := by
+    Continuous (Checked.div f g h₀) := by
   rw [funext (Pi.div_apply₀ f g)]
   exact hf.div₀ hg
 
@@ -411,18 +412,19 @@ continuously across a zero denominator. The boundary value is part of this compo
 no value of division at zero is defined. -/
 theorem ContinuousAt.comp_div_cases {f g : α → G₀} (h : α → G₀ → β) (hf : ContinuousAt f a)
     (hg : ContinuousAt g a)
-    (hh : ∀ hga : g a ≠ 0, ContinuousAt ↿h (a, f a / g a))
+    (hh : ∀ hga : g a ≠ 0, ContinuousAt ↿h (a, Checked.div (f a) (g a) hga.isUnit))
     (hdom : g a ≠ 0 → {x | g x ≠ 0} ∈ 𝓝 a)
     (h2h : g a = 0 → Tendsto ↿h (𝓝 a ×ˢ ⊤) (𝓝 (h a 0))) :
-    ContinuousAt (fun x ↦ if hx : g x = 0 then h x 0 else h x (f x / g x)) a := by
+    ContinuousAt (fun x ↦ if hx : g x = 0 then h x 0
+      else h x (Checked.div (f x) (g x) (Ne.isUnit hx))) a := by
   by_cases hga : g a = 0
   · change Tendsto _ (𝓝 a) _
     simp only [dite_eq_left hga]
-    let b : α → G₀ := fun x ↦ if hx : g x = 0 then 0 else f x / g x
+    let b : α → G₀ := fun x ↦ if hx : g x = 0 then 0 else Checked.div (f x) (g x) (Ne.isUnit hx)
     convert (h2h hga).comp (continuousAt_id.tendsto.prodMk (tendsto_top (f := b))) using 1
     funext x
-    change (if hx : g x = 0 then h x 0 else h x (f x / g x)) =
-      h x (if hx : g x = 0 then 0 else f x / g x)
+    change (if hx : g x = 0 then h x 0 else h x (Checked.div (f x) (g x) (Ne.isUnit hx))) =
+      h x (if hx : g x = 0 then 0 else Checked.div (f x) (g x) (Ne.isUnit hx))
     by_cases hx : g x = 0 <;> simp [hx]
   · change Tendsto _ (𝓝 a) _
     simp only [dite_eq_right hga]
@@ -441,10 +443,11 @@ open Classical in
 /-- The composite with its specified zero-denominator boundary value is continuous everywhere. -/
 theorem Continuous.comp_div_cases {f g : α → G₀} (h : α → G₀ → β) (hf : Continuous f)
     (hg : Continuous g)
-    (hh : ∀ a (ha : g a ≠ 0), ContinuousAt ↿h (a, f a / g a))
+    (hh : ∀ a (ha : g a ≠ 0), ContinuousAt ↿h (a, Checked.div (f a) (g a) ha.isUnit))
     (hdom : ∀ a, g a ≠ 0 → {x | g x ≠ 0} ∈ 𝓝 a)
     (h2h : ∀ a, g a = 0 → Tendsto ↿h (𝓝 a ×ˢ ⊤) (𝓝 (h a 0))) :
-    Continuous (fun x ↦ if hx : g x = 0 then h x 0 else h x (f x / g x)) :=
+    Continuous (fun x ↦ if hx : g x = 0 then h x 0
+      else h x (Checked.div (f x) (g x) (Ne.isUnit hx))) :=
   continuous_iff_continuousAt.mpr fun a =>
     hf.continuousAt.comp_div_cases _ hg.continuousAt (hh a) (hdom a) (h2h a)
 

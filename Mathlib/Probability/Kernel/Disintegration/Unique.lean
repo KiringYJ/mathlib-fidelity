@@ -368,12 +368,15 @@ private lemma ae_apply_eq_zero_or_one_of_isCondKernel {ρ : Measure (α × Ω)}
     rw [restrict_apply ht]
     exact hρB _ (inter_subset_right.trans inter_subset_left) (ht.inter hC)
   set g : α → Ω → ℝ≥0∞ := fun a ω ↦
-    if a ∈ C then (if ω ∈ s then 2⁻¹ else (1 - η a s / 2) / (1 - η a s)) else 1 with hg_def
+    if a ∈ C then
+      (if ω ∈ s then 2⁻¹ else ENNReal.div (1 - ENNReal.div (η a s) 2) (1 - η a s))
+    else 1 with hg_def
   have hg : Measurable (Function.uncurry g) := by
     refine Measurable.ite (hC.preimage measurable_fst)
       (Measurable.ite (hs.preimage measurable_snd) measurable_const ?_) measurable_const
-    exact ((measurable_const.sub (hp.div_const 2)).div (measurable_const.sub hp)).comp
-      measurable_fst
+    simp only [ENNReal.div_eq_mul_inv]
+    exact ((measurable_const.sub (hp.mul_const (2 : ℝ≥0∞)⁻¹)).mul
+      (measurable_const.sub hp).inv).comp measurable_fst
   have hg_ne (a : α) (ω : Ω) : g a ω ≠ 0 := by
     simp only [hg_def]
     split_ifs with ha hω
@@ -395,7 +398,8 @@ private lemma ae_apply_eq_zero_or_one_of_isCondKernel {ρ : Measure (α × Ω)}
     · have h1 : η a s < 1 := ha.2.2
       rw [← lintegral_add_compl _ hs,
         setLIntegral_congr_fun (g := fun _ ↦ 2⁻¹) hs (fun ω hω ↦ by simp [hg_def, ha, hω]),
-        setLIntegral_congr_fun (g := fun _ ↦ (1 - η a s / 2) / (1 - η a s)) hs.compl
+        setLIntegral_congr_fun
+          (g := fun _ ↦ ENNReal.div (1 - ENNReal.div (η a s) 2) (1 - η a s)) hs.compl
           (fun ω hω ↦ by simp [hg_def, ha, notMem_of_mem_compl hω]),
         setLIntegral_const, setLIntegral_const, prob_compl_eq_one_sub hs,
         ENNReal.div_mul_cancel (tsub_pos_of_lt h1).ne' (ENNReal.sub_ne_top ENNReal.one_ne_top),

@@ -20,11 +20,11 @@ example (z : ℂ) : Complex.logTaylor 2 z = z := by
   simp [Complex.logTaylor]
 
 example (z : ℂ) (hz : ‖z‖ < 1) :
-    HasSum (fun n : ℕ ↦ z ^ (n + 1) / (n + 1)) (-Complex.log (1 - z)) :=
+    HasSum (fun n : ℕ ↦ z ^ (n + 1) / ((n : ℂ) + 1)) (-Complex.log (1 - z)) :=
   Complex.hasSum_taylorSeries_neg_log hz
 
 -- Taking even and odd terms of the shifted logarithmic series preserves the arctangent series.
-example : HasSum (fun n : ℕ ↦ (-1 : ℝ) ^ n * (1 / 2 : ℝ) ^ (2 * n + 1) / (2 * n + 1))
+example : HasSum (fun n : ℕ ↦ (-1 : ℝ) ^ n * (1 / 2 : ℝ) ^ (2 * n + 1) / (2 * (n : ℝ) + 1))
     (Real.arctan (1 / 2)) := by
   have hs := Real.hasSum_arctan (x := (1 / 2 : ℝ)) (by norm_num)
   simpa only [Nat.cast_add, Nat.cast_mul, Nat.cast_one, Nat.cast_ofNat] using hs

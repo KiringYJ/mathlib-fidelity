@@ -97,7 +97,7 @@ lemma tendsto_smul_atImInfty {g : GL (Fin 2) ℝ} (hg : g 1 0 = 0) :
   have hu : IsUnit |g 1 1| := (abs_pos.mpr h₁).ne'.isUnit
   suffices Tendsto (fun τ : ℍ ↦ |g 0 0| * τ.im / |g 1 1|) atImInfty atTop by
     simpa [atImInfty, Function.comp_def, im_smul, num, denom, hg, abs_div, abs_mul,
-      abs_of_pos (UpperHalfPlane.im_pos _), mul_div_right_comm]
+      abs_of_pos (UpperHalfPlane.im_pos _), mul_div_right_comm₀]
   have hp : 0 < |g 0 0| / |g 1 1| := div_pos (abs_pos.mpr h₀) (abs_pos.mpr h₁)
   simpa only [atImInfty, div_mul_eq_mul_div₀] using tendsto_comap.const_mul_atTop hp
 

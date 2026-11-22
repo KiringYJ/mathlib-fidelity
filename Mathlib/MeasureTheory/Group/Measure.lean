@@ -234,18 +234,18 @@ instance isMulRightInvariant_map_mul_left [IsMulRightInvariant μ] (g : G) :
 
 end Semigroup
 
-section DivInvMonoid
+theorem map_sub_right_eq_self [SubNegMonoid G] (μ : Measure G) [IsAddRightInvariant μ] (g : G) :
+    ∀ (hg : Measurable (· - g) := by fun_prop), map (· - g) μ hg.aemeasurable = μ := by
+  intro hg
+  simpa only [sub_eq_add_neg] using
+    map_add_right_eq_self μ (-g) (by simpa only [sub_eq_add_neg] using hg)
 
-variable [DivInvMonoid G]
-
-@[to_additive]
-theorem map_div_right_eq_self (μ : Measure G) [IsMulRightInvariant μ] (g : G) :
+@[to_additive AddGroup.map_sub_right_eq_self]
+theorem map_div_right_eq_self [Group G] (μ : Measure G) [IsMulRightInvariant μ] (g : G) :
     ∀ (hg : Measurable (· / g) := by fun_prop), map (· / g) μ hg.aemeasurable = μ := by
   intro hg
   simpa only [div_eq_mul_inv] using
     map_mul_right_eq_self μ g⁻¹ (by simpa only [div_eq_mul_inv] using hg)
-
-end DivInvMonoid
 
 section Group
 
@@ -426,15 +426,9 @@ instance inv.instIsMulLeftInvariant [IsMulRightInvariant μ] : IsMulLeftInvarian
     Function.comp_def, mul_inv_rev, inv_inv]
 
 @[to_additive]
-theorem measurePreserving_div_left (μ : Measure G) [IsInvInvariant μ] [IsMulLeftInvariant μ]
-    (g : G) : MeasurePreserving (fun t => g / t) μ μ := by
-  simp_rw [div_eq_mul_inv]
-  exact (measurePreserving_mul_left μ g).comp (measurePreserving_inv μ)
-
-@[to_additive]
-theorem map_div_left_eq_self (μ : Measure G) [IsInvInvariant μ] [IsMulLeftInvariant μ] (g : G) :
-    map (fun t => g / t) μ = μ :=
-  (measurePreserving_div_left μ g).map_eq
+theorem measurePreserving_mul_inv (μ : Measure G) [IsInvInvariant μ] [IsMulLeftInvariant μ]
+    (g : G) : MeasurePreserving (fun t => g * t⁻¹) μ μ :=
+  (measurePreserving_mul_left μ g).comp (measurePreserving_inv μ)
 
 @[to_additive]
 theorem measurePreserving_mul_right_inv (μ : Measure G) [IsInvInvariant μ] [IsMulLeftInvariant μ]
@@ -447,6 +441,36 @@ theorem map_mul_right_inv_eq_self (μ : Measure G) [IsInvInvariant μ] [IsMulLef
   (measurePreserving_mul_right_inv μ g).map_eq
 
 end DivisionMonoid
+
+section SubtractionMonoid
+
+variable [SubtractionMonoid G] [MeasurableAdd G] [MeasurableNeg G]
+
+theorem measurePreserving_sub_left (μ : Measure G) [IsNegInvariant μ] [IsAddLeftInvariant μ]
+    (g : G) : MeasurePreserving (fun t => g - t) μ μ := by
+  simpa only [sub_eq_add_neg] using measurePreserving_add_neg μ g
+
+theorem map_sub_left_eq_self (μ : Measure G) [IsNegInvariant μ] [IsAddLeftInvariant μ] (g : G) :
+    map (fun t => g - t) μ = μ :=
+  (measurePreserving_sub_left μ g).map_eq
+
+end SubtractionMonoid
+
+section
+
+variable [Group G] [MeasurableMul G] [MeasurableInv G]
+
+@[to_additive AddGroup.measurePreserving_sub_left]
+theorem measurePreserving_div_left (μ : Measure G) [IsInvInvariant μ] [IsMulLeftInvariant μ]
+    (g : G) : MeasurePreserving (fun t => g / t) μ μ := by
+  simpa only [div_eq_mul_inv] using measurePreserving_mul_inv μ g
+
+@[to_additive AddGroup.map_sub_left_eq_self]
+theorem map_div_left_eq_self (μ : Measure G) [IsInvInvariant μ] [IsMulLeftInvariant μ] (g : G) :
+    map (fun t => g / t) μ (measurePreserving_div_left μ g).measurable.aemeasurable = μ :=
+  (measurePreserving_div_left μ g).map_eq
+
+end
 
 section Group
 

@@ -84,18 +84,19 @@ lemma gammaSet_ne_zero {N r : ℕ} {a : Fin 2 → ZMod N} (v : gammaSet N r a)
   intro hv
   exact hr (v.property.2.symm.trans (finGcdMap_eq_zero_iff.mpr hv))
 
+/-- Take the Euclidean quotient of every coordinate by a nonzero integer. -/
+abbrev divIntMap (r : ℤ) [NeZero r] {m : ℕ} (v : Fin m → ℤ) : Fin m → ℤ :=
+  fun i => Int.euclideanDiv (v i) r (NeZero.ne r)
+
 lemma finGcdMap_div {r : ℕ} [NeZero r] (v : Fin 2 → ℤ) (hv : finGcdMap v = r) :
-    IsCoprime ((v / r) 0) ((v / r) 1) := by
+    IsCoprime (divIntMap r v 0) (divIntMap r v 1) := by
   have hg : 0 < finGcdMap v := hv ▸ Nat.pos_of_ne_zero (NeZero.ne r)
-  rw [← hv, Int.isCoprime_iff_gcd_eq_one]
-  exact Int.gcd_ediv_gcd_ediv_gcd hg
+  subst r
+  exact Int.isCoprime_iff_gcd_eq_one.mpr (Int.gcd_div_gcd_div_gcd hg)
 
 lemma finGcdMap_smul {r : ℕ} (a : ℤ) {v : Fin 2 → ℤ} (hv : finGcdMap v = r) :
     finGcdMap (a • v) = a.natAbs * r := by
   simp [finGcdMap, Int.gcd_mul_left, hv]
-
-/-- An abbreviation of the map which divides an integer vector by an integer. -/
-abbrev divIntMap (r : ℤ) {m : ℕ} (v : Fin m → ℤ) : Fin m → ℤ := v / r
 
 lemma mem_gammaSet_one (v : Fin 2 → ℤ) : v ∈ gammaSet 1 1 0 ↔ IsCoprime (v 0) (v 1) := by
   rw [gammaSet_one_mem_iff, Int.isCoprime_iff_gcd_eq_one]
@@ -113,25 +114,21 @@ lemma gammaSet_div_gcd_to_gammaSet10_bijection (r : ℕ) [NeZero r] :
   · intro x hx v hv hv2
     ext i
     exact (Int.ediv_left_inj (gammaSet_div_gcd hx i) (gammaSet_div_gcd hv i)).mp
-      (congr_fun hv2 i)
+      (by simpa only [divIntMap, Int.euclideanDiv_eq_core] using congr_fun hv2 i)
   · intro x hx
     use r • x
-    simp only [nsmul_eq_mul, divIntMap, Int.cast_natCast]
+    simp only [nsmul_eq_mul]
     constructor
     · rw [mem_gammaSet_one, Int.isCoprime_iff_gcd_eq_one] at hx
       exact ⟨Subsingleton.eq_zero _, by simp [Int.gcd_mul_left, hx]⟩
     · ext i
-      simp_all [NeZero.ne r]
+      simp_all [Int.euclideanDiv_eq_core, NeZero.ne r]
 
-lemma gammaSet_eq_gcd_mul_divIntMap {r : ℕ} {v : Fin 2 → ℤ} (hv : v ∈ gammaSet 1 r 0) :
+lemma gammaSet_eq_gcd_mul_divIntMap {r : ℕ} [NeZero r] {v : Fin 2 → ℤ} (hv : v ∈ gammaSet 1 r 0) :
     v = r • (divIntMap r v) := by
-  by_cases hr : r = 0
-  · have hv := hv.2
-    simp only [hr, Fin.isValue, Int.gcd_eq_zero_iff, CharP.cast_eq_zero, zero_smul] at *
-    ext i
-    fin_cases i <;> simp [hv]
-  · ext i
-    simp_all [Pi.smul_apply, divIntMap, ← Int.mul_ediv_assoc _ (gammaSet_div_gcd hv i)]
+  ext i
+  simpa only [Pi.smul_apply, nsmul_eq_mul, divIntMap, Int.euclideanDiv_eq_core] using
+    (Int.mul_ediv_cancel' (gammaSet_div_gcd hv i)).symm
 
 /-- The equivalence between `gammaSet 1 r 0` and `gammaSet 1 1 0` for non-zero `r`. -/
 def gammaSetDivGcdEquiv (r : ℕ) [NeZero r] : gammaSet 1 r 0 ≃ gammaSet 1 1 0 :=
@@ -161,8 +158,9 @@ section gamma_action
 /-- Right-multiplying a vector by a matrix in `SL(2, ℤ)` doesn't change its gcd. -/
 lemma vecMulSL_gcd {v : Fin 2 → ℤ} (hab : finGcdMap v = r) (A : SL(2, ℤ)) :
     finGcdMap (v ᵥ* A.1) = r := by
-  have hvr : v = r • (v / r) := by
+  have hvr : v = r • divIntMap r v := by
     ext i
+    simp only [Pi.smul_apply, nsmul_eq_mul, divIntMap, Int.euclideanDiv_eq_core]
     refine Eq.symm (Int.mul_ediv_cancel' ?_)
     fin_cases i <;> simp [← hab, Int.gcd_dvd_left, Int.gcd_dvd_right]
   rw [hvr, smul_vecMul]

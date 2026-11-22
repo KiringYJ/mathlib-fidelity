@@ -50,10 +50,10 @@ def zsqrtdProducer (dQ : Q(ℤ)) (d : Int) : Producer :=
     one := 1
     mul := (· * ·)
     sub := (· - ·)
-    divExact := fun x y =>
+    divExact := fun x y => do
       let z := x * star y
       let n := y.norm
-      ⟨z.re / n, z.im / n⟩
+      return ⟨← intExactQuotient z.re n, ← intExactQuotient z.im n⟩
     isZero := (· == 0) }
   let prepare (entries : Array (Array Expr)) :
       MetaM (Array (Array (ℤ√d)) × (BareissData (ℤ√d) → BareissData (ℤ√d))) := do

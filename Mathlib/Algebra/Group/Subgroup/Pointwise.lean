@@ -62,9 +62,18 @@ lemma op_smul_coe_set [Group G] [SetLike S G] [SubgroupClass S G] {s : S} {a : G
     MulOpposite.op a • (s : Set G) = s := by
   ext; simp [Set.mem_smul_set_iff_inv_smul_mem, mul_mem_cancel_right, ha]
 
-@[to_additive (attr := simp, norm_cast)]
-lemma coe_div_coe [SetLike S G] [DivisionMonoid G] [SubgroupClass S G] (H : S) :
-    H / H = (H : Set G) := by simp [div_eq_mul_inv]
+@[norm_cast]
+lemma coe_mul_inv_coe [SetLike S G] [DivisionMonoid G] [SubgroupClass S G] (H : S) :
+    (H : Set G) * (H : Set G)⁻¹ = (H : Set G) := by simp
+
+@[simp, norm_cast]
+lemma coe_div_coe [SetLike S G] [CommGroup G] [SubgroupClass S G] (H : S) :
+    (H : Set G) / (H : Set G) = (H : Set G) := coe_mul_inv_coe H
+
+@[simp, norm_cast]
+lemma _root_.AddSubgroup.coe_sub_coe
+    [SetLike S A] [SubtractionMonoid A] [AddSubgroupClass S A] (H : S) :
+    (H : Set A) - (H : Set A) = (H : Set A) := by simp [sub_eq_add_neg]
 
 variable [Group G] [AddGroup A] {s : Set G}
 

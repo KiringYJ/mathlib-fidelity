@@ -363,26 +363,26 @@ theorem Gamma_conj (s : ℂ) : Gamma (conj s) = conj (Gamma s) := by
 /-- Expresses the integral over `Ioi 0` of `t ^ (a - 1) * exp (-(r * t))` in terms of the Gamma
 function, for complex `a`. -/
 lemma integral_cpow_mul_exp_neg_mul_Ioi {a : ℂ} {r : ℝ} (ha : 0 < a.re) (hr : 0 < r) :
-    ∫ (t : ℝ) in Ioi 0, t ^ (a - 1) * exp (-(r * t)) = (1 / r) ^ a * Gamma a := by
-  have aux : (1 / r : ℂ) ^ a = 1 / r * (1 / r) ^ (a - 1) := by
-    nth_rewrite 2 [← cpow_one (1 / r : ℂ)]
+    ∫ (t : ℝ) in Ioi 0, t ^ (a - 1) * exp (-(r * t)) = (1 / (r : ℂ)) ^ a * Gamma a := by
+  have aux : (1 / (r : ℂ)) ^ a = 1 / (r : ℂ) * (1 / (r : ℂ)) ^ (a - 1) := by
+    nth_rewrite 2 [← cpow_one (1 / (r : ℂ))]
     rw [← cpow_add _ _ (one_div_ne_zero (ha := (ofReal_ne_zero.mpr hr.ne').isUnit)),
       add_sub_cancel]
   calc
-    _ = ∫ (t : ℝ) in Ioi 0, (1 / r) ^ (a - 1) * (r * t) ^ (a - 1) * exp (-(r * t)) := by
+    _ = ∫ (t : ℝ) in Ioi 0, (1 / (r : ℂ)) ^ (a - 1) * (r * t) ^ (a - 1) * exp (-(r * t)) := by
       refine MeasureTheory.setIntegral_congr_fun measurableSet_Ioi (fun x hx ↦ ?_)
       rw [mem_Ioi] at hx
       rw [mul_cpow_ofReal_nonneg hr.le hx.le, ← mul_assoc, one_div₀,
         ← ofReal_inv (hr := hr.ne'.isUnit),
         ← mul_cpow_ofReal_nonneg (inv_pos.mpr hr).le hr.le, ← ofReal_mul r⁻¹,
         inv_mul_cancel₀, ofReal_one, one_cpow, one_mul]
-    _ = 1 / r * ∫ (t : ℝ) in Ioi 0, (1 / r) ^ (a - 1) * t ^ (a - 1) * exp (-t) := by
+    _ = 1 / (r : ℂ) * ∫ (t : ℝ) in Ioi 0, (1 / (r : ℂ)) ^ (a - 1) * t ^ (a - 1) * exp (-t) := by
       simp_rw [← ofReal_mul]
       rw [integral_comp_mul_left_Ioi (fun x ↦ _ * x ^ (a - 1) * exp (-x)) _ hr, mul_zero,
         real_smul, ← one_div₀, ofReal_div, ofReal_one]
-    _ = 1 / r * (1 / r : ℂ) ^ (a - 1) * (∫ (t : ℝ) in Ioi 0, t ^ (a - 1) * exp (-t)) := by
+    _ = 1 / (r : ℂ) * (1 / (r : ℂ)) ^ (a - 1) * (∫ (t : ℝ) in Ioi 0, t ^ (a - 1) * exp (-t)) := by
       simp_rw [← MeasureTheory.integral_const_mul, mul_assoc]
-    _ = (1 / r) ^ a * Gamma a := by
+    _ = (1 / (r : ℂ)) ^ a * Gamma a := by
       rw [aux, Gamma_eq_integral ha]
       congr 2 with x
       rw [ofReal_exp, ofReal_neg, mul_comm]

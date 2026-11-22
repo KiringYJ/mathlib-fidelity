@@ -416,8 +416,10 @@ lemma one_add_α_pow_q [Fact q.Prime] (odd : Odd q) (leg3 : legendreSym q 3 = -1
     (1 + α : X q) ^ q = 1 - α := by
   obtain ⟨k, rfl⟩ := odd
   let q := 2 * k + 1
+  have hhalf : Nat.euclideanDiv (2 * k + 1) 2 = k :=
+    Nat.euclideanDiv_eq_of_remainder (r := 1) (by decide) rfl (by decide)
   have : (3 ^ k : ZMod q) = -1 := by
-    simpa [leg3, mul_add_div, eq_comm] using legendreSym.eq_pow (2 * k + 1) 3
+    simpa [leg3, hhalf, eq_comm] using legendreSym.eq_pow (2 * k + 1) 3
   rw [add_pow_expChar, α_pow, show (3 : X q) = (3 : ZMod q) by rw [map_ofNat], ← map_pow, this,
     map_neg]
   simp [sub_eq_add_neg]
@@ -430,9 +432,10 @@ lemma one_add_α_pow_q_succ [Fact q.Prime] (odd : Odd q) (leg3 : legendreSym q 3
 
 /-- If `3` is not a square then `(2 * ω) ^ ((q + 1) / 2) = -2`. -/
 lemma two_mul_ω_pow [Fact q.Prime] (odd : Odd q) (leg3 : legendreSym q 3 = -1) :
-    (2 * ω : X q) ^ ((q + 1) / 2) = -2 := by
+    (2 * ω : X q) ^ Nat.euclideanDiv (q + 1) 2 = -2 := by
   rw [← one_add_α_sq, ← pow_mul]
-  have : 2 * ((q + 1) / 2) = q + 1 := by
+  have : 2 * Nat.euclideanDiv (q + 1) 2 = q + 1 := by
+    rw [Nat.euclideanDiv_eq_core]
     apply Nat.mul_div_cancel'
     rw [← even_iff_two_dvd]
     exact Odd.add_one odd
@@ -442,12 +445,16 @@ lemma two_mul_ω_pow [Fact q.Prime] (odd : Odd q) (leg3 : legendreSym q 3 = -1) 
 lemma pow_ω [Fact q.Prime] (odd : Odd q)
     (leg3 : legendreSym q 3 = -1)
     (leg2 : legendreSym q 2 = 1) :
-    (ω : X q) ^ ((q + 1) / 2) = -1 := by
-  have pow2 : (2 : ZMod q) ^ ((q + 1) / 2) = 2 := by
+    (ω : X q) ^ Nat.euclideanDiv (q + 1) 2 = -1 := by
+  have pow2 : (2 : ZMod q) ^ Nat.euclideanDiv (q + 1) 2 = 2 := by
     obtain ⟨_, _⟩ := odd
-    rw [(by lia : (q + 1) / 2 = q / 2 + 1), pow_succ]
+    have hhalf : Nat.euclideanDiv (q + 1) 2 = Nat.euclideanDiv q 2 + 1 := by
+      simp only [Nat.euclideanDiv_eq_core]
+      lia
+    rw [hhalf, pow_succ]
     have leg := legendreSym.eq_pow q 2
     have : (2 : ZMod q) = ((2 : ℤ) : ZMod q) := by norm_cast
+    simp only [Nat.euclideanDiv_eq_core] at leg ⊢
     rw [this, ← leg, leg2]
     ring
   have := two_mul_ω_pow odd leg3
@@ -455,20 +462,25 @@ lemma pow_ω [Fact q.Prime] (odd : Odd q)
   have coe : (2 : X q) = (2 : ZMod q) := by rw [map_ofNat]
   rw [coe, ← map_pow, pow2, ← coe,
     (by ring : (-2 : X q) = 2 * -1)] at this
-  refine (IsUnit.of_mul_eq_one (M := X q) ↑((q + 1) / 2) ?_).mul_left_cancel this
+  refine (IsUnit.of_mul_eq_one (M := X q) ↑(Nat.euclideanDiv (q + 1) 2) ?_).mul_left_cancel this
   norm_cast
-  simp [Nat.mul_div_cancel' odd.add_one.two_dvd]
+  simp [Nat.euclideanDiv_eq_core, Nat.mul_div_cancel' odd.add_one.two_dvd]
 
 /-- The final evaluation needed to establish the Lucas-Lehmer necessity. -/
 lemma ω_pow_trace [Fact q.Prime] (odd : Odd q)
     (leg3 : legendreSym q 3 = -1)
     (leg2 : legendreSym q 2 = 1)
     (hq4 : 4 ∣ q + 1) :
-    (ω : X q) ^ ((q + 1) / 4) + ωb ^ ((q + 1) / 4) = 0 := by
-  have : (ω : X q) ^ ((q + 1) / 2) * ωb ^ ((q + 1) / 4) = -ωb ^ ((q + 1) / 4) := by
+    (ω : X q) ^ Nat.euclideanDiv (q + 1) 4 + ωb ^ Nat.euclideanDiv (q + 1) 4 = 0 := by
+  have : (ω : X q) ^ Nat.euclideanDiv (q + 1) 2 * ωb ^ Nat.euclideanDiv (q + 1) 4 =
+      -ωb ^ Nat.euclideanDiv (q + 1) 4 := by
     rw [pow_ω odd leg3 leg2]
     ring
-  have div4 : (q + 1) / 2 = (q + 1) / 4 + (q + 1) / 4 := by rcases hq4 with ⟨k, hk⟩; lia
+  have div4 : Nat.euclideanDiv (q + 1) 2 =
+      Nat.euclideanDiv (q + 1) 4 + Nat.euclideanDiv (q + 1) 4 := by
+    rcases hq4 with ⟨k, hk⟩
+    simp only [Nat.euclideanDiv_eq_core]
+    lia
   rw [div4, pow_add, mul_assoc, ← mul_pow, ω_mul_ωb, one_pow, mul_one] at this
   rw [this]
   ring
@@ -614,7 +626,7 @@ theorem lucas_lehmer_necessity (p : ℕ) (w : 3 ≤ p) (hp : (mersenne p).Prime)
     (legendreSym_mersenne_three w <| hp.of_mersenne.odd_of_ne_two (by lia))
     (legendreSym_mersenne_two w) (by simp [pow_add])
   rw [succ_mersenne, pow_add, show 2 ^ 2 = 4 by norm_num,
-    show (2 : ℕ) ^ p' * 4 / 4 = 2 ^ p' by omega] at this
+    Nat.euclideanDiv_mul_right_cancel _ (by decide : (4 : ℕ) ≠ 0)] at this
   simp [this]
 
 namespace LucasLehmer
@@ -754,13 +766,15 @@ and the fact that `% 2^p` and `/ 2^p` can be very efficient on the binary repres
 Someone should do this, too!
 -/
 
-theorem modEq_mersenne (n k : ℕ) : k ≡ k / 2 ^ n + k % 2 ^ n [MOD 2 ^ n - 1] :=
+theorem modEq_mersenne (n k : ℕ) :
+    k ≡ Nat.euclideanDiv k (2 ^ n) (pow_ne_zero n two_ne_zero) + k % 2 ^ n [MOD 2 ^ n - 1] := by
   -- See https://leanprover.zulipchat.com/#narrow/stream/113489-new-members/topic/help.20finding.20a.20lemma/near/177698446
+  let q := Nat.euclideanDiv k (2 ^ n) (pow_ne_zero n two_ne_zero)
   calc
-    k = 2 ^ n * (k / 2 ^ n) + k % 2 ^ n := (Nat.div_add_mod k (2 ^ n)).symm
-    _ ≡ 1 * (k / 2 ^ n) + k % 2 ^ n [MOD 2 ^ n - 1] :=
-      ((Nat.modEq_sub <| Nat.succ_le_of_lt <| pow_pos zero_lt_two _).mul_right _).add_right _
-    _ = k / 2 ^ n + k % 2 ^ n := by rw [one_mul]
+    k = 2 ^ n * q + k % 2 ^ n := (Nat.euclideanDiv_mul_add_mod k _ _).symm
+    _ ≡ 1 * q + k % 2 ^ n [MOD 2 ^ n - 1] :=
+      ((Nat.modEq_sub <| Nat.succ_le_of_lt <| pow_pos zero_lt_two _).mul_right q).add_right _
+    _ = q + k % 2 ^ n := by rw [one_mul]
 
 -- It's hard to know what the limiting factor for large Mersenne primes would be.
 -- In the purely computational world, I think it's the squaring operation in `s`.

@@ -46,13 +46,9 @@ info: Unfolds for 1 + 1:
 #guard_msgs in
 #unfold? 1 + 1
 
-/--
-info: Unfolds for 5 / 3:
-· Nat.div 5 3
-· 1
--/
+/-- info: No unfolds found for Nat.euclideanDiv 5 3 ⋯ -/
 #guard_msgs in
-#unfold? 5 / 3
+#unfold? Nat.euclideanDiv 5 3
 
 /--
 info: Unfolds for 1 + 1:

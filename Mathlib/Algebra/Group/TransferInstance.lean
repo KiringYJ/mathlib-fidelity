@@ -59,15 +59,12 @@ lemma mul_def [Mul β] (x y : α) :
     letI := Equiv.mul e
     x * y = e.symm (e x * e y) := rfl
 
-/-- Transfer `Div` across an `Equiv` -/
-@[to_additive /-- Transfer `Sub` across an `Equiv` -/]
-protected abbrev div [Div β] : Div α :=
-  ⟨fun x y => e.invFun (e.toFun x / e.toFun y)⟩
+/-- Transfer `Sub` across an `Equiv`. -/
+protected abbrev sub [Sub β] : Sub α where sub x y := e.invFun (e.toFun x - e.toFun y)
 
-@[to_additive]
-lemma div_def [Div β] (x y : α) :
-    letI := Equiv.div e
-    x / y = e.symm (e x / e y) := rfl
+lemma sub_def [Sub β] (x y : α) :
+    letI := e.sub
+    x - y = e.symm (e x - e y) := rfl
 
 -- Porting note: this should be called `inv`,
 -- but we already have an `Equiv.inv` (which perhaps should move to `Perm.inv`?)
@@ -176,21 +173,19 @@ protected abbrev group [Group β] : Group α := by
   let one := e.one
   let mul := e.mul
   let inv := e.Inv
-  let div := e.div
+  let div : Div α := ⟨fun x y => e.symm (e x / e y)⟩
   let npow := e.pow ℕ
   let zpow := e.pow ℤ
   apply e.injective.group _ <;> intros <;> exact e.apply_symm_apply _
 
 /-- Transfer `CommGroup` across an `Equiv` -/
 @[to_additive /-- Transfer `AddCommGroup` across an `Equiv` -/]
-protected abbrev commGroup [CommGroup β] : CommGroup α := by
-  let one := e.one
-  let mul := e.mul
-  let inv := e.Inv
-  let div := e.div
-  let npow := e.pow ℕ
-  let zpow := e.pow ℤ
-  apply e.injective.commGroup _ <;> intros <;> exact e.apply_symm_apply _
+protected abbrev commGroup [CommGroup β] : CommGroup α :=
+  { e.group, e.commMonoid with }
+
+lemma div_def [Group β] (x y : α) :
+    letI := e.group
+    x / y = e.symm (e x / e y) := rfl
 
 end Equiv
 

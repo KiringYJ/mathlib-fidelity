@@ -122,12 +122,12 @@ theorem strictConvexOn_zpow {m : ℤ} (hm₀ : m ≠ 0) (hm₁ : m ≠ 1) :
   have hinv : (z : ℝ)⁻¹ < a * (x : ℝ)⁻¹ + b * (y : ℝ)⁻¹ := by
     obtain rfl : b = 1 - a := eq_sub_of_add_eq' hab
     have key : a * (x : ℝ)⁻¹ + (1 - a) * (y : ℝ)⁻¹ - (z : ℝ)⁻¹ =
-        a * (1 - a) * ((x : ℝ) - y) ^ 2 / (x * y * z) := by
+        a * (1 - a) * ((x : ℝ) - y) ^ 2 / ((x : ℝ) * (y : ℝ) * (z : ℝ)) := by
       field_simp
       rw [hz']
       ring
     have hsq : 0 < ((x : ℝ) - y) ^ 2 := sq_pos_iff.2 (sub_ne_zero.2 hxy)
-    have : 0 < a * (1 - a) * ((x : ℝ) - y) ^ 2 / (x * y * z) :=
+    have : 0 < a * (1 - a) * ((x : ℝ) - y) ^ 2 / ((x : ℝ) * (y : ℝ) * (z : ℝ)) :=
       div_pos (mul_pos (mul_pos ha hb) hsq) (by positivity)
     linarith
   have e : ∀ w : Ioi (0 : ℝ), Checked.zpow (w : ℝ) (Int.negSucc n) (fun _ ↦ w.2.ne'.isUnit) =

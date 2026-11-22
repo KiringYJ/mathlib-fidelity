@@ -133,13 +133,13 @@ instance : ValuationRing A where
     · use 0; right
       ext
       simp [ha]
-    rcases A.mem_or_inv_mem ((a : K) / b) (hx := (div_ne_zero ha).isUnit) with hh | hh
-    · use ⟨a / b, hh⟩
+    rcases A.mem_or_inv_mem ((a : K) / (b : K)) (hx := (div_ne_zero ha).isUnit) with hh | hh
+    · use ⟨(a : K) / (b : K), hh⟩
       right
       ext
       simp [field]
-    · rw [show (a / b : K)⁻¹ = b / a by simp] at hh
-      use ⟨b / a, hh⟩
+    · rw [show ((a : K) / (b : K))⁻¹ = (b : K) / (a : K) by simp] at hh
+      use ⟨(b : K) / (a : K), hh⟩
       left
       ext
       simp [field]

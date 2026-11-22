@@ -196,7 +196,7 @@ partial def Methods.bisect (m : Methods) (g : MVarId) (cases : Subarray Interval
     (z1 z2 : Bound) (e1 e2 p1 p2 e : Expr) : MetaM Unit := g.withContext do
   if 1 < cases.size then
     let tgt ← g.getType
-    let mid := cases.size / 2
+    let mid := Nat.euclideanDiv cases.size 2
     let z3 := z1.asLower + mid
     let e3 ← m.mkNumeral z3
     let le ← mkAppM ``LE.le #[e3, e]

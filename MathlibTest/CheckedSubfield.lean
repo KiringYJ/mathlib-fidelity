@@ -25,8 +25,9 @@ example (s : Subfield K) {x : K} (hx : x ∈ s) (h : x ≠ 0) : x⁻¹ ∈ s := 
 
 -- coercions: the ambient evidence is derived from the subfield evidence
 example (s : Subfield K) (x : s) (hx : x ≠ 0) : ((x⁻¹ : s) : K) = (x : K)⁻¹ := by simp
-example (s : Subfield K) (x y : s) (hy : y ≠ 0) : ((x / y : s) : K) = x / y := by simp
-example (s : Subfield K) (x y : s) (hy : IsUnit y) : (x : K) / y = ((x / y : s) : K) := by
+example (s : Subfield K) (x y : s) (hy : y ≠ 0) : ((x / y : s) : K) = (x : K) / (y : K) := by
+  simp
+example (s : Subfield K) (x y : s) (hy : IsUnit y) : (x : K) / (y : K) = ((x / y : s) : K) := by
   norm_cast
 example (s : Subfield K) (x : s) (h : x ≠ 0) : x * x⁻¹ = 1 := mul_inv_cancel₀
 
@@ -44,7 +45,8 @@ section
 
 variable {F : Type*} [Field F]
 
-example (s : Subfield F) (x y : s) (hy : y ≠ 0) : ((x / y : s) : F) = (x : F) / y := by simp
+example (s : Subfield F) (x y : s) (hy : y ≠ 0) : ((x / y : s) : F) = (x : F) / (y : F) := by
+  simp
 example (s : Subfield F) (x : s) (h : x ≠ 0) : ((x * x⁻¹ : s) : F) = 1 := by simp
 
 end

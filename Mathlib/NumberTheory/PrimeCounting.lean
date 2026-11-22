@@ -266,7 +266,7 @@ theorem primesLE_card_eq_primeCounting (n : ℕ) : #(primesLE n) = π n := by
 
 /-- A linear upper bound on the size of the `primeCounting'` function -/
 theorem primeCounting'_add_le {a k : ℕ} (h0 : a ≠ 0) (h1 : a < k) (n : ℕ) :
-    π' (k + n) ≤ π' k + Nat.totient a * (n / a + 1) :=
+    π' (k + n) ≤ π' k + Nat.totient a * (n.euclideanDiv a h0 + 1) :=
   calc
     π' (k + n) ≤ #{p ∈ range k | p.Prime} + #{p ∈ Ico k (k + n) | p.Prime} := by
       rw [primeCounting', count_eq_card_filter_range, range_eq_Ico, range_eq_Ico, ←
@@ -278,12 +278,12 @@ theorem primeCounting'_add_le {a k : ℕ} (h0 : a ≠ 0) (h1 : a < k) (n : ℕ) 
       gcongr with p hp
       rw [coprime_comm]
       exact coprime_of_lt_prime h0 <| h1.trans_le (mem_Ico.1 hp).1
-    _ ≤ π' k + totient a * (n / a + 1) := by
+    _ ≤ π' k + totient a * (n.euclideanDiv a h0 + 1) := by
       rw [add_le_add_iff_left]
       exact Ico_filter_coprime_le k n h0
 
 theorem primeCounting_add_le {a k : ℕ} (h0 : a ≠ 0) (h1 : a ≤ k) (n : ℕ) :
-    π (k + n) ≤ π k + totient a * (n / a + 1) := by
+    π (k + n) ≤ π k + totient a * (n.euclideanDiv a h0 + 1) := by
   rw [primeCounting_eq_primeCounting'_succ]
   convert! primeCounting'_add_le h0 (Order.lt_add_one_iff.mpr h1) n using 2
   omega

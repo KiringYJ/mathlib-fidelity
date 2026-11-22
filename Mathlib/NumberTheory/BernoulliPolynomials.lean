@@ -256,7 +256,7 @@ variable {A : Type*} [CommRing A] [Algebra ℚ A]
 -- This name should probably be updated afterwards
 /-- The theorem that $(e^X - 1) * ∑ Bₙ(t)* X^n/n! = Xe^{tX}$ -/
 theorem bernoulli_generating_function (t : A) :
-    (mk fun n => aeval t ((1 / n ! : ℚ) • bernoulli n)) * (exp A - 1) =
+    (mk fun n => aeval t ((1 / (n ! : ℚ)) • bernoulli n)) * (exp A - 1) =
       PowerSeries.X * rescale t (exp A) := by
   -- check equality of power series by checking coefficients of X^n
   ext n
@@ -274,7 +274,7 @@ theorem bernoulli_generating_function (t : A) :
   rw [← (hnp1.map (algebraMap ℚ A)).mul_right_inj]
   -- do trivial rearrangements to make RHS (n+1)*t^n
   rw [mul_left_comm, ← map_mul]
-  change _ = t ^ n * algebraMap ℚ A (((n + 1) * n ! : ℕ) * (1 / n !))
+  change _ = t ^ n * algebraMap ℚ A (((n + 1) * n ! : ℕ) * (1 / (n ! : ℚ)))
   rw [cast_mul, mul_assoc, mul_one_div_cancel, mul_one,
     mul_comm (t ^ n), ← aeval_monomial, cast_add, cast_one]
   -- But this is the RHS of `Polynomial.sum_bernoulli`

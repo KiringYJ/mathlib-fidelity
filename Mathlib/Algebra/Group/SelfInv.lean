@@ -87,7 +87,17 @@ protected lemma IsSelfInv.mul (ha : IsSelfInv a) (hb : IsSelfInv b) : IsSelfInv 
   rw [isSelfInv_iff, mul_inv, ha, hb]
 
 @[to_additive]
-protected lemma IsSelfInv.div (ha : IsSelfInv a) (hb : IsSelfInv b) : IsSelfInv (a / b) :=
-  div_eq_mul_inv a b ▸ ha.mul hb.inv
+protected lemma IsSelfInv.mul_inv (ha : IsSelfInv a) (hb : IsSelfInv b) :
+    IsSelfInv (a * b⁻¹) :=
+  ha.mul hb.inv
 
 end DivisionCommMonoid
+
+@[to_additive sub_group]
+protected lemma IsSelfInv.div [CommGroup α] {a b : α}
+    (ha : IsSelfInv a) (hb : IsSelfInv b) : IsSelfInv (a / b) := by
+  simpa only [div_eq_mul_inv] using ha.mul_inv hb
+
+protected lemma IsSelfNeg.sub [SubtractionCommMonoid α] {a b : α}
+    (ha : IsSelfNeg a) (hb : IsSelfNeg b) : IsSelfNeg (a - b) := by
+  simpa only [sub_eq_add_neg] using ha.add_neg hb

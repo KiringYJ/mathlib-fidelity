@@ -389,7 +389,7 @@ theorem outer_Ioc [DenselyOrdered R] (a b : R) : f.outer (Ioc a b) = ofReal (f b
     simp [this]
   apply (le_iInf₂ fun s hs => ENNReal.le_of_forall_pos_le_add fun ε εpos h => ?_)
   let δ := ε / 2
-  have δpos : 0 < (δ : ℝ≥0∞) := by simpa [δ] using εpos.ne'
+  have δpos : 0 < (δ : ℝ≥0∞) := by simpa [δ] using εpos
   rcases ENNReal.exists_pos_sum_of_countable δpos.ne' ℕ with ⟨ε', ε'0, hε⟩
   obtain ⟨a', ha', aa'⟩ : ∃ a', f a' - f a < δ ∧ a < a' := by
     have A : ContinuousWithinAt (fun r => f r - f a) (Ioi a) a := by

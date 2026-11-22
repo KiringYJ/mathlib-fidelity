@@ -51,7 +51,7 @@ namespace Complex
 lemma exp_rat_mul_pi_mul_I_pow_two_mul_den (q : ℚ) : exp (q * π * I) ^ (2 * q.den) = 1 := by
   nth_rw 1 [← q.num_div_den, ← exp_nat_mul]
   push_cast
-  rw [show 2 * q.den * (q.num / q.den * π * I) = q.num * (2 * π * I) by field,
+  rw [show 2 * q.den * ((q.num : ℂ) / (q.den : ℂ) * π * I) = q.num * (2 * π * I) by field,
     exp_int_mul_two_pi_mul_I]
 
 /-- `exp(q * π * I)` for `q : ℚ` is integral over `ℤ`. -/
@@ -139,7 +139,7 @@ theorem niven (hθ : ∃ r : ℚ, θ = r * π) (hcos : ∃ q : ℚ, cos θ = q) 
     rw [Finset.mem_Icc]
     rify
     constructor <;> linarith [hk, (r * π).neg_one_le_cos, (r * π).cos_le_one]
-  rw [show cos (r * π) = k / 2 by
+  rw [show cos (r * π) = (k : ℝ) / 2 by
     apply eq_div_iff_mul_eq.mpr
     linarith [hk]]
   fin_cases hk_values <;> simp

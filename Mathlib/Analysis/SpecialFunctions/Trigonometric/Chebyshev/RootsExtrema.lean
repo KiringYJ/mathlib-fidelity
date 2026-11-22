@@ -97,7 +97,7 @@ theorem abs_eval_T_real_le_one_iff {n : ℤ} (hn : n ≠ 0) (x : ℝ) :
   ⟨abs_eval_T_real_le_one n, by simpa using mt <| one_lt_abs_eval_T_real hn⟩
 
 theorem abs_eval_T_real_eq_one_iff {n : ℕ} (hn : n ≠ 0) (x : ℝ) :
-    |(T ℝ n).eval x| = 1 ↔ ∃ k ≤ n, x = cos (k * π / n) := by
+    |(T ℝ n).eval x| = 1 ↔ ∃ k ≤ n, x = cos (k * π / (n : ℝ)) := by
   constructor
   · intro hTx
     have hx := (abs_eval_T_real_le_one_iff (Nat.cast_ne_zero.mpr hn) x).mpr (le_of_eq hTx)
@@ -113,20 +113,20 @@ theorem abs_eval_T_real_eq_one_iff {n : ℕ} (hn : n ≠ 0) (x : ℝ) :
       gcongr
       exact div_le_one_of_le₀ (arccos_le_pi x) (by positivity)
     refine ⟨k, by simpa using hkn, ?_⟩
-    have hr : (k : ℝ) * π / n = arccos x := (div_eq_iff).mpr (hk.trans (mul_comm _ _))
+    have hr : (k : ℝ) * π / (n : ℝ) = arccos x := (div_eq_iff).mpr (hk.trans (mul_comm _ _))
     rw [hr, cos_arccos (by grind) (by grind)]
   · rintro ⟨k, hk, rfl⟩
     rw [T_real_cos, abs_cos_eq_one_iff]
     exact ⟨k, by simp [field]⟩
 
 theorem eval_T_real_cos_int_mul_pi_div {k : ℕ} {n : ℕ} (hn : n ≠ 0) :
-    (T ℝ n).eval (cos (k * π / n)) = (k : ℤ).negOnePow := by
+    (T ℝ n).eval (cos (k * π / (n : ℝ))) = (k : ℤ).negOnePow := by
   rw [T_real_cos, Int.cast_negOnePow]
   convert! Real.cos_int_mul_pi k using 2
   simp [field]
 
 theorem eval_T_real_eq_one_iff {n : ℕ} (hn : n ≠ 0) (x : ℝ) :
-    (T ℝ n).eval x = 1 ↔ ∃ k ≤ n, Even k ∧ x = cos (k * π / n) := by
+    (T ℝ n).eval x = 1 ↔ ∃ k ≤ n, Even k ∧ x = cos (k * π / (n : ℝ)) := by
   constructor
   · intro hx
     obtain ⟨k, hk₁, hk₂⟩ := (abs_eval_T_real_eq_one_iff hn x).mp
@@ -140,7 +140,7 @@ theorem eval_T_real_eq_one_iff {n : ℕ} (hn : n ≠ 0) (x : ℝ) :
     norm_cast
 
 theorem eval_T_real_eq_neg_one_iff {n : ℕ} (hn : n ≠ 0) (x : ℝ) :
-    (T ℝ n).eval x = -1 ↔ ∃ k ≤ n, Odd k ∧ x = cos (k * π / n) := by
+    (T ℝ n).eval x = -1 ↔ ∃ k ≤ n, Odd k ∧ x = cos (k * π / (n : ℝ)) := by
   constructor
   · intro hx
     obtain ⟨k, hk₁, hk₂⟩ := (abs_eval_T_real_eq_one_iff hn x).mp
@@ -198,7 +198,7 @@ theorem rootMultiplicity_T_real {n k : ℕ} (hk : k < n) :
   exact Finset.mem_image_of_mem _ (Finset.mem_univ (⟨k, hk⟩ : Fin n))
 
 theorem roots_U_real_nodup (n : ℕ) :
-    (Multiset.map (fun k : ℕ ↦ cos ((k + 1) * π / (n + 1))) (.range n)).Nodup := by
+    (Multiset.map (fun k : ℕ ↦ cos ((k + 1) * π / (n + 1 : ℝ))) (.range n)).Nodup := by
   refine (Finset.range n).nodup_map_iff_injOn.mpr ?_
   apply injOn_cos.comp
   · intro x hx y hy hxy
@@ -211,12 +211,12 @@ theorem roots_U_real_nodup (n : ℕ) :
 
 theorem roots_U_real (n : ℕ) :
     (U ℝ n).roots (U_ne_zero ℝ n (by omega)) =
-    ((Finset.range n).image (fun (k : ℕ) => cos ((k + 1) * π / (n + 1)))).val := by
+    ((Finset.range n).image (fun (k : ℕ) => cos ((k + 1) * π / (n + 1 : ℝ)))).val := by
   wlog! hn : n ≠ 0
   · simp [hn]
   refine roots_eq_of_degree_eq_card (fun x hx ↦ ?_) ?_
   · obtain ⟨k, hk, hx⟩ := Finset.mem_image.mp hx
-    suffices (U ℝ n).eval x * sin ((k + 1) * π / (n + 1)) = 0 by
+    suffices (U ℝ n).eval x * sin ((k + 1) * π / (n + 1 : ℝ)) = 0 by
       refine (mul_eq_zero_iff_right (ne_of_gt (sin_pos_of_pos_of_lt_pi (by positivity) ?_))).mp this
       field_simp
       norm_cast
@@ -230,16 +230,16 @@ theorem roots_U_real (n : ℕ) :
     exact (Finset.range n).nodup_map_iff_injOn.mp (roots_U_real_nodup n)
 
 theorem rootMultiplicity_U_real {n k : ℕ} (hk : k < n) :
-    (U ℝ n).rootMultiplicity (cos ((k + 1) * π / (n + 1))) (U_ne_zero ℝ n (by omega)) = 1 := by
+    (U ℝ n).rootMultiplicity (cos ((k + 1) * π / (n + 1 : ℝ))) (U_ne_zero ℝ n (by omega)) = 1 := by
   rw [← count_roots _ (U_ne_zero ℝ n (by omega)), roots_U_real,
     Multiset.count_eq_one_of_mem (by simp)]
   grind
 
 theorem isLocalMax_T_real {n k : ℕ} (hn : n ≠ 0) (hk₀ : 0 < k) (hk₁ : k < n) (hk₂ : Even k) :
-    IsLocalMax (T ℝ n).eval (cos (k * π / n)) := by
-  have zero_lt : 0 < k * π / n := by positivity
-  have lt_pi : k * π / n < π := calc
-    k * π / n < n * π / n := by gcongr
+    IsLocalMax (T ℝ n).eval (cos (k * π / (n : ℝ))) := by
+  have zero_lt : 0 < k * π / (n : ℝ) := by positivity
+  have lt_pi : k * π / (n : ℝ) < π := calc
+    k * π / (n : ℝ) < n * π / (n : ℝ) := by gcongr
     _ = π := mul_div_cancel_left₀ _
   refine eventually_nhds_iff.mpr ⟨Set.Ioo (-1) 1, ?_, isOpen_Ioo, ?_, ?_⟩
   · intro x hx
@@ -252,11 +252,11 @@ theorem isLocalMax_T_real {n k : ℕ} (hn : n ≠ 0) (hk₀ : 0 < k) (hk₁ : k 
     exact cos_lt_cos_of_nonneg_of_le_pi (le_refl 0) (le_of_lt lt_pi) zero_lt
 
 theorem isLocalMin_T_real {n k : ℕ} (hn : n ≠ 0) (hk₁ : k < n) (hk₂ : Odd k) :
-    IsLocalMin (T ℝ n).eval (cos (k * π / n)) := by
+    IsLocalMin (T ℝ n).eval (cos (k * π / (n : ℝ))) := by
   have k_pos : 0 < k := hk₂.pos
-  have zero_lt : 0 < k * π / n := by positivity
-  have lt_pi : k * π / n < π := calc
-    k * π / n < n * π / n := by gcongr
+  have zero_lt : 0 < k * π / (n : ℝ) := by positivity
+  have lt_pi : k * π / (n : ℝ) < π := calc
+    k * π / (n : ℝ) < n * π / (n : ℝ) := by gcongr
     _ = π := mul_div_cancel_left₀ _
   refine eventually_nhds_iff.mpr ⟨Set.Ioo (-1) 1, ?_, isOpen_Ioo, ?_, ?_⟩
   · intro x hx
@@ -269,13 +269,13 @@ theorem isLocalMin_T_real {n k : ℕ} (hn : n ≠ 0) (hk₁ : k < n) (hk₂ : Od
     exact cos_lt_cos_of_nonneg_of_le_pi (le_refl 0) (le_of_lt lt_pi) zero_lt
 
 theorem isLocalExtr_T_real {n k : ℕ} (hn : n ≠ 0) (hk₀ : 0 < k) (hk₁ : k < n) :
-    IsLocalExtr (T ℝ n).eval (cos (k * π / n)) := by
+    IsLocalExtr (T ℝ n).eval (cos (k * π / (n : ℝ))) := by
   cases k.even_or_odd
   case inl hk₂ => exact .inr (isLocalMax_T_real hn hk₀ hk₁ hk₂)
   case inr hk₂ => exact .inl (isLocalMin_T_real hn hk₁ hk₂)
 
 theorem isLocalExtr_T_real_iff {n : ℕ} (hn : 2 ≤ n) (x : ℝ) :
-    IsLocalExtr (T ℝ n).eval x ↔ ∃ k ∈ Finset.Ioo 0 n, x = cos (k * π / n) := by
+    IsLocalExtr (T ℝ n).eval x ↔ ∃ k ∈ Finset.Ioo 0 n, x = cos (k * π / (n : ℝ)) := by
   constructor
   · intro hx
     replace hx := hx.deriv_eq_zero
@@ -295,36 +295,36 @@ theorem isLocalExtr_T_real_iff {n : ℕ} (hn : 2 ≤ n) (x : ℝ) :
       (Finset.mem_Ioo.mp hk).1 (Finset.mem_Ioo.mp hk).2
 
 theorem isMaxOn_T_real {n k : ℕ} (hn : n ≠ 0) (hk₁ : k ≤ n) (hk₂ : Even k) :
-    IsMaxOn (T ℝ n).eval (Set.Icc (-1) 1) (cos (k * π / n)) :=
+    IsMaxOn (T ℝ n).eval (Set.Icc (-1) 1) (cos (k * π / (n : ℝ))) :=
   isMaxOn_iff.mpr (fun x hx => le_of_le_of_eq (abs_le.mp (abs_eval_T_real_le_one n (by grind))).2
     ((eval_T_real_eq_one_iff hn _).mpr ⟨k, hk₁, hk₂, rfl⟩).symm)
 
 theorem isMinOn_T_real {n k : ℕ} (hn : n ≠ 0) (hk₁ : k ≤ n) (hk₂ : Odd k) :
-    IsMinOn (T ℝ n).eval (Set.Icc (-1) 1) (cos (k * π / n)) :=
+    IsMinOn (T ℝ n).eval (Set.Icc (-1) 1) (cos (k * π / (n : ℝ))) :=
   isMinOn_iff.mpr (fun x hx => le_of_eq_of_le
     ((eval_T_real_eq_neg_one_iff hn _).mpr ⟨k, hk₁, hk₂, rfl⟩)
     (abs_le.mp (abs_eval_T_real_le_one n (by grind))).1)
 
 theorem isExtrOn_T_real {n k : ℕ} (hn : n ≠ 0) (hk : k ≤ n) :
-    IsExtrOn (T ℝ n).eval (Set.Icc (-1) 1) (cos (k * π / n)) := by
+    IsExtrOn (T ℝ n).eval (Set.Icc (-1) 1) (cos (k * π / (n : ℝ))) := by
   cases k.even_or_odd
   case inl hk₂ => exact .inr (isMaxOn_T_real hn hk hk₂)
   case inr hk₂ => exact .inl (isMinOn_T_real hn hk hk₂)
 
 theorem isExtrOn_T_real_iff {n : ℕ} (hn : n ≠ 0) {x : ℝ} (hx : x ∈ Set.Icc (-1) 1) :
     IsExtrOn (T ℝ n).eval (Set.Icc (-1) 1) x ↔
-    ∃ k ≤ n, x = cos (k * π / n) := by
+    ∃ k ≤ n, x = cos (k * π / (n : ℝ)) := by
   constructor
   · intro h
     apply (abs_eval_T_real_eq_one_iff hn x).mp
     apply eq_of_le_of_ge (abs_eval_T_real_le_one n (by grind))
     refine h.elim (fun h => ?_) (fun h => ?_)
     · refine le_abs.mpr (.inr (le_neg_of_le_neg ?_))
-      have := isMinOn_iff.mp h (cos (1 * π / n)) (by grind [abs_cos_le_one])
-      rwa [(eval_T_real_eq_neg_one_iff hn (cos (1 * π / n))).mpr ⟨1, Nat.one_le_iff_ne_zero.mpr hn,
-        by simp⟩] at this
+      have := isMinOn_iff.mp h (cos (1 * π / (n : ℝ))) (by grind [abs_cos_le_one])
+      rwa [(eval_T_real_eq_neg_one_iff hn (cos (1 * π / (n : ℝ)))).mpr
+        ⟨1, Nat.one_le_iff_ne_zero.mpr hn, by simp⟩] at this
     · refine le_abs.mpr (.inl ?_)
-      have := isMaxOn_iff.mp h (cos (0 * π / n)) (by simp)
+      have := isMaxOn_iff.mp h (cos (0 * π / (n : ℝ))) (by simp)
       rwa [(eval_T_real_eq_one_iff hn _).mpr ⟨0, by simp, by simp⟩] at this
   · rintro ⟨k, hk, hx⟩
     rw [hx]
@@ -346,14 +346,21 @@ theorem irrational_of_isRoot_T_real {n : ℕ} {x : ℝ} (hroot : (T ℝ n).IsRoo
     field_simp
   apply irrational_cos_rat_mul_pi
   contrapose! hnz
-  have : q.den = 2 * (n / n.gcd (2 * k.val + 1)) := calc
-    _ = 2 * n / (2 * n).gcd (2 * k.val + 1) := by
-      simp only [q, Rat.fraction, Rat.den_normalize, Int.natAbs_natCast, Nat.gcd_comm]
-    _ = _ := by rw [Nat.Coprime.gcd_mul_left_cancel n (by simp),
-      Nat.mul_div_assoc _ (Nat.gcd_dvd_left ..)]
+  obtain ⟨d, _, hnum, hden'⟩ := Rat.normalize_num_den' ((2 * k.val + 1 : ℕ) : ℤ) (2 * n) hden
+  have hnum' : 2 * k.val + 1 = q.num.natAbs * d := by
+    simpa only [q, Rat.fraction, Int.natAbs_natCast, Int.natAbs_mul] using congrArg Int.natAbs hnum
+  change 2 * n = q.den * d at hden'
+  have hd : Odd d := (Nat.odd_mul.mp (hnum' ▸ odd_two_mul_add_one k.val)).2
+  have hq : Even q.den :=
+    (Nat.even_mul.mp (hden' ▸ even_two_mul n)).resolve_right (Nat.not_even_iff_odd.mpr hd)
+  obtain ⟨l, hl⟩ := hq
+  have htwo : q.den = 2 := by
+    have := q.den_pos
+    omega
+  rw [htwo] at hden'
+  have hdn : d = n := by omega
   have hkn : 2 * k.val + 1 = n := Nat.eq_of_dvd_of_lt_two_mul (by simp)
-    (Nat.gcd_eq_left_iff_dvd.mp <|
-      Nat.eq_of_dvd_of_div_eq_one (Nat.gcd_dvd_left ..) (by grind [Rat.den_pos]))
+    ⟨q.num.natAbs, by simpa only [hdn, Nat.mul_comm] using hnum'⟩
     (by have := k.isLt; omega)
   have hangle : rootAngleTReal k = π / 2 := by
     unfold rootAngleTReal

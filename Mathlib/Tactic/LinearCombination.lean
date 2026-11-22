@@ -78,8 +78,8 @@ def rescale (lems : Ineq.WithStrictness → Name) (ty : Option Expr) (p c : Term
     if strict then pure (.proof lt p') else pure (.proof le p')
 
 /-- Divide an (in)equality while retaining the denominator's invertibility obligation.
-Equality uses the elaborated division operation, so genuine Euclidean quotients and group
-operations remain available. Ordered field division also supplies its exact unit evidence. -/
+Equality applies congruence to the elaborated division operation. Inequalities use the
+denominator's sign and invertibility evidence. -/
 def divide (ty : Option Expr) (p c : Term) (rel : Ineq) : TermElabM Expanded := do
   let e ← withSynthesizeLight <| Term.elabTerm c ty
   let c ← e.toSyntax
@@ -95,10 +95,12 @@ def divide (ty : Option Expr) (p c : Term) (rel : Ineq) : TermElabM Expanded := 
   if rel == .eq then
     let α ← (← inferType e).toSyntax
     return ← finish .eq (← ``(congrArg (fun x : $α => x / $c) $p))
-  let (strict, hc) ← if rel == .le then
-    pure (false, ← Meta.Positivity.proveNonneg e)
-  else Meta.Positivity.bestResult e
-  let i := mkIdent <| divRelConstData (if rel == .le then .le else .lt strict)
+  let (lemmaName, strict, hc) ← if rel == .le then
+    pure (``div_le_const, false, ← Meta.Positivity.proveNonneg e)
+  else
+    let (strict, hc) ← Meta.Positivity.bestResult e
+    pure (if strict then ``div_lt_const else ``div_lt_const_weak, strict, hc)
+  let i := mkIdent lemmaName
   let hc ← hc.toSyntax
   let proof ← `(let denominator_sign := $hc
     $i $p denominator_sign (by checked_unit))

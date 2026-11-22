@@ -210,7 +210,7 @@ lemma riemannZeta_eq_mul_completedRiemannZeta₀ (s : ℂ)
   have hp : (π : ℂ) ≠ 0 := ofReal_ne_zero.mpr Real.pi_ne_zero
   calc
     riemannZeta s = (s * completedRiemannZeta₀ s - 1 - s / (1 - s)) *
-        reciprocalGammaℝ (s + 2) / 2 / π := by
+        reciprocalGammaℝ (s + 2) / 2 / (π : ℂ) := by
       rw [riemannZeta, hurwitzZetaEven, hurwitzZetaEvenRegularPart,
         reciprocalGammaℝ_eq_self_mul_reciprocalGammaℝ_add_two s]
       simp only [ite_true, one_mul, completedHurwitzZetaEven₀_zero]

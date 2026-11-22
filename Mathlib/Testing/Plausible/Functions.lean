@@ -8,6 +8,7 @@ module
 public meta import Mathlib.Data.Finsupp.ToDFinsupp
 public meta import Mathlib.Data.Int.Range
 public meta import Mathlib.Data.List.Sigma
+public meta import Mathlib.Lean.Elab.NativeDivision
 public meta import Plausible.Functions
 public import Batteries.Data.MLList.Basic
 public import Mathlib.Algebra.Order.Group.Nat
@@ -301,22 +302,23 @@ sliced off a list of length `n`
 def sliceSizes : ℕ → MLList Id ℕ+
   | n =>
     if h : 0 < n then
-      have : n / 2 < n := Nat.div_lt_self h (by decide : 1 < 2)
-      .cons ⟨_, h⟩ (sliceSizes <| n / 2)
+      have : Nat.euclideanDiv n 2 < n := by
+        rw [Nat.euclideanDiv_eq_core]
+        exact Nat.div_lt_self h Nat.one_lt_two
+      .cons ⟨_, h⟩ (sliceSizes (Nat.euclideanDiv n 2))
     else .nil
 
 /-- Shrink a permutation of a list, slicing a segment in the middle.
 
-The sizes of the slice being removed start at `n` (with `n` the length
-of the list) and then `n / 2`, then `n / 4`, etc. down to 1. The slices
-will be taken at index `0`, `n / k`, `2n / k`, `3n / k`, etc.
+The slice sizes start at the list length and are halved, rounding down, until they reach 1.
+For each size `n`, the slices start at multiples of `n` beginning with 0.
 -/
 protected def shrinkPerm {α : Type} [DecidableEq α] :
     (Σ' xs ys : List α, xs ~ ys ∧ ys.Nodup) → List (Σ' xs ys : List α, xs ~ ys ∧ ys.Nodup)
   | xs => do
     let k := xs.1.length
     let n ← (sliceSizes k).force
-    let i ← List.finRange <| k / n
+    let i ← List.finRange (Nat.euclideanDiv k (n : ℕ) n.ne_zero)
     pure <| Perm.slice (i * n) n xs
 
 

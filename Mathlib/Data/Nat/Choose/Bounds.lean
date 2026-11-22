@@ -34,24 +34,29 @@ namespace Nat
 
 attribute [local simp] factorial_ne_zero
 
-theorem choose_le_pow_div (r n : ℕ) : (n.choose r : α) ≤ (n ^ r : α) / r ! := by
+theorem choose_le_pow_div (r n : ℕ) :
+    (n.choose r : α) ≤ Checked.div (n ^ r : α) (r ! : α)
+      (Nat.cast_ne_zero.mpr r.factorial_ne_zero).isUnit := by
   rw [le_div_iff₀ ((Nat.cast_pos'.mpr r.factorial_pos : (0 : α) < r !)), mul_comm]
   norm_cast
   rw [← Nat.descFactorial_eq_factorial_mul_choose]
   exact n.descFactorial_le_pow r
 
-lemma choose_lt_pow_div (hn : n ≠ 0) (hk : 2 ≤ k) : (n.choose k : α) < (n ^ k : α) / k ! := by
+lemma choose_lt_pow_div (hn : n ≠ 0) (hk : 2 ≤ k) :
+    (n.choose k : α) < Checked.div (n ^ k : α) (k ! : α)
+      (Nat.cast_ne_zero.mpr k.factorial_ne_zero).isUnit := by
   rw [lt_div_iff₀ ((Nat.cast_pos'.mpr k.factorial_pos : (0 : α) < k !)), mul_comm]
   norm_cast
   rw [← Nat.descFactorial_eq_factorial_mul_choose]
   exact descFactorial_lt_pow hn hk
 
 lemma choose_le_descFactorial (n k : ℕ) : n.choose k ≤ n.descFactorial k := by
-  rw [choose_eq_descFactorial_div_factorial]
+  rw [choose_eq_descFactorial_div_factorial, Nat.euclideanDiv_eq_core]
   exact Nat.div_le_self _ _
 
 lemma choose_lt_descFactorial (hk : 2 ≤ k) (hkn : k ≤ n) : n.choose k < n.descFactorial k := by
-  rw [choose_eq_descFactorial_div_factorial]; exact Nat.div_lt_self (by simpa) (by simpa)
+  rw [choose_eq_descFactorial_div_factorial, Nat.euclideanDiv_eq_core]
+  exact Nat.div_lt_self (by simpa) (by simpa)
 
 lemma choose_le_pow (n k : ℕ) : n.choose k ≤ n ^ k :=
   (choose_le_descFactorial n k).trans (descFactorial_le_pow n k)
@@ -60,7 +65,7 @@ lemma choose_lt_pow (hn : n ≠ 0) (hk : 2 ≤ k) : n.choose k < n ^ k :=
   (choose_le_descFactorial n k).trans_lt (descFactorial_lt_pow hn hk)
 
 theorem choose_add_le_add_one_pow (n k : ℕ) : (n + k).choose k ≤ (n + 1) ^ k := by
-  rw [choose_eq_asc_factorial_div_factorial]
+  rw [choose_eq_asc_factorial_div_factorial, Nat.euclideanDiv_eq_core]
   exact Nat.div_le_of_le_mul (ascFactorial_le_factorial_mul_pow _ _)
 
 theorem choose_le_sub_pow (n k : ℕ) : n.choose k ≤ (n + 1 - k) ^ k := by
@@ -71,7 +76,9 @@ theorem choose_le_sub_pow (n k : ℕ) : n.choose k ≤ (n + 1 - k) ^ k := by
   · simp [choose_eq_zero_of_lt h]
 
 -- horrific casting is due to ℕ-subtraction
-theorem pow_le_choose (r n : ℕ) : ((n + 1 - r : ℕ) ^ r : α) / r ! ≤ n.choose r := by
+theorem pow_le_choose (r n : ℕ) :
+    Checked.div ((n + 1 - r : ℕ) ^ r : α) (r ! : α)
+      (Nat.cast_ne_zero.mpr r.factorial_ne_zero).isUnit ≤ n.choose r := by
   rw [div_le_iff₀ ((Nat.cast_pos'.mpr r.factorial_pos : (0 : α) < r !)), mul_comm]
   norm_cast
   rw [← Nat.descFactorial_eq_factorial_mul_choose]

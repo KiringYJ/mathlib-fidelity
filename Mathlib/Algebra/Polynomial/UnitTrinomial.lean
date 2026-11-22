@@ -185,13 +185,14 @@ theorem isUnitTrinomial_iff :
 
 theorem isUnitTrinomial_iff' :
     p.IsUnitTrinomial ↔ ∃ h : p * p.mirror ≠ 0,
-      (p * p.mirror).coeff (((p * p.mirror).natDegree + (p * p.mirror).natTrailingDegree h) / 2) =
-        3 := by
+      (p * p.mirror).coeff
+        (Nat.euclideanDiv
+          ((p * p.mirror).natDegree + (p * p.mirror).natTrailingDegree h) 2) = 3 := by
   by_cases hp0 : p = 0
   · subst hp0
     exact iff_of_false (fun hp ↦ hp.ne_zero rfl) fun ⟨h, _⟩ ↦ h (zero_mul _)
   rw [exists_prop_of_true (mul_ne_zero hp0 (mirror_ne_zero hp0)), natDegree_mul_mirror,
-    natTrailingDegree_mul_mirror p hp0, ← mul_add, Nat.mul_div_right _ zero_lt_two,
+    natTrailingDegree_mul_mirror p hp0, ← mul_add, Nat.euclideanDiv_mul_left_cancel,
     coeff_mul_mirror p hp0]
   refine ⟨?_, fun hp => ?_⟩
   · rintro ⟨k, m, n, hkm, hmn, u, v, w, rfl⟩

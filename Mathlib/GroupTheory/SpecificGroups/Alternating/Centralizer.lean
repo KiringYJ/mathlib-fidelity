@@ -100,23 +100,19 @@ variable (α) in
 /-- The cardinality of even permutations of given `cycleType` -/
 theorem card_of_cycleType (m : Multiset ℕ) :
     #{g : alternatingGroup α | (g : Equiv.Perm α).cycleType = m} =
-      if (m.sum ≤ Fintype.card α ∧ ∀ a ∈ m, 2 ≤ a) ∧ Even (m.sum + Multiset.card m) then
-        (Fintype.card α)! /
-          ((Fintype.card α - m.sum)! *
-            (m.prod * (∏ n ∈ m.toFinset, (m.count n)!)))
+      if hm : (m.sum ≤ Fintype.card α ∧ ∀ a ∈ m, 2 ≤ a) ∧ Even (m.sum + Multiset.card m) then
+        Nat.euclideanDiv (Fintype.card α)!
+          ((Fintype.card α - m.sum)! * (m.prod * (∏ n ∈ m.toFinset, (m.count n)!))) (by
+          have : 0 < m.prod := Multiset.prod_pos fun a ha => zero_lt_two.trans_le (hm.1.2 a ha)
+          positivity)
       else 0 := by
   split_ifs with hm
-  · -- m is an even cycle_type
-    rw [← Finset.card_map, map_subtype_of_cycleType, ite_eq_left hm.2,
-      Equiv.Perm.card_of_cycleType α m, ite_eq_left hm.1, mul_assoc]
-  · -- m does not correspond to a permutation, or to an odd one,
-    rw [← Finset.card_map, map_subtype_of_cycleType]
-    rw [apply_ite Finset.card, Finset.card_empty]
-    split_ifs with hm'
-    · rw [Equiv.Perm.card_of_cycleType, ite_eq_right]
-      obtain hm | hm := not_and_or.mp hm
-      · exact hm
-      · contradiction
+  · have h := card_of_cycleType_mul_eq α m
+    rw [ite_eq_left hm, mul_assoc (Fintype.card α - m.sum)!] at h
+    rw [← h, Nat.euclideanDiv_mul_right_cancel]
+  · rw [← Finset.card_map, map_subtype_of_cycleType, apply_ite Finset.card, Finset.card_empty]
+    split_ifs with heven
+    · exact (Equiv.Perm.card_of_cycleType_eq_zero_iff α).mpr (fun h ↦ hm ⟨h, heven⟩)
     · rfl
 
 open Fintype in

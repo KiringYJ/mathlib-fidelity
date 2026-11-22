@@ -391,7 +391,7 @@ theorem _root_.IsFractional.div_of_nonzero {I J : Submodule R₁ K} :
     rw [← hy', mul_comm b, ← Algebra.smul_def, mul_smul]
 
 theorem isFractional_div_of_ne_zero {I J : FractionalIdeal R₁⁰ K} (h : J ≠ 0) :
-    IsFractional R₁⁰ (I / J : Submodule R₁ K) :=
+    IsFractional R₁⁰ ((I : Submodule R₁ K) / (J : Submodule R₁ K)) :=
   I.isFractional.div_of_nonzero J.isFractional fun H =>
     h <| coeToSubmodule_injective <| H.trans coe_zero.symm
 
@@ -404,7 +404,7 @@ The fractional ideal colon uses the nonzero domain over any integral base ring.
 When `J` is invertible, the colon is the quotient `I / J` of the monoid of fractional ideals
 (`FractionalIdeal.div_eq_colon`). -/
 def colon (I J : FractionalIdeal R₁⁰ K) (hJ : J ≠ 0) : FractionalIdeal R₁⁰ K :=
-  ⟨I / J, isFractional_div_of_ne_zero hJ⟩
+  ⟨(I : Submodule R₁ K) / (J : Submodule R₁ K), isFractional_div_of_ne_zero hJ⟩
 
 variable {I J : FractionalIdeal R₁⁰ K}
 
@@ -517,7 +517,8 @@ theorem eq_zero_or_one (I : FractionalIdeal K⁰ L) : I = 0 ∨ I = 1 := by
   constructor
   · intro x_mem
     obtain ⟨n, d, rfl⟩ := IsLocalization.exists_mk'_eq K⁰ x
-    refine ⟨n / d, ?_⟩
+    have hd : (d : K) ≠ 0 := mem_nonZeroDivisors_iff_ne_zero.mp d.property
+    refine ⟨n / (d : K), ?_⟩
     rw [map_div₀, IsFractionRing.mk'_eq_div]
   · rintro ⟨x, rfl⟩
     obtain ⟨y, y_ne, y_mem⟩ := exists_ne_zero_mem_isInteger hI

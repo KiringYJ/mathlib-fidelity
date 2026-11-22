@@ -13,6 +13,7 @@ public import Mathlib.Data.PNat.Defs  -- shake: keep (Qq dependency)
 public import Mathlib.Algebra.Order.Ring.Basic  -- shake: keep (Qq dependency)
 public import Mathlib.Algebra.Order.Hom.Basic
 public import Mathlib.Data.NNRat.Defs
+public meta import Mathlib.Lean.Elab.NativeDivision
 public import Mathlib.Tactic.Positivity.Core
 
 /-!
@@ -284,42 +285,43 @@ such that `positivity` successfully recognises both `a` and `b`. -/
   | none =>
     return ← catchNone <| tryProveNonzero .none ra.toNonzero rb.toNonzero
 
-lemma int_div_self_pos {a : ℤ} (ha : 0 < a) : 0 < a / a := by
-  rw [Int.ediv_self ha.ne']; exact zero_lt_one
+lemma int_div_self_pos {a : ℤ} (ha : a ≠ 0) : 0 < Int.euclideanDiv a a ha := by
+  have h : 0 < (a.natAbs : ℤ) := Int.ofNat_lt.mpr (Nat.pos_of_ne_zero (Int.natAbs_ne_zero.mpr ha))
+  rw [Int.euclideanDiv_eq_of_remainder ha (q := 1) (r := 0) (by simp) le_rfl h]
+  exact zero_lt_one
 
-lemma int_div_nonneg_of_pos_of_nonneg {a b : ℤ} (ha : 0 < a) (hb : 0 ≤ b) : 0 ≤ a / b :=
-  Int.ediv_nonneg ha.le hb
+lemma int_div_nonneg {a b : ℤ} (hb : b ≠ 0) (pa : 0 ≤ a) (pb : 0 ≤ b) :
+    0 ≤ Int.euclideanDiv a b hb := by
+  by_contra! h
+  have hm := Int.mul_le_mul_of_nonneg_left (by omega : Int.euclideanDiv a b hb ≤ -1) pb
+  rw [Int.mul_neg, Int.mul_one] at hm
+  have hr := Int.emod_lt_of_pos a (lt_of_le_of_ne pb hb.symm)
+  have he := Int.euclideanDiv_mul_add_mod a b hb
+  omega
 
-lemma int_div_nonneg_of_nonneg_of_pos {a b : ℤ} (ha : 0 ≤ a) (hb : 0 < b) : 0 ≤ a / b :=
-  Int.ediv_nonneg ha hb.le
-
-lemma int_div_nonneg_of_pos_of_pos {a b : ℤ} (ha : 0 < a) (hb : 0 < b) : 0 ≤ a / b :=
-  Int.ediv_nonneg ha.le hb.le
-
-/-- The `positivity` extension which identifies expressions of the form `a / b`,
-where `a` and `b` are integers. -/
-@[positivity (_ : ℤ) / (_ : ℤ)] def evalIntDiv : PositivityExt where eval {u α} _ pα? e :=
-  match pα? with | none => pure .none | some _ => do
-  match u, α, e with
-  | 0, ~q(ℤ), ~q($a / $b) =>
-    let ra ← core q(inferInstance) (some q(inferInstance)) a
-    let rb ← core q(inferInstance) (some q(inferInstance)) b
-    assertInstancesCommute
-    match ra, rb with
-    | .positive (pa : Q(0 < $a)), .positive (pb : Q(0 < $b)) =>
-      -- Only attempts to prove `0 < a / a`, otherwise falls back to `0 ≤ a / b`
-      let _ := q(int_div_self_pos $pa)
-      match ← isDefEqQ a b with
-      | .defEq _ => pure (.positive q(int_div_self_pos $pa))
-      | .notDefEq => pure (.nonnegative q(int_div_nonneg_of_pos_of_pos $pa $pb))
-    | .positive (pa : Q(0 < $a)), .nonnegative (pb : Q(0 ≤ $b)) =>
-      pure (.nonnegative q(int_div_nonneg_of_pos_of_nonneg $pa $pb))
-    | .nonnegative (pa : Q(0 ≤ $a)), .positive (pb : Q(0 < $b)) =>
-      pure (.nonnegative q(int_div_nonneg_of_nonneg_of_pos $pa $pb))
-    | .nonnegative (pa : Q(0 ≤ $a)), .nonnegative (pb : Q(0 ≤ $b)) =>
-      pure (.nonnegative q(Int.ediv_nonneg $pa $pb))
-    | _, _ => pure .none
-  | _, _, _ => throwError "not /"
+/-- Prove signs of integer Euclidean quotients. -/
+@[positivity Int.euclideanDiv _ _ _]
+def evalIntDiv : PositivityExt where eval {u α} _ p? e :=
+  match p? with
+  | none => pure .none
+  | some _ => do
+    match u, α, e with
+    | 0, ~q(ℤ), ~q(Int.euclideanDiv $a $b $hb) =>
+      assertInstancesCommute
+      if ← withNewMCtxDepth (isDefEq a b) then
+        haveI' : $a =Q $b := ⟨⟩
+        pure (.positive q(int_div_self_pos $hb))
+      else
+        let zℤ : Q(Zero ℤ) := q(inferInstance)
+        let oℤ : Q(PartialOrder ℤ) := q(inferInstance)
+        let ra ← core zℤ (some oℤ) a
+        let rb ← core zℤ (some oℤ) b
+        assertInstancesCommute
+        match ra.toNonneg, rb.toNonneg with
+        | some (pa : Q(0 ≤ $a)), some (pb : Q(0 ≤ $b)) =>
+          pure (.nonnegative q(int_div_nonneg $hb $pa $pb))
+        | _, _ => pure .none
+    | _, _, _ => throwError "not an integer quotient"
 
 theorem pow_zero_pos [Semiring α] [PartialOrder α] [IsOrderedRing α] [Nontrivial α]
     (a : α) : 0 < a ^ 0 :=
@@ -365,7 +367,7 @@ meta def evalPow : PositivityExt where eval {u α} zα pα? e := do
       let .true := b.isAppOfArity ``OfNat.ofNat 3 | throwError "not a ^ n where n is a literal"
       let some n := (b.getRevArg! 1).rawNatLit? | throwError "not a ^ n where n is a literal"
       guard (n % 2 = 0)
-      have m : Q(ℕ) := mkRawNatLit (n / 2)
+      have m : Q(ℕ) := mkRawNatLit (Nat.euclideanDiv n 2 (by decide))
       haveI' : $b =Q 2 * $m := ⟨⟩
       haveI' : $e =Q $a ^ $b := ⟨⟩
       pure (.nonnegative q((even_two_mul $m).pow_nonneg $a))

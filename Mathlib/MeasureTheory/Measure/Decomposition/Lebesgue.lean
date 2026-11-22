@@ -705,9 +705,9 @@ theorem exists_positive_of_not_mutuallySingular (μ ν : Measure α) [IsFiniteMe
         ∧ ∀ A, MeasurableSet A → ε * ν (A ∩ E) ≤ μ (A ∩ E) := by
   -- for all `n : ℕ`, obtain the Hahn decomposition for `μ - (1 / n) ν`
   have h_decomp (n : ℕ) : ∃ s : Set α, MeasurableSet s
-        ∧ (∀ t, MeasurableSet t → ((1 / (n + 1) : ℝ≥0) • ν) (t ∩ s) ≤ μ (t ∩ s))
-        ∧ (∀ t, MeasurableSet t → μ (t ∩ sᶜ) ≤ ((1 / (n + 1) : ℝ≥0) • ν) (t ∩ sᶜ)) := by
-    obtain ⟨s, hs, hs_le, hs_ge⟩ := hahn_decomposition μ ((1 / (n + 1) : ℝ≥0) • ν)
+        ∧ (∀ t, MeasurableSet t → ((1 / (n + 1 : ℝ≥0)) • ν) (t ∩ s) ≤ μ (t ∩ s))
+        ∧ (∀ t, MeasurableSet t → μ (t ∩ sᶜ) ≤ ((1 / (n + 1 : ℝ≥0)) • ν) (t ∩ sᶜ)) := by
+    obtain ⟨s, hs, hs_le, hs_ge⟩ := hahn_decomposition μ ((1 / (n + 1 : ℝ≥0)) • ν)
     refine ⟨s, hs, fun t ht ↦ ?_, fun t ht ↦ ?_⟩
     · exact hs_le (t ∩ s) (ht.inter hs) inter_subset_right
     · exact hs_ge (t ∩ sᶜ) (ht.inter hs.compl) inter_subset_right
@@ -717,11 +717,11 @@ theorem exists_positive_of_not_mutuallySingular (μ ν : Measure α) [IsFiniteMe
   let A := ⋂ n, (f n)ᶜ
   have hAmeas : MeasurableSet A := MeasurableSet.iInter fun n ↦ (hf₁ n).compl
   have hA₂ (n : ℕ) (t : Set α) (ht : MeasurableSet t) :
-      μ (t ∩ A) ≤ ((1 / (n + 1) : ℝ≥0) • ν) (t ∩ A) := by
+      μ (t ∩ A) ≤ ((1 / (n + 1 : ℝ≥0)) • ν) (t ∩ A) := by
     specialize hf₃ n (t ∩ A) (ht.inter hAmeas)
     have : A ∩ (f n)ᶜ = A := inter_eq_left.mpr (iInter_subset _ n)
     rwa [inter_assoc, this] at hf₃
-  have hA₃ (n : ℕ) : μ A ≤ (1 / (n + 1) : ℝ≥0) * ν A := by simpa using hA₂ n univ .univ
+  have hA₃ (n : ℕ) : μ A ≤ (1 / (n + 1 : ℝ≥0)) * ν A := by simpa using hA₂ n univ .univ
   have hμ : μ A = 0 := by
     lift μ A to ℝ≥0 using measure_ne_top _ _ with μA
     lift ν A to ℝ≥0 using measure_ne_top _ _ with νA
@@ -737,7 +737,7 @@ theorem exists_positive_of_not_mutuallySingular (μ ν : Measure α) [IsFiniteMe
         refine exists_nat_one_div_lt ?_
         positivity
       rcases this with ⟨n, hn⟩
-      have h' : 1 / (↑n + 1) * νA < c := by
+      have h' : 1 / (n + 1 : ℝ≥0) * νA < c := by
         have hn' := mul_lt_mul_of_pos_right hn (show (0 : ℝ) < νA from hb)
         simp only [mul_assoc, inv_mul_cancel₀, mul_one] at hn'
         apply NNReal.coe_lt_coe.mp
@@ -755,7 +755,7 @@ theorem exists_positive_of_not_mutuallySingular (μ ν : Measure α) [IsFiniteMe
   -- as `Aᶜ = ⋃ n, f n`, `ν Aᶜ > 0` implies there exists some `n` such that `ν (f n) > 0`
   obtain ⟨n, hn⟩ := exists_measure_pos_of_not_measure_iUnion_null this
   -- thus, choosing `f n` as the set `E` suffices
-  exact ⟨1 / (n + 1), by simp, f n, hf₁ n, hn, hf₂ n⟩
+  exact ⟨1 / (n + 1 : ℝ≥0), by simp, f n, hf₁ n, hn, hf₂ n⟩
 
 namespace LebesgueDecomposition
 

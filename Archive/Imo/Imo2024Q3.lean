@@ -980,14 +980,13 @@ lemma exists_a_apply_add_eq : ∃ b c, 0 < c ∧ ∀ n, b < n →
     a (N' a N + 2 * n + 2 * c) = a (N' a N + 2 * n) := by
   obtain ⟨b, c', hbc'⟩ := hc.exists_p_eq a N
   have hs (n : ℕ) : Small a (a (N' a N + 2 * n)) := hc.small_apply_N'_add_iff_even.mpr (by simp)
-  refine ⟨b + 2, c' / 2, ?_, fun n hbn ↦ hbc' n (by lia) ▸ ?_⟩
-  · have := hbc' (b + 2) (by lia)
-    have := hc.p_pos (N' a N + 2 * (b + 2))
-    rcases hc.even_p (by lia) (hs (b + 2)) with ⟨_, _⟩
+  obtain ⟨c, hhalf⟩ := hc.even_p (by lia) (hs (b + 2))
+  have hdouble : c' = 2 * c := by rw [← hbc' (b + 2) (by lia), hhalf, two_mul]
+  refine ⟨b + 2, c, ?_, fun n hbn ↦ ?_⟩
+  · have hpos := hc.p_pos (N' a N + 2 * (b + 2))
     lia
-  · convert hc.apply_add_p_eq (by lia) (hs n)
-    rcases hc.even_p (by lia) (hs n) with ⟨_, ht⟩
-    simp [ht, ← two_mul]
+  · rw [← hdouble, ← hbc' n (by lia)]
+    exact hc.apply_add_p_eq (by lia) (hs n)
 
 end Condition
 
@@ -995,9 +994,9 @@ theorem result {a : ℕ → ℕ} {N : ℕ} (h : Condition a N) :
     EventuallyPeriodic (fun i ↦ a (2 * i)) ∨ EventuallyPeriodic (fun i ↦ a (2 * i + 1)) := by
   obtain ⟨b, c, hc, hbc⟩ := h.exists_a_apply_add_eq a N
   obtain ⟨t, _⟩ | ⟨t, _⟩ := Nat.even_or_odd (Condition.N' a N)
-  · refine .inl ⟨c, Condition.N' a N / 2 + b + 1, hc, fun m hm ↦ ?_⟩
+  · refine .inl ⟨c, t + b + 1, hc, fun m hm ↦ ?_⟩
     convert hbc (m - t) (by lia) <;> lia
-  · refine .inr ⟨c, Condition.N' a N / 2 + b + 1, hc, fun m hm ↦ ?_⟩
+  · refine .inr ⟨c, t + b + 1, hc, fun m hm ↦ ?_⟩
     convert hbc (m - t) (by lia) using 2 <;> lia
 
 end Imo2024Q3

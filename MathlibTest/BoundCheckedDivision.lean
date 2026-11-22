@@ -19,10 +19,10 @@ example {K : Type*} [GroupWithZero K] [PartialOrder K] [PosMulReflectLT K]
 
 example {K : Type*} [GroupWithZero K] [PartialOrder K] [PosMulReflectLT K]
     {a b : K} (hb : IsUnit b) (ha : 0 ≤ a) (hb0 : 0 ≤ b) :
-    0 ≤ a / b := by
+    0 ≤ Checked.div a b hb := by
   bound
 
 example {K : Type*} [GroupWithZero K] [PartialOrder K] [PosMulReflectLT K]
     {a b : K} (hb : IsUnit b) (ha : 0 < a) (hb0 : 0 < b) :
-    0 < a / b := by
+    0 < Checked.div a b hb := by
   bound

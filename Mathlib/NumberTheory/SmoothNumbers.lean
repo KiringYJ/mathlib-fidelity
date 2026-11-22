@@ -476,8 +476,14 @@ lemma roughNumbersUpTo_eq_biUnion (N k) :
 /-- The cardinality of the set of `k`-rough numbers `≤ N` is bounded by the sum of `⌊N/p⌋`
 over the primes `k ≤ p ≤ N`. -/
 lemma roughNumbersUpTo_card_le (N k : ℕ) :
-    #(roughNumbersUpTo N k) ≤ ((N + 1).primesBelow \ k.primesBelow).sum (fun p ↦ N / p) := by
+    #(roughNumbersUpTo N k) ≤ ((N + 1).primesBelow \ k.primesBelow).attach.sum fun p ↦
+      Nat.euclideanDiv N p.val
+        (prime_of_mem_primesBelow (Finset.mem_sdiff.mp p.property).1).ne_zero := by
   rw [roughNumbersUpTo_eq_biUnion]
-  exact Finset.card_biUnion_le.trans <| Finset.sum_le_sum fun p _ ↦ (card_multiples' N p).le
+  refine Finset.card_biUnion_le.trans ?_
+  rw [← Finset.sum_attach _ fun p ↦ #({m ∈ Finset.range (N + 1) | m ≠ 0 ∧ p ∣ m})]
+  exact Finset.sum_le_sum fun p _ ↦
+    (card_multiples' N p.val
+      (prime_of_mem_primesBelow (Finset.mem_sdiff.mp p.property).1).ne_zero).le
 
 end Nat

@@ -84,7 +84,8 @@ theorem fraction_mul_den (n : ℤ) (d : ℕ) (hd : d ≠ 0) :
       simp only [fraction, mul_assoc]
     _ = (n : ℚ) := by rw [mul_den_eq_num]; exact hn'.symm
 
-theorem fraction_eq_div (n : ℤ) (d : ℕ) (hd : d ≠ 0) : fraction n d hd = n / d :=
+theorem fraction_eq_div (n : ℤ) (d : ℕ) (hd : d ≠ 0) :
+    fraction n d hd = (n : ℚ) / (d : ℚ) :=
   eq_div_iff.mpr (fraction_mul_den n d hd)
 
 /-- A checked fraction with an integer denominator satisfies its signed numerator equation. -/

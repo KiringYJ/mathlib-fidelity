@@ -811,6 +811,26 @@ theorem coeFn_fun_finsetProd [CommMonoid γ] [ContinuousMul γ]
   grw [coeFn_finsetProd]
   filter_upwards with x using by simp
 
+section Sub
+
+variable [AddGroup γ] [IsTopologicalAddGroup γ]
+
+instance instSub : Sub (α →ₘ[μ] γ) :=
+  ⟨comp₂ (fun a b : γ => a - b) continuous_sub⟩
+
+@[simp]
+theorem mk_sub (f g : α → γ) (hf : AEStronglyMeasurable f μ) (hg : AEStronglyMeasurable g μ) :
+    mk (f - g) (hf.sub hg) = (mk f hf : α →ₘ[μ] γ) - mk g hg :=
+  rfl
+
+theorem coeFn_sub (f g : α →ₘ[μ] γ) : ⇑(f - g) =ᵐ[μ] fun x => f x - g x :=
+  coeFn_comp₂ _ _ _ _
+
+theorem sub_toGerm (f g : α →ₘ[μ] γ) : (f - g).toGerm = f.toGerm - g.toGerm :=
+  comp₂_toGerm _ _ _ _
+
+end Sub
+
 section Group
 
 variable [Group γ] [IsTopologicalGroup γ]
@@ -835,26 +855,9 @@ theorem inv_toGerm (f : α →ₘ[μ] γ) : f⁻¹.toGerm = f.toGerm⁻¹ :=
 
 end Inv
 
-section Div
-
-@[to_additive]
+@[to_additive existing]
 instance instDiv : Div (α →ₘ[μ] γ) :=
-  ⟨comp₂ Div.div continuous_div'⟩
-
-@[to_additive (attr := simp)]
-theorem mk_div (f g : α → γ) (hf : AEStronglyMeasurable f μ) (hg : AEStronglyMeasurable g μ) :
-    mk (f / g) (hf.div hg) = (mk f hf : α →ₘ[μ] γ) / mk g hg :=
-  rfl
-
-@[to_additive]
-theorem coeFn_div (f g : α →ₘ[μ] γ) : ⇑(f / g) =ᵐ[μ] f / g :=
-  coeFn_comp₂ _ _ _ _
-
-@[to_additive]
-theorem div_toGerm (f g : α →ₘ[μ] γ) : (f / g).toGerm = f.toGerm / g.toGerm :=
-  comp₂_toGerm _ _ _ _
-
-end Div
+  ⟨fun f g => f * g⁻¹⟩
 
 section ZPow
 
@@ -886,11 +889,40 @@ instance instAddCommGroup [AddCommGroup γ] [IsTopologicalAddGroup γ] : AddComm
 
 @[to_additive existing]
 instance instGroup [Group γ] [IsTopologicalGroup γ] : Group (α →ₘ[μ] γ) :=
-  toGerm_injective.group _ one_toGerm mul_toGerm inv_toGerm div_toGerm pow_toGerm zpow_toGerm
+  toGerm_injective.group _ one_toGerm mul_toGerm inv_toGerm
+    (fun f g => by
+      change (f * g⁻¹).toGerm = f.toGerm / g.toGerm
+      simp only [div_eq_mul_inv, mul_toGerm, inv_toGerm])
+    pow_toGerm zpow_toGerm
 
 @[to_additive existing]
 instance instCommGroup [CommGroup γ] [IsTopologicalGroup γ] : CommGroup (α →ₘ[μ] γ) :=
   { mul_comm := mul_comm }
+
+section Div
+
+variable [Group γ] [IsTopologicalGroup γ]
+
+@[to_additive existing]
+theorem coeFn_div (f g : α →ₘ[μ] γ) : ⇑(f / g) =ᵐ[μ] fun x => f x / g x := by
+  change ⇑(f * g⁻¹) =ᵐ[μ] fun x => f x / g x
+  filter_upwards [coeFn_mul f g⁻¹, coeFn_inv g] with x hfg hg
+  simpa only [Pi.mul_apply, Pi.inv_apply, hg, div_eq_mul_inv] using hfg
+
+@[to_additive existing, simp]
+theorem mk_div (f g : α → γ) (hf : AEStronglyMeasurable f μ) (hg : AEStronglyMeasurable g μ) :
+    mk (f / g) (hf.div hg) = (mk f hf : α →ₘ[μ] γ) / mk g hg := by
+  apply ext
+  filter_upwards [coeFn_mk (f / g) (hf.div hg), coeFn_div (mk f hf) (mk g hg),
+    coeFn_mk f hf, coeFn_mk g hg] with x h hfg hf' hg'
+  rw [h, hfg, hf', hg']
+  simp only [div_eq_mul_inv, Pi.mul_apply, Pi.inv_apply]
+
+@[to_additive existing]
+theorem div_toGerm (f g : α →ₘ[μ] γ) : (f / g).toGerm = f.toGerm / g.toGerm := by
+  simp only [div_eq_mul_inv, mul_toGerm, inv_toGerm]
+
+end Div
 
 section Module
 

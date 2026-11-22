@@ -91,15 +91,20 @@ namespace ZMod
 @[simp]
 protected lemma minOrder {n : ℕ} (hn : n ≠ 0) (hn₁ : n ≠ 1) : minOrder (ZMod n) = n.minFac := by
   have : Fact (1 < n) := ⟨one_lt_iff_ne_zero_and_ne_one.mpr ⟨hn, hn₁⟩⟩
-  have : (↑(n / n.minFac) : ZMod n) ≠ 0 := by
+  obtain ⟨q, hq⟩ := n.minFac_dvd hn₁
+  have hq₀ : 0 < q := Nat.pos_of_ne_zero fun h ↦ hn (by simpa [h] using hq)
+  have hqn : q < n := calc
+    q = 1 * q := (one_mul q).symm
+    _ < n.minFac * q := Nat.mul_lt_mul_of_pos_right (minFac_prime hn₁).one_lt hq₀
+    _ = n := hq.symm
+  have hqd : q ∣ n := ⟨n.minFac, hq.trans (Nat.mul_comm _ _)⟩
+  have hx : (q : ZMod n) ≠ 0 := by
     rw [Ne, ringChar.spec, ringChar.eq (ZMod n) n]
-    exact
-      not_dvd_of_pos_of_lt (Nat.div_pos (minFac_le (by lia)) (n.minFac_pos hn₁))
-        (div_lt_self hn.bot_lt (minFac_prime hn₁).one_lt)
-  refine ((minOrder_le_natCard (zmultiples_eq_bot.not.2 this) <| toFinite _).trans ?_).antisymm <|
+    exact not_dvd_of_pos_of_lt hq₀ hqn
+  refine ((minOrder_le_natCard (zmultiples_eq_bot.not.2 hx) <| toFinite _).trans ?_).antisymm <|
     le_minOrder_iff_forall_addSubgroup.2 fun s hs _ ↦ ?_
-  · rw [Nat.card_zmultiples, ZMod.addOrderOf_coe _ hn,
-      gcd_eq_right (div_dvd_of_dvd (n.minFac_dvd hn₁)), Nat.div_div_self (n.minFac_dvd hn₁) hn]
+  · rw [Nat.card_zmultiples, ZMod.addOrderOf_coe _ hn, Nat.euclideanDiv_eq_core,
+      gcd_eq_right hqd, Nat.div_eq_of_eq_mul_left hq₀ hq]
   · have : Nontrivial s := s.bot_or_nontrivial.resolve_left hs
     exact WithTop.coe_le_coe.2 <| minFac_le_of_dvd Finite.one_lt_card <|
       (card_addSubgroup_dvd_card _).trans n.card_zmod.dvd

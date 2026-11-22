@@ -155,12 +155,14 @@ theorem _root_.NumberField.mixedEmbedding.covolume_idealLattice (I : (Fractional
 theorem exists_ne_zero_mem_ideal_of_norm_le_mul_sqrt_discr (I : (FractionalIdeal (𝓞 K)⁰ K)ˣ) :
     ∃ a ∈ (I : FractionalIdeal (𝓞 K)⁰ K), a ≠ 0 ∧
       |Algebra.norm ℚ (a : K)| ≤ FractionalIdeal.absNorm I.1 * (4 / π) ^ nrComplexPlaces K *
-        (finrank ℚ K).factorial / (finrank ℚ K) ^ (finrank ℚ K) * Real.sqrt |discr K| := by
+        (finrank ℚ K).factorial / (finrank ℚ K : ℝ) ^ (finrank ℚ K) * Real.sqrt |discr K| := by
   classical
   -- The smallest possible value for `exists_ne_zero_mem_ideal_of_norm_le`
   have hdeg : 0 < (finrank ℚ K : ℝ) := Nat.cast_pos.mpr finrank_pos
   have hfactor : (convexBodySumFactor K : ℝ≥0∞) ≠ 0 :=
     ENNReal.coe_ne_zero.mpr (convexBodySumFactor_ne_zero K)
+  have hunit : IsUnit (convexBodySumFactor K : ℝ≥0∞) :=
+    ENNReal.isUnit_iff.mpr ⟨hfactor, ENNReal.coe_ne_top⟩
   let A := (minkowskiBound K I / (convexBodySumFactor K : ℝ≥0∞)).toReal
   let B := A ^ (1 / (finrank ℚ K : ℝ))
   have hA : 0 ≤ A := ENNReal.toReal_nonneg
@@ -172,7 +174,8 @@ theorem exists_ne_zero_mem_ideal_of_norm_le_mul_sqrt_discr (I : (FractionalIdeal
   have h_le : (minkowskiBound K I) ≤ volume (convexBodySum K B) := by
     rw [convexBodySum_volume, ← ENNReal.ofReal_pow hB, hpow]
     dsimp only [A]
-    rw [ENNReal.ofReal_toReal (ENNReal.div_ne_top (minkowskiBound_lt_top K I).ne hfactor),
+    rw [ENNReal.checkedDiv_eq_div _ _ hunit,
+      ENNReal.ofReal_toReal (ENNReal.div_ne_top (minkowskiBound_lt_top K I).ne hfactor),
       ENNReal.mul_div_cancel hfactor ENNReal.coe_ne_top]
   obtain ⟨a, ha, hne, hbound⟩ := exists_ne_zero_mem_ideal_of_norm_le K I h_le
   refine ⟨a, ha, hne, hbound.trans_eq ?_⟩
@@ -187,16 +190,16 @@ theorem exists_ne_zero_mem_ideal_of_norm_le_mul_sqrt_discr (I : (FractionalIdeal
       ← ZLattice.covolume_eq_measure_fundamentalDomain _ _ (fundamentalDomain_idealLattice K I),
       covolume_idealLattice, ENNReal.toReal_pow, ENNReal.toReal_ofNat, mixedEmbedding.finrank]
   have hden : (convexBodySumFactor K : ℝ≥0∞).toReal =
-      (2 : ℝ) ^ nrRealPlaces K * (π / 2) ^ nrComplexPlaces K / (finrank ℚ K).factorial := by
+      (2 : ℝ) ^ nrRealPlaces K * (π / 2) ^ nrComplexPlaces K / ((finrank ℚ K).factorial : ℝ) := by
     simp only [ENNReal.coe_toReal, convexBodySumFactor, NNReal.coe_div, NNReal.coe_mul,
       NNReal.coe_pow, NNReal.coe_real_pi, NNReal.coe_ofNat, NNReal.coe_natCast]
   have hquot : A = Checked.div
       ((FractionalIdeal.absNorm I.1 : ℝ) * (2⁻¹ : ℝ) ^ nrComplexPlaces K *
         Real.sqrt |(discr K : ℝ)| * (2 : ℝ) ^ finrank ℚ K)
-      ((2 : ℝ) ^ nrRealPlaces K * (π / 2) ^ nrComplexPlaces K / (finrank ℚ K).factorial)
+      ((2 : ℝ) ^ nrRealPlaces K * (π / 2) ^ nrComplexPlaces K / ((finrank ℚ K).factorial : ℝ))
       (hden ▸ hfactor_real) := by
     dsimp only [A]
-    rw [ENNReal.toReal_div _ _ (hb := hfactor_real)]
+    rw [ENNReal.checkedDiv_eq_div _ _ hunit, ENNReal.toReal_div _ _ (hb := hfactor_real)]
     apply div_eq_div_iff.mpr
     rw [hnum, hden]
   have htwo : (2 : ℝ) ^ finrank ℚ K =
@@ -210,7 +213,7 @@ theorem exists_ne_zero_mem_ideal_of_norm_le_mul_sqrt_discr (I : (FractionalIdeal
 theorem exists_ne_zero_mem_ringOfIntegers_of_norm_le_mul_sqrt_discr :
     ∃ (a : 𝓞 K), a ≠ 0 ∧
       |Algebra.norm ℚ (a : K)| ≤ (4 / π) ^ nrComplexPlaces K *
-        (finrank ℚ K).factorial / (finrank ℚ K) ^ (finrank ℚ K) * Real.sqrt |discr K| := by
+        (finrank ℚ K).factorial / (finrank ℚ K : ℝ) ^ (finrank ℚ K) * Real.sqrt |discr K| := by
   obtain ⟨_, h_mem, h_nz, h_nm⟩ := exists_ne_zero_mem_ideal_of_norm_le_mul_sqrt_discr K ↑1
   obtain ⟨a, rfl⟩ := (FractionalIdeal.mem_one_iff _).mp h_mem
   refine ⟨a, ne_zero_of_map h_nz, ?_⟩
@@ -222,7 +225,7 @@ The Minkowski lower bound `n^{2n}/((4/pi)^{2r_2}*n!^2)` for the absolute value o
 of a number field of degree n.
 -/
 theorem abs_discr_ge' :
-    (finrank ℚ K) ^ (2 * finrank ℚ K) / ((4 / π) ^ (2 * nrComplexPlaces K) *
+    (finrank ℚ K : ℝ) ^ (2 * finrank ℚ K) / ((4 / π) ^ (2 * nrComplexPlaces K) *
       (finrank ℚ K).factorial ^ 2) ≤ |discr K| := by
   -- We use `exists_ne_zero_mem_ringOfIntegers_of_norm_le_mul_sqrt_discr` to get a nonzero
   -- algebraic integer `x` of small norm and the fact that `1 ≤ |Norm x|` to get a lower bound
@@ -233,19 +236,19 @@ theorem abs_discr_ge' :
     exact Int.one_le_abs (Algebra.norm_ne_zero_iff.mpr h_nz)
   replace h_bd := le_trans h_nm h_bd
   have hpos : (0 : ℝ) < (4 / π) ^ nrComplexPlaces K * (finrank ℚ K).factorial /
-      (finrank ℚ K) ^ finrank ℚ K :=
+      (finrank ℚ K : ℝ) ^ finrank ℚ K :=
     div_pos (by positivity) (pow_pos (Nat.cast_pos.mpr finrank_pos) _)
   rw [← inv_mul_le_iff₀ hpos, inv_div₀, mul_one, Real.le_sqrt (by positivity) (by positivity),
     ← Int.cast_abs] at h_bd
   simpa only [div_pow₀, mul_pow, ← pow_mul, Nat.mul_comm] using h_bd
 
 theorem abs_discr_ge_of_isTotallyComplex [IsTotallyComplex K] :
-    (finrank ℚ K) ^ (2 * finrank ℚ K) / ((4 / π) ^ (finrank ℚ K) *
+    (finrank ℚ K : ℝ) ^ (2 * finrank ℚ K) / ((4 / π) ^ (finrank ℚ K) *
       (finrank ℚ K).factorial ^ 2) ≤ |discr K| := by
   simpa only [← IsTotallyComplex.finrank] using abs_discr_ge' K
 
 theorem abs_discr_rpow_ge_of_isTotallyComplex [IsTotallyComplex K] :
-    (finrank ℚ K) ^ 2 / ((4 / π) * (finrank ℚ K).factorial ^
+    (finrank ℚ K : ℝ) ^ 2 / ((4 / π) * (finrank ℚ K).factorial ^
       (2 * Checked.inv (finrank ℚ K : ℝ)
         (Nat.cast_ne_zero.mpr (finrank_pos (R := ℚ) (M := K)).ne').isUnit)) ≤
       |discr K| ^ Checked.inv (finrank ℚ K : ℝ)
@@ -290,8 +293,8 @@ theorem abs_discr_ge (h : 1 < finrank ℚ K) :
   induction n, hn using Nat.le_induction with
   | base => exact le_of_eq <| by simp [a, Nat.factorial_two]; field
   | succ m _ h_m =>
-      suffices (3 : ℝ) ≤ (1 + 1 / m : ℝ) ^ (2 * m) by
-        convert_to _ ≤ (a m) * (1 + 1 / m : ℝ) ^ (2 * m) / (4 / π)
+      suffices (3 : ℝ) ≤ (1 + 1 / (m : ℝ)) ^ (2 * m) by
+        convert_to _ ≤ (a m) * (1 + 1 / (m : ℝ)) ^ (2 * m) / (4 / π)
         · simp_rw [a, add_mul, one_mul, pow_succ, Nat.factorial_succ]
           field_simp
           simp [field]
@@ -441,7 +444,7 @@ theorem finite_of_discr_bdd_of_isReal :
   -- The bound on the Minkowski bound
   let B := boundOfDiscBdd N
   -- The bound on the coefficients of the generating polynomials
-  let C := Nat.ceil ((max B 1) ^ D * Nat.choose D (D / 2))
+  let C := Nat.ceil ((max B 1) ^ D * Nat.choose D (Nat.euclideanDiv D 2))
   refine finite_of_finite_generating_set A _ (bUnion_roots_finite (algebraMap ℤ A) D
       (Set.finite_Icc (-C : ℤ) C)) (fun ⟨K, hK₀⟩ ⟨hK₁, hK₂⟩ ↦ ?_)
   -- We now need to prove that each field is generated by an element of the union of the root set
@@ -490,7 +493,7 @@ theorem finite_of_discr_bdd_of_isComplex :
   -- The bound on the Minkowski bound
   let B := boundOfDiscBdd N
   -- The bound on the coefficients of the generating polynomials
-  let C := Nat.ceil ((max (sqrt (1 + B ^ 2)) 1) ^ D * Nat.choose D (D / 2))
+  let C := Nat.ceil ((max (sqrt (1 + B ^ 2)) 1) ^ D * Nat.choose D (Nat.euclideanDiv D 2))
   refine finite_of_finite_generating_set A _ (bUnion_roots_finite (algebraMap ℤ A) D
       (Set.finite_Icc (-C : ℤ) C)) (fun ⟨K, hK₀⟩ ⟨hK₁, hK₂⟩ ↦ ?_)
   -- We now need to prove that each field is generated by an element of the union of the root set

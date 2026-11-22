@@ -136,13 +136,19 @@ theorem coeff_expand_of_not_dvd (φ : MvPowerSeries σ R) {m : σ →₀ ℕ} {i
     contradiction
   simp [meq]
 
+include hp in
+private theorem exists_smul_of_forall_dvd {d : σ →₀ ℕ} (h : ∀ i, p ∣ d i) :
+    ∃ m, p • m = d := by
+  refine ⟨d.mapRange (fun a ↦ Nat.euclideanDiv a p hp) (by simp [Nat.euclideanDiv_eq_core]), ?_⟩
+  ext i
+  simp [Nat.euclideanDiv_eq_core, Nat.mul_div_cancel' (h i)]
+
 set_option backward.isDefEq.respectTransparency.types false in
 theorem support_expand_subset (φ : MvPowerSeries σ R) :
     (expand p hp φ).support ⊆ φ.support.image (p • ·) := by
   intro d hd
-  have : ∀ i, p ∣ d i := fun _ => by_contra fun hc => hd (coeff_expand_of_not_dvd p hp φ hc)
-  let m := d.mapRange (fun n => n / p) (Nat.zero_div p)
-  have eq_aux : p • m = d := (Finsupp.ext fun a => Nat.eq_mul_of_div_eq_right (this a) rfl).symm
+  have h : ∀ i, p ∣ d i := fun _ => by_contra fun hc => hd (coeff_expand_of_not_dvd p hp φ hc)
+  obtain ⟨m, eq_aux⟩ := exists_smul_of_forall_dvd p hp h
   rw [Function.mem_support, ← eq_aux, ← coeff_apply (expand p hp φ), coeff_expand_smul,
     coeff_apply] at hd
   exact ⟨m, hd, eq_aux⟩
@@ -170,8 +176,7 @@ theorem order_expand (φ : MvPowerSeries σ R) :
       exact order_le <| (coeff_expand_smul p hp φ _) ▸ hd₁
     · refine MvPowerSeries.le_order fun d hd => ?_
       by_cases! h : ∀ i, p ∣ d i
-      · obtain ⟨m, hm⟩ : ∃ m, p • m = d := ⟨d.mapRange (fun a ↦ a / p) (by simp),
-          by ext i; simp [(Nat.mul_div_cancel' (h i))]⟩
+      · obtain ⟨m, hm⟩ := exists_smul_of_forall_dvd p hp h
         rw [← hm, coeff_expand_smul, coeff_of_lt_order]
         simp only [← hm, map_nsmul, smul_eq_mul, Nat.cast_mul, nsmul_eq_mul] at hd
         exact lt_of_mul_lt_mul_left' hd
@@ -188,8 +193,7 @@ theorem expand_eq_expand {φ : MvPolynomial σ R} :
   ext n
   simp only [MvPolynomial.coeff_coe]
   by_cases! h : ∀ i, p ∣ n i
-  · obtain ⟨m, hm⟩ : ∃ m, p • m = n := ⟨n.mapRange (fun a ↦ a / p) (by simp),
-      by ext i; simp [(Nat.mul_div_cancel' (h i))]⟩
+  · obtain ⟨m, hm⟩ := exists_smul_of_forall_dvd p hp h
     rw [← hm, coeff_expand_smul p hp _ _, φ.coeff_expand_smul _ hp, φ.coeff_coe]
   · obtain ⟨i, hi⟩ := h
     rw [coeff_expand_of_not_dvd p hp _ hi, MvPolynomial.coeff_expand_of_not_dvd _ hi]
@@ -198,8 +202,7 @@ theorem trunc'_expand [DecidableEq σ] {n : σ →₀ ℕ} (φ : MvPowerSeries �
     trunc' R (p • n) (expand p hp φ) = (trunc' R n φ).expand p := by
   ext d
   by_cases! h : ∀ i, p ∣ d i
-  · obtain ⟨m, hm⟩ : ∃ m, p • m = d := ⟨d.mapRange (fun a ↦ a / p) (by simp),
-      by ext i; simp [(Nat.mul_div_cancel' (h i))]⟩
+  · obtain ⟨m, hm⟩ := exists_smul_of_forall_dvd p hp h
     by_cases h_le : m ≤ n
     · rw [← hm, coeff_trunc', ite_eq_left (nsmul_le_nsmul_right h_le p), coeff_expand_smul,
         MvPolynomial.coeff_expand_smul _ hp, coeff_trunc', ite_eq_left h_le]

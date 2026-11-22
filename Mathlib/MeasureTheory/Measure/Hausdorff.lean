@@ -795,7 +795,8 @@ theorem hausdorffMeasure_preimage_le (hf : AntilipschitzWith K f) (hd : 0 ≤ d)
   simp only [hausdorffMeasure_apply, ENNReal.mul_iSup, ENNReal.mul_iInf_of_ne hKd0 hKd,
     ← ENNReal.tsum_mul_left]
   refine iSup₂_le fun ε ε0 => ?_
-  refine le_iSup₂_of_le (ε / K) (by simp [ε0.ne']) ?_
+  refine le_iSup₂_of_le (ENNReal.div ε K)
+    (ENNReal.div_pos_iff.mpr ⟨ε0.ne', ENNReal.coe_ne_top⟩) ?_
   refine le_iInf₂ fun t hst => le_iInf fun htε => ?_
   replace hst : f ⁻¹' s ⊆ _ := preimage_mono hst; rw [preimage_iUnion] at hst
   refine iInf₂_le_of_le _ hst (iInf_le_of_le (fun n => ?_) ?_)
@@ -917,14 +918,16 @@ theorem hausdorffMeasure_pi_real {ι : Type*} [Fintype ι] :
   have npos (n : ℕ+) : 0 < ((n : ℕ) : ℝ) := Nat.cast_pos.2 n.2
   let t : ∀ n : ℕ+, γ n → Set (ι → ℝ) := fun n f => by
     have hn := (npos n).ne'
-    exact Set.pi univ fun i => Icc (a i + f i / (n : ℕ)) (a i + (f i + 1) / (n : ℕ))
-  have A : Tendsto (fun n : ℕ+ => 1 / ((n : ℕ) : ℝ≥0∞)) atTop (𝓝 0) := by
-    simpa only [one_div, Function.comp_def] using
+    exact Set.pi univ fun i => Icc (a i + ((f i : ℕ) : ℝ) / ((n : ℕ) : ℝ))
+      (a i + (((f i : ℕ) : ℝ) + 1) / ((n : ℕ) : ℝ))
+  let δ (n : ℕ+) := ENNReal.div 1 ((n : ℕ) : ℝ≥0∞)
+  have A : Tendsto δ atTop (𝓝 0) := by
+    simpa only [δ, ENNReal.one_div, Function.comp_def] using
       ENNReal.tendsto_inv_nat_nhds_zero.comp tendsto_PNat_val_atTop_atTop
-  have B : ∀ᶠ n in atTop, ∀ i : γ n, ediam (t n i) ≤ 1 / n := by
+  have B : ∀ᶠ n in atTop, ∀ i : γ n, ediam (t n i) ≤ δ n := by
     refine Eventually.of_forall fun n f => ?_
     refine ediam_pi_le_of_le fun b => ?_
-    simp only [Real.ediam_Icc, add_div, ENNReal.ofReal_div_of_pos (npos n), le_refl,
+    simp only [δ, Real.ediam_Icc, add_div, ENNReal.ofReal_div_of_pos (npos n), le_refl,
       add_sub_add_left_eq_sub, add_sub_cancel_left, ENNReal.ofReal_one, ENNReal.ofReal_natCast]
   have C : ∀ᶠ n in atTop, (Set.pi univ fun i : ι => Ioo (a i : ℝ) (b i)) ⊆ ⋃ i : γ n, t n i := by
     refine Eventually.of_forall fun n => ?_
@@ -941,14 +944,14 @@ theorem hausdorffMeasure_pi_real {ι : Type*} [Fintype ι] :
           simpa only [Rat.cast_lt, sub_pos] using H i⟩
     refine ⟨f, fun i => ⟨?_, ?_⟩⟩
     · calc
-        (a i : ℝ) + ⌊(x i - a i) * (n : ℕ)⌋₊ / (n : ℕ) ≤
-            (a i : ℝ) + (x i - a i) * (n : ℕ) / (n : ℕ) := by
+        (a i : ℝ) + (⌊(x i - a i) * (n : ℕ)⌋₊ : ℝ) / ((n : ℕ) : ℝ) ≤
+            (a i : ℝ) + (x i - a i) * (n : ℕ) / ((n : ℕ) : ℝ) := by
           gcongr
           exact Nat.floor_le (mul_nonneg (sub_nonneg.2 (hx i).1.le) hn.le)
         _ = x i := by field
     · calc
-        x i = (a i : ℝ) + (x i - a i) * (n : ℕ) / (n : ℕ) := by field
-        _ ≤ (a i : ℝ) + (⌊(x i - a i) * (n : ℕ)⌋₊ + 1) / (n : ℕ) := by
+        x i = (a i : ℝ) + (x i - a i) * (n : ℕ) / ((n : ℕ) : ℝ) := by field
+        _ ≤ (a i : ℝ) + ((⌊(x i - a i) * (n : ℕ)⌋₊ : ℝ) + 1) / ((n : ℕ) : ℝ) := by
           gcongr
           exact (Nat.lt_floor_add_one _).le
   have hcast : Tendsto (fun n : ℕ+ ↦
@@ -959,8 +962,8 @@ theorem hausdorffMeasure_pi_real {ι : Type*} [Fintype ι] :
     μH[Fintype.card ι] (Set.pi univ fun i : ι => Ioo (a i : ℝ) (b i)) ≤
         liminf (fun n : ℕ+ => ∑ i : γ n, ediam (t n i) ^ ((Fintype.card ι) : ℝ)) atTop :=
       hausdorffMeasure_le_liminf_sum _ (Set.pi univ fun i => Ioo (a i : ℝ) (b i))
-        (fun n : ℕ+ => 1 / ((n : ℕ) : ℝ≥0∞)) A t B C
-    _ ≤ liminf (fun n : ℕ+ => ∑ i : γ n, (1 / ((n : ℕ) : ℝ≥0∞)) ^ Fintype.card ι) atTop := by
+        δ A t B C
+    _ ≤ liminf (fun n : ℕ+ => ∑ i : γ n, (δ n) ^ Fintype.card ι) atTop := by
       refine liminf_le_liminf ?_ ?_
       · filter_upwards [B] with _ hn
         apply Finset.sum_le_sum fun i _ => _
@@ -968,10 +971,11 @@ theorem hausdorffMeasure_pi_real {ι : Type*} [Fintype ι] :
         intro i _
         exact pow_le_pow_left' (hn i) _
       · isBoundedDefault
-    _ = liminf (fun n : ℕ+ => ∏ i : ι, (⌈((b i : ℝ) - a i) * (n : ℕ)⌉₊ : ℝ≥0∞) /
-        (n : ℕ)) atTop := by
+    _ = liminf (fun n : ℕ+ => ∏ i : ι,
+        ENNReal.div (⌈((b i : ℝ) - a i) * (n : ℕ)⌉₊ : ℝ≥0∞) ((n : ℕ) : ℝ≥0∞)) atTop := by
       simp only [γ, Finset.card_univ, Nat.cast_prod, one_mul, Fintype.card_fin, Finset.sum_const,
-        nsmul_eq_mul, Fintype.card_pi, div_eq_mul_inv, Finset.prod_mul_distrib, Finset.prod_const]
+        nsmul_eq_mul, Fintype.card_pi, δ, ENNReal.div_eq_mul_inv, Finset.prod_mul_distrib,
+        Finset.prod_const]
     _ = ∏ i : ι, volume (Ioo (a i : ℝ) (b i)) := by
       simp only [Real.volume_Ioo]
       apply Tendsto.liminf_eq

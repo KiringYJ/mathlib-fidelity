@@ -277,7 +277,7 @@ theorem intervalIntegrable_log' : IntervalIntegrable log volume a b := by
     simpa
 
 theorem intervalIntegrable_one_div_one_add_sq :
-    IntervalIntegrable (fun x : ℝ => 1 / (↑1 + x ^ 2)) μ a b := by
+    IntervalIntegrable (fun x : ℝ => 1 / ((1 : ℝ) + x ^ 2)) μ a b := by
   apply Continuous.intervalIntegrable
   exact continuous_const.div₀ (by fun_prop)
 

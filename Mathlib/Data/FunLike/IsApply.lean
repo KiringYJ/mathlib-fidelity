@@ -27,7 +27,7 @@ The following `Is*Apply` typeclasses are available:
 * `IsOneApplyEqSelf`: `1 x = x`
 * `IsAddApply`, `IsMulApply`: `(f + g) x = f x + g x` and `(f * g) x = f x * g x`, respectively
 * `IsMulApplyEqComp`: `(f * g) x = f (g x)`
-* `IsSubApply`, `IsDivApply`: `(f - g) x = f x - g x` and `(f / g) x = f x / g x`, respectively
+* `IsSubApply`: `(f - g) x = f x - g x`
 * `IsNegApply`, `IsInvApply`: `(-f) x = -(f x)` and `(f⁻¹) x = (f x)⁻¹`, respectively
 * `IsVAddApply`, `IsSMulApply` `IsPowApply`: `(n +ᵥ f) x = n +ᵥ f x`, `(n • f) x = n • f x`, and
   `(f ^ n) x = (f x) ^ n`, respectively
@@ -129,12 +129,7 @@ section Sub
 class IsSubApply (F : Type*) (α β : outParam Type*) [FunLike F α β] [Sub β] [Sub F] where
   sub_apply (f g : F) (x : α) : (f - g) x = f x - g x
 
-/-- `IsDivApply F α β` states for all `f g : F` and `x : α`, `(f / g) x = f x / g x`. -/
-@[to_additive]
-class IsDivApply (F : Type*) (α β : outParam Type*) [FunLike F α β] [Div β] [Div F] where
-  div_apply (f g : F) (x : α) : (f / g) x = f x / g x
-
-@[to_additive (attr := simp, grind =)] alias div_apply := IsDivApply.div_apply
+@[simp, grind =] alias sub_apply := IsSubApply.sub_apply
 
 end Sub
 
@@ -220,13 +215,18 @@ theorem coe_one_iff [One F] [One β] [IsOneApply F α β] (f : F) : (f : α → 
 theorem coe_mul [Mul F] [Mul β] [IsMulApply F α β] (f g : F) : ↑(f * g) = (f : α → β) * g := by
   ext; simp
 
-@[to_additive (attr := simp, norm_cast)]
-theorem coe_div [Div F] [Div β] [IsDivApply F α β] (f g : F) : ↑(f / g) = (f : α → β) / g := by
+@[simp, norm_cast]
+theorem coe_sub [Sub F] [Sub β] [IsSubApply F α β] (f g : F) :
+    ↑(f - g) = (f : α → β) - (g : α → β) := by
   ext; simp
 
 @[to_additive (attr := simp, norm_cast)]
 theorem coe_inv [Inv F] [Inv β] [IsInvApply F α β] (f : F) : ↑(f⁻¹) = (f : α → β)⁻¹ := by
   ext; simp
+
+theorem coe_mul_inv [Mul F] [Mul β] [Inv F] [Inv β] [IsMulApply F α β] [IsInvApply F α β]
+    (f g : F) : ↑(f * g⁻¹) = (f : α → β) * (g : α → β)⁻¹ := by
+  rw [coe_mul, coe_inv]
 
 @[to_additive (attr := simp, norm_cast)]
 theorem coe_smul [SMul M F] [SMul M β] [IsSMulApply M F α β] (n : M) (f : F) :

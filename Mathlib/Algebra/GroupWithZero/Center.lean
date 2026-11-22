@@ -57,7 +57,7 @@ variable {M : Type*} [Monoid M] {s : Set M} {a b : M}
   exact hca.units_inv_right.eq
 
 @[simp] lemma div_mem_centralizer₀ {hb : IsUnit b} (ha : a ∈ centralizer s)
-    (hb' : b ∈ centralizer s) : a / b ∈ centralizer s := by
+    (hb' : b ∈ centralizer s) : Checked.div a b hb ∈ centralizer s := by
   rw [div_eq_mul_inv₀]
   exact mul_mem_centralizer ha (inv_mem_centralizer₀ hb')
 

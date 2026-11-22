@@ -286,8 +286,8 @@ theorem GammaSeq_add_one_left (s : ℂ) {n : ℕ} (hn : n ≠ 0)
 
 theorem GammaSeq_eq_approx_Gamma_integral {s : ℂ} (hs : 0 < re s) {n : ℕ} (hn : n ≠ 0) :
     GammaSeq s n (fun j _ ↦ Gamma_regular_of_re_pos hs j) =
-      ∫ x : ℝ in 0..n, ↑((1 - x / n) ^ n) * (x : ℂ) ^ (s - 1) := by
-  have : ∀ x : ℝ, x = x / n * n := by intro x; rw [div_mul_cancel₀]
+      ∫ x : ℝ in 0..n, ↑((1 - x / (n : ℝ)) ^ n) * (x : ℂ) ^ (s - 1) := by
+  have : ∀ x : ℝ, x = x / (n : ℝ) * n := by intro x; rw [div_mul_cancel₀]
   conv_rhs => enter [1, x, 2, 1]; rw [this x]
   rw [GammaSeq_eq_betaIntegral_of_re_pos hs]
   have := intervalIntegral.integral_comp_div (a := 0) (b := n)
@@ -311,7 +311,7 @@ theorem GammaSeq_eq_approx_Gamma_integral {s : ℂ} (hs : 0 < re s) {n : ℕ} (h
 Gamma function for `0 < re s` as the limit of a sequence of integrals over finite intervals. -/
 theorem approx_Gamma_integral_tendsto_Gamma_integral {s : ℂ} (hs : 0 < re s) :
     Tendsto (fun n : {n : ℕ // n ≠ 0} =>
-      ∫ x : ℝ in 0..(n : ℕ), ((1 - x / (n : ℕ)) ^ (n : ℕ) : ℝ) * (x : ℂ) ^ (s - 1))
+      ∫ x : ℝ in 0..(n : ℕ), ((1 - x / ((n : ℕ) : ℝ)) ^ (n : ℕ) : ℝ) * (x : ℂ) ^ (s - 1))
       (comap Subtype.val atTop)
       (𝓝 <| Gamma s) := by
   rw [Gamma_eq_integral hs]
@@ -319,7 +319,7 @@ theorem approx_Gamma_integral_tendsto_Gamma_integral {s : ℂ} (hs : 0 < re s) :
   -- bounded above by the Gamma integrand `exp (-x) * x ^ (re s - 1)`.
   let f : {n : ℕ // n ≠ 0} → ℝ → ℂ := fun n =>
     indicator (Ioc 0 ((n : ℕ) : ℝ)) fun x : ℝ =>
-      ((1 - x / (n : ℕ)) ^ (n : ℕ) : ℝ) * (x : ℂ) ^ (s - 1)
+      ((1 - x / ((n : ℕ) : ℝ)) ^ (n : ℕ) : ℝ) * (x : ℂ) ^ (s - 1)
   -- integrability of f
   have f_ible : ∀ n : {n : ℕ // n ≠ 0}, Integrable (f n) (volume.restrict (Ioi 0)) := by
     intro n
@@ -337,7 +337,7 @@ theorem approx_Gamma_integral_tendsto_Gamma_integral {s : ℂ} (hs : 0 < re s) :
     intro x hx
     apply Tendsto.congr'
     · change ∀ᶠ n : {n : ℕ // n ≠ 0} in comap Subtype.val atTop,
-        ↑((1 - x / (n : ℕ)) ^ (n : ℕ)) * (x : ℂ) ^ (s - 1) = f n x
+        ↑((1 - x / ((n : ℕ) : ℝ)) ^ (n : ℕ)) * (x : ℂ) ^ (s - 1) = f n x
       filter_upwards [preimage_mem_comap (eventually_ge_atTop ⌈x⌉₊)] with n hn
       change ⌈x⌉₊ ≤ n.val at hn
       rw [Nat.ceil_le] at hn
@@ -457,7 +457,7 @@ theorem GammaSeq_mul (z : ℂ) {n : ℕ} (hn : n ≠ 0)
 
 /-- Euler's reflection formula for the complex Gamma function. -/
 theorem Gamma_mul_Gamma_one_sub (z : ℂ) (hs : sin (π * z) ≠ 0) :
-    Gamma z * Gamma (1 - z) = π / sin (π * z) := by
+    Gamma z * Gamma (1 - z) = (π : ℂ) / sin (π * z) := by
   have pi_ne : (π : ℂ) ≠ 0 := Complex.ofReal_ne_zero.mpr pi_ne_zero
   have hz : ∀ j : ℕ, z ≠ -j := by
     intro j hj
@@ -478,14 +478,14 @@ theorem Gamma_mul_Gamma_one_sub (z : ℂ) (hs : sin (π * z) ≠ 0) :
       atTop (comap Subtype.val atTop) from tendsto_comap_iff.mpr tendsto_id)
   have hprod := ((GammaSeq_tendsto_Gamma z hz).mul (GammaSeq_tendsto_Gamma (1 - z) hz')).mul
     ((tendsto_euler_sin_prod z).div_const₀ (π : ℂ) (hy := pi_ne.isUnit))
-  have heq : Gamma z * Gamma (1 - z) * (sin (π * z) / π) = 1 := by
+  have heq : Gamma z * Gamma (1 - z) * (sin (π * z) / (π : ℂ)) = 1 := by
     apply tendsto_nhds_unique hprod
     apply hratio.congr'
     filter_upwards [eventually_ne_atTop 0] with n hn
     have h := GammaSeq_mul z hn (fun j _ ↦ hz j) (fun j _ ↦ hz' j)
     simp only [Function.comp_apply]
     apply (div_eq_iff (hb := (hden n).isUnit)).mpr
-    have hpi (w : ℂ) : π * z * w / π = z * w := by field
+    have hpi (w : ℂ) : π * z * w / (π : ℂ) = z * w := by field
     simpa only [add_sub_assoc, hpi] using h.symm
   apply (eq_div_iff (hb := hs.isUnit)).mpr
   have := congrArg (fun x : ℂ ↦ x * π) heq
@@ -651,7 +651,7 @@ theorem Gamma_mul_reciprocalGamma {s : ℂ} (hs : ∀ n : ℕ, s ≠ -n) :
 
 /-- Euler's reflection formula for the entire reciprocal Gamma function. -/
 theorem reciprocalGamma_mul_reciprocalGamma_one_sub (s : ℂ) :
-    reciprocalGamma s * reciprocalGamma (1 - s) = sin (π * s) / π := by
+    reciprocalGamma s * reciprocalGamma (1 - s) = sin (π * s) / (π : ℂ) := by
   have hp : (π : ℂ) ≠ 0 := ofReal_ne_zero.mpr pi_ne_zero
   by_cases hsin : sin (π * s) = 0
   · rw [hsin, zero_div]
@@ -679,7 +679,7 @@ theorem reciprocalGamma_mul_reciprocalGamma_one_sub (s : ℂ) :
       reciprocalGamma s * reciprocalGamma (1 - s) * (Gamma s * Gamma (1 - s)) = 1 := by
         rw [mul_mul_mul_comm, reciprocalGamma_mul_Gamma (hregular (mul_ne_zero_iff.mp hg).1),
           reciprocalGamma_mul_Gamma (hregular (mul_ne_zero_iff.mp hg).2), one_mul]
-      _ = sin (π * s) / π * (Gamma s * Gamma (1 - s)) := by
+      _ = sin (π * s) / (π : ℂ) * (Gamma s * Gamma (1 - s)) := by
         rw [Gamma_mul_Gamma_one_sub s hsin]
         field
 

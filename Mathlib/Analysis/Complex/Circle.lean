@@ -85,7 +85,7 @@ lemma coe_inj : (x : ℂ) = y ↔ x = y := coe_injective.eq_iff
 lemma coe_inv_eq_conj (z : Circle) : ↑z⁻¹ = conj (z : ℂ) := by
   simp only [coe_inv, inv_def, normSq_coe, inv_one₀, ofReal_one, mul_one]
 
-@[simp, norm_cast] lemma coe_div (z w : Circle) : ↑(z / w) = (z : ℂ) / w := rfl
+@[simp, norm_cast] lemma coe_div (z w : Circle) : ↑(z / w) = (z : ℂ) / (w : ℂ) := rfl
 @[simp, norm_cast] lemma coe_pow (z : Circle) (n : ℕ) : ↑(z ^ n) = (z : ℂ) ^ n := rfl
 @[simp, norm_cast] lemma coe_zpow (z : Circle) (n : ℤ) : ↑(z ^ n) = (z : ℂ) ^ n := rfl
 @[simp, norm_cast] lemma coe_neg (x : Circle) : ↑(-x) = -(x : ℂ) := rfl

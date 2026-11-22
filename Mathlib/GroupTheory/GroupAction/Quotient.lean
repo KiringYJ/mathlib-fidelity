@@ -415,12 +415,13 @@ end MulAction
 theorem ConjClasses.card_carrier {G : Type*} [Group G] [Fintype G] (g : G)
     [Fintype (ConjClasses.mk g).carrier] [Fintype <| MulAction.stabilizer (ConjAct G) g] :
     Fintype.card (ConjClasses.mk g).carrier =
-      Fintype.card G / Fintype.card (MulAction.stabilizer (ConjAct G) g) := by
+      Nat.euclideanDiv (Fintype.card G) (Fintype.card (MulAction.stabilizer (ConjAct G) g))
+        Fintype.card_pos.ne' := by
   classical
-  rw [Fintype.card_congr <| ConjAct.toConjAct (G := G) |>.toEquiv]
-  rw [← MulAction.card_orbit_mul_card_stabilizer_eq_card_group (ConjAct G) g, Nat.mul_div_cancel]
-  · simp_rw [ConjAct.orbit_eq_carrier_conjClasses]
-  · exact Fintype.card_pos_iff.mpr inferInstance
+  rw [Fintype.card_congr <| ConjAct.toConjAct (G := G) |>.toEquiv,
+    ← MulAction.card_orbit_mul_card_stabilizer_eq_card_group (ConjAct G) g,
+    Nat.euclideanDiv_mul_right_cancel _ Fintype.card_pos.ne']
+  simp_rw [ConjAct.orbit_eq_carrier_conjClasses]
 
 namespace Subgroup
 

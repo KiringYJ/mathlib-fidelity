@@ -372,11 +372,8 @@ lemma IsMulFreimanHom.inv (hf : IsMulFreimanHom n A B f) : IsMulFreimanHom n A B
 
 @[to_additive] lemma IsMulFreimanHom.div {β : Type*} [DivisionCommMonoid β] {B₁ B₂ : Set β}
     {f₁ f₂ : α → β} (h₁ : IsMulFreimanHom n A B₁ f₁) (h₂ : IsMulFreimanHom n A B₂ f₂) :
-    IsMulFreimanHom n A (B₁ / B₂) (f₁ / f₂) where
-  mapsTo := h₁.mapsTo.div h₂.mapsTo
-  map_prod_eq_map_prod s t hsA htA hs ht h := by
-    rw [Pi.div_def, prod_map_div, prod_map_div, h₁.map_prod_eq_map_prod hsA htA hs ht h,
-      h₂.map_prod_eq_map_prod hsA htA hs ht h]
+    IsMulFreimanHom n A (B₁ * B₂⁻¹) (f₁ * f₂⁻¹) :=
+  h₁.mul h₂.inv
 
 end DivisionCommMonoid
 

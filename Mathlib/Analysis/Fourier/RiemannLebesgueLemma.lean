@@ -123,7 +123,7 @@ theorem tendsto_integral_exp_inner_smul_cocompact_of_continuous_compact_support 
     exact le_self_add
   --* Use uniform continuity to choose δ such that `‖x - y‖ < δ` implies `‖f x - f y‖ < ε / B`.
   obtain ⟨δ, hδ1, hδ2⟩ :=
-    Metric.uniformContinuous_iff.mp (hf2.uniformContinuous_of_continuous hf1) (ε / B)
+    Metric.uniformContinuous_iff.mp (hf2.uniformContinuous_of_continuous hf1) (ε / (B : ℝ))
       (div_pos hε hB_pos)
   refine ⟨1 / 2 + 1 / (2 * δ), fun w hw_bd => ?_⟩
   have hw_ne : w ≠ 0 := by
@@ -158,7 +158,7 @@ theorem tendsto_integral_exp_inner_smul_cocompact_of_continuous_compact_support 
     · exact (le_add_of_nonneg_right zero_le_one).trans hv.le
   rw [int_A]; clear int_A
   --* Bound integral using fact that `‖f v - f (v + w')‖` is small.
-  have bdA : ∀ v : V, v ∈ A → ‖‖f v - f (v + w')‖‖ ≤ ε / B := by
+  have bdA : ∀ v : V, v ∈ A → ‖‖f v - f (v + w')‖‖ ≤ ε / (B : ℝ) := by
     simp_rw [norm_norm]
     simp_rw [dist_eq_norm] at hδ2
     refine fun x _ => (hδ2 ?_).le

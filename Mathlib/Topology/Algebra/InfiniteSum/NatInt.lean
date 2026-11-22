@@ -251,7 +251,8 @@ theorem tendsto_prod_nat_add [T2Space G] (f : ℕ → G) :
       ext1 i
       rw [div_eq_iff_eq_mul, mul_comm, hf.prod_mul_tprod_nat_add i]
     have h₁ : Tendsto (fun _ : ℕ ↦ ∏' i, f i) atTop (𝓝 (∏' i, f i)) := tendsto_const_nhds
-    simpa only [h₀, div_self'] using Tendsto.div' h₁ hf.hasProd.tendsto_prod_nat
+    rw [← h₀]
+    simpa only [div_eq_mul_inv, mul_inv_cancel] using h₁.mul hf.hasProd.tendsto_prod_nat.inv
   · refine tendsto_const_nhds.congr fun n ↦ (tprod_eq_one_of_not_multipliable ?_).symm
     rwa [multipliable_nat_add_iff n]
 
@@ -476,8 +477,9 @@ variable [TopologicalSpace G] [IsTopologicalGroup G]
 @[to_additive]
 lemma HasProd.of_nat_of_neg {f : ℤ → G} (hf₁ : HasProd (fun n : ℕ ↦ f n) g)
     (hf₂ : HasProd (fun n : ℕ ↦ f (-n)) g') : HasProd f (g * g' / f 0) := by
-  refine mul_div_assoc' g .. ▸ hf₁.of_nat_of_neg_add_one (m' := g' / f 0) ?_
-  rwa [← hasProd_nat_add_iff' 1, prod_range_one, Nat.cast_zero, neg_zero] at hf₂
+  have htail : HasProd (fun n : ℕ ↦ f (-(n + 1))) (g' / f 0) := by
+    rwa [← hasProd_nat_add_iff' 1, prod_range_one, Nat.cast_zero, neg_zero] at hf₂
+  simpa only [div_eq_mul_inv, mul_assoc] using hf₁.of_nat_of_neg_add_one htail
 
 @[to_additive]
 lemma Multipliable.of_nat_of_neg {f : ℤ → G} (hf₁ : Multipliable fun n : ℕ ↦ f n)

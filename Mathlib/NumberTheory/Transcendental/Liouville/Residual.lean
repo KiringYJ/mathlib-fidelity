@@ -27,7 +27,7 @@ open Filter Set Metric
 theorem setOfPred_liouville_eq_iInter_iUnion :
     { x | Liouville x } =
       ⋂ n : ℕ, ⋃ (a : ℤ) (b : ℤ) (_ : 1 < b),
-      ball ((a : ℝ) / b) (1 / (b : ℝ) ^ n) \ {(a : ℝ) / b} := by
+      ball ((a : ℝ) / (b : ℝ)) (1 / (b : ℝ) ^ n) \ {(a : ℝ) / (b : ℝ)} := by
   ext x
   simp only [mem_iInter, mem_iUnion, Liouville, mem_ofPred_eq, Set.mem_sdiff,
     mem_singleton_iff, mem_ball, Real.dist_eq, and_comm]
@@ -47,7 +47,7 @@ alias IsGδ.setOf_liouville := IsGδ.setOfPred_liouville
 theorem setOfPred_liouville_eq_irrational_inter_iInter_iUnion :
     { x | Liouville x } =
       { x | Irrational x } ∩ ⋂ n : ℕ, ⋃ (a : ℤ) (b : ℤ) (_ : 1 < b),
-      ball (a / b) (1 / (b : ℝ) ^ n) := by
+      ball ((a : ℝ) / (b : ℝ)) (1 / (b : ℝ) ^ n) := by
   refine Subset.antisymm ?_ ?_
   · refine subset_inter (fun x hx => hx.irrational) ?_
     rw [setOfPred_liouville_eq_iInter_iUnion]
@@ -56,7 +56,7 @@ theorem setOfPred_liouville_eq_irrational_inter_iInter_iUnion :
     refine iInter_mono fun n => iUnion₂_mono fun a b => iUnion_mono fun hb => ?_
     rw [inter_comm]
     exact sdiff_subset_sdiff Subset.rfl
-      (singleton_subset_iff.2 ⟨a / b, by
+      (singleton_subset_iff.2 ⟨(a : ℚ) / (b : ℚ), by
         simp only [Rat.cast_div, Rat.cast_intCast]⟩)
 
 @[deprecated (since := "2026-07-09")]

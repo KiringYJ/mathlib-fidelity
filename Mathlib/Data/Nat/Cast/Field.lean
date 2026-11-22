@@ -19,7 +19,7 @@ This file concerns the canonical homomorphism `ℕ → F`, where `F` is a field.
 ## Main results
 
 * `Nat.cast_div`: if `n` divides `m` and its image is nonzero, then the cast of the natural
-  quotient `m / n` is the quotient of the casts.
+  quotient `Nat.euclideanDiv m n` agrees with division of the casts by the unit represented by `n`.
 -/
 
 public section
@@ -30,17 +30,22 @@ namespace Nat
 variable {K : Type*} [DivisionSemiring K] {d m n : ℕ}
 
 @[simp]
-lemma cast_div (hnm : n ∣ m) (hn : (n : K) ≠ 0) : (↑(m / n) : K) = m / n := by
-  rw [eq_div_iff, ← Nat.cast_mul, Nat.div_mul_cancel hnm]
+lemma cast_div (hnm : n ∣ m) (hn : (n : K) ≠ 0) :
+    (Nat.euclideanDiv m n (fun he => hn (he ▸ Nat.cast_zero)) : K) =
+      Checked.div (m : K) (n : K) hn.isUnit := by
+  rw [eq_div_iff, ← Nat.cast_mul, Nat.euclideanDiv_eq_core, Nat.div_mul_cancel hnm]
 
 variable [CharZero K]
 
 @[norm_cast]
-lemma cast_div_charZero (hnm : n ∣ m) (hn : n ≠ 0) : (↑(m / n) : K) = m / n :=
+lemma cast_div_charZero (hnm : n ∣ m) (hn : n ≠ 0) :
+    (Nat.euclideanDiv m n hn : K) = Checked.div (m : K) (n : K) (Nat.cast_ne_zero.mpr hn).isUnit :=
   cast_div hnm (Nat.cast_ne_zero.mpr hn)
 
 /-- A nonzero multiple has a nonzero natural quotient by its divisor. -/
-lemma cast_div_ne_zero (hnm : n ∣ m) (hm : m ≠ 0) : (↑(m / n) : K) ≠ 0 := by
+lemma cast_div_ne_zero (hnm : n ∣ m) (hm : m ≠ 0) :
+    (Nat.euclideanDiv m n (fun he => hm (Nat.eq_zero_of_zero_dvd (he ▸ hnm))) : K) ≠ 0 := by
+  rw [Nat.euclideanDiv_eq_core]
   apply Nat.cast_ne_zero.mpr
   intro hq
   apply hm
@@ -55,7 +60,10 @@ macro_rules | `(tactic| checked_nonzero) => `(tactic|
     | ((with_reducible apply Nat.cast_div_ne_zero) <;> assumption))
 
 lemma cast_div_div_div_cancel_right (hn : d ∣ n) (hm : d ∣ m) (hn0 : n ≠ 0) :
-    (↑(m / d) : K) / ↑(n / d) = m / n := by
+    Checked.div (Nat.euclideanDiv m d (fun he => hn0 (Nat.eq_zero_of_zero_dvd (he ▸ hn))) : K)
+      (Nat.euclideanDiv n d (fun he => hn0 (Nat.eq_zero_of_zero_dvd (he ▸ hn))) : K)
+      (cast_div_ne_zero hn hn0).isUnit =
+      Checked.div (m : K) (n : K) (Nat.cast_ne_zero.mpr hn0).isUnit := by
   have hd : (d : K) ≠ 0 := Nat.cast_ne_zero.mpr fun h ↦ hn0 (Nat.eq_zero_of_zero_dvd (h ▸ hn))
   simp only [cast_div hm hd, cast_div hn hd]
   exact div_div_div_cancel_right₀ _ _

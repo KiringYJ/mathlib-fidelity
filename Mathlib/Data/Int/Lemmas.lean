@@ -7,6 +7,7 @@ module
 
 public import Mathlib.Data.Int.Bitwise
 public import Mathlib.Data.Int.Order.Lemmas
+public import Mathlib.Lean.Elab.NativeDivision
 public import Mathlib.Order.Interval.Set.Defs
 
 /-!
@@ -106,23 +107,23 @@ This lemma is orphaned from `Data.Int.Bitwise` as it also requires material from
 
 @[simp]
 theorem div2_bit (b n) : div2 (bit b n) = n := by
-  rw [bit_val, div2_val, add_comm, Int.add_mul_ediv_left, (_ : (_ / 2 : ℤ) = 0), zero_add]
-  cases b
-  · decide
-  · change ofNat _ = _
-    rw [Nat.div_eq_of_lt] <;> simp
-  · decide
+  have hinj : Function.Injective (bit b) := by
+    intro x y h
+    simp only [bit_val] at h
+    omega
+  exact hinj <| by simpa only [bodd_bit] using bit_decomp (bit b n)
 
 /-- Like `Int.ediv_emod_unique`, but permitting negative `b`. -/
 theorem ediv_emod_unique'' {a b r q : Int} (h : b ≠ 0) :
-    a / b = q ∧ a % b = r ↔ r + b * q = a ∧ 0 ≤ r ∧ r < |b| := by
+    Int.euclideanDiv a b h = q ∧ a % b = r ↔ r + b * q = a ∧ 0 ≤ r ∧ r < |b| := by
   constructor
   · intro ⟨rfl, rfl⟩
-    exact ⟨emod_add_mul_ediv a b, emod_nonneg _ h, emod_lt_abs _ h⟩
-  · intro ⟨rfl, hz, hb⟩
+    exact ⟨(Int.add_comm _ _).trans (Int.euclideanDiv_mul_add_mod a b h), emod_nonneg _ h,
+      emod_lt_abs _ h⟩
+  · intro ⟨he, hz, hb⟩
     constructor
-    · rw [Int.add_mul_ediv_left r q h, ediv_eq_zero_of_lt_abs hz hb]
-      simp
-    · rw [add_mul_emod_self_left, ← emod_abs, emod_eq_of_lt hz hb]
+    · exact Int.euclideanDiv_eq_of_remainder h (he.symm.trans (Int.add_comm _ _)) hz
+        (by simpa only [← abs_eq_natAbs] using hb)
+    · rw [← he, add_mul_emod_self_left, ← emod_abs, emod_eq_of_lt hz hb]
 
 end Int

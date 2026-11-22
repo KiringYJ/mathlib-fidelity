@@ -423,10 +423,16 @@ protected theorem inv [Inv β] [ContinuousInv β] (hf : StronglyMeasurable f) :
     StronglyMeasurable f⁻¹ :=
   ⟨fun n => (hf.approx n)⁻¹, fun x => (hf.tendsto_approx x).inv⟩
 
-@[to_additive (attr := to_fun (attr := fun_prop)) sub]
-protected theorem div' [Div β] [ContinuousDiv β] (hf : StronglyMeasurable f)
-    (hg : StronglyMeasurable g) : StronglyMeasurable (f / g) :=
-  ⟨fun n => hf.approx n / hg.approx n, fun x => (hf.tendsto_approx x).div' (hg.tendsto_approx x)⟩
+@[to_fun (attr := fun_prop)]
+protected theorem div' [Group β] [ContinuousDiv β] (hf : StronglyMeasurable f)
+    (hg : StronglyMeasurable g) : StronglyMeasurable (f / g) := by
+  rw [Pi.div_def]
+  exact continuous_div'.comp_stronglyMeasurable (hf.prodMk hg)
+
+@[to_fun (attr := fun_prop)]
+protected theorem sub [Sub β] [ContinuousSub β] (hf : StronglyMeasurable f)
+    (hg : StronglyMeasurable g) : StronglyMeasurable (f - g) :=
+  ⟨fun n => hf.approx n - hg.approx n, fun x => (hf.tendsto_approx x).sub (hg.tendsto_approx x)⟩
 
 @[fun_prop]
 theorem div₀ [GroupWithZero β] [ContinuousMul β] [ContinuousInv₀ β]
@@ -456,12 +462,12 @@ theorem div₀ [GroupWithZero β] [ContinuousMul β] [ContinuousInv₀ β]
     have hlim : Tendsto (fun _ : ℕ => (0 : β)) atTop (𝓝 a) :=
       tendsto_const_nhds.mono_right (specializes_iff_mem_closure.mpr ha)
     refine ⟨fun _ => SimpleFunc.const α 0, fun x => ?_⟩
-    have h := hlim.mul_const (a⁻¹ * (f x / g x))
+    have h := hlim.mul_const (a⁻¹ * Checked.div (f x) (g x) (h0 x))
     simpa only [zero_mul, ← mul_assoc, mul_inv_cancel₀, one_mul, SimpleFunc.const_apply] using h
 
 theorem div [GroupWithZero β] [ContinuousMul β] [ContinuousInv₀ β]
     {h0 : IsUnit g} (hf : StronglyMeasurable f) (hg : StronglyMeasurable g) :
-    StronglyMeasurable (f / g) := by
+    StronglyMeasurable (Checked.div f g h0) := by
   rw [funext (Pi.div_apply₀ f g)]
   exact hf.div₀ hg
 

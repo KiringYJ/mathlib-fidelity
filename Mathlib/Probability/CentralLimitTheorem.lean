@@ -71,7 +71,7 @@ lemma tendsto_charFun_inv_sqrt_mul_pow {X : Ω → ℝ}
     Tendsto (fun (n : PositiveNat) ↦ (charFun (P.map X hX) (invSqrt(n) * t)) ^ (n : ℕ))
       atTopPositiveNat (𝓝 (exp (- t ^ 2 / 2))) := by
   apply tendsto_pow_exp_of_isLittleO_sub_add_div
-  have hsq (n : PositiveNat) : (invSqrt(n) * t) ^ 2 = t ^ 2 / (n : ℕ) := by
+  have hsq (n : PositiveNat) : (invSqrt(n) * t) ^ 2 = t ^ 2 / ((n : ℕ) : ℝ) := by
     have hn := sampleSize_pos n
     have hinv : Checked.inv ((√((n : ℕ) : ℝ)) ^ 2) ((isUnit_sqrt_sampleSize n).pow 2) =
         (((n : ℕ) : ℝ))⁻¹ := by
@@ -80,8 +80,8 @@ lemma tendsto_charFun_inv_sqrt_mul_pow {X : Ω → ℝ}
     rw [mul_pow, inv_pow₀, hinv, div_eq_inv_mul₀]
   suffices (fun (n : PositiveNat) ↦ charFun (Measure.map X P hX) (invSqrt(n) * t) -
       (1 + (-((invSqrt(n) * t) ^ 2 / 2) : ℂ))) =o[atTopPositiveNat] fun n ↦ (invSqrt(n) * t) ^ 2 by
-    have aux : (fun (n : PositiveNat) ↦ ‖(1 / (n : ℕ) : ℂ)‖) =
-        fun n : PositiveNat ↦ ‖(1 / (n : ℕ) : ℝ)‖ := by
+    have aux : (fun (n : PositiveNat) ↦ ‖1 / ((n : ℕ) : ℂ)‖) =
+        fun n : PositiveNat ↦ ‖1 / ((n : ℕ) : ℝ)‖ := by
       funext n
       simp
     rw [← Asymptotics.isLittleO_norm_right, aux, Asymptotics.isLittleO_norm_right]
@@ -96,8 +96,6 @@ lemma tendsto_charFun_inv_sqrt_mul_pow {X : Ω → ℝ}
       Real.tendsto_sqrt_atTop.comp (tendsto_natCast_atTop_atTop.comp tendsto_comap)
     exact .mul_const t (h_sqrt.fun_inv_tendsto_atTop (h0 := isUnit_sqrt_sampleSize))
   convert! (taylor_charFun_two hX h0 h1).comp_tendsto this using 2
-  simp
-  ring
 
 variable [IsProbabilityMeasure P']
 

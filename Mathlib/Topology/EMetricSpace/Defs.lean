@@ -72,14 +72,21 @@ theorem eball_subset_eball (h : ε₁ ≤ ε₂) : eball x ε₁ ⊆ eball x ε�
 
 end Metric
 
+/-- Every positive extended radius bounds the sum of any two distances below half that radius. -/
+theorem ENNReal.exists_pos_forall_add_lt (ε : ℝ≥0∞) (hε : 0 < ε) :
+    ∃ δ > (0 : ℝ≥0∞), ∀ x < δ, ∀ y < δ, x + y < ε := by
+  have : IsUnit (2 : ℝ≥0∞) := ENNReal.isUnit_iff.2 ⟨by simp, ENNReal.ofNat_ne_top⟩
+  refine ⟨ε / 2, ?_⟩
+  rw [ENNReal.checkedDiv_eq_div]
+  exact ⟨ENNReal.half_pos hε.ne', fun _ hx _ hy ↦
+    (ENNReal.add_lt_add hx hy).trans_eq (ENNReal.add_halves ε)⟩
+
 /-- Creating a uniform space from an extended distance. -/
 @[reducible]
 noncomputable def uniformSpaceOfEDist (edist : α → α → ℝ≥0∞) (edist_self : ∀ x : α, edist x x = 0)
     (edist_comm : ∀ x y : α, edist x y = edist y x)
     (edist_triangle : ∀ x y z : α, edist x z ≤ edist x y + edist y z) : UniformSpace α :=
-  .ofFun edist edist_self edist_comm edist_triangle fun ε ε0 =>
-    ⟨ε / 2, ENNReal.half_pos ε0.ne', fun _ h₁ _ h₂ =>
-      (ENNReal.add_lt_add h₁ h₂).trans_eq (ENNReal.add_halves _)⟩
+  .ofFun edist edist_self edist_comm edist_triangle ENNReal.exists_pos_forall_add_lt
 
 /-- Creating a uniform space from an extended distance. We assume that
 there is a preexisting topology, for which the neighborhoods can be expressed using the distance,
@@ -92,9 +99,8 @@ to the original one. -/
     (edist_triangle : ∀ x y z : α, edist x z ≤ edist x y + edist y z)
     (basis : ∀ x, (𝓝 x).HasBasis (fun c ↦ 0 < c) (fun c ↦ {y | edist x y < c})) :
     UniformSpace α :=
-  .ofFunOfHasBasis edist edist_self edist_comm edist_triangle (fun ε ε0 =>
-    ⟨ε / 2, ENNReal.half_pos ε0.ne', fun _ h₁ _ h₂ =>
-      (ENNReal.add_lt_add h₁ h₂).trans_eq (ENNReal.add_halves _)⟩) basis
+  .ofFunOfHasBasis edist edist_self edist_comm edist_triangle
+    ENNReal.exists_pos_forall_add_lt basis
 
 /-- A pseudo extended metric space is a type endowed with a `ℝ≥0∞`-valued distance `edist`
 satisfying reflexivity `edist x x = 0`, commutativity `edist x y = edist y x`, and the triangle

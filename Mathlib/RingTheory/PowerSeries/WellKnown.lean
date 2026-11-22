@@ -193,13 +193,15 @@ open Nat
 noncomputable def sin : PowerSeries A :=
   mk fun n => if Even n then 0 else
     algebraMap ℚ A
-      (Checked.div ((-1) ^ (n / 2)) (n ! : ℚ) (Nat.cast_ne_zero.2 n.factorial_ne_zero).isUnit)
+      (Checked.div ((-1) ^ Nat.euclideanDiv n 2) (n ! : ℚ)
+        (Nat.cast_ne_zero.2 n.factorial_ne_zero).isUnit)
 
 /-- Power series for the cosine function at zero. -/
 noncomputable def cos : PowerSeries A :=
   mk fun n => if Even n then
       algebraMap ℚ A
-        (Checked.div ((-1) ^ (n / 2)) (n ! : ℚ) (Nat.cast_ne_zero.2 n.factorial_ne_zero).isUnit)
+        (Checked.div ((-1) ^ Nat.euclideanDiv n 2) (n ! : ℚ)
+        (Nat.cast_ne_zero.2 n.factorial_ne_zero).isUnit)
     else 0
 
 variable {A A'} (f : A →+* A')

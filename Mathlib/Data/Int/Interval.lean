@@ -150,18 +150,19 @@ theorem image_Ico_emod (n a : ℤ) (h : 0 ≤ a) : (Ico n (n + a)).image (· % a
   · rintro ⟨i, _, rfl⟩
     exact ⟨emod_nonneg i ha.ne', emod_lt_of_pos i ha⟩
   rintro ⟨hi₀, hia⟩
-  have hn := Int.emod_add_mul_ediv n a
+  let q := Int.euclideanDiv n a ha.ne'
+  have hn : n % a + a * q = n := (Int.add_comm ..).trans (Int.euclideanDiv_mul_add_mod n a ha.ne')
   obtain hi | hi := lt_or_ge i (n % a)
-  · refine ⟨i + a * (n / a + 1), ⟨?_, ?_⟩, ?_⟩
+  · refine ⟨i + a * (q + 1), ⟨?_, ?_⟩, ?_⟩
     · calc
-        n = 0 + n % a + a * (n / a) := by simp [hn]
-        _ ≤ i + a + a * (n / a) := by gcongr; exact (Int.emod_lt_of_pos n ha).le
-        _ = i + a * (n / a + 1) := by grind
+        n = 0 + n % a + a * q := by simp [hn]
+        _ ≤ i + a + a * q := by gcongr; exact (Int.emod_lt_of_pos n ha).le
+        _ = i + a * (q + 1) := by grind
     · calc
-        i + a * (n / a + 1) < n % a + a * (n / a + 1) := by gcongr
+        i + a * (q + 1) < n % a + a * (q + 1) := by gcongr
         _ = n + a := by rw [mul_add, mul_one, ← add_assoc, hn]
     · rw [Int.add_mul_emod_self_left, Int.emod_eq_of_lt hi₀ hia]
-  · refine ⟨i + a * (n / a), ⟨?_, ?_⟩, ?_⟩
+  · refine ⟨i + a * q, ⟨?_, ?_⟩, ?_⟩
     · exact hn.symm.le.trans (add_le_add_left hi _)
     · rw [add_comm n a]
       refine add_lt_add_of_lt_of_le hia (le_trans ?_ hn.le)

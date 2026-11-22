@@ -163,24 +163,26 @@ theorem inv_comp [Inv γ] [ContinuousInv γ] (f : C(β, γ)) (g : C(α, β)) :
     f⁻¹.comp g = (f.comp g)⁻¹ :=
   rfl
 
-/-! ### `div` and `sub` -/
+/-! ### `div` and `sub`
 
-@[to_additive]
-instance [Div β] [ContinuousDiv β] : Div C(α, β) where
-  div f g := ⟨f / g, f.continuous.div' g.continuous⟩
+For a continuous binary operation bundled as `k : C(β × β, γ)`, its pointwise action on two
+continuous maps is `k.comp (f.prodMk g)`. -/
 
-@[to_additive (attr := norm_cast, simp)]
-theorem coe_div [Div β] [ContinuousDiv β] (f g : C(α, β)) : ⇑(f / g) = f / g :=
-  rfl
+instance [Sub β] [ContinuousSub β] : Sub C(α, β) where
+  sub f g := ⟨fun x => f x - g x, f.continuous.sub g.continuous⟩
 
-@[to_additive (attr := simp)]
-theorem div_apply [Div β] [ContinuousDiv β] (f g : C(α, β)) (x : α) : (f / g) x = f x / g x :=
-  rfl
+@[norm_cast, simp]
+theorem coe_sub [Sub β] [ContinuousSub β] (f g : C(α, β)) : ⇑(f - g) = ⇑f - ⇑g := rfl
 
-@[to_additive (attr := simp)]
-theorem div_comp [Div γ] [ContinuousDiv γ] (f g : C(β, γ)) (h : C(α, β)) :
-    (f / g).comp h = f.comp h / g.comp h :=
-  rfl
+@[simp]
+theorem sub_apply [Sub β] [ContinuousSub β] (f g : C(α, β)) (x : α) : (f - g) x = f x - g x := rfl
+
+@[simp]
+theorem sub_comp [Sub γ] [ContinuousSub γ] (f g : C(β, γ)) (h : C(α, β)) :
+    (f - g).comp h = f.comp h - g.comp h := rfl
+
+instance instDivOfContinuousDiv [Group β] [ContinuousDiv β] : Div C(α, β) where
+  div f g := ⟨(f : α → β) / (g : α → β), f.continuous.div' g.continuous⟩
 
 /-! ### `zpow` and `zsmul` -/
 
@@ -324,14 +326,30 @@ theorem coe_prod [CommMonoid β] [ContinuousMul β] {ι : Type*} (s : Finset ι)
 theorem prod_apply [CommMonoid β] [ContinuousMul β] {ι : Type*} (s : Finset ι) (f : ι → C(α, β))
     (a : α) : (∏ i ∈ s, f i) a = ∏ i ∈ s, f i a := by simp
 
-@[to_additive]
+instance instAddGroupOfIsTopologicalAddGroup [AddGroup β] [IsTopologicalAddGroup β] :
+    AddGroup C(α, β) := fast_instance%
+  coe_injective.addGroup _ coe_zero coe_add coe_neg coe_sub (fun f n => coe_nsmul n f)
+    (fun f z => coe_zsmul z f)
+
+@[to_additive existing]
 instance [Group β] [IsTopologicalGroup β] : Group C(α, β) := fast_instance%
-  coe_injective.group _ coe_one coe_mul coe_inv coe_div coe_pow coe_zpow
+  coe_injective.group _ coe_one coe_mul coe_inv (fun _ _ => rfl) coe_pow coe_zpow
+
+@[norm_cast, simp]
+theorem coe_div [Group β] [IsTopologicalGroup β] (f g : C(α, β)) : ⇑(f / g) = ⇑f / ⇑g := rfl
+
+@[simp]
+theorem div_apply [Group β] [IsTopologicalGroup β] (f g : C(α, β)) (x : α) :
+    (f / g) x = f x / g x := Pi.div_apply (⇑f) (⇑g) x
+
+@[simp]
+theorem div_comp {γ : Type*} [TopologicalSpace γ] [Group γ] [IsTopologicalGroup γ]
+    (f g : C(β, γ)) (h : C(α, β)) :
+    (f / g).comp h = f.comp h / g.comp h := rfl
 
 @[to_additive]
 instance instCommGroupContinuousMap [CommGroup β] [IsTopologicalGroup β] :
-    CommGroup C(α, β) := fast_instance%
-  coe_injective.commGroup _ coe_one coe_mul coe_inv coe_div coe_pow coe_zpow
+    CommGroup C(α, β) where
 
 @[to_additive]
 instance [CommGroup β] [IsTopologicalGroup β] : IsTopologicalGroup C(α, β) where
@@ -861,10 +879,13 @@ lemma curry_mul_apply [Mul Z] [ContinuousMul Z] (f g : C(X × Y, Z)) (x : X) :
     (f * g).curry x = f.curry x * g.curry x :=
   rfl
 
-@[to_additive (attr := simp)]
-lemma curry_div_apply [Div Z] [ContinuousDiv Z] (f g : C(X × Y, Z)) (x : X) :
-    (f / g).curry x = f.curry x / g.curry x :=
-  rfl
+@[simp]
+lemma curry_sub_apply [Sub Z] [ContinuousSub Z] (f g : C(X × Y, Z)) (x : X) :
+    (f - g).curry x = f.curry x - g.curry x := rfl
+
+@[simp]
+lemma curry_div_apply [Group Z] [IsTopologicalGroup Z] (f g : C(X × Y, Z)) (x : X) :
+    (f / g).curry x = f.curry x / g.curry x := rfl
 
 @[to_additive (attr := simp)]
 lemma curry_smul_apply {R : Type*} [SMul R Z] [ContinuousConstSMul R Z]

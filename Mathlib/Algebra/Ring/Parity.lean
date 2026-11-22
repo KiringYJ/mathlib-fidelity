@@ -255,7 +255,8 @@ variable {m n : ℕ}
 
 @[grind =]
 lemma odd_iff : Odd n ↔ n % 2 = 1 :=
-  ⟨fun ⟨m, hm⟩ ↦ by lia, fun h ↦ ⟨n / 2, by lia⟩⟩
+  ⟨fun ⟨m, hm⟩ ↦ by lia, fun h ↦ ⟨Nat.euclideanDiv n 2, by
+    simpa only [h] using (Nat.euclideanDiv_mul_add_mod n 2 (by decide)).symm⟩⟩
 
 instance : DecidablePred (Odd : ℕ → Prop) := fun _ ↦ decidable_of_iff _ odd_iff.symm
 
@@ -310,8 +311,10 @@ lemma Odd.of_mul_right (h : Odd (m * n)) : Odd n :=
 
 lemma odd_pow_iff {e : ℕ} (he : e ≠ 0) : Odd (n ^ e) ↔ Odd n := by grind
 
-lemma even_div : Even (m / n) ↔ m % (2 * n) / n = 0 := by
-  rw [even_iff_two_dvd, dvd_iff_mod_eq_zero, ← Nat.mod_mul_right_div_self, mul_comm]
+lemma even_div (hn : n ≠ 0) :
+    Even (Nat.euclideanDiv m n hn) ↔ Nat.euclideanDiv (m % (2 * n)) n hn = 0 := by
+  rw [Nat.euclideanDiv_eq_core m n hn, Nat.euclideanDiv_eq_core _ n hn, even_iff_two_dvd,
+    dvd_iff_mod_eq_zero, ← Nat.mod_mul_right_div_self, mul_comm]
 
 @[parity_simps] lemma odd_add : Odd (m + n) ↔ (Odd m ↔ Even n) := by grind
 
@@ -327,11 +330,16 @@ lemma odd_sub' (h : n ≤ m) : Odd (m - n) ↔ (Odd n ↔ Even m) := by grind
 
 lemma Even.sub_odd (h : n ≤ m) (hm : Even m) (hn : Odd n) : Odd (m - n) := by grind
 
-lemma two_mul_div_two_add_one_of_odd (h : Odd n) : 2 * (n / 2) + 1 = n := by grind
+lemma two_mul_div_two_add_one_of_odd (h : Odd n) : 2 * Nat.euclideanDiv n 2 + 1 = n := by
+  simpa only [odd_iff.mp h] using Nat.euclideanDiv_mul_add_mod n 2 (by decide)
 
-lemma div_two_mul_two_add_one_of_odd (h : Odd n) : n / 2 * 2 + 1 = n := by grind
+lemma div_two_mul_two_add_one_of_odd (h : Odd n) : Nat.euclideanDiv n 2 * 2 + 1 = n := by
+  rw [Nat.mul_comm]
+  exact two_mul_div_two_add_one_of_odd h
 
-lemma one_add_div_two_mul_two_of_odd (h : Odd n) : 1 + n / 2 * 2 = n := by grind
+lemma one_add_div_two_mul_two_of_odd (h : Odd n) : 1 + Nat.euclideanDiv n 2 * 2 = n := by
+  rw [Nat.add_comm]
+  exact div_two_mul_two_add_one_of_odd h
 
 lemma two_dvd_mul_add_one (k : ℕ) : 2 ∣ k * (k + 1) :=
   even_iff_two_dvd.mp (even_mul_succ_self k)

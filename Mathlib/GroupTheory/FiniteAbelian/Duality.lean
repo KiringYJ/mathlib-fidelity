@@ -106,16 +106,14 @@ of `G`, then any homomorphism `H →* Mˣ` can be extended to an homomorphism `G
 -/
 theorem _root_.MonoidHom.domRestrict_surjective (H : Subgroup G) :
     Function.Surjective (MonoidHom.domRestrictHom H Mˣ) := by
-  have : Fintype H := Fintype.ofFinite H
   have : HasEnoughRootsOfUnity M (Monoid.exponent H) :=
     hM.of_dvd M <| Monoid.exponent_submonoid_dvd H.toSubmonoid
   have : HasEnoughRootsOfUnity M (Monoid.exponent (G ⧸ H)) :=
     hM.of_dvd M <| Group.exponent_quotient_dvd H
   refine MonoidHom.surjective_of_card_ker_le_div _ (le_of_eq ?_)
-  rw [card_monoidHom_of_hasEnoughRootsOfUnity, card_monoidHom_of_hasEnoughRootsOfUnity,
-    H.card_eq_card_quotient_mul_card_subgroup,
-    MulDivCancelClass.mul_div_cancel_right₀ _ (Fintype.card_eq_nat_card ▸ Fintype.card_ne_zero),
-    ← card_monoidHom_of_hasEnoughRootsOfUnity (G ⧸ H) M,
+  simp only [card_monoidHom_of_hasEnoughRootsOfUnity, H.card_eq_card_quotient_mul_card_subgroup,
+    Nat.euclideanDiv_mul_right_cancel]
+  rw [← card_monoidHom_of_hasEnoughRootsOfUnity (G ⧸ H) M,
     Nat.card_congr (domRestrictHomKerEquiv Mˣ H).toEquiv]
 
 @[deprecated (since := "2026-07-19")]

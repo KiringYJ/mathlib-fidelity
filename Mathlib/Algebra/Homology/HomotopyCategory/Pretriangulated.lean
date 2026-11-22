@@ -201,6 +201,11 @@ end map
 
 section Rotate
 
+private lemma zero_quotient_two : Int.euclideanDiv 0 2 = 0 :=
+  Int.euclideanDiv_eq_of_remainder (r := 0) (by decide) rfl (by decide) (by decide)
+
+attribute [local simp] zero_quotient_two
+
 set_option backward.defeqAttrib.useBackward true in
 set_option backward.isDefEq.respectTransparency false in
 /-- Given `φ : K ⟶ L`, `K⟦(1 : ℤ)⟧` is homotopy equivalent to

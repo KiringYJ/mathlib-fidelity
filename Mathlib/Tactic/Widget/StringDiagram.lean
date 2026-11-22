@@ -290,11 +290,11 @@ def mkStringDiagram (nodes : List (List Node)) (strands : List (List Strand)) :
 
 /-- Penrose dsl file for string diagrams. -/
 def dsl :=
-  include_str ".."/".."/".."/"widget"/"src"/"penrose"/"monoidal.dsl"
+  include_str "../../../widget/src/penrose/monoidal.dsl"
 
 /-- Penrose sty file for string diagrams. -/
 def sty :=
-  include_str ".."/".."/".."/"widget"/"src"/"penrose"/"monoidal.sty"
+  include_str "../../../widget/src/penrose/monoidal.sty"
 
 /-- The kind of the context. -/
 inductive Kind where
