@@ -978,24 +978,109 @@ For a chosen Euclidean division algorithm, the reconstruction identity
 `b * q + r = a` determines the quotient `q` from the remainder `r` by
 cancellation when `b ≠ 0`. The remainder decreases in the chosen well-founded
 relation on that domain. Such a divisor can be a nonunit. At `b = 0` the
-identity forces `r = a` and leaves `q` undetermined. Congruence modulo zero
-is equality, so the remainder at zero has a specification independent of
-any quotient value.
+identity forces `r = a` and leaves `q` undetermined.
 
-`EuclideanDomain.quotient a b hb` carries the nonzero proof. Ordinary `/`
-in a generic Euclidean domain uses this quotient with routine proof search.
-The remainder has its own law at zero. If the gcd is zero, the least common
-multiple is zero by its divisibility specification. The nonzero-gcd branch
-divides the product by the gcd.
+For natural and integer inputs, `a % b` selects a representative of the
+congruence class `a + bℤ`. For `b ≠ 0` the representative lies in `[0, |b|)`.
+The class modulo zero is `{a}`, so `a % 0 = a` follows from the representative
+specification. Equation (3.22) in *Concrete Mathematics* uses this value to
+preserve congruence with the dividend.
+[Graham, Knuth, and Patashnik, second edition, §3.4, p. 82](https://ptgmedia.pearsoncmg.com/images/9780201558029/samplepages/9780201558029.pdf#page=32)
+[Rijke, Lecture notes on Number Theory, Remark 9.1.4](https://egbertrijke.github.io/jhu-number-theory-spring-2025.pdf#page=96)
+
+`EuclideanDomain.quotient a b hb` carries the nonzero proof. The remainder
+has its own law at zero. If the gcd is zero, the least common multiple is
+zero by its divisibility specification. The nonzero-gcd branch divides
+the product by the gcd.
 
 `Field.toEuclideanDomain` explicitly supplies this structure for a field.
 `Field.quotient_eq_div` gives agreement with checked exact division when
 `b ≠ 0`. Field `/` syntax requires invertibility evidence even with the
 Euclidean structure installed locally.
 
-`Int.euclideanDomain` calls Lean's native integer algorithm on the checked
-nonzero domain. Native `Int` and `Nat` division belong to the official Lean
-toolchain and have a separate domain audit in [`TODO.md`](TODO.md).
+`Nat.euclideanDiv` and `Int.euclideanDiv` specify Euclidean quotients with nonzero
+divisors and nonnegative remainders. `Int.exactQuotient` takes the same
+nonzero condition and a proof of divisibility. Its integer result is the
+unique `q` with `b * q = a`. At `a = b = 0`, every integer satisfies
+that equation.
+
+### Ordinary division notation
+
+Ordinary `a / b` defaults to division by a unit in one commutative monoid.
+Both operands have the same type and the denominator carries `IsUnit b` evidence.
+Multiplication by a unit is bijective, so the result is the unique `q` satisfying
+`q * b = a`. Users write operand casts explicitly. A notation exception requires
+documented mathematical usage of slash and a defining specification on the
+declared domain. An off-domain value needs its own mathematical specification.
+The pretty-printer uses slash when the operation and any omitted unit evidence
+can be recovered in the local context.
+
+Writing `HDiv.hDiv` or `Div.div` still selects a division operation through a
+notation typeclass. A mathematical interface that uses a named operation must
+state its defining law or domain and implement the specified operation. A result
+about an arbitrary binary operation can take that operation as an explicit
+parameter. Syntax recognition and proofs about the official Lean interface can
+still refer to its typeclass projections.
+
+The elaborator supports these exceptions:
+
+- **Group right division.** For `[Group G]`, `a / b` uses the group's division
+  `a * b⁻¹`. Every group element is a unit. In a commutative group this is the
+  default unit quotient, with the operation already used by group rewrite rules.
+  Kinyon, Krapež, and Phillips give this slash convention immediately after Definition 1.2.
+  [Right product quasigroups and loops, §1](https://arxiv.org/abs/0903.5436)
+- **Division-ring right division.** For `[DivisionRing D]`, the same-carrier
+  quotient is `a * b⁻¹` with `IsUnit b` evidence. Nonzeroness supplies that
+  evidence. Fisher's right fraction convention specializes to this operation
+  when the domain is itself a division ring. Hamilton gives the same
+  multiplication order for quaternion fractions.
+  [Fisher, §2.3.1](https://sampfisher.github.io/PDFs/phd.pdf)
+  [Hamilton, equations (313)–(314)](https://www.maths.tcd.ie/pub/HistMath/People/Hamilton/ResQuat/ResQuat.pdf)
+- **Pointwise quotients.** With the canonical `Pointwise` division instance in
+  scope, `A / B` on `Set G` and `Finset G` for a commutative group `G` means
+  `{a * b⁻¹ | a ∈ A, b ∈ B}`. Each denominator element belongs to the group.
+  Shkredov defines the real-set quotient using slash and excluding zero
+  denominators in §1, and uses slash for the quotient set in an abstract
+  multiplicative abelian group in §2. Takahashi uses the same real-set convention
+  for Cantor sets.
+  [Some remarks on sets with small quotient set, §§1–2](https://doi.org/10.1070/SM8733)
+  [Sums, products, ratios and intersections of two Cantor sets, §6](https://www.kurims.kyoto-u.ac.jp/~kyodo/kokyuroku/contents/pdf/2176-01.pdf)
+  For general groups the source expresses the right quotient set as `A * B⁻¹`,
+  following the notation of noncommutative product-set estimates.
+  [Tao, Product set estimates for non-commutative groups, §3](https://arxiv.org/abs/math/0601431)
+- **Interval division.** For `NonemptyInterval G` and `Interval G` with the
+  ordered commutative group instances, `[a, b] / [c, d]` has endpoints
+  `[a / d, b / c]`. Each endpoint belongs to the multiplicative group.
+  This extends the endpoint rule for positive real intervals. Moore,
+  Kearfott, and Cloud define interval quotient notation on real intervals
+  with zero excluded from the denominator interval.
+  [Introduction to Interval Analysis, §2.3, equations (2.18) and (2.24)](https://epubs.siam.org/doi/10.1137/1.9780898717716.ch2)
+- **Submodule right residual.** For submodules of a commutative algebra, `I / J`
+  consists of `x` for which `x * y ∈ I` for every `y ∈ J`. This is the right
+  residual of submodule multiplication, characterized by `K ≤ I / J ↔ K * J ≤ I`.
+  In particular `I / ⊥ = ⊤`, since `K * ⊥ = ⊥` for every `K`.
+  Jipsen and Galatos explicitly use slash for the same right residual on ring ideals.
+  [Jipsen and Galatos, Residuated Lattices, slide 27](https://mathcs.chapman.edu/~jipsen/talks/India2009/beamerJipsenRLtutorialslides.pdf#page=27)
+  [Montagna and Tsinakis, Ordered groups with a conucleus, §2](https://cdn-dev.vanderbilt.edu/t2-my-dev/wp-content/uploads/sites/1171/2014/03/ordered-groups-conucleus.pdf)
+
+For integers `a` and `b` with `b ≠ 0`, write `(a : ℚ) / (b : ℚ)` to
+obtain their exact rational quotient. The named Euclidean quotients take
+nonzero divisors. `Int.exactQuotient` gives an integer result with divisibility
+evidence. Use `divp` for a bundled unit denominator in an arbitrary monoid.
+
+`Nat.euclideanDiv` computes its result using remainder and natural arithmetic.
+Set `c = a + 1` and `s = (c * a + a) % (c * b + 1)`. For the Euclidean
+decomposition `a = b * q + r`, the bound `q ≤ a` gives `s = c * r + (a - q)`.
+The quotient is `a - s % c`. Lean verifies the reconstruction and the remainder
+bound for `b ≠ 0`. The proof may use the official Euclidean lemmas.
+
+`Ordinal.quotient a b hb` carries `b ≠ 0` and uses the left-divisor
+reconstruction `a = b * q + r`, `r < b`. The ordinal remainder at zero
+is the dividend. [Dehornoy, Logique, Proposition 2.3.14](https://www.univ-orleans.fr/lifo/Members/duchier/teaching/IPF/DehornoyChap2.pdf)
+
+For extended nonnegative reals, `ENNReal.div a b` has the order specification
+`sInf {q | a ≤ b * q}`. This specification determines the values at zero and
+infinity. On the unit domain, ordinary slash agrees with `ENNReal.div`.
 
 ### Final algebra and operational interface
 
@@ -1015,9 +1100,9 @@ toolchain and have a separate domain audit in [`TODO.md`](TODO.md).
   Construction should find routine local evidence and propagate closure facts.
 - Keep mathlib's established theorem names for statements about the faithful
   operations. The namespace that implements checked construction is not
-  mathematical vocabulary, and goals display the operations with ordinary
-  notation. Each fact has one canonical declaration at the exact generality
-  of its content: the identity `a * a⁻¹ = 1` for a unit `a` is one theorem for
+  mathematical vocabulary. Goals use ordinary notation where the operation
+  meets the notation contract above. Each fact has one canonical declaration at the
+  exact generality of its content. The identity `a * a⁻¹ = 1` for a unit `a` is one theorem for
   monoids, groups with zero, and fields. Where the established name belongs to
   a retained group or division-monoid theorem about a total inverse, the
   partial-inverse theorem takes the `₀` suffix, as mathlib does for groups with

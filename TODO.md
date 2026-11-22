@@ -4464,8 +4464,9 @@ not production conjecture roots; distinguish goal metadata and test scaffolding 
 - [x] **Expose the nonzero domain of the Euclidean quotient.**
   **Implementation, 2026-11-21.** `EuclideanDomain.quotient a b hb` requires `hb : b ≠ 0`,
   because reconstruction determines only the remainder when `b = 0`. The class has a separate
-  remainder law at zero. Ordinary Euclidean `/` selects the checked quotient, including for
-  nonunit divisors. The proof-free Euclidean `Div` routes and the quotient fallback are removed.
+  remainder law at zero. The proof-free Euclidean `Div` routes and the quotient fallback are
+  removed. At this checkpoint, Euclidean `/` also selected the checked quotient. The follow-up
+  below migrates Euclidean quotient callers to the named operation.
 
   The extended Euclidean algorithm takes a quotient only in its nonzero branch. `lcm` handles
   the zero gcd directly, and `lcm_zero_left` and `lcm_zero_right` follow from the corresponding
@@ -4485,12 +4486,32 @@ not production conjecture roots; distinguish goal metadata and test scaffolding 
   operator audits, and `git diff --check` passed. The source scan found no references to the
   retired Euclidean quotient surface and no added proof holes or axioms.
 
-- [ ] **Audit the domain of native natural and integer quotients.**
+- [ ] **Migrate native natural and integer quotients and restrict ordinary division notation.**
   The official Lean definitions `Nat.div` and `Int.ediv` and their native `/` instances
-  have values at divisor zero. `Int.euclideanDomain` takes a nonzero proof before using
-  `Int.ediv` to compute its checked quotient. Audit the native-carrier notation, instances,
-  and maintained uses separately under the official-toolchain boundary. Preserve the
-  remainder law at zero and the arithmetic on nonzero divisors.
+  have values at divisor zero. Use `Nat.euclideanDiv` and `Int.euclideanDiv` with an explicit or
+  automatically established nonzero divisor. Use `Int.exactQuotient` for the integer solution
+  of `b * q = a` given divisibility and a nonzero divisor. Preserve the independent remainder
+  law at zero. Audit mathematical definitions, statements, instances, and proof dependencies
+  under the official-toolchain boundary.
+
+  Apply the ordinary `/` contract throughout the fork. The default is division by a unit in
+  a single commutative monoid. Keep the literature-supported exceptions listed in
+  `FORK_DESIGN.md` on their stated mathematical domains. Cast operands explicitly and use
+  the named operations for native Euclidean quotients. Audit every mathematical use written
+  with `HDiv.hDiv` or `Div.div` during the migration. Use slash where the documented operation
+  applies, and give other operations their own mathematical definitions or explicit function
+  parameters. Verify elaboration, delaboration, instance inference, all affected callers,
+  the exception list, and the full acceptance matrix.
+
+  The scoped semantic and proof audit of the native quotient module and the focused
+  integration targets pass. The full operator-fidelity acceptance gate remains open.
+  The exact 86-declaration `Mathlib.Data.Nat.Factorization.Defs` audit reached an
+  incomplete `PProd.snd` projection in `Nat.prod_factorization_pow_eq_self`, through
+  the proof of `List.bagInter.eq_def`. A scratch `Nat.land` boundary left an independent
+  path through `Nat.hasNotBit` and `Nat.shiftRight` to `Nat.div`. Reproduce with legacy
+  imports of `Mathlib.Data.Nat.Factorization.Defs` and
+  `Mathlib.Tactic.Linter.OperatorFidelity`, followed by
+  `#operator_fidelity with_proofs in Mathlib.Data.Nat.Factorization.Defs`.
 
 - [ ] **Audit negation at the top element of additive ordered groups with top.**
   `LinearOrderedAddCommGroupWithTop` in `Mathlib/Algebra/Order/AddGroupWithTop.lean` retains total
