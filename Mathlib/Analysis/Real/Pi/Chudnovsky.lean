@@ -58,7 +58,7 @@ def chudnovskyTerm (n : ℕ) : ℚ :=
 /-- info: 3.141593 -/
 #guard_msgs in
 set_option linter.hashCommand false in
-#eval Float.div 1 (Float.div 12 ((640320 : Float) ^ (1.5 : Float)) *
+#eval (1 : Float) / ((12 : Float) / (640320 : Float) ^ (1.5 : Float) *
   (List.ofFn fun n : Fin 37 => (chudnovskyTerm n).toFloat).sum)
 
 /-- The infinite sum in Chudnovsky's formula for `π⁻¹` -/

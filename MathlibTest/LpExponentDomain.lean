@@ -28,22 +28,22 @@ example (f : Unit → ℝ) (q : ℝ) (μ : Measure Unit) (hq : IsUnit q) :
 
 -- The ENNReal endpoint formulas remain defined without a nonzero exponent assumption.
 example (f : Unit → ℝ) (p : ℝ≥0∞) (μ : Measure Unit) (c : ℝ≥0∞) :
-    eLpNorm f p (c • μ) ≤ c ^ (ENNReal.div 1 p).toReal • eLpNorm f p μ :=
+    eLpNorm f p (c • μ) ≤ c ^ (1 / p).toReal • eLpNorm f p μ :=
   eLpNorm_smul_measure_le c f p μ
 
 example (f : Unit → ℝ) (μ : Measure Unit) (c : ℝ≥0∞) :
-    eLpNorm f 0 (c • μ) = c ^ (ENNReal.div 1 0).toReal • eLpNorm f 0 μ :=
+    eLpNorm f 0 (c • μ) = c ^ (1 / 0 : ℝ≥0∞).toReal • eLpNorm f 0 μ :=
   eLpNorm_smul_measure_of_ne_top (by simp) f c
 
 -- Indicator bounds retain both endpoint exponents, even without measurability of the set.
 example (s : Set Unit) (c : ℝ) (p : ℝ≥0∞) (μ : Measure Unit) :
-    eLpNorm (s.indicator fun _ => c) p μ ≤ ‖c‖ₑ * μ s ^ (ENNReal.div 1 p).toReal :=
+    eLpNorm (s.indicator fun _ => c) p μ ≤ ‖c‖ₑ * μ s ^ (1 / p).toReal :=
   eLpNorm_indicator_const_le c p
 
 -- Exponent comparison includes the essential-supremum endpoint.
 example (f : Unit → ℝ) (p : ℝ≥0∞) (μ : Measure Unit)
     (hf : AEStronglyMeasurable f μ) :
-    eLpNorm f p μ ≤ eLpNorm f ∞ μ * μ Set.univ ^ (ENNReal.div 1 p).toReal := by
+    eLpNorm f p μ ≤ eLpNorm f ∞ μ * μ Set.univ ^ (1 / p).toReal := by
   simpa using eLpNorm_le_eLpNorm_mul_rpow_measure_univ (p := p) le_top hf
 
 -- Real-valued constant norms use the reciprocal in ENNReal before taking toReal.

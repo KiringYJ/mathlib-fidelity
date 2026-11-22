@@ -97,7 +97,7 @@ def castHom : ℚ →+* α where
   map_inv₀ (castHom α) _
 
 @[simp, norm_cast] lemma cast_div (p q : ℚ) {hq : IsUnit q} :
-    ((p / q : ℚ) : α) = Checked.div (p : α) (q : α) (hq.map (castHom α)) :=
+    ((p / q : ℚ) : α) = ((p : α) / (q : α)) :=
   map_div₀ (castHom α) ..
 
 @[norm_cast]
@@ -185,7 +185,7 @@ def castHom : ℚ≥0 →+* α where
   map_inv₀ (castHom α) _
 
 @[simp, norm_cast] lemma cast_div (p q : ℚ≥0) {hq : IsUnit q} :
-    ((p / q : ℚ≥0) : α) = Checked.div (p : α) (q : α) (hq.map (castHom α)) :=
+    ((p / q : ℚ≥0) : α) = ((p : α) / (q : α)) :=
   map_div₀ (castHom α) ..
 
 @[simp, norm_cast]

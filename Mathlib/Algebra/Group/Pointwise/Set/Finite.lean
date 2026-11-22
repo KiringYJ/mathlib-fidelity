@@ -140,16 +140,15 @@ instance fintypeSub [DecidableEq α] (s t : Set α) [Fintype s] [Fintype t] :
 end Sub
 
 section Div
-variable [CommGroup α] {s t : Set α}
+variable [Div α] {s t : Set α}
 
 lemma Finite.div (hs : s.Finite) (ht : t.Finite) : (s / t).Finite :=
-  hs.mul ht.inv
+  hs.image2 _ ht
 
-/-- A quotient set of two finite subsets of a commutative group is finite. -/
+/-- The pointwise quotient of two finite sets is finite. -/
 instance fintypeDiv [DecidableEq α] (s t : Set α) [Fintype s] [Fintype t] :
-    Fintype (s / t) := by
-  rw [← Set.image2_div]
-  exact Set.fintypeImage2 _ _ _
+    Fintype (s / t) :=
+  Set.fintypeImage2 _ _ _
 
 end Div
 

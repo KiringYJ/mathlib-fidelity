@@ -505,7 +505,7 @@ macro_rules | `(tactic| checked_unit) => `(tactic|
     simp only [star_pow]
 
 @[simp] theorem star_div₀ [CommMonoid R] [StarMul R] (x y : R) {hy : IsUnit y} :
-    star (Checked.div x y hy) = Checked.div (star x) (star y) hy.star := by
+    star (x / y) = ((star x) / (star y)) := by
   rw [div_eq_mul_inv₀, star_mul, star_inv₀, mul_comm, ← div_eq_mul_inv₀]
 
 protected instance Invertible.star {R : Type*} [MulOneClass R] [StarMul R] (r : R) [Invertible r] :

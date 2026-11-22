@@ -20,7 +20,7 @@ open Fintype
 variable {ι K : Type*} [DivisionSemiring K]
 
 lemma Multiset.sum_map_div (s : Multiset ι) (f : ι → K) (a : K) {ha : IsUnit a} :
-    (s.map (fun x ↦ Checked.div (f x) a ha)).sum = Checked.div (s.map f).sum a ha := by
+    (s.map (fun x ↦ ((f x) / a))).sum = ((s.map f).sum / a) := by
   simp only [div_eq_mul_inv₀, Multiset.sum_map_mul_right]
 
 lemma Finset.sum_div (s : Finset ι) (f : ι → K) (a : K) {ha : IsUnit a} :

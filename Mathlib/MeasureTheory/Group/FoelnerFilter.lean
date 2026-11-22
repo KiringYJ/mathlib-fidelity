@@ -80,7 +80,7 @@ structure IsAddFoelner : Prop where
   eventually_meas_ne_zero : ∀ᶠ i in l, μ (F i) ≠ 0
   eventually_meas_ne_top : ∀ᶠ i in l, μ (F i) ≠ ∞
   tendsto_meas_vadd_symmDiff (g : G) :
-    Tendsto (fun i ↦ ENNReal.div (μ ((g +ᵥ F i) ∆ F i)) (μ (F i))) l (𝓝 0)
+    Tendsto (fun i ↦ (μ ((g +ᵥ F i) ∆ F i) / μ (F i))) l (𝓝 0)
 
 variable (G μ l F) in
 /-- Consider a group `G` acting on a measure space `X`.
@@ -94,7 +94,7 @@ structure IsFoelner : Prop where
   eventually_meas_ne_zero : ∀ᶠ i in l, μ (F i) ≠ 0
   eventually_meas_ne_top : ∀ᶠ i in l, μ (F i) ≠ ∞
   tendsto_meas_smul_symmDiff (g : G) :
-    Tendsto (fun i ↦ ENNReal.div (μ ((g • F i) ∆ F i)) (μ (F i))) l (𝓝 0)
+    Tendsto (fun i ↦ (μ ((g • F i) ∆ F i) / μ (F i))) l (𝓝 0)
 
 attribute [to_additive IsAddFoelner] IsFoelner
 attribute [to_additive existing isAddFoelner_iff] isFoelner_iff
@@ -132,16 +132,16 @@ variable (μ u F) in
 @[to_additive
 /-- The limit along an ultrafilter of the density of a set with respect to a sequence in `X`. -/]
 noncomputable def mean (s : Set X) :=
-  limUnder u (fun i ↦ ENNReal.div (μ (s ∩ F i)) (μ (F i)))
+  limUnder u (fun i ↦ (μ (s ∩ F i) / μ (F i)))
 
 @[to_additive]
 theorem tendsto_nhds_mean (hfoel : IsFoelner G μ u F) (s : Set X) :
-    Tendsto (fun i ↦ ENNReal.div (μ (s ∩ F i)) (μ (F i))) u (𝓝 (mean μ u F s)) := by
-  have mem_Icc : ∀ᶠ i in u, ENNReal.div (μ (s ∩ F i)) (μ (F i)) ∈ Icc 0 1 := by
+    Tendsto (fun i ↦ (μ (s ∩ F i) / μ (F i))) u (𝓝 (mean μ u F s)) := by
+  have mem_Icc : ∀ᶠ i in u, (μ (s ∩ F i) / μ (F i)) ∈ Icc 0 1 := by
     filter_upwards [hfoel.eventually_meas_ne_zero, hfoel.eventually_meas_ne_top] with i hi hi'
     simpa [ENNReal.div_le_iff hi hi'] using μ.mono inter_subset_right
   obtain ⟨x, hx⟩ := isCompact_Icc.ultrafilter_le_nhds'
-    (u.map (fun i ↦ ENNReal.div (μ (s ∩ F i)) (μ (F i)))) (mem_map.1 mem_Icc)
+    (u.map (fun i ↦ (μ (s ∩ F i) / μ (F i)))) (mem_map.1 mem_Icc)
   exact tendsto_nhds_limUnder (by use x; exact hx.2)
 
 @[to_additive]
@@ -164,7 +164,7 @@ theorem mean_union_eq_add_of_disjoint (hfoel : IsFoelner G μ u F)
 @[to_additive]
 theorem tendsto_meas_smul_symmDiff_smul [SMulInvariantMeasure G X μ]
     (hfoel : IsFoelner G μ u F) (g h : G) :
-    Tendsto (fun i ↦ ENNReal.div (μ ((g • F i) ∆ (h • F i))) (μ (F i))) u (𝓝 0) := by
+    Tendsto (fun i ↦ (μ ((g • F i) ∆ (h • F i)) / μ (F i))) u (𝓝 0) := by
   simpa [← smul_smul] using hfoel.tendsto_meas_smul_symmDiff (h⁻¹ * g)
 
 @[to_additive]
@@ -217,7 +217,7 @@ variable (G μ) in
     on measurable sets of finite non-zero measure. -/]
 noncomputable def maxFoelner : Filter (Set X) :=
   𝓟 {s : Set X | MeasurableSet s ∧ μ s ≠ 0 ∧ μ s ≠ ∞} ⊓
-  ⨅ (g : G), comap (fun s ↦ ENNReal.div (μ ((g • s) ∆ s)) (μ s)) (𝓝 0)
+  ⨅ (g : G), comap (fun s ↦ (μ ((g • s) ∆ s) / μ s)) (𝓝 0)
 
 variable (l F) in
 @[to_additive isAddFoelner_iff_tendsto]

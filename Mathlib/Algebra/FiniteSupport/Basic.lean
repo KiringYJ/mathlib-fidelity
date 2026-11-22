@@ -84,19 +84,19 @@ lemma HasFiniteMulSupport.prod {M : Type*} [CommMonoid M] {ι : Type*} {f : ι �
 @[fun_prop]
 lemma HasFiniteMulSupport.mul_inv {M : Type*} [DivisionMonoid M] {f g : α → M}
     (hf : HasFiniteMulSupport f) (hg : HasFiniteMulSupport g) :
-    HasFiniteMulSupport (DivInvMonoid.div' f g) :=
-  (hf.union hg).subset <| mulSupport_div ..
+    HasFiniteMulSupport (f * g⁻¹) :=
+  (hf.union hg).subset <| mulSupport_mul_inv ..
 
 @[fun_prop]
 lemma HasFiniteMulSupport.fun_mul_inv {M : Type*} [DivisionMonoid M] {f g : α → M}
     (hf : HasFiniteMulSupport f) (hg : HasFiniteMulSupport g) :
-    HasFiniteMulSupport (fun x ↦ DivInvMonoid.div' (f x) (g x)) :=
+    HasFiniteMulSupport (fun x ↦ f x * (g x)⁻¹) :=
   hf.mul_inv hg
 
 @[to_fun (attr := fun_prop)]
-lemma HasFiniteMulSupport.div {M : Type*} [Group M] {f g : α → M}
+lemma HasFiniteMulSupport.div {M : Type*} [DivisionMonoid M] {f g : α → M}
     (hf : HasFiniteMulSupport f) (hg : HasFiniteMulSupport g) : HasFiniteMulSupport (f / g) := by
-  simpa only [div_eq_mul_inv, DivInvMonoid.div'] using hf.mul_inv hg
+  simpa only [div_eq_mul_inv] using hf.mul_inv hg
 
 @[to_fun (attr := fun_prop)]
 lemma HasFiniteSupport.sub {A : Type*} [SubtractionMonoid A] {f g : α → A}

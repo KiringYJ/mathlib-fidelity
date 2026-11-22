@@ -443,7 +443,7 @@ lemma rnDeriv_add_self (μ ν : Measure α) [SigmaFinite μ] [SigmaFinite ν] :
   rw [h3]
 
 lemma rnDeriv_self_add (μ ν : Measure α) [SigmaFinite μ] [SigmaFinite ν] :
-    μ.rnDeriv (μ + ν) =ᵐ[ν] fun x ↦ ENNReal.div (μ.rnDeriv ν x) (μ.rnDeriv ν x + 1) := by
+    μ.rnDeriv (μ + ν) =ᵐ[ν] fun x ↦ (μ.rnDeriv ν x / (μ.rnDeriv ν x + 1)) := by
   have h_add : (μ + ν).rnDeriv (μ + ν) =ᵐ[ν] μ.rnDeriv (μ + ν) + ν.rnDeriv (μ + ν) :=
     (ae_add_measure_iff.mp (μ.rnDeriv_add' ν (μ + ν))).2
   have h_one_add := (ae_add_measure_iff.mp (μ + ν).rnDeriv_self).2
@@ -460,7 +460,7 @@ lemma rnDeriv_self_add (μ ν : Measure α) [SigmaFinite μ] [SigmaFinite ν] :
   rwa [ENNReal.mul_inv_cancel (by simp) (by simp [ha_lt_top.ne])] at h
 
 lemma rnDeriv_eq_div_rnDeriv_add (μ ν : Measure α) [SigmaFinite μ] [SigmaFinite ν] :
-    μ.rnDeriv ν =ᵐ[ν] fun x ↦ ENNReal.div (μ.rnDeriv (μ + ν) x) (ν.rnDeriv (μ + ν) x) := by
+    μ.rnDeriv ν =ᵐ[ν] fun x ↦ (μ.rnDeriv (μ + ν) x / ν.rnDeriv (μ + ν) x) := by
   filter_upwards [rnDeriv_add_self ν μ, rnDeriv_self_add μ ν, μ.rnDeriv_lt_top ν]
       with a ha1 ha2 ha_lt_top
   rw [ha1, ha2, ENNReal.div_eq_inv_mul, inv_inv, ENNReal.div_eq_inv_mul, ← mul_assoc,
@@ -471,8 +471,8 @@ lemma rnDeriv_eq_div_rnDeriv_add (μ ν : Measure α) [SigmaFinite μ] [SigmaFin
 lemma rnDeriv_div_rnDeriv_eq_div_rnDeriv_add {ξ : Measure α}
     [SigmaFinite μ] [SigmaFinite ν] [SigmaFinite ξ]
     (hμ : μ ≪ ξ) (hν : ν ≪ ξ) :
-    (fun x ↦ ENNReal.div (μ.rnDeriv ξ x) (ν.rnDeriv ξ x))
-      =ᵐ[μ + ν] fun x ↦ ENNReal.div (μ.rnDeriv (μ + ν) x) (ν.rnDeriv (μ + ν) x) := by
+    (fun x ↦ (μ.rnDeriv ξ x / ν.rnDeriv ξ x))
+      =ᵐ[μ + ν] fun x ↦ (μ.rnDeriv (μ + ν) x / ν.rnDeriv (μ + ν) x) := by
   have h1 : μ.rnDeriv (μ + ν) * (μ + ν).rnDeriv ξ =ᵐ[ξ] μ.rnDeriv ξ :=
     Measure.rnDeriv_mul_rnDeriv (rfl.absolutelyContinuous.add_right _)
   have h2 : ν.rnDeriv (μ + ν) * (μ + ν).rnDeriv ξ =ᵐ[ξ] ν.rnDeriv ξ :=
@@ -490,7 +490,7 @@ lemma rnDeriv_div_rnDeriv_eq_div_rnDeriv_add {ξ : Measure α}
 respect to `ξ`. -/
 lemma rnDeriv_eq_div {ξ : Measure α} [SigmaFinite μ] [SigmaFinite ν] [SigmaFinite ξ]
     (hμ : μ ≪ ξ) (hν : ν ≪ ξ) :
-    μ.rnDeriv ν =ᵐ[ν] fun x ↦ ENNReal.div (μ.rnDeriv ξ x) (ν.rnDeriv ξ x) := by
+    μ.rnDeriv ν =ᵐ[ν] fun x ↦ (μ.rnDeriv ξ x / ν.rnDeriv ξ x) := by
   have hν_ac : ν ≪ μ + ν := rfl.absolutelyContinuous.add_right' _
   filter_upwards [μ.rnDeriv_eq_div_rnDeriv_add ν,
     hν_ac (rnDeriv_div_rnDeriv_eq_div_rnDeriv_add hμ hν)] with a h1 h2 using h1.trans h2.symm

@@ -830,8 +830,8 @@ variable [PosMulReflectLT M₀]
 
 alias ⟨_, inv_nonneg_of_nonneg⟩ := inv_nonneg
 
-lemma one_div_pos {ha : IsUnit a} : 0 < Checked.div 1 a ↔ 0 < a := by rw [one_div₀, inv_pos]
-lemma one_div_nonneg {ha : IsUnit a} : 0 ≤ Checked.div 1 a ↔ 0 ≤ a := by rw [one_div₀, inv_nonneg]
+lemma one_div_pos {ha : IsUnit a} : 0 < 1 / a ↔ 0 < a := by rw [one_div₀, inv_pos]
+lemma one_div_nonneg {ha : IsUnit a} : 0 ≤ 1 / a ↔ 0 ≤ a := by rw [one_div₀, inv_nonneg]
 
 end PosMulReflectLT
 
@@ -867,8 +867,8 @@ variable [LinearOrder M₀] [PosMulMono M₀]
 
 alias inv_lt_zero := inv_neg''
 
-lemma one_div_neg {ha : IsUnit a} : Checked.div 1 a < 0 ↔ a < 0 := by rw [one_div₀, inv_neg'']
-lemma one_div_nonpos {ha : IsUnit a} : Checked.div 1 a ≤ 0 ↔ a ≤ 0 := by rw [one_div₀, inv_nonpos]
+lemma one_div_neg {ha : IsUnit a} : 1 / a < 0 ↔ a < 0 := by rw [one_div₀, inv_neg'']
+lemma one_div_nonpos {ha : IsUnit a} : 1 / a ≤ 0 ↔ a ≤ 0 := by rw [one_div₀, inv_nonpos]
 
 end LinearOrder
 end MonoidWithZero
@@ -908,10 +908,10 @@ theorem MulPosReflectLE.of_posMulReflectLT_of_mulPosMono [MulPosMono G₀] : Mul
 
 attribute [local instance] PosMulReflectLT.toPosMulStrictMono PosMulReflectLT.toPosMulReflectLE
 
-lemma div_pos (ha : 0 < a) (hb : 0 < b) : 0 < Checked.div a b := by
+lemma div_pos (ha : 0 < a) (hb : 0 < b) : 0 < a / b := by
   rw [div_eq_mul_inv₀]; exact mul_pos ha (inv_pos.2 hb)
 
-lemma div_nonneg {hbUnit : IsUnit b} (ha : 0 ≤ a) (hb : 0 ≤ b) : 0 ≤ Checked.div a b := by
+lemma div_nonneg {hbUnit : IsUnit b} (ha : 0 ≤ a) (hb : 0 ≤ b) : 0 ≤ a / b := by
   rw [div_eq_mul_inv₀]; exact mul_nonneg ha (inv_nonneg.2 hb)
 
 /-- See `le_inv_mul_iff₀'` for a version with multiplication on the other side. -/
@@ -1131,7 +1131,7 @@ theorem MulPosReflectLT.toMulPosStrictMono : MulPosStrictMono G₀ where
 attribute [local instance] MulPosReflectLT.toMulPosStrictMono MulPosReflectLT.toMulPosReflectLE
 
 lemma div_nonpos_of_nonpos_of_nonneg {hbUnit : IsUnit b} (ha : a ≤ 0) (hb : 0 ≤ b) :
-    Checked.div a b ≤ 0 := by
+    a / b ≤ 0 := by
   rw [div_eq_mul_inv₀]; exact mul_nonpos_of_nonpos_of_nonneg ha (Right.inv_nonneg.2 hb)
 
 /-- See `le_mul_inv_iff₀'` for a version with multiplication on the other side. -/
@@ -1151,25 +1151,25 @@ lemma mul_inv_lt_iff₀ (hc : 0 < c) : b * c⁻¹ < a ↔ b < a * c := by
   rw [← mul_lt_mul_iff_of_pos_right hc, inv_mul_cancel_right₀]
 
 /-- See `le_div_iff₀'` for a version with multiplication on the other side. -/
-lemma le_div_iff₀ (hc : 0 < c) : a ≤ Checked.div b c ↔ a * c ≤ b := by
+lemma le_div_iff₀ (hc : 0 < c) : a ≤ b / c ↔ a * c ≤ b := by
   rw [div_eq_mul_inv₀, le_mul_inv_iff₀ hc]
 
 /-- See `div_le_iff₀'` for a version with multiplication on the other side. -/
-lemma div_le_iff₀ (hc : 0 < c) : Checked.div b c ≤ a ↔ b ≤ a * c := by
+lemma div_le_iff₀ (hc : 0 < c) : b / c ≤ a ↔ b ≤ a * c := by
   rw [div_eq_mul_inv₀, mul_inv_le_iff₀ hc]
 
 /-- See `lt_div_iff₀'` for a version with multiplication on the other side. -/
-lemma lt_div_iff₀ (hc : 0 < c) : a < Checked.div b c ↔ a * c < b := by
+lemma lt_div_iff₀ (hc : 0 < c) : a < b / c ↔ a * c < b := by
   rw [div_eq_mul_inv₀, lt_mul_inv_iff₀ hc]
 
 /-- See `div_lt_iff₀'` for a version with multiplication on the other side. -/
-lemma div_lt_iff₀ (hc : 0 < c) : Checked.div b c < a ↔ b < a * c := by
+lemma div_lt_iff₀ (hc : 0 < c) : b / c < a ↔ b < a * c := by
   rw [div_eq_mul_inv₀, mul_inv_lt_iff₀ hc]
 
-lemma div_le_div_iff_of_pos_right (hc : 0 < c) : Checked.div a c ≤ Checked.div b c ↔ a ≤ b := by
+lemma div_le_div_iff_of_pos_right (hc : 0 < c) : a / c ≤ b / c ↔ a ≤ b := by
   rw [div_le_iff₀ hc, div_mul_cancel₀]
 
-lemma div_lt_div_iff_of_pos_right (hc : 0 < c) : Checked.div a c < Checked.div b c ↔ a < b := by
+lemma div_lt_div_iff_of_pos_right (hc : 0 < c) : a / c < b / c ↔ a < b := by
   rw [div_lt_iff₀ hc, div_mul_cancel₀]
 
 /-- See `inv_le_iff_one_le_mul₀'` for a version with multiplication on the other side. -/
@@ -1180,27 +1180,27 @@ lemma inv_le_iff_one_le_mul₀ (ha : 0 < a) : a⁻¹ ≤ b ↔ 1 ≤ b * a := by
 lemma inv_lt_iff_one_lt_mul₀ (ha : 0 < a) : a⁻¹ < b ↔ 1 < b * a := by
   rw [← mul_inv_lt_iff₀ ha, one_mul]
 
-lemma one_le_div₀ (hb : 0 < b) : 1 ≤ Checked.div a b ↔ b ≤ a := by rw [le_div_iff₀ hb, one_mul]
-lemma one_lt_div₀ (hb : 0 < b) : 1 < Checked.div a b ↔ b < a := by rw [lt_div_iff₀ hb, one_mul]
-lemma div_le_one₀ (hb : 0 < b) : Checked.div a b ≤ 1 ↔ a ≤ b := by rw [div_le_iff₀ hb, one_mul]
-lemma div_lt_one₀ (hb : 0 < b) : Checked.div a b < 1 ↔ a < b := by rw [div_lt_iff₀ hb, one_mul]
+lemma one_le_div₀ (hb : 0 < b) : 1 ≤ a / b ↔ b ≤ a := by rw [le_div_iff₀ hb, one_mul]
+lemma one_lt_div₀ (hb : 0 < b) : 1 < a / b ↔ b < a := by rw [lt_div_iff₀ hb, one_mul]
+lemma div_le_one₀ (hb : 0 < b) : a / b ≤ 1 ↔ a ≤ b := by rw [div_le_iff₀ hb, one_mul]
+lemma div_lt_one₀ (hb : 0 < b) : a / b < 1 ↔ a < b := by rw [div_lt_iff₀ hb, one_mul]
 
 @[bound]
 lemma mul_inv_le_one_of_le₀ {hbUnit : IsUnit b} (h : a ≤ b) (hb : 0 ≤ b) : a * b⁻¹ ≤ 1 :=
   (mul_inv_le_iff₀ (hb.lt_of_ne' hbUnit.ne_zero)).2 (by rwa [one_mul])
 
 @[bound]
-lemma div_le_one_of_le₀ {hbUnit : IsUnit b} (h : a ≤ b) (hb : 0 ≤ b) : Checked.div a b ≤ 1 :=
+lemma div_le_one_of_le₀ {hbUnit : IsUnit b} (h : a ≤ b) (hb : 0 ≤ b) : a / b ≤ 1 :=
   (div_le_one₀ (hb.lt_of_ne' hbUnit.ne_zero)).2 h
 
 @[mono, gcongr, bound]
 lemma div_le_div_of_nonneg_right {hcUnit : IsUnit c} (hab : a ≤ b) (hc : 0 ≤ c) :
-    Checked.div a c ≤ Checked.div b c := by
+    a / c ≤ b / c := by
   rw [div_eq_mul_inv₀ a c, div_eq_mul_inv₀ b c]
   exact mul_le_mul_of_nonneg_right hab (Right.inv_nonneg.2 hc)
 
 @[gcongr, bound]
-lemma div_lt_div_of_pos_right (h : a < b) (hc : 0 < c) : Checked.div a c < Checked.div b c := by
+lemma div_lt_div_of_pos_right (h : a < b) (hc : 0 < c) : a / c < b / c := by
   rw [div_eq_mul_inv₀ a c, div_eq_mul_inv₀ b c]
   exact mul_lt_mul_of_pos_right h (Right.inv_pos.2 hc)
 
@@ -1276,39 +1276,38 @@ lemma lt_inv_of_lt_inv₀ (ha : 0 < a) {hb : IsUnit b} (h : a < b⁻¹) : b < a�
   (lt_inv_comm₀ ha <| inv_pos.1 <| ha.trans h).1 h
 
 lemma div_le_div_iff_of_pos_left (ha : 0 < a) (hb : 0 < b) (hc : 0 < c) :
-    Checked.div a b ≤ Checked.div a c ↔ c ≤ b := by
+    a / b ≤ a / c ↔ c ≤ b := by
   simp only [div_eq_mul_inv₀, mul_le_mul_iff_right₀ ha, inv_le_inv₀ hb hc]
 
-lemma div_lt_div_iff_of_pos_left (ha : 0 < a) (hb : 0 < b) (hc : 0 < c) :
-    Checked.div a b < Checked.div a c ↔ c < b :=
+lemma div_lt_div_iff_of_pos_left (ha : 0 < a) (hb : 0 < b) (hc : 0 < c) : a / b < a / c ↔ c < b :=
   lt_iff_lt_of_le_iff_le' (div_le_div_iff_of_pos_left ha hc hb)
     (div_le_div_iff_of_pos_left ha hb hc)
 
 -- Not a `mono` lemma b/c `div_le_div₀` is strictly more general
 lemma div_le_div_of_nonneg_left (ha : 0 ≤ a) (hc : 0 < c) (h : c ≤ b) :
-    Checked.div a b (hc.trans_le h).ne'.isUnit ≤ Checked.div a c := by
+    Checked.div a b (hc.trans_le h).ne'.isUnit ≤ a / c := by
   rw [div_eq_mul_inv₀, div_eq_mul_inv₀]
   exact mul_le_mul_of_nonneg_left (inv_anti₀ hc h) ha
 
 @[gcongr, bound]
 lemma div_lt_div_of_pos_left (ha : 0 < a) (hc : 0 < c) (h : c < b) :
-    Checked.div a b (hc.trans h).ne'.isUnit < Checked.div a c :=
+    Checked.div a b (hc.trans h).ne'.isUnit < a / c :=
   (div_lt_div_iff_of_pos_left ha (hc.trans h) hc).mpr h
 
 @[mono, gcongr, bound]
 lemma div_le_div₀ (hc : 0 ≤ c) (hac : a ≤ c) (hd : 0 < d) (hdb : d ≤ b) :
-    Checked.div a b (hd.trans_le hdb).ne'.isUnit ≤ Checked.div c d := by
+    Checked.div a b (hd.trans_le hdb).ne'.isUnit ≤ c / d := by
   rw [div_eq_mul_inv₀, div_eq_mul_inv₀]
   exact mul_le_mul hac (inv_anti₀ hd hdb) (inv_nonneg.2 (hd.le.trans hdb)) hc
 
 @[gcongr]
 lemma div_lt_div₀ (hac : a < c) (hdb : d ≤ b) (hc : 0 ≤ c) (hd : 0 < d) :
-    Checked.div a b (hd.trans_le hdb).ne'.isUnit < Checked.div c d := by
+    Checked.div a b (hd.trans_le hdb).ne'.isUnit < c / d := by
   rw [div_eq_mul_inv₀, div_eq_mul_inv₀]
   exact mul_lt_mul hac (inv_anti₀ hd hdb) (inv_pos.2 (hd.trans_le hdb)) hc
 
 lemma div_lt_div₀' (hac : a ≤ c) (hdb : d < b) (hc : 0 < c) (hd : 0 < d) :
-    Checked.div a b (hd.trans hdb).ne'.isUnit < Checked.div c d := by
+    Checked.div a b (hd.trans hdb).ne'.isUnit < c / d := by
   rw [div_eq_mul_inv₀, div_eq_mul_inv₀]
   exact mul_lt_mul' hac ((inv_lt_inv₀ (hd.trans hdb) hd).2 hdb)
     (inv_nonneg.2 <| hd.le.trans hdb.le) hc
@@ -1324,14 +1323,14 @@ section PosMulMono
 variable [PosMulMono G₀]
 
 lemma div_nonpos_of_nonneg_of_nonpos {hbUnit : IsUnit b} (ha : 0 ≤ a) (hb : b ≤ 0) :
-    Checked.div a b ≤ 0 := by
+    a / b ≤ 0 := by
   rw [div_eq_mul_inv₀]; exact mul_nonpos_of_nonneg_of_nonpos ha (inv_nonpos.2 hb)
 
-lemma neg_of_div_neg_right {hb : IsUnit b} (h : Checked.div a b < 0) (ha : 0 ≤ a) : b < 0 :=
+lemma neg_of_div_neg_right {hb : IsUnit b} (h : a / b < 0) (ha : 0 ≤ a) : b < 0 :=
   have := PosMulMono.toPosMulReflectLT (α := G₀)
   lt_of_not_ge fun hb' ↦ (div_nonneg ha hb').not_gt h
 
-lemma neg_of_div_neg_left {hbUnit : IsUnit b} (h : Checked.div a b < 0) (hb : 0 ≤ b) : a < 0 :=
+lemma neg_of_div_neg_left {hbUnit : IsUnit b} (h : a / b < 0) (hb : 0 ≤ b) : a < 0 :=
   have := PosMulMono.toPosMulReflectLT (α := G₀)
   lt_of_not_ge fun ha ↦ (div_nonneg ha hb).not_gt h
 
@@ -1425,22 +1424,21 @@ lemma le_mul_inv_iff₀' (hc : 0 < c) : a ≤ b * c⁻¹ ↔ c * a ≤ b := by
 lemma mul_inv_le_iff₀' (hc : 0 < c) : b * c⁻¹ ≤ a ↔ b ≤ c * a := by
   rw [mul_inv_le_iff₀ hc, mul_comm]
 
-lemma div_le_div_iff₀ (hb : 0 < b) (hd : 0 < d) :
-    Checked.div a b ≤ Checked.div c d ↔ a * d ≤ c * b := by
+lemma div_le_div_iff₀ (hb : 0 < b) (hd : 0 < d) : a / b ≤ c / d ↔ a * d ≤ c * b := by
   rw [div_le_iff₀ hb, ← mul_div_right_comm₀, le_div_iff₀ hd]
 
 /-- See `le_div_iff₀` for a version with multiplication on the other side. -/
-lemma le_div_iff₀' (hc : 0 < c) : a ≤ Checked.div b c ↔ c * a ≤ b := by
+lemma le_div_iff₀' (hc : 0 < c) : a ≤ b / c ↔ c * a ≤ b := by
   rw [le_div_iff₀ hc, mul_comm]
 
 /-- See `div_le_iff₀` for a version with multiplication on the other side. -/
-lemma div_le_iff₀' (hc : 0 < c) : Checked.div b c ≤ a ↔ b ≤ c * a := by
+lemma div_le_iff₀' (hc : 0 < c) : b / c ≤ a ↔ b ≤ c * a := by
   rw [div_le_iff₀ hc, mul_comm]
 
-lemma le_div_comm₀ (ha : 0 < a) (hc : 0 < c) : a ≤ Checked.div b c ↔ c ≤ Checked.div b a := by
+lemma le_div_comm₀ (ha : 0 < a) (hc : 0 < c) : a ≤ b / c ↔ c ≤ b / a := by
   rw [le_div_iff₀ ha, le_div_iff₀' hc]
 
-lemma div_le_comm₀ (hb : 0 < b) (hc : 0 < c) : Checked.div a b ≤ c ↔ Checked.div a c ≤ b := by
+lemma div_le_comm₀ (hb : 0 < b) (hc : 0 < c) : a / b ≤ c ↔ a / c ≤ b := by
   rw [div_le_iff₀ hb, div_le_iff₀' hc]
 
 /-- See `lt_inv_mul_iff₀` for a version with multiplication on the other side. -/
@@ -1459,22 +1457,21 @@ lemma lt_mul_inv_iff₀' (hc : 0 < c) : a < b * c⁻¹ ↔ c * a < b := by
 lemma mul_inv_lt_iff₀' (hc : 0 < c) : b * c⁻¹ < a ↔ b < c * a := by
   rw [mul_inv_lt_iff₀ hc, mul_comm]
 
-lemma div_lt_div_iff₀ (hb : 0 < b) (hd : 0 < d) :
-    Checked.div a b < Checked.div c d ↔ a * d < c * b := by
+lemma div_lt_div_iff₀ (hb : 0 < b) (hd : 0 < d) : a / b < c / d ↔ a * d < c * b := by
   rw [div_lt_iff₀ hb, ← mul_div_right_comm₀, lt_div_iff₀ hd]
 
 /-- See `lt_div_iff₀` for a version with multiplication on the other side. -/
-lemma lt_div_iff₀' (hc : 0 < c) : a < Checked.div b c ↔ c * a < b := by
+lemma lt_div_iff₀' (hc : 0 < c) : a < b / c ↔ c * a < b := by
   rw [lt_div_iff₀ hc, mul_comm]
 
 /-- See `div_lt_iff₀` for a version with multiplication on the other side. -/
-lemma div_lt_iff₀' (hc : 0 < c) : Checked.div b c < a ↔ b < c * a := by
+lemma div_lt_iff₀' (hc : 0 < c) : b / c < a ↔ b < c * a := by
   rw [div_lt_iff₀ hc, mul_comm]
 
-lemma lt_div_comm₀ (ha : 0 < a) (hc : 0 < c) : a < Checked.div b c ↔ c < Checked.div b a := by
+lemma lt_div_comm₀ (ha : 0 < a) (hc : 0 < c) : a < b / c ↔ c < b / a := by
   rw [lt_div_iff₀ ha, lt_div_iff₀' hc]
 
-lemma div_lt_comm₀ (hb : 0 < b) (hc : 0 < c) : Checked.div a b < c ↔ Checked.div a c < b := by
+lemma div_lt_comm₀ (hb : 0 < b) (hc : 0 < c) : a / b < c ↔ a / c < b := by
   rw [div_lt_iff₀ hb, div_lt_iff₀' hc]
 
 end CommGroupWithZero

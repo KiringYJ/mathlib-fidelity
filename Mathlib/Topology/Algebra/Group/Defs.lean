@@ -18,7 +18,7 @@ These classes say that the corresponding operations are continuous:
 - `ContinuousInv G` says that `(·⁻¹)` is continuous on `G`;
 - `IsTopologicalGroup G` says that `(· * ·)` is continuous on `G × G`
   and `(·⁻¹)` is continuous on `G`;
-- `ContinuousDiv G` says that group division is continuous on `G × G`.
+- `ContinuousDiv G` says that division is continuous on `G × G`.
 
 For groups, `ContinuousDiv G` is equivalent to `IsTopologicalGroup G`,
 but we use the additive version `ContinuousSub` for types like `NNReal`,
@@ -115,10 +115,10 @@ automatically holds for topological additive groups but it also holds, e.g., for
 class ContinuousSub (G : Type*) [TopologicalSpace G] [Sub G] : Prop where
   continuous_sub : Continuous fun p : G × G => p.1 - p.2
 
-/-- A typeclass saying that group division is continuous. This property
+/-- A typeclass saying that division is continuous. This property
 automatically holds for topological groups. Lemmas using this class have primes.
 The unprimed version is for `GroupWithZero`. -/
-class ContinuousDiv (G : Type*) [TopologicalSpace G] [Group G] : Prop where
+class ContinuousDiv (G : Type*) [TopologicalSpace G] [Div G] : Prop where
   continuous_div' : Continuous fun p : G × G => p.1 / p.2
 
 -- see Note [lower instance priority]
@@ -169,7 +169,7 @@ end ContinuousSub
 
 section ContinuousDiv
 
-variable [TopologicalSpace G] [Group G] [ContinuousDiv G]
+variable [TopologicalSpace G] [Div G] [ContinuousDiv G]
 
 theorem Filter.Tendsto.div' {f g : α → G} {l : Filter α} {a b : G} (hf : Tendsto f l (𝓝 a))
     (hg : Tendsto g l (𝓝 b)) : Tendsto (fun x => f x / g x) l (𝓝 (a / b)) :=
@@ -195,8 +195,11 @@ theorem ContinuousOn.div' (hf : ContinuousOn f s) (hg : ContinuousOn g s) :
 theorem Continuous.div' (hf : Continuous f) (hg : Continuous g) : Continuous (f / g) := by
   simpa only [Pi.div_def] using continuous_div'.comp₂ hf hg
 
+end ContinuousDiv
+
 /-- On a group, continuity of division implies continuity of inversion and multiplication. -/
-theorem IsTopologicalGroup.of_continuousDiv : IsTopologicalGroup G := by
+theorem IsTopologicalGroup.of_continuousDiv [TopologicalSpace G] [Group G] [ContinuousDiv G] :
+    IsTopologicalGroup G := by
   have hinv : Continuous (fun x : G => x⁻¹) := by
     simpa only [id_eq, div_eq_mul_inv, one_mul] using
       (continuous_div'.comp₂ (continuous_const (y := (1 : G))) (continuous_id (X := G)))
@@ -205,5 +208,3 @@ theorem IsTopologicalGroup.of_continuousDiv : IsTopologicalGroup G := by
     continuous_mul := by
       simpa only [Function.comp_apply, div_eq_mul_inv, inv_inv] using
         (continuous_div'.comp₂ (continuous_fst (X := G) (Y := G)) (hinv.comp continuous_snd)) }
-
-end ContinuousDiv

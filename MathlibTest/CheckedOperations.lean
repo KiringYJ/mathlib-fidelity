@@ -174,6 +174,19 @@ error: could not synthesize default value for parameter 'hb' using tactics
 error: an invertibility proof is required
 R : Type u_1
 inst✝ : EuclideanDomain R
+a b : R
+hb : b ≠ 0
+⊢ IsUnit b
+-/
+#guard_msgs in
+noncomputable example (a b : R) (hb : b ≠ 0) : R := a / b
+
+/--
+error: could not synthesize default value for parameter 'hb' using tactics
+---
+error: an invertibility proof is required
+R : Type u_1
+inst✝ : EuclideanDomain R
 a : R
 ⊢ IsUnit 0
 -/
@@ -206,17 +219,9 @@ private instance : EuclideanDomain EuclideanInt := Int.euclideanDomain
 
 local instance : Div EuclideanInt := ⟨fun _ _ => 0⟩
 
-example (a b : EuclideanInt) (hb : IsUnit b) : a / b = Checked.div a b hb := rfl
-
-/--
-error: could not synthesize default value for parameter 'hb' using tactics
----
-error: an invertibility proof is required
-a : EuclideanInt
-⊢ IsUnit 0
--/
+/-- error: division notation is unavailable for Nat or Int operands -/
 #guard_msgs in
-noncomputable example (a : EuclideanInt) : EuclideanInt := a / 0
+noncomputable example (a b : EuclideanInt) (_hb : IsUnit b) : EuclideanInt := a / b
 
 end NamedEuclideanCarrier
 
@@ -235,11 +240,15 @@ Hint: Additional diagnostic information may be available using the `set_option d
 
 attribute [local instance] Field.toEuclideanDomain
 
+local instance : Div K := ⟨fun _ _ => 0⟩
+
 example (a : K) : EuclideanDomain.remainder a 0 = a :=
   EuclideanDomain.mod_zero a
 
 example (a b : K) (hb : b ≠ 0) : EuclideanDomain.quotient a b hb = Checked.div a b hb.isUnit :=
   Field.quotient_eq_div a hb
+
+example (a b : K) (hb : b ≠ 0) : a / b = Checked.div a b hb.isUnit := rfl
 
 /--
 error: could not synthesize default value for parameter 'hb' using tactics

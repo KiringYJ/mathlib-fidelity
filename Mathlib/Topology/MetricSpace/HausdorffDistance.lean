@@ -146,9 +146,8 @@ theorem continuous_infEDist : Continuous fun x => infEDist x s :=
 theorem infEDist_closure : infEDist x (closure s) = infEDist x s := by
   refine le_antisymm (infEDist_anti subset_closure) ?_
   refine ENNReal.le_of_forall_pos_le_add fun ε εpos h => ?_
-  have : IsUnit (2 : ℝ≥0∞) := by simp [ENNReal.isUnit_iff]
   let δ := (ε : ℝ≥0∞) / 2
-  have ε0 : 0 < δ := by simpa [δ, ENNReal.checkedDiv_eq_div, pos_iff_ne_zero] using εpos
+  have ε0 : 0 < δ := ENNReal.half_pos (ENNReal.coe_ne_zero.mpr εpos.ne')
   have : infEDist x (closure s) < infEDist x (closure s) + δ :=
     ENNReal.lt_add_right h.ne ε0.ne'
   obtain ⟨y : α, ycs : y ∈ closure s, hy : edist x y < infEDist x (closure s) + δ⟩ :=
@@ -159,7 +158,8 @@ theorem infEDist_closure : infEDist x (closure s) = infEDist x s := by
     _ ≤ edist x y + edist y z := edist_triangle _ _ _
     _ ≤ infEDist x (closure s) + δ + δ := add_le_add (le_of_lt hy) (le_of_lt dyz)
     _ = infEDist x (closure s) + ↑ε := by
-      simp only [δ, add_assoc, ENNReal.checkedDiv_eq_div, ENNReal.add_halves]
+      rw [add_assoc]
+      exact congrArg (_ + ·) (ENNReal.add_halves (ε : ℝ≥0∞))
 
 /-- A point belongs to the closure of `s` iff its infimum edistance to this set vanishes -/
 theorem mem_closure_iff_infEDist_zero : x ∈ closure s ↔ infEDist x s = 0 :=
@@ -314,9 +314,8 @@ between `s` and `t`. -/
 theorem infEDist_le_infEDist_add_hausdorffEDist :
     infEDist x t ≤ infEDist x s + hausdorffEDist s t :=
   ENNReal.le_of_forall_pos_le_add fun ε εpos h => by
-    have : IsUnit (2 : ℝ≥0∞) := by simp [ENNReal.isUnit_iff]
     let δ := (ε : ℝ≥0∞) / 2
-    have ε0 : δ ≠ 0 := by simpa [δ, ENNReal.checkedDiv_eq_div, pos_iff_ne_zero] using εpos
+    have ε0 : δ ≠ 0 := (ENNReal.half_pos (ENNReal.coe_ne_zero.mpr εpos.ne')).ne'
     have : infEDist x s < infEDist x s + δ :=
       ENNReal.lt_add_right (ENNReal.add_lt_top.1 h).1.ne ε0
     obtain ⟨y : α, ys : y ∈ s, dxy : edist x y < infEDist x s + δ⟩ := infEDist_lt_iff.mp this
@@ -330,7 +329,7 @@ theorem infEDist_le_infEDist_add_hausdorffEDist :
       _ ≤ infEDist x s + δ + (hausdorffEDist s t + δ) := add_le_add dxy.le dyz.le
       _ = infEDist x s + hausdorffEDist s t + ε := by
         rw [add_add_add_comm]
-        simp only [δ, ENNReal.checkedDiv_eq_div, ENNReal.add_halves]
+        exact congrArg (_ + ·) (ENNReal.add_halves (ε : ℝ≥0∞))
 
 /-- The Hausdorff edistance is invariant under isometries. -/
 theorem hausdorffEDist_image (h : Isometry Φ) :

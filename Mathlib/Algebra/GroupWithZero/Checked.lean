@@ -19,9 +19,10 @@ there is no ambient inverse operation and no value at an invalid denominator. An
 requires invertibility only for a negative exponent.
 
 These declarations implement `a⁻¹` and `a ^ n` for monoids without an ambient inverse,
-such as groups with zero and fields. Ordinary division notation `a / b` uses a unit denominator
-in a commutative monoid or division ring. See `Mathlib.Algebra.GroupWithZero.Checked.Notation` for
-notation and `Mathlib.Algebra.GroupWithZero.Inverse` for the associated theorems.
+such as groups with zero and fields. Ordinary `a / b` supports ambient division and checked
+division by a unit. Use the named operations for Euclidean quotients, and for division on `ℕ`
+and `ℤ`. See `Mathlib.Algebra.GroupWithZero.Checked.Notation` for notation and
+`Mathlib.Algebra.GroupWithZero.Inverse` for the associated theorems.
 
 The default evidence tactics use local hypotheses, unit and nonzero closure, and simplification.
 A local hypothesis may also be applied: a pointwise hypothesis `∀ x, f x ≠ 0` or

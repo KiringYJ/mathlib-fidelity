@@ -398,7 +398,7 @@ theorem lift_inv₀ (g : ∀ i, H i) (h) (x : DirectLimit G f) {hx : IsUnit x} :
 
 @[simp]
 theorem lift_div₀ (g : ∀ i, H i) (h) (x y : DirectLimit G f) {hy : IsUnit y} :
-    DirectLimit.lift f (g ·) h (Checked.div x y hy) =
+    DirectLimit.lift f (g ·) h (x / y) =
       Checked.div (DirectLimit.lift f (g ·) h x) (DirectLimit.lift f (g ·) h y)
         (isUnit_lift g h hy) := by
   rw [div_eq_mul_inv₀, lift_mul, lift_inv₀, div_eq_mul_inv₀]

@@ -388,8 +388,9 @@ instance instOne [One β] : One (α →ₛ β) :=
 instance instMul [Mul β] : Mul (α →ₛ β) :=
   ⟨fun f g => (f.map (· * ·)).seq g⟩
 
-instance instSub [Sub β] : Sub (α →ₛ β) :=
-  ⟨fun f g => (f.map (· - ·)).seq g⟩
+@[to_additive]
+instance instDiv [Div β] : Div (α →ₛ β) :=
+  ⟨fun f g => (f.map (· / ·)).seq g⟩
 
 @[to_additive]
 instance instInv [Inv β] : Inv (α →ₛ β) :=
@@ -420,8 +421,8 @@ theorem coe_mul [Mul β] (f g : α →ₛ β) : ⇑(f * g) = ⇑f * ⇑g :=
 theorem coe_inv [Inv β] (f : α →ₛ β) : ⇑(f⁻¹) = (⇑f)⁻¹ :=
   rfl
 
-@[simp, norm_cast]
-theorem coe_sub [Sub β] (f g : α →ₛ β) : ⇑(f - g) = ⇑f - ⇑g :=
+@[to_additive (attr := simp, norm_cast)]
+theorem coe_div [Div β] (f g : α →ₛ β) : ⇑(f / g) = ⇑f / ⇑g :=
   rfl
 
 @[simp, norm_cast]
@@ -436,7 +437,8 @@ theorem coe_inf [Min β] (f g : α →ₛ β) : ⇑(f ⊓ g) = ⇑f ⊓ ⇑g :=
 theorem mul_apply [Mul β] (f g : α →ₛ β) (a : α) : (f * g) a = f a * g a :=
   rfl
 
-theorem sub_apply [Sub β] (f g : α →ₛ β) (x : α) : (f - g) x = f x - g x :=
+@[to_additive]
+theorem div_apply [Div β] (f g : α →ₛ β) (x : α) : (f / g) x = f x / g x :=
   rfl
 
 @[to_additive]
@@ -547,24 +549,13 @@ instance instCommMonoid [CommMonoid β] : CommMonoid (α →ₛ β) :=
     coe_mul coe_pow
 
 @[to_additive existing]
-instance instGroup [Group β] : Group (α →ₛ β) := by
-  letI : Div (α →ₛ β) := ⟨fun f g => f * g⁻¹⟩
-  exact fast_instance% Function.Injective.group (fun f => show α → β from f) coe_injective coe_one
-    coe_mul coe_inv (fun f g => by
-      change ⇑(f * g⁻¹) = ⇑f / ⇑g
-      simp only [div_eq_mul_inv, coe_mul, coe_inv]) coe_pow coe_zpow
+instance instGroup [Group β] : Group (α →ₛ β) :=
+  fast_instance% Function.Injective.group (fun f => show α → β from f) coe_injective coe_one
+    coe_mul coe_inv coe_div coe_pow coe_zpow
 
 @[to_additive existing]
 instance instCommGroup [CommGroup β] : CommGroup (α →ₛ β) :=
   { mul_comm := fun f g => ext fun x => mul_comm (f x) (g x) }
-
-@[simp, norm_cast]
-theorem coe_div [Group β] (f g : α →ₛ β) : ⇑(f / g) = ⇑f / ⇑g := by
-  change ⇑(f * g⁻¹) = ⇑f / ⇑g
-  simp only [div_eq_mul_inv, coe_mul, coe_inv]
-
-theorem div_apply [Group β] (f g : α →ₛ β) (x : α) : (f / g) x = f x / g x := by
-  rw [← Pi.div_apply, ← coe_div]
 
 instance [Monoid K] [MulAction K β] : MulAction K (α →ₛ β) :=
   fast_instance% Function.Injective.mulAction (fun f => show α → β from f) coe_injective coe_smul

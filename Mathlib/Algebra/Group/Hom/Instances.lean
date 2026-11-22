@@ -121,16 +121,13 @@ instance MonoidHom.instCommGroup [MulOneClass M] [CommGroup N] : CommGroup (M �
 namespace OneHom
 
 @[norm_cast]
-theorem coe_div [One M] [Group N] (f g : OneHom M N) : ⇑(f / g) = ⇑f / ⇑g := by
-  simp only [div_eq_mul_inv, coe_mul, coe_inv]
+theorem coe_div [One M] [Group N] (f g : OneHom M N) : ⇑(f / g) = ⇑f / ⇑g := rfl
 
 @[simp]
-theorem div_apply [One M] [Group N] (f g : OneHom M N) (x : M) : (f / g) x = f x / g x := by
-  simp only [div_eq_mul_inv, mul_apply, inv_apply]
+theorem div_apply [One M] [Group N] (f g : OneHom M N) (x : M) : (f / g) x = f x / g x := rfl
 
 theorem div_comp [One M] [One N] [Group P] (g₁ g₂ : OneHom N P) (f : OneHom M N) :
-    (g₁ / g₂).comp f = g₁.comp f / g₂.comp f := by
-  simp only [div_eq_mul_inv, mul_comp, inv_comp]
+    (g₁ / g₂).comp f = g₁.comp f / g₂.comp f := rfl
 
 end OneHom
 
@@ -139,16 +136,15 @@ namespace MonoidHom
 variable {G H : Type*} [MulOneClass M] [MulOneClass N] [CommGroup G] [CommGroup H]
 
 @[to_additive existing, simp]
-theorem div_apply (f g : M →* G) (x : M) : (f / g) x = f x / g x := by
-  simp only [div_eq_mul_inv, mul_apply, inv_apply]
+theorem div_apply (f g : M →* G) (x : M) : (f / g) x = f x / g x := rfl
 
 @[to_additive existing, simp]
-theorem div_comp (f g : N →* G) (h : M →* N) : (f / g).comp h = f.comp h / g.comp h := by
-  simp only [div_eq_mul_inv, mul_comp, inv_comp]
+theorem div_comp (f g : N →* G) (h : M →* N) : (f / g).comp h = f.comp h / g.comp h := rfl
 
 @[to_additive existing, simp]
 theorem comp_div (f : G →* H) (g h : M →* G) : f.comp (g / h) = f.comp g / f.comp h := by
-  simp only [div_eq_mul_inv, comp_mul, comp_inv]
+  ext x
+  exact map_div f _ _
 
 end MonoidHom
 

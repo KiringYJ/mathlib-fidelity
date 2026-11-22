@@ -1006,62 +1006,45 @@ that equation.
 
 ### Ordinary division notation
 
-Ordinary `a / b` defaults to division by a unit in one commutative monoid.
-Both operands have the same type and the denominator carries `IsUnit b` evidence.
-Multiplication by a unit is bijective, so the result is the unique `q` satisfying
-`q * b = a`. Users write operand casts explicitly. A notation exception requires
-documented mathematical usage of slash and a defining specification on the
-declared domain. An off-domain value needs its own mathematical specification.
-The pretty-printer uses slash when the operation and any omitted unit evidence
-can be recovered in the local context.
+Slash uses the installed `HDiv` operation, including operations supplied by `Div`
+and heterogeneous operations. Both operand types are checked before coercion.
+Slash rejects operands definitionally equal to `Nat` or `Int`, including division
+by a unit and division with a locally installed instance. Cast native operands
+explicitly to use a quotient on another carrier.
 
-Writing `HDiv.hDiv` or `Div.div` still selects a division operation through a
-notation typeclass. A mathematical interface that uses a named operation must
-state its defining law or domain and implement the specified operation. A result
-about an arbitrary binary operation can take that operation as an explicit
-parameter. Syntax recognition and proofs about the official Lean interface can
-still refer to its typeclass projections.
+Exact division on groups with zero and rationals uses the checked unit quotient.
+On a Euclidean domain, slash likewise denotes exact division by a unit. Use
+the named Euclidean quotient for division with remainder, including
+`EuclideanDomain.quotient`, `Ordinal.quotient`, `Num.quotient`, and
+`ZNum.quotient`. A monoid without ambient division can divide by a proved
+unit. The pretty-printer uses slash when it can recover the same operation
+and any omitted proof.
 
-The elaborator supports these exceptions:
+An exact quotient must commute with the natural embedding into an ambient
+carrier that supports exact division. For an injective multiplicative map
+`i : A → B` with `i b` invertible, an `A`-valued exact quotient `q` must satisfy
+`i q = i a / i b`. This is equivalent to `q * b = a` in `A`.
+Use explicit casts when the intended result belongs to `B`. When the
+result must belong to `A`, its domain needs closure or evidence that the ambient
+quotient lies in the image. Divisibility is such evidence for a named exact
+integer quotient. A field such as `ℚ` is already closed under its exact
+quotient on nonzero divisors, so it supports slash on that domain.
 
-- **Group right division.** For `[Group G]`, `a / b` uses the group's division
-  `a * b⁻¹`. Every group element is a unit. In a commutative group this is the
-  default unit quotient, with the operation already used by group rewrite rules.
-  Kinyon, Krapež, and Phillips give this slash convention immediately after Definition 1.2.
-  [Right product quasigroups and loops, §1](https://arxiv.org/abs/0903.5436)
-- **Division-ring right division.** For `[DivisionRing D]`, the same-carrier
-  quotient is `a * b⁻¹` with `IsUnit b` evidence. Nonzeroness supplies that
-  evidence. Fisher's right fraction convention specializes to this operation
-  when the domain is itself a division ring. Hamilton gives the same
-  multiplication order for quaternion fractions.
-  [Fisher, §2.3.1](https://sampfisher.github.io/PDFs/phd.pdf)
-  [Hamilton, equations (313)–(314)](https://www.maths.tcd.ie/pub/HistMath/People/Hamilton/ResQuat/ResQuat.pdf)
-- **Pointwise quotients.** With the canonical `Pointwise` division instance in
-  scope, `A / B` on `Set G` and `Finset G` for a commutative group `G` means
-  `{a * b⁻¹ | a ∈ A, b ∈ B}`. Each denominator element belongs to the group.
-  Shkredov defines the real-set quotient using slash and excluding zero
-  denominators in §1, and uses slash for the quotient set in an abstract
-  multiplicative abelian group in §2. Takahashi uses the same real-set convention
-  for Cantor sets.
-  [Some remarks on sets with small quotient set, §§1–2](https://doi.org/10.1070/SM8733)
-  [Sums, products, ratios and intersections of two Cantor sets, §6](https://www.kurims.kyoto-u.ac.jp/~kyodo/kokyuroku/contents/pdf/2176-01.pdf)
-  For general groups the source expresses the right quotient set as `A * B⁻¹`,
-  following the notation of noncommutative product-set estimates.
-  [Tao, Product set estimates for non-commutative groups, §3](https://arxiv.org/abs/math/0601431)
-- **Interval division.** For `NonemptyInterval G` and `Interval G` with the
-  ordered commutative group instances, `[a, b] / [c, d]` has endpoints
-  `[a / d, b / c]`. Each endpoint belongs to the multiplicative group.
-  This extends the endpoint rule for positive real intervals. Moore,
-  Kearfott, and Cloud define interval quotient notation on real intervals
-  with zero excluded from the denominator interval.
-  [Introduction to Interval Analysis, §2.3, equations (2.18) and (2.24)](https://epubs.siam.org/doi/10.1137/1.9780898717716.ch2)
-- **Submodule right residual.** For submodules of a commutative algebra, `I / J`
-  consists of `x` for which `x * y ∈ I` for every `y ∈ J`. This is the right
-  residual of submodule multiplication, characterized by `K ≤ I / J ↔ K * J ≤ I`.
-  In particular `I / ⊥ = ⊤`, since `K * ⊥ = ⊥` for every `K`.
-  Jipsen and Galatos explicitly use slash for the same right residual on ring ideals.
-  [Jipsen and Galatos, Residuated Lattices, slide 27](https://mathcs.chapman.edu/~jipsen/talks/India2009/beamerJipsenRLtutorialslides.pdf#page=27)
-  [Montagna and Tsinakis, Ordered groups with a conucleus, §2](https://cdn-dev.vanderbilt.edu/t2-my-dev/wp-content/uploads/sites/1171/2014/03/ordered-groups-conucleus.pdf)
+The Euclidean quotient paired with a nonzero remainder fails this compatibility
+test. For example, division of `3` by `2` in `ℤ` has Euclidean quotient `1`,
+while the exact quotient of their images in `ℚ` is `3 / 2`. The Euclidean
+quotient keeps its name even on inputs where the two values agree. This test
+concerns embeddings that preserve the structure whose quotient is being
+interpreted. Other uses of slash are governed by their own specifications.
+
+The mathematical specification belongs to the selected operation. For example,
+group division is `a * b⁻¹`, pointwise division lifts the supplied element
+operation, and the right residual on submodules satisfies
+`K ≤ I / J ↔ K * J ≤ I`. The residual gives `I / ⊥ = ⊤` because
+`K * ⊥ = ⊥` for every `K`.
+[Group right division](https://arxiv.org/abs/0903.5436)
+[Pointwise quotient sets](https://doi.org/10.1070/SM8733)
+[Ideal residuals](https://mathcs.chapman.edu/~jipsen/talks/India2009/beamerJipsenRLtutorialslides.pdf#page=27)
 
 For integers `a` and `b` with `b ≠ 0`, write `(a : ℚ) / (b : ℚ)` to
 obtain their exact rational quotient. The named Euclidean quotients take
@@ -1075,12 +1058,14 @@ The quotient is `a - s % c`. Lean verifies the reconstruction and the remainder
 bound for `b ≠ 0`. The proof may use the official Euclidean lemmas.
 
 `Ordinal.quotient a b hb` carries `b ≠ 0` and uses the left-divisor
-reconstruction `a = b * q + r`, `r < b`. The ordinal remainder at zero
-is the dividend. [Dehornoy, Logique, Proposition 2.3.14](https://www.univ-orleans.fr/lifo/Members/duchier/teaching/IPF/DehornoyChap2.pdf)
+reconstruction `a = b * q + r`, `r < b`.
+The ordinal remainder at zero is the dividend.
+[Dehornoy, Logique, Proposition 2.3.14](https://www.univ-orleans.fr/lifo/Members/duchier/teaching/IPF/DehornoyChap2.pdf)
 
-For extended nonnegative reals, `ENNReal.div a b` has the order specification
+On extended nonnegative reals, `a / b` has the order specification
 `sInf {q | a ≤ b * q}`. This specification determines the values at zero and
-infinity. On the unit domain, ordinary slash agrees with `ENNReal.div`.
+infinity. For finite inputs with positive denominator the quotient agrees with
+exact division under the natural embedding `ℝ≥0 → ℝ≥0∞`.
 
 ### Final algebra and operational interface
 

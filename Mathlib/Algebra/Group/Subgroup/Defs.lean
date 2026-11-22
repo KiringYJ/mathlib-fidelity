@@ -197,6 +197,12 @@ instance _root_.AddSubgroupClass.sub {A S : Type*} [SubNegMonoid A] [SetLike S A
     [AddSubgroupClass S A] {H : S} : Sub H :=
   ⟨fun a b ↦ ⟨(a : A) - (b : A), sub_mem a.property b.property⟩⟩
 
+/-- A subgroup inherits the ambient division. -/
+@[to_additive existing]
+instance div {G S : Type*} [DivInvMonoid G] [SetLike S G] [SubgroupClass S G] {H : S} : Div H :=
+  ⟨fun a b ↦ ⟨(a : G) / (b : G), by
+    rw [div_eq_mul_inv]; exact mul_mem a.property (inv_mem b.property)⟩⟩
+
 /-- A subgroup of a group inherits an integer power. -/
 @[to_additive /-- An additive subgroup of an `AddGroup` inherits an integer scaling. -/]
 instance instZPow {M S} [DivInvMonoid M] [SetLike S M] [SubgroupClass S M] {H : S} : Pow H ℤ :=
@@ -208,8 +214,6 @@ variable (H)
 /-- A subgroup of a group inherits a group structure. -/
 @[to_additive /-- An additive subgroup of an `AddGroup` inherits an `AddGroup` structure. -/]
 instance (priority := 75) toGroup : Group H := fast_instance%
-  letI : Div H := ⟨fun a b ↦ ⟨(a : G) / (b : G), by
-    rw [div_eq_mul_inv]; exact mul_mem a.property (inv_mem b.property)⟩⟩
   Subtype.coe_injective.group _ rfl (fun _ _ => rfl) (fun _ => rfl) (fun _ _ => rfl)
     (fun _ _ => rfl) fun _ _ => rfl
 

@@ -96,9 +96,9 @@ sigma-finite. `C` is finite since `ν` is a finite measure. Then there exists a 
 with `μ.restrict t` sigma-finite such that `ν t ≥ C - 1/n`. -/
 lemma exists_isSigmaFiniteSet_measure_ge (μ ν : Measure α) [IsFiniteMeasure ν] (n : ℕ) :
     ∃ t, MeasurableSet t ∧ SigmaFinite (μ.restrict t)
-      ∧ (⨆ (s) (_ : MeasurableSet s) (_ : SigmaFinite (μ.restrict s)), ν s) - ENNReal.div 1 n
+      ∧ (⨆ (s) (_ : MeasurableSet s) (_ : SigmaFinite (μ.restrict s)), ν s) - 1 / (n : ℝ≥0∞)
         ≤ ν t := by
-  by_cases! hC_lt : ENNReal.div 1 n <
+  by_cases! hC_lt : 1 / (n : ℝ≥0∞) <
       ⨆ (s) (_ : MeasurableSet s) (_ : SigmaFinite (μ.restrict s)), ν s
   · have h_lt_top : ⨆ (s) (_ : MeasurableSet s) (_ : SigmaFinite (μ.restrict s)), ν s < ∞ := by
       refine (?_ : ⨆ (s) (_ : MeasurableSet s)
@@ -107,7 +107,7 @@ lemma exists_isSigmaFiniteSet_measure_ge (μ ν : Measure α) [IsFiniteMeasure �
       exact iSup_le (fun _ ↦ iSup_le (fun _ ↦ measure_mono (Set.subset_univ s)))
     obtain ⟨t, ht⟩ := exists_lt_of_lt_ciSup
       (ENNReal.sub_lt_self h_lt_top.ne hC_lt.ne_bot (by simp) :
-          (⨆ (s) (_ : MeasurableSet s) (_ : SigmaFinite (μ.restrict s)), ν s) - ENNReal.div 1 n
+          (⨆ (s) (_ : MeasurableSet s) (_ : SigmaFinite (μ.restrict s)), ν s) - 1 / (n : ℝ≥0∞)
         < ⨆ (s) (_ : MeasurableSet s) (_ : SigmaFinite (μ.restrict s)), ν s)
     have ht_meas : MeasurableSet t := by
       by_contra h_notMem
@@ -149,7 +149,7 @@ lemma measure_sigmaFiniteSetGE_le (μ ν : Measure α) [IsFiniteMeasure ν] (n :
     (measurableSet_sigmaFiniteSetGE n)
 
 lemma measure_sigmaFiniteSetGE_ge (μ ν : Measure α) [IsFiniteMeasure ν] (n : ℕ) :
-    (⨆ (s) (_ : MeasurableSet s) (_ : SigmaFinite (μ.restrict s)), ν s) - ENNReal.div 1 n
+    (⨆ (s) (_ : MeasurableSet s) (_ : SigmaFinite (μ.restrict s)), ν s) - 1 / (n : ℝ≥0∞)
       ≤ ν (μ.sigmaFiniteSetGE ν n) :=
   (exists_isSigmaFiniteSet_measure_ge μ ν n).choose_spec.2.2
 

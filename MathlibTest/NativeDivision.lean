@@ -8,6 +8,9 @@ import Mathlib.Algebra.Field.Defs
 import Mathlib.Algebra.Group.Pointwise.Finset.Basic
 import Mathlib.Algebra.Order.Interval.Basic
 import Mathlib.Algebra.Ring.Rat
+import Mathlib.Basic.ENNReal.Inv
+import Mathlib.Data.Num.Basic
+import Mathlib.SetTheory.Ordinal.Arithmetic
 
 #guard Nat.euclideanDiv 7 3 = 2
 #guard Int.euclideanDiv (-7) 3 = -3
@@ -65,9 +68,9 @@ section DivisionNotation
 
 universe u
 
-section CommMonoid
+section Monoid
 
-variable {M : Type u} [CommMonoid M] (a b : M) (hb : IsUnit b)
+variable {M : Type u} [Monoid M] (a b : M) (hb : IsUnit b)
 
 example : a / b = Checked.div a b hb := rfl
 
@@ -75,7 +78,7 @@ example : a / b = Checked.div a b hb := rfl
 #guard_msgs in
 #check (a / b)
 
-end CommMonoid
+end Monoid
 
 section ExplicitWitness
 
@@ -101,9 +104,23 @@ example : a / b * b = a := div_mul_cancel a b
 
 local instance : Div G := ⟨fun x _ => x⟩
 
-example : a / b * b = a := div_mul_cancel a b
+example : a / b = a := rfl
 
 end Group
+
+example {D : Type u} [Div D] (a b : D) : a / b = Div.div a b := rfl
+
+example {A : Type*} {B : Type*} {C : Type*} [HDiv A B C] (a : A) (b : B) :
+    (a / b : C) = HDiv.hDiv a b := rfl
+
+section Heterogeneous
+
+local instance : HDiv Bool String (List String) :=
+  ⟨fun keep text => if keep then [text] else []⟩
+
+example : true / "a" = ["a"] := rfl
+
+end Heterogeneous
 
 example {D : Type u} [DivisionRing D] (a b : D) (hb : b ≠ 0) : a / b * b = a :=
   div_mul_cancel₀ a
@@ -118,7 +135,7 @@ example (c d : R) (hd : IsUnit d) :
 
 example (n : ℕ) (hn : IsUnit (n : R)) : a / (n : R) = Checked.div a (n : R) hn := rfl
 
-/-- error: division requires operands of the same type, found R and ℕ -/
+/-- error: division notation is unavailable for Nat or Int operands -/
 #guard_msgs in
 noncomputable example (n : ℕ) : R := a / n
 
@@ -128,6 +145,13 @@ section QuotientSets
 
 open scoped Pointwise
 
+example {D : Type*} [Div D] (x y : D) : ({x} : Set D) / {y} = {x / y} :=
+  Set.singleton_div_singleton
+
+example {D : Type*} [DecidableEq D] [Div D] (x y : D) :
+    ({x} : Finset D) / {y} = {x / y} :=
+  Finset.singleton_div_singleton x y
+
 variable {G : Type*} [CommGroup G] (x : G)
 
 example (s t : Set G) : x ∈ s / t ↔ ∃ a ∈ s, ∃ b ∈ t, a / b = x :=
@@ -136,11 +160,15 @@ example (s t : Set G) : x ∈ s / t ↔ ∃ a ∈ s, ∃ b ∈ t, a / b = x :=
 example [DecidableEq G] (s t : Finset G) : x ∈ s / t ↔ ∃ a ∈ s, ∃ b ∈ t, a / b = x :=
   Finset.mem_div
 
-local instance : Div G := ⟨fun a _ => a⟩
+example (s t : Set G) : s / t = s * t⁻¹ := div_eq_mul_inv s t
 
-example (s t : Set G) : s / t = s * t⁻¹ := rfl
+example [DecidableEq G] (s t : Finset G) : s / t = s * t⁻¹ := div_eq_mul_inv s t
 
-example [DecidableEq G] (s t : Finset G) : s / t = s * t⁻¹ := rfl
+local instance : Div (Set G) := ⟨fun s _ => s⟩
+local instance [DecidableEq G] : Div (Finset G) := ⟨fun s _ => s⟩
+
+example (s t : Set G) : s / t = s := rfl
+example [DecidableEq G] (s t : Finset G) : s / t = s := rfl
 
 end QuotientSets
 
@@ -168,20 +196,29 @@ example (I : Submodule R A) : I / ⊥ = ⊤ := Submodule.div_bot I
 
 end SubmoduleResidual
 
-example (a : ℕ) : a / (1 : ℕ) = Checked.div a 1 := rfl
+example (a : ENNReal) (ha : a ≠ 0) : a / 0 = ⊤ := ENNReal.div_zero ha
 
-/--
-error: could not synthesize default value for parameter 'hb' using tactics
----
-error: an invertibility proof is required
-⊢ IsUnit 3
--/
+example (a b : Ordinal) (hb : b ≠ 0) :
+    b * Ordinal.quotient a b hb + a % b = a :=
+  Ordinal.div_add_mod a b hb
+
+example : Num.quotient (.pos (.bit1 (.bit1 .one))) (.pos (.bit1 .one)) (by decide) =
+    Num.pos (.bit0 .one) := by decide
+
+example : ZNum.quotient (.neg (.bit1 (.bit1 .one))) (.pos (.bit1 .one)) (by decide) =
+    ZNum.neg (.bit1 .one) := by decide
+
+#check_failure (fun (a b : Ordinal) (_hb : b ≠ 0) => (a / b : Ordinal))
+#check_failure (fun (a b : Num) (_hb : b ≠ 0) => (a / b : Num))
+#check_failure (fun (a b : ZNum) (_hb : b ≠ 0) => (a / b : ZNum))
+
+/-- error: division notation is unavailable for Nat or Int operands -/
 #guard_msgs in
 noncomputable example : ℕ := (7 : ℕ) / 3
 
-/-- error: division notation has no documented operation on M -/
+/-- error: division notation is unavailable for Nat or Int operands -/
 #guard_msgs in
-noncomputable example {M : Type} [Monoid M] (x y : M) (_hy : IsUnit y) : M := x / y
+noncomputable example (a : ℕ) : ℕ := a / 1
 
 example (n : ℕ) : n % 3 < 3 := by omega
 example (n : ℤ) : n % 3 < 3 := by omega
@@ -204,20 +241,64 @@ Hint: Additional diagnostic information may be available using the `set_option d
 #guard_msgs in
 #synth Div ℤ
 
-example (a : ℤ) : a / (1 : ℤ) = Checked.div a 1 := rfl
+/-- error: division notation is unavailable for Nat or Int operands -/
+#guard_msgs in
+noncomputable example (a : ℤ) : ℤ := a / 1
 
 example : ((7 : ℤ) : ℚ) / ((3 : ℤ) : ℚ) = Rat.fractionInt 7 3 (by decide) :=
   (Rat.fractionInt_eq_div 7 3 (by decide)).symm
 
-/--
-error: could not synthesize default value for parameter 'hb' using tactics
----
-error: an invertibility proof is required
-⊢ IsUnit 3
--/
+example : ((7 : ℕ) : ℚ) / ((3 : ℕ) : ℚ) = Rat.fraction 7 3 (by decide) :=
+  (Rat.fraction_eq_div 7 3 (by decide)).symm
+
+example (a : ℚ) : (3 / 2 + a : ℚ) = Checked.div 3 2 + a := rfl
+
+/-- error: division notation is unavailable for Nat or Int operands -/
 #guard_msgs in
 noncomputable example : ℤ := (6 : ℤ) / (3 : ℤ)
 
-/-- error: division requires operands of the same type, found ℤ and ℚ -/
+/-- error: division notation is unavailable for Nat or Int operands -/
 #guard_msgs in
 noncomputable example (a : ℤ) (b : ℚ) : ℚ := a / b
+
+section LocalNativeInstances
+
+local instance : Div Nat := ⟨fun a _ => a⟩
+local instance : HDiv Bool Int Bool := ⟨fun a _ => a⟩
+
+/-- error: division notation is unavailable for Nat or Int operands -/
+#guard_msgs in
+example (a b : Nat) : Nat := 1 + (a / b)
+
+/-- error: division notation is unavailable for Nat or Int operands -/
+#guard_msgs in
+def delayedNativeDivision := fun a b => (a / b, (a : Nat), (b : Nat))
+
+/-- error: division notation is unavailable for Nat or Int operands -/
+#guard_msgs in
+example (b : Int) : Bool := true / b
+
+end LocalNativeInstances
+
+section DelayedOperandType
+
+private def Indexed (native : Bool) : Type := if native then Nat else Bool
+
+private def value {native : Bool} : Indexed native := by
+  cases native
+  · exact false
+  · exact (7 : Nat)
+
+local instance {native : Bool} : Div (Indexed native) := ⟨fun a _ => a⟩
+
+example : Indexed true × Indexed true :=
+  let a := value (native := _)
+  (a, (show Indexed true from a))
+
+/-- error: division notation is unavailable for Nat or Int operands -/
+#guard_msgs in
+example : Indexed true × Indexed true :=
+  let a := value (native := _)
+  (a / a, (show Indexed true from a))
+
+end DelayedOperandType

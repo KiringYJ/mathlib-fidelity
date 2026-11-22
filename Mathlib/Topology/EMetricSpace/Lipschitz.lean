@@ -176,7 +176,7 @@ theorem ediam_image_le (hf : LipschitzWith K f) (s : Set α) :
   exact hf.edist_le_mul_of_le (Metric.edist_le_ediam_of_mem hx hy)
 
 theorem edist_lt_of_edist_lt_div (hf : LipschitzWith K f) {x y : α} {d : ℝ≥0∞}
-    (h : edist x y < ENNReal.div d (K : ℝ≥0∞)) : edist (f x) (f y) < d :=
+    (h : edist x y < d / (K : ℝ≥0∞)) : edist (f x) (f y) < d :=
   calc
     edist (f x) (f y) ≤ K * edist x y := hf x y
     _ < d := ENNReal.mul_lt_of_lt_div' h
@@ -184,7 +184,7 @@ theorem edist_lt_of_edist_lt_div (hf : LipschitzWith K f) {x y : α} {d : ℝ≥
 /-- A Lipschitz function is uniformly continuous. -/
 protected theorem uniformContinuous (hf : LipschitzWith K f) : UniformContinuous f :=
   EMetric.uniformContinuous_iff.2 fun ε εpos =>
-    ⟨ENNReal.div ε (K : ℝ≥0∞), ENNReal.div_pos_iff.2 ⟨ne_of_gt εpos, ENNReal.coe_ne_top⟩,
+    ⟨ε / (K : ℝ≥0∞), ENNReal.div_pos_iff.2 ⟨ne_of_gt εpos, ENNReal.coe_ne_top⟩,
       hf.edist_lt_of_edist_lt_div⟩
 
 /-- A Lipschitz function is continuous. -/
@@ -320,9 +320,9 @@ theorem edist_le_mul_of_le (h : LipschitzOnWith K f s) {x y : α} (hx : x ∈ s)
   (h hx hy).trans <| mul_right_mono hr
 
 theorem edist_lt_of_edist_lt_div (hf : LipschitzOnWith K f s) {x y : α} (hx : x ∈ s) (hy : y ∈ s)
-    {d : ℝ≥0∞} (hd : edist x y < ENNReal.div d (K : ℝ≥0∞)) : edist (f x) (f y) < d :=
+    {d : ℝ≥0∞} (hd : edist x y < d / (K : ℝ≥0∞)) : edist (f x) (f y) < d :=
   hf.to_restrict.edist_lt_of_edist_lt_div <|
-    show edist (⟨x, hx⟩ : s) ⟨y, hy⟩ < ENNReal.div d (K : ℝ≥0∞) from hd
+    show edist (⟨x, hx⟩ : s) ⟨y, hy⟩ < d / (K : ℝ≥0∞) from hd
 
 protected theorem comp {g : β → γ} {t : Set β} {Kg : ℝ≥0} (hg : LipschitzOnWith Kg g t)
     (hf : LipschitzOnWith K f s) (hmaps : MapsTo f s t) : LipschitzOnWith (Kg * K) (g ∘ f) s :=
@@ -435,9 +435,7 @@ theorem continuousOn_prod_of_subset_closure_continuousOn_lipschitzOnWith [Pseudo
     (hb : ∀ b ∈ t, LipschitzOnWith K (fun x => f (x, b)) s) : ContinuousOn f (s ×ˢ t) := by
   rintro ⟨x, y⟩ ⟨hx : x ∈ s, hy : y ∈ t⟩
   refine Metric.nhds_basis_closedEBall.tendsto_right_iff.2 fun ε (ε0 : 0 < ε) => ?_
-  have : IsUnit (2 : ℝ≥0∞) := by simp [ENNReal.isUnit_iff]
-  replace ε0 : 0 < ε / 2 := by
-    simpa only [ENNReal.checkedDiv_eq_div] using ENNReal.half_pos ε0.ne'
+  replace ε0 : 0 < ε / 2 := ENNReal.half_pos ε0.ne'
   obtain ⟨δ, δpos, hδ⟩ : ∃ δ : ℝ≥0, 0 < δ ∧ (δ : ℝ≥0∞) * ↑(3 * K) < ε / 2 :=
     ENNReal.exists_nnreal_pos_mul_lt ENNReal.coe_ne_top ε0.ne'
   rw [← ENNReal.coe_pos] at δpos
@@ -458,7 +456,7 @@ theorem continuousOn_prod_of_subset_closure_continuousOn_lipschitzOnWith [Pseudo
       · exact (hb y hy).edist_le_mul_of_le (hs' hx') hx ((edist_comm _ _).trans_le hxx'.le)
     _ = δ * ↑(3 * K) + ε / 2 := by push_cast; ring
     _ ≤ ε / 2 + ε / 2 := by gcongr
-    _ = ε := by simpa only [ENNReal.checkedDiv_eq_div] using ENNReal.add_halves ε
+    _ = ε := ENNReal.add_halves ε
 
 /-- Consider a function `f : α × β → γ`. Suppose that it is continuous on each “vertical fiber”
 `{a} × t`, `a ∈ s`, and is Lipschitz continuous on each “horizontal fiber” `s × {b}`, `b ∈ t`

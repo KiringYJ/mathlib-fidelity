@@ -198,10 +198,8 @@ theorem eqOn_zero_of_preconnected_of_eventuallyEq_zero_aux [CompleteSpace F] {f 
     it follows that `f` vanishes on a neighborhood of `x`, proving the claim. -/
   rintro x ⟨xu, xU⟩
   rcases hf x xU with ⟨p, r, hp⟩
-  have : IsUnit (2 : ℝ≥0∞) := ENNReal.isUnit_iff.2 ⟨by simp, ENNReal.ofNat_ne_top⟩
-  obtain ⟨hpos, hle, hadd⟩ : 0 < r / 2 ∧ r / 2 ≤ r ∧ r / 2 + r / 2 = r := by
-    simp only [ENNReal.checkedDiv_eq_div]
-    exact ⟨ENNReal.half_pos hp.r_pos.ne', ENNReal.half_le_self, ENNReal.add_halves r⟩
+  obtain ⟨hpos, hle, hadd⟩ : 0 < r / 2 ∧ r / 2 ≤ r ∧ r / 2 + r / 2 = r :=
+    ⟨ENNReal.half_pos hp.r_pos.ne', ENNReal.half_le_self, ENNReal.add_halves r⟩
   obtain ⟨y, yu, hxy⟩ : ∃ y ∈ u, edist x y < r / 2 :=
     EMetric.mem_closure_iff.1 xu (r / 2) hpos
   let q := p.changeOrigin (y - x)

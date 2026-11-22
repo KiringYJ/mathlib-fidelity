@@ -55,7 +55,7 @@ theorem eval_div {α : Type*} [DivisionSemiring α] (a b : ℚ≥0) {hb : IsUnit
       rw [div_eq_mul_inv₀]
       apply mul_den_ne_zero _ _ ha
       rw [den_inv_of_ne_zero, ← eval_mul_den b hd]
-      exact mul_ne_zero hv hd) = Checked.div (eval a ha) (eval b hd) hv.isUnit := by
+      exact mul_ne_zero hv hd) = ((eval a ha) / (eval b hd)) := by
   apply eq_div_of_mul_eq
   calc
     _ = eval ((a / b) * b) (by simpa only [div_mul_cancel₀] using ha) :=
@@ -66,7 +66,7 @@ theorem eval_div {α : Type*} [DivisionSemiring α] (a b : ℚ≥0) {hb : IsUnit
 theorem eval_divNat {α : Type*} [DivisionSemiring α] (n d : ℕ) (hd : (d : α) ≠ 0) :
     eval (divNat n d (fun h => hd (h ▸ Nat.cast_zero)))
       (Rat.normalize_den_ne_zero (R := α) n d (fun h => hd (h ▸ Nat.cast_zero)) hd) =
-      Checked.div (n : α) (d : α) hd.isUnit := by
+      ((n : α) / (d : α)) := by
   have hd' : d ≠ 0 := fun h => hd (h ▸ Nat.cast_zero)
   have hunit : IsUnit (d : ℚ≥0) := (Nat.cast_ne_zero.mpr hd').isUnit
   have h := eval_div (n : ℚ≥0) (d : ℚ≥0) (α := α) (hb := hunit) (by simp) (by simp)

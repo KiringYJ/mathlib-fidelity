@@ -33,6 +33,7 @@ theorem birthday :
   decide
 
 open MeasureTheory ProbabilityTheory
+open scoped ENNReal
 
 variable {n m : ℕ} [NeZero m]
 
@@ -43,12 +44,12 @@ noncomputable instance measureSpace : MeasureSpace (Fin n → Fin m) :=
   ⟨uniformOn Set.univ .univ⟩
 
 theorem Fin.measure_apply {s : Set <| Fin n → Fin m} :
-    ℙ s = ENNReal.div |s.toFinite.toFinset| ‖Fin n → Fin m‖ := by
-  rw [volume, measureSpace, uniformOn_univ, Measure.count_apply_finite, ENNReal.checkedDiv_eq_div]
+    ℙ s = (|s.toFinite.toFinset| : ℝ≥0∞) / (‖Fin n → Fin m‖ : ℝ≥0∞) := by
+  rw [volume, measureSpace, uniformOn_univ, Measure.count_apply_finite s s.toFinite]
 
 /-- **Birthday Problem**: first probabilistic interpretation. -/
 theorem birthday_measure :
-    ℙ ({f | f.Injective} : Set (Fin 23 → Fin 365)) < ENNReal.div 1 2 := by
+    ℙ ({f | f.Injective} : Set (Fin 23 → Fin 365)) < (1 / 2 : ℝ≥0∞) := by
   rw [Fin.measure_apply]
   generalize_proofs hfin
   have : |hfin.toFinset| = 42200819302092359872395663074908957253749760700776448000000 := by

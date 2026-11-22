@@ -119,7 +119,7 @@ theorem inv_comp [One M] [One N] [InvOneClass P] (g : OneHom N P) (f : OneHom M 
 
 /-- Division field for the pointwise structure on one-preserving morphisms. -/
 instance instDiv [One M] [DivisionMonoid N] : Div (OneHom M N) where
-  div f g := f * g⁻¹
+  div f g := ⟨fun x ↦ f x / g x, by simp [DivInvMonoid.div_eq_mul_inv]⟩
 
 theorem mul_inv_apply {M N} [One M] [DivisionMonoid N] (f g : OneHom M N) (x : M) :
     (f * g⁻¹) x = f x * (g x)⁻¹ := rfl
@@ -291,7 +291,8 @@ theorem comp_inv (φ : G →* H) (ψ : M →* G) : φ.comp ψ⁻¹ = (φ.comp ψ
 
 /-- Division field for the pointwise group of monoid homomorphisms. -/
 instance instDiv : Div (M →* G) where
-  div f g := f * g⁻¹
+  div f g := mk' (fun x ↦ f x / g x) fun a b ↦ by
+    simp [div_eq_mul_inv, mul_assoc, mul_left_comm, mul_comm]
 
 end InvDiv
 

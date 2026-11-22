@@ -117,7 +117,7 @@ lemma inv_def (q : ℚ≥0) {hq : IsUnit q} :
   rw [divNat_eq_div, ← mul_div_assoc₀, mul_den_eq_num, div_self]
 
 lemma div_def (p q : ℚ≥0) {hq : IsUnit q} :
-    Checked.div p q hq = divNat (p.num * q.den) (p.den * q.num)
+    (p / q) = divNat (p.num * q.den) (p.den * q.num)
       (Nat.mul_ne_zero p.den_ne_zero (num_ne_zero.mpr hq.ne_zero)) := by
   rw [div_eq_mul_inv₀, inv_def,
     ← divNat_mul_divNat _ _ p.den_ne_zero (num_ne_zero.mpr hq.ne_zero), num_divNat_den]

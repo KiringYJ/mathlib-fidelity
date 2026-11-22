@@ -59,31 +59,26 @@ theorem neg_inv₀ {ha : IsUnit a} : -a⁻¹ = (-a)⁻¹ := (inv_neg₀ (ha := h
 theorem inv_neg_one₀ : (-1 : K)⁻¹ = -1 := by
   rw [inv_neg₀, inv_one₀]
 
-theorem neg_div₀ (a b : K) {ha : IsUnit a} : Checked.div (-b) a = -(Checked.div b a) := by
+theorem neg_div₀ (a b : K) {ha : IsUnit a} : -b / a = -(b / a) := by
   rw [div_eq_mul_inv₀, div_eq_mul_inv₀, neg_mul]
 
-theorem neg_div₀' (a b : K) {ha : IsUnit a} :
-    -(Checked.div b a) = Checked.div (-b) a := (neg_div₀ a b).symm
+theorem neg_div₀' (a b : K) {ha : IsUnit a} : -(b / a) = -b / a := (neg_div₀ a b).symm
 
-theorem div_neg_eq_neg_div₀ (a b : K) {ha : IsUnit (-a)} :
-    Checked.div b (-a) = -(Checked.div b a) := by
+theorem div_neg_eq_neg_div₀ (a b : K) {ha : IsUnit (-a)} : b / -a = -(b / a) := by
   rw [div_eq_mul_inv₀, div_eq_mul_inv₀, inv_neg₀, mul_neg]
 
-theorem div_neg₀ (a : K) {hb : IsUnit (-b)} :
-    Checked.div a (-b) = -(Checked.div a b) := div_neg_eq_neg_div₀ b a
+theorem div_neg₀ (a : K) {hb : IsUnit (-b)} : a / -b = -(a / b) := div_neg_eq_neg_div₀ b a
 
-theorem div_neg_eq_neg_div₀' (a : K) {hb : IsUnit (-b)} :
-    Checked.div a (-b) = Checked.div (-a) b := by
+theorem div_neg_eq_neg_div₀' (a : K) {hb : IsUnit (-b)} : a / -b = -a / b := by
   rw [div_neg₀, neg_div₀]
 
-theorem neg_div_neg_eq₀ (a b : K) {hb : IsUnit (-b)} : Checked.div (-a) (-b) = Checked.div a b := by
+theorem neg_div_neg_eq₀ (a b : K) {hb : IsUnit (-b)} : -a / -b = a / b := by
   rw [div_neg₀, neg_div₀, neg_neg]
 
-theorem one_div_neg_one_eq_neg_one₀ : Checked.div (1 : K) (-1) = -1 := by
+theorem one_div_neg_one_eq_neg_one₀ : (1 : K) / -1 = -1 := by
   rw [div_neg₀, div_one₀]
 
-theorem one_div_neg_eq_neg_one_div₀ (a : K) {ha : IsUnit (-a)} :
-    Checked.div 1 (-a) = -(Checked.div 1 a) :=
+theorem one_div_neg_eq_neg_one_div₀ (a : K) {ha : IsUnit (-a)} : 1 / -a = -(1 / a) :=
   div_neg₀ 1
 
 end HasDistribNeg
@@ -93,21 +88,18 @@ end HasDistribNeg
 section Semiring
 variable [Semiring K] {a b c d : K}
 
-theorem add_div (a b c : K) {hc : IsUnit c} :
-    Checked.div (a + b) c = Checked.div a c + Checked.div b c := by
+theorem add_div (a b c : K) {hc : IsUnit c} : (a + b) / c = a / c + b / c := by
   simp only [div_eq_mul_inv₀, add_mul]
 
-theorem same_add_div {hb : IsUnit b} : Checked.div (b + a) b = 1 + Checked.div a b := by
+theorem same_add_div {hb : IsUnit b} : (b + a) / b = 1 + a / b := by
   rw [add_div, div_self]
 
-theorem div_add_same {hb : IsUnit b} : Checked.div (a + b) b = Checked.div a b + 1 := by
+theorem div_add_same {hb : IsUnit b} : (a + b) / b = a / b + 1 := by
   rw [add_div, div_self]
 
-theorem one_add_div {hb : IsUnit b} :
-    1 + Checked.div a b = Checked.div (b + a) b := same_add_div.symm
+theorem one_add_div {hb : IsUnit b} : 1 + a / b = (b + a) / b := same_add_div.symm
 
-theorem div_add_one {hb : IsUnit b} :
-    Checked.div a b + 1 = Checked.div (a + b) b := div_add_same.symm
+theorem div_add_one {hb : IsUnit b} : a / b + 1 = (a + b) / b := div_add_same.symm
 
 /-- See `inv_add_inv` for the more convenient version when `K` is commutative. -/
 theorem inv_add_inv' {ha : IsUnit a} {hb : IsUnit b} :
@@ -116,31 +108,30 @@ theorem inv_add_inv' {ha : IsUnit a} {hb : IsUnit b} :
     add_comm]
 
 theorem one_div_mul_add_mul_one_div_eq_one_div_add_one_div {ha : IsUnit a} {hb : IsUnit b} :
-    Checked.div 1 a * (a + b) * Checked.div 1 b = Checked.div 1 a + Checked.div 1 b := by
+    1 / a * (a + b) * (1 / b) = 1 / a + 1 / b := by
   simp only [one_div₀]
   exact inv_add_inv'.symm
 
-theorem add_div_eq_mul_add_div (a b : K) {hc : IsUnit c} :
-    a + Checked.div b c = Checked.div (a * c + b) c :=
+theorem add_div_eq_mul_add_div (a b : K) {hc : IsUnit c} : a + b / c = (a * c + b) / c :=
   eq_div_iff_mul_eq.2 <| by rw [add_mul, div_mul_cancel₀]
 
-theorem add_div' (a b c : K) {hc : IsUnit c} : b + Checked.div a c = Checked.div (b * c + a) c := by
+theorem add_div' (a b c : K) {hc : IsUnit c} : b + a / c = (b * c + a) / c := by
   rw [add_div, mul_div_cancel_right₀]
 
-theorem div_add' (a b c : K) {hc : IsUnit c} : Checked.div a c + b = Checked.div (a + b * c) c := by
+theorem div_add' (a b c : K) {hc : IsUnit c} : a / c + b = (a + b * c) / c := by
   rw [add_div, mul_div_cancel_right₀]
 
 protected theorem Commute.div_add_div (hbc : Commute b c) (hbd : Commute b d) {hb : IsUnit b}
-    {hd : IsUnit d} : Checked.div a b + Checked.div c d = Checked.div (a * d + b * c) (b * d) := by
+    {hd : IsUnit d} : a / b + c / d = (a * d + b * c) / (b * d) := by
   refine eq_div_iff_mul_eq.2 ?_
   rw [add_mul, ← mul_assoc, div_mul_cancel₀, hbd.eq, ← mul_assoc, div_mul_cancel₀, hbc.eq]
 
 protected theorem Commute.one_div_add_one_div (hab : Commute a b) {ha : IsUnit a}
-    {hb : IsUnit b} : Checked.div 1 a + Checked.div 1 b = Checked.div (a + b) (a * b) := by
+    {hb : IsUnit b} : 1 / a + 1 / b = (a + b) / (a * b) := by
   rw [(Commute.one_right a).div_add_div hab, one_mul, mul_one, add_comm]
 
 protected theorem Commute.inv_add_inv (hab : Commute a b) {ha : IsUnit a} {hb : IsUnit b} :
-    a⁻¹ + b⁻¹ = Checked.div (a + b) (a * b) := by
+    a⁻¹ + b⁻¹ = (a + b) / (a * b) := by
   rw [inv_eq_one_div₀ a, inv_eq_one_div₀ b, hab.one_div_add_one_div]
 
 end Semiring
@@ -149,59 +140,54 @@ section DivisionSemiring
 
 variable [DivisionSemiring K] [NeZero (2 : K)]
 
-@[simp] lemma add_self_div_two (a : K) : Checked.div (a + a) 2 = a := by
+@[simp] lemma add_self_div_two (a : K) : (a + a) / 2 = a := by
   rw [← mul_two, mul_div_cancel_right₀]
 
-@[simp] lemma add_halves (a : K) :
-    Checked.div a 2 + Checked.div a 2 = a := by rw [← add_div, add_self_div_two]
+@[simp] lemma add_halves (a : K) : a / 2 + a / 2 = a := by rw [← add_div, add_self_div_two]
 
 end DivisionSemiring
 
 section Ring
 variable [Ring K] {a b c d : K}
 
-@[simp] theorem div_neg_self {ha : IsUnit (-a)} : Checked.div a (-a) = -1 := by
+@[simp] theorem div_neg_self {ha : IsUnit (-a)} : a / -a = -1 := by
   rw [div_neg₀, div_self]
 
-@[simp] theorem neg_div_self {ha : IsUnit a} : Checked.div (-a) a = -1 := by
+@[simp] theorem neg_div_self {ha : IsUnit a} : -a / a = -1 := by
   rw [neg_div₀, div_self]
 
-theorem div_sub_div_same (a b c : K) {hc : IsUnit c} :
-    Checked.div a c - Checked.div b c = Checked.div (a - b) c := by
+theorem div_sub_div_same (a b c : K) {hc : IsUnit c} : a / c - b / c = (a - b) / c := by
   simp only [div_eq_mul_inv₀, sub_mul]
 
-theorem sub_div (a b c : K) {hc : IsUnit c} :
-    Checked.div (a - b) c = Checked.div a c - Checked.div b c :=
+theorem sub_div (a b c : K) {hc : IsUnit c} : (a - b) / c = a / c - b / c :=
   (div_sub_div_same _ _ _).symm
 
-theorem same_sub_div {hb : IsUnit b} : Checked.div (b - a) b = 1 - Checked.div a b := by
+theorem same_sub_div {hb : IsUnit b} : (b - a) / b = 1 - a / b := by
   rw [sub_div, div_self]
 
-theorem one_sub_div {hb : IsUnit b} :
-    1 - Checked.div a b = Checked.div (b - a) b := same_sub_div.symm
+theorem one_sub_div {hb : IsUnit b} : 1 - a / b = (b - a) / b := same_sub_div.symm
 
-theorem div_sub_same {hb : IsUnit b} : Checked.div (a - b) b = Checked.div a b - 1 := by
+theorem div_sub_same {hb : IsUnit b} : (a - b) / b = a / b - 1 := by
   rw [sub_div, div_self]
 
-theorem div_sub_one {hb : IsUnit b} :
-    Checked.div a b - 1 = Checked.div (a - b) b := div_sub_same.symm
+theorem div_sub_one {hb : IsUnit b} : a / b - 1 = (a - b) / b := div_sub_same.symm
 
 /-- See `inv_sub_inv` for the more convenient version when `K` is commutative. -/
 theorem inv_sub_inv' {ha : IsUnit a} {hb : IsUnit b} : a⁻¹ - b⁻¹ = a⁻¹ * (b - a) * b⁻¹ := by
   rw [mul_sub, sub_mul, inv_mul_cancel₀, one_mul, mul_assoc, mul_inv_cancel₀, mul_one]
 
 theorem one_div_mul_sub_mul_one_div_eq_one_div_add_one_div {ha : IsUnit a} {hb : IsUnit b} :
-    Checked.div 1 a * (b - a) * Checked.div 1 b = Checked.div 1 a - Checked.div 1 b := by
+    1 / a * (b - a) * (1 / b) = 1 / a - 1 / b := by
   simp only [one_div₀]
   exact inv_sub_inv'.symm
 
 protected theorem Commute.div_sub_div (hbc : Commute b c) (hbd : Commute b d) {hb : IsUnit b}
-    {hd : IsUnit d} : Checked.div a b - Checked.div c d = Checked.div (a * d - b * c) (b * d) := by
+    {hd : IsUnit d} : a / b - c / d = (a * d - b * c) / (b * d) := by
   refine eq_div_iff_mul_eq.2 ?_
   rw [sub_mul, ← mul_assoc, div_mul_cancel₀, hbd.eq, ← mul_assoc, div_mul_cancel₀, hbc.eq]
 
 protected theorem Commute.inv_sub_inv (hab : Commute a b) {ha : IsUnit a} {hb : IsUnit b} :
-    a⁻¹ - b⁻¹ = Checked.div (b - a) (a * b) := by
+    a⁻¹ - b⁻¹ = (b - a) / (a * b) := by
   simp only [inv_eq_one_div₀, (Commute.one_right a).div_sub_div hab, one_mul, mul_one]
 
 theorem inv_eq_self₀ [NoZeroDivisors K] {ha : IsUnit a} : a⁻¹ = a ↔ a = -1 ∨ a = 1 := by
@@ -216,14 +202,14 @@ section CommSemiring
 variable [CommSemiring K] {a b c d : K}
 
 theorem div_add_div (a : K) (c : K) {hb : IsUnit b} {hd : IsUnit d} :
-    Checked.div a b + Checked.div c d = Checked.div (a * d + b * c) (b * d) :=
+    a / b + c / d = (a * d + b * c) / (b * d) :=
   (Commute.all b _).div_add_div (Commute.all _ _)
 
 theorem one_div_add_one_div {ha : IsUnit a} {hb : IsUnit b} :
-    Checked.div 1 a + Checked.div 1 b = Checked.div (a + b) (a * b) :=
+    1 / a + 1 / b = (a + b) / (a * b) :=
   (Commute.all a _).one_div_add_one_div
 
-theorem inv_add_inv {ha : IsUnit a} {hb : IsUnit b} : a⁻¹ + b⁻¹ = Checked.div (a + b) (a * b) :=
+theorem inv_add_inv {ha : IsUnit a} {hb : IsUnit b} : a⁻¹ + b⁻¹ = (a + b) / (a * b) :=
   (Commute.all a _).inv_add_inv
 
 end CommSemiring
@@ -263,10 +249,10 @@ theorem Units.isSelfInv_iff_eq_neg_one_or_eq_one (u : Kˣ) :
 
 variable [NeZero (2 : K)]
 
-lemma sub_half (a : K) : a - Checked.div a 2 = Checked.div a 2 := by
+lemma sub_half (a : K) : a - a / 2 = a / 2 := by
   rw [sub_eq_iff_eq_add, add_halves]
 
-lemma half_sub (a : K) : Checked.div a 2 - a = -(Checked.div a 2) := by
+lemma half_sub (a : K) : a / 2 - a = -(a / 2) := by
   rw [← neg_sub, sub_half]
 
 end DivisionRing

@@ -174,7 +174,7 @@ theorem MeasureTheory.Measure.IsMulLeftInvariant.quotientMeasureEqMeasurePreimag
   have hμ' : μ' V = μ V := by
     rw [hV, Measure.map_apply meas_V meas_π.aemeasurable,
       Measure.restrict_apply (measurableSet_quotient.mp meas_V)]
-  rw [measure_eq_div_smul μ' μ neZeroV neTopV, hμ', div_self, one_smul]
+  rw [measure_eq_div_smul μ' μ neZeroV neTopV, hμ', ENNReal.div_self neZeroV neTopV, one_smul]
 
 /-- If a measure `μ` is left-invariant and satisfies the right scaling condition, then it
   satisfies `QuotientMeasureEqMeasurePreimage`. -/

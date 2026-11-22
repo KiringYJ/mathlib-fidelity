@@ -12,10 +12,9 @@ import Mathlib.Tactic.Linter.Header
 /-!
 # Elaboration of operator trees with checked division
 
-Ordinary `a / b` checks the operands in their own types. The default is division by a unit in
-a commutative monoid. The documented alternatives are right division in groups and division rings,
-pointwise quotients of subsets of a commutative group, ordered-group interval division, and
-submodule right residuals. The enclosing tree can supply a type for ambiguous numerals.
+Slash admits installed division operations outside the native natural and integer carriers.
+Exact division retains its unit witness. Euclidean quotients use their named operations.
+The enclosing tree can supply a type for ambiguous numerals.
 Other operators retain their ordinary coercion behavior.
 The tree and its coercion analysis follow the official Lean elaborator in `Lean.Elab.Extra`.
 -/
@@ -33,96 +32,60 @@ structure Rules where
   /-- Select a unary operation using the tree's common type and its elaborated operand. -/
   unOp? : Option Expr → Expr → Expr → TermElabM (Option Expr) := fun _ _ _ => pure none
 
-private def preferInferredMonoid (carrier monoid : Expr) : MetaM Expr := do
-  if let .some inferred ← trySynthInstance (← mkAppM `Monoid #[carrier]) then
-    if ← withTransparency .instances <| isDefEqGuarded inferred monoid then
-      return inferred
-  return monoid
+/-- The native quotient carriers cannot be operands of slash, including through type aliases. -/
+private def isNativeDivisionOperand (carrier : Expr) : MetaM Bool := do
+  let carrier ← withTransparency .all <| whnf carrier
+  return carrier.isConstOf ``Nat || carrier.isConstOf ``Int
 
-/-- Select the monoid for division by a proved unit. The classes are defined downstream
-of this foundational elaborator. -/
-private def checkedDivisionMonoid? (carrier : Expr) : MetaM (Option Expr) := do
-  if (← getEnv).contains `CommMonoid then
-    if let .some comm ← trySynthInstance (← mkAppM `CommMonoid #[carrier]) then
-      let monoid ← mkAppOptM `CommMonoid.toMonoid #[some carrier, some comm]
-      return some (← preferInferredMonoid carrier monoid)
-  unless (← getEnv).contains `DivisionRing do return none
-  let .some ring ← trySynthInstance (← mkAppM `DivisionRing #[carrier]) | return none
-  let group ← mkAppOptM `DivisionRing.toGroupWithZero #[some carrier, some ring]
-  let monoidWithZero ← mkAppOptM `GroupWithZero.toMonoidWithZero #[some carrier, some group]
-  let monoid ← mkAppOptM `MonoidWithZero.toMonoid #[some carrier, some monoidWithZero]
-  return some (← preferInferredMonoid carrier monoid)
+/-- A metavariable can still change a carrier whose head is stuck on a reduction.
+The parameters of an inductive carrier such as `Fin ?n` do not change its head. -/
+private def divisionCarrierStuck (carrier : Expr) : MetaM Bool := do
+  let carrier ← withTransparency .all <| whnf carrier
+  unless carrier.hasExprMVar do return false
+  match carrier.getAppFn with
+  | .fvar _ | .forallE .. | .sort _ => return false
+  | .const name _ =>
+    match ← getConstInfo name with
+    | .inductInfo _ | .opaqueInfo _ | .axiomInfo _ | .quotInfo _ => return false
+    | _ => return true
+  | _ => return true
 
-/-- A group supplies its own right division. Its multiplication must agree with the
-monoid already selected for the operands. -/
-private def groupDiv? (carrier : Expr) (monoid? : Option Expr) : MetaM (Option Expr) := do
-  unless (← getEnv).contains `Group do return none
-  let .some group ← trySynthInstance (← mkAppM `Group #[carrier]) | return none
-  let divInvMonoid ← mkAppOptM `Group.toDivInvMonoid #[some carrier, some group]
-  let groupMonoid ← mkAppOptM `DivInvMonoid.toMonoid #[some carrier, some divInvMonoid]
-  let monoid ← match monoid? with
-    | some m => pure m
-    | none => synthInstance (← mkAppM `Monoid #[carrier])
-  unless ← withTransparency .instances <| isDefEqGuarded groupMonoid monoid do return none
-  return some (← mkAppOptM `DivInvMonoid.toDiv #[some carrier, some divInvMonoid])
-
-/-- Quotient sets use the pointwise instance in scope and the division of the underlying
-commutative group. Arbitrary `Div` instances do not select this operation. -/
-private def pointwiseDiv? (carrier : Expr) : MetaM (Option Expr) := do
-  unless (← getEnv).contains `CommGroup do return none
-  unless (← getEnv).contains `Set.div || (← getEnv).contains `Finset.div do return none
-  let shape ←
-    if carrier.isAppOf `Set || carrier.isAppOf `Finset then pure carrier else whnf carrier
-  let (name, element) ← match shape with
-    | .app (.const `Set _) element => pure (`Set.div, element)
-    | .forallE _ element (.sort .zero) _ => pure (`Set.div, element)
-    | .app (.const `Finset _) element => pure (`Finset.div, element)
-    | _ => return none
-  unless (← getEnv).contains name do return none
-  let .some installed ← trySynthInstance (← mkAppM ``Div #[carrier]) | return none
-  let .some commGroup ← trySynthInstance (← mkAppM `CommGroup #[element]) | return none
-  let pointwise ← if name == `Set.div then
-      mkAppOptM name #[some element, some commGroup]
-    else
-      let .some decEq ← trySynthInstance (← mkAppM ``DecidableEq #[element]) | return none
-      mkAppOptM name #[some element, some decEq, some commGroup]
-  unless ← withTransparency .instances <| isDefEqGuarded installed pointwise do return none
-  return some pointwise
-
-private partial def canonicalDivisionInstance? (names : Array Name) (inst : Expr) :
-    MetaM (Option Expr) := withIncRecDepth do
-  if names.any inst.getAppFn.isConstOf then return some inst
-  let next ← if inst.isFVar then pure (← inst.fvarId!.getDecl).value?
-    else unfoldDefinition? inst
-  let some next := next | return none
-  canonicalDivisionInstance? names next
-
-/-- Only the canonical interval endpoint and submodule residual instances, including their
-definitionally equal aliases, select these operations. -/
-private def intervalOrSubmoduleDiv? (carrier : Expr) : MetaM (Option Expr) := do
+/-- These carriers use the exact quotient with an invertibility witness, also for pointwise
+functions. On a Euclidean domain this keeps the Euclidean quotient at its named operation. -/
+private partial def usesCheckedExactDivision (carrier : Expr) : MetaM Bool := do
   let env ← getEnv
-  unless env.contains `instDivNonemptyInterval || env.contains `Submodule.instDiv do return none
-  let intervalType (type : Expr) :=
-    type.isAppOf `NonemptyInterval || type.isAppOf `Interval ||
-      ((type.isAppOf `WithBot || type.isAppOf `Option) &&
-        type.getAppArgs.any (·.isAppOf `NonemptyInterval))
-  let shape ← if intervalType carrier || carrier.isAppOf `Submodule then pure carrier
-    else withReducible <| whnf carrier
-  let allowed := if intervalType shape then #[`instDivNonemptyInterval, `instDivInterval]
-    else if shape.isAppOf `Submodule then #[`Submodule.instDiv] else #[]
-  if allowed.isEmpty then return none
-  let .some inst ← trySynthInstance (← mkAppM ``Div #[carrier]) | return none
-  canonicalDivisionInstance? allowed inst
+  for className in #[`GroupWithZero, `EuclideanDomain] do
+    if env.contains className then
+      if let .some _ ← trySynthInstance (← mkAppM className #[carrier]) then
+        return true
+  let reduced ← whnf carrier
+  if reduced.isConstOf ``Rat then return true
+  match reduced with
+  | .forallE name domain body bi =>
+    withLocalDecl name bi domain fun x => usesCheckedExactDivision (body.instantiate1 x)
+  | _ => return false
 
-private def inheritedDivision? (carrier : Expr) (monoid? : Option Expr) : MetaM (Option Expr) := do
-  let div? ← match ← groupDiv? carrier monoid? with
-    | some div => pure (some div)
-    | none =>
-      match ← pointwiseDiv? carrier with
-      | some div => pure (some div)
-      | none => intervalOrSubmoduleDiv? carrier
-  let some div := div? | return none
-  return some (← mkAppOptM ``instHDiv #[some carrier, some div])
+private def checkedDivisionOp? (carrier : Expr) : MetaM (Option Expr) := do
+  unless (← getEnv).contains `Checked.div do return none
+  let .some monoid ← trySynthInstance (← mkAppM `Monoid #[carrier]) | return none
+  return some (← mkAppOptM `Checked.div #[some carrier, some monoid])
+
+private def ambientDivisionOp? (lhsType rhsType : Expr) : MetaM (Option Expr) := do
+  let resultLevel ← mkFreshLevelMVar
+  let levels := [← getDecLevel lhsType, ← getDecLevel rhsType, resultLevel]
+  let resultType ← mkFreshExprMVar (mkSort (.succ resultLevel))
+  let type := mkApp3 (mkConst ``HDiv levels) lhsType rhsType resultType
+  let .some division ← trySynthInstance type | return none
+  return some (mkApp4 (mkConst ``HDiv.hDiv levels) lhsType rhsType resultType division)
+
+/-- Select a division on resolved operand types. Checked domains take precedence over ordinary
+instance search. Otherwise a monoid can divide by a proved unit when it has no ambient division. -/
+private def divisionOp? (lhsType rhsType : Expr) : MetaM (Option Expr) := do
+  let homogeneous ← withNewMCtxDepth <| isDefEqGuarded lhsType rhsType
+  if homogeneous && (← usesCheckedExactDivision lhsType) then
+    return ← checkedDivisionOp? lhsType
+  if let some op ← ambientDivisionOp? lhsType rhsType then return some op
+  if homogeneous then checkedDivisionOp? lhsType else pure none
 
 open Lean.PrettyPrinter.Delaborator SubExpr
 
@@ -136,8 +99,8 @@ private def withDivisionInstances {α : Type} (k : DelabM α) : DelabM α :=
 `Core.Context.maxHeartbeats` uses the unscaled allocation count. -/
 private def divisionPrintHeartbeatLimit : Nat := 2_000_000
 
-/-- Check that ordinary division can reconstruct the omitted unit witness. -/
-private def divisionProofAvailable (carrier monoid lhs rhs : Expr) : MetaM Bool := do
+/-- Check that slash can reconstruct the omitted proof of the denominator's domain. -/
+private def divisionProofAvailable (op lhs rhs : Expr) : MetaM Bool := do
   let ctx ← readThe Core.Context
   let spent := (← IO.getNumHeartbeats) - ctx.initHeartbeats
   let limit := spent + divisionPrintHeartbeatLimit
@@ -148,72 +111,98 @@ private def divisionProofAvailable (carrier monoid lhs rhs : Expr) : MetaM Bool 
       withOptions (fun opts => pp.notation.set opts false) do
     try
       TermElabM.run' <| withoutErrToSorry do
-        let op ← mkAppOptM `Checked.div #[some carrier, some monoid]
         let app ← elabAppArgs op #[] #[Arg.expr lhs, Arg.expr rhs] none
           (explicit := false) (ellipsis := false) (resultIsOutParamSupport := false)
         synthesizeSyntheticMVarsNoPostponing
-        let some proof := (← instantiateMVars app).getAppArgs[4]? | return false
+        let some proof := (← instantiateMVars app).getAppArgs.back? | return false
         return !proof.hasMVar && !proof.hasSorry
     catch ex =>
       if ex.isInterrupt then throw ex
       return false
 
-/-- Display checked division when slash selects the same operation and reconstructs its witness. -/
+/-- Display checked exact division when slash reconstructs the same operation and domain. -/
 @[delab app.Checked.div] def delabDiv : Delab :=
   whenNotPPOption getPPExplicit <| whenPPOption getPPNotation <| withOverApp 5 do
   let #[carrier, monoid, lhs, rhs, _] := (← getExpr).getAppArgs | failure
   guard (← withDivisionInstances do
-    let some selected ← checkedDivisionMonoid? carrier | return false
-    if (← inheritedDivision? carrier (some selected)).isSome then return false
-    unless ← withTransparency .instances <| isDefEqGuarded monoid selected do return false
-    divisionProofAvailable carrier selected lhs rhs)
+    if ← isNativeDivisionOperand carrier then return false
+    let some selected ← divisionOp? carrier carrier | return false
+    unless selected.getAppFn.isConstOf `Checked.div do return false
+    unless ← withTransparency .instances <| isDefEqGuarded monoid selected.getAppArgs[1]! do
+      return false
+    divisionProofAvailable selected lhs rhs)
   `($(← withNaryArg 2 delab) / $(← withNaryArg 3 delab))
 
-/-- Display the selected inherited quotient with slash. -/
+/-- Display an ambient quotient with slash when instance inference selects it. -/
 @[app_delab HDiv.hDiv] def delabHDiv : Delab :=
   (whenNotPPOption getPPExplicit <| whenPPOption getPPNotation <| withOverApp 6 do
-    let #[carrier, _, _, inst, _, _] := (← getExpr).getAppArgs | failure
+    let #[lhsType, rhsType, _, inst, _, _] := (← getExpr).getAppArgs | failure
     guard (← withDivisionInstances do
-      let monoid? ← checkedDivisionMonoid? carrier
-      let some selected ← inheritedDivision? carrier monoid? | return false
-      withTransparency .instances <| isDefEqGuarded inst selected)
+      if (← isNativeDivisionOperand lhsType) || (← isNativeDivisionOperand rhsType) then
+        return false
+      let some selected ← divisionOp? lhsType rhsType | return false
+      unless selected.getAppFn.isConstOf ``HDiv.hDiv do return false
+      withTransparency .instances <| isDefEqGuarded inst selected.getAppArgs[3]!)
     `($(← withNaryArg 4 delab) / $(← withNaryArg 5 delab)))
   <|> (withOptionAtCurrPos `pp.notation false <| withOptionAtCurrPos `pp.fieldNotation false delabApp)
 
 /-- Internal elaboration target for a slash at a boundary of a coercion tree. -/
 syntax (name := checkedDiv) "checked_div% " term:max term:max : term
 
-/-- Elaborate both operands of a slash independently. A known operand fixes an ambiguous one.
-When both are ambiguous, the surrounding term can first supply the result type. -/
+private def rejectNativeDivision (lhsType rhsType : Expr) : TermElabM Unit := do
+  if (← isNativeDivisionOperand lhsType) || (← isNativeDivisionOperand rhsType) then
+    throwError "division notation is unavailable for Nat or Int operands"
+
+private def applyDivisionOp (op lhs rhs : Expr) : TermElabM Expr :=
+  elabAppArgs op #[] #[Arg.expr lhs, Arg.expr rhs] none
+    (explicit := false) (ellipsis := false) (resultIsOutParamSupport := false)
+
+/-- Elaborate slash on the original operand types first. When they have no division together,
+try the ordinary coercions to a common nonnative carrier. -/
 @[term_elab checkedDiv]
 def elabCheckedDiv : TermElab := fun stx expectedType? => withSynthesizeLight do
   let lhs ← elabTerm stx[1] none
   let rhs ← elabTerm stx[2] none
   let lhsType ← inferType lhs
   let rhsType ← inferType rhs
-  unless ← isDefEqGuarded lhsType rhsType do
-    throwError "division requires operands of the same type, found {lhsType} and {rhsType}"
-  if ← isMVarApp lhsType then
+  rejectNativeDivision lhsType rhsType
+  let expectedType? ← expectedType?.mapM instantiateMVars
+  let lhsUnknown ← isMVarApp lhsType
+  let rhsUnknown ← isMVarApp rhsType
+  if lhsUnknown && rhsUnknown then
+    discard <| isDefEqGuarded lhsType rhsType
     if let some expectedType := expectedType? then
       unless ← isMVarApp expectedType do
         discard <| isDefEqGuarded lhsType expectedType
-    if ← isMVarApp lhsType then
-      tryPostpone
-      synthesizeSyntheticMVarsUsingDefault
-  let carrier ← instantiateMVars lhsType
-  if ← isMVarApp carrier then throwError "cannot infer the type for division"
-  let monoid? ← checkedDivisionMonoid? carrier
-  let op ← match ← inheritedDivision? carrier monoid? with
-    | some inst => mkAppOptM ``HDiv.hDiv #[some carrier, some carrier, some carrier, some inst]
-    | none => do
-      let some monoid := monoid? |
-        if carrier.hasExprMVar then tryPostpone
-        throwError "division notation has no documented operation on {carrier}"
-      unless (← getEnv).contains `Checked.div do
-        throwError "division requires importing Mathlib.Algebra.GroupWithZero.Checked"
-      mkAppOptM `Checked.div #[some carrier, some monoid]
-  elabAppArgs op #[] #[Arg.expr lhs, Arg.expr rhs] none (explicit := false) (ellipsis := false)
-    (resultIsOutParamSupport := false)
+    if ← isMVarApp lhsType then tryPostpone
+  else if (lhsUnknown && lhs.isFVar) || (rhsUnknown && rhs.isFVar) then
+    tryPostpone
+  if (← isMVarApp lhsType) || (← isMVarApp rhsType) then
+    discard <| isDefEqGuarded lhsType rhsType
+  if (← isMVarApp lhsType) || (← isMVarApp rhsType) then
+    synthesizeSyntheticMVarsUsingDefault
+  let lhsType ← instantiateMVars lhsType
+  let rhsType ← instantiateMVars rhsType
+  rejectNativeDivision lhsType rhsType
+  if (← divisionCarrierStuck lhsType) || (← divisionCarrierStuck rhsType) then
+    tryPostpone
+    throwError "cannot infer the operand types for division"
+  if let some op ← divisionOp? lhsType rhsType then
+    rejectNativeDivision lhsType rhsType
+    return ← applyDivisionOp op lhs rhs
+  if lhsType.hasExprMVar || rhsType.hasExprMVar then tryPostpone
+  let candidates := expectedType?.toArray ++ #[lhsType, rhsType]
+  for carrier in candidates do
+    if (← divisionCarrierStuck carrier) || (← isNativeDivisionOperand carrier) then continue
+    if let some (op, lhs, rhs) ← observing? <| withoutErrToSorry do
+      let lhs ← ensureHasType (some carrier) lhs
+      let rhs ← ensureHasType (some carrier) rhs
+      let some op ← divisionOp? carrier carrier | throwUnsupportedSyntax
+      pure (op, lhs, rhs)
+    then
+      rejectNativeDivision (← inferType lhs) (← inferType rhs)
+      return ← applyDivisionOp op lhs rhs
+  throwError "division notation has no operation for {lhsType} and {rhsType}"
 
 private inductive BinOpKind where
   | regular   -- `binop%`

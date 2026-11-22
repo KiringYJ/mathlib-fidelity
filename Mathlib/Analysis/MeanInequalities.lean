@@ -590,7 +590,7 @@ namespace ENNReal
 
 /-- **Young's inequality**, `ℝ≥0∞` version with real conjugate exponents. -/
 theorem young_inequality (a b : ℝ≥0∞) {p q : ℝ} (hpq : p.HolderConjugate q) :
-    a * b ≤ ENNReal.div (a ^ p) (.ofReal p) + ENNReal.div (b ^ q) (.ofReal q) := by
+    a * b ≤ ((a ^ p) / (.ofReal p)) + ((b ^ q) / (.ofReal q)) := by
   by_cases! h : a = ⊤ ∨ b = ⊤
   · refine le_trans le_top (le_of_eq ?_)
     repeat rw [ENNReal.div_eq_mul_inv]
@@ -604,7 +604,7 @@ theorem young_inequality (a b : ℝ≥0∞) {p q : ℝ} (hpq : p.HolderConjugate
 
 /-- **Young's inequality** equality condition, `ℝ≥0∞` version with real conjugate exponents. -/
 theorem young_inequality_eq_iff (a b : ℝ≥0∞) {p q : ℝ} (hpq : p.HolderConjugate q) :
-    a * b = ENNReal.div (a ^ p) (.ofReal p) + ENNReal.div (b ^ q) (.ofReal q) ↔
+    a * b = ((a ^ p) / (.ofReal p)) + ((b ^ q) / (.ofReal q)) ↔
       (a = ⊤ ∧ b ≠ 0) ∨ (a ≠ 0 ∧ b = ⊤) ∨ a ^ p = b ^ q := by
   by_cases! h0 : a = 0 ∨ b = 0
   · rcases h0 with rfl | rfl <;> simp [hpq.pos, hpq.symm.pos, eq_comm]

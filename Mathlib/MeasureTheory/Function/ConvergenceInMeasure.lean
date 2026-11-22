@@ -448,7 +448,7 @@ theorem tendstoInMeasure_of_tendsto_eLpNorm_top {E} [SeminormedAddCommGroup E] {
   simp only [eLpNorm_exponent_top, eLpNormEssSup] at hfg
   rw [ENNReal.tendsto_nhds_zero] at hfg ⊢
   intro ε hε
-  specialize hfg (ENNReal.div δ 2) (ENNReal.div_pos_iff.2 ⟨hδ.ne', ENNReal.ofNat_ne_top⟩)
+  specialize hfg (δ / 2) (ENNReal.div_pos_iff.2 ⟨hδ.ne', ENNReal.ofNat_ne_top⟩)
   refine hfg.mono fun n hn => ?_
   simp only [Pi.sub_apply] at *
   have : essSup (fun x : α => ‖f n x - g x‖ₑ) μ < δ :=

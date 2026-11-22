@@ -584,18 +584,14 @@ section EDistLeGeometricTwo
 theorem ENNReal.isUnit_two_pow (n : ℕ) : IsUnit ((2 : ℝ≥0∞) ^ n) :=
   (ENNReal.isUnit_iff.2 ⟨two_ne_zero, ENNReal.ofNat_ne_top⟩ : IsUnit (2 : ℝ≥0∞)).pow n
 
-private theorem ennreal_checkedDiv_eq_mul_inv (a b : ℝ≥0∞) (hb : IsUnit b) :
-    Checked.div a b hb = a * b⁻¹ := by
-  exact congrArg (a * ·) (ENNReal.eq_inv_of_mul_eq_one_left hb.val_inv_mul)
-
 variable [PseudoEMetricSpace α] (C : ℝ≥0∞) (hC : C ≠ ⊤) {f : ℕ → α}
-  (hu : ∀ n, edist (f n) (f (n + 1)) ≤ Checked.div C (2 ^ n) (ENNReal.isUnit_two_pow n))
+  (hu : ∀ n, edist (f n) (f (n + 1)) ≤ C / 2 ^ n)
   {a : α} (ha : Tendsto f atTop (𝓝 a))
 
 include hC hu in
 /-- If `edist (f n) (f (n+1))` is bounded by `C * 2^-n`, then `f` is a Cauchy sequence. -/
 theorem cauchySeq_of_edist_le_geometric_two : CauchySeq f := by
-  simp only [ennreal_checkedDiv_eq_mul_inv, ENNReal.inv_pow] at hu
+  simp only [ENNReal.div_eq_mul_inv, ENNReal.inv_pow] at hu
   refine cauchySeq_of_edist_le_geometric 2⁻¹ C ?_ hC hu
   simp
 
@@ -603,20 +599,20 @@ include hu ha in
 /-- If `edist (f n) (f (n+1))` is bounded by `C * 2^-n`, then the distance from
 `f n` to the limit of `f` is bounded above by `2 * C * 2^-n`. -/
 theorem edist_le_of_edist_le_geometric_two_of_tendsto (n : ℕ) :
-    edist (f n) a ≤ Checked.div (2 * C) (2 ^ n) (ENNReal.isUnit_two_pow n) := by
-  simp only [ennreal_checkedDiv_eq_mul_inv, ENNReal.inv_pow] at hu
+    edist (f n) a ≤ 2 * C / 2 ^ n := by
+  simp only [ENNReal.div_eq_mul_inv, ENNReal.inv_pow] at hu
   calc
     _ ≤ C * (2⁻¹ : ℝ≥0∞) ^ n * ∑' m : ℕ, (2⁻¹ : ℝ≥0∞) ^ m :=
       edist_le_of_edist_le_geometric_of_tendsto 2⁻¹ C hu ha n
     _ = _ := by
-      rw [ENNReal.tsum_geometric_two, ennreal_checkedDiv_eq_mul_inv, ENNReal.inv_pow]
+      rw [ENNReal.tsum_geometric_two, ENNReal.div_eq_mul_inv, ENNReal.inv_pow]
       ac_rfl
 
 include hu ha in
 /-- If `edist (f n) (f (n+1))` is bounded by `C * 2^-n`, then the distance from
 `f 0` to the limit of `f` is bounded above by `2 * C`. -/
 theorem edist_le_of_edist_le_geometric_two_of_tendsto₀ : edist (f 0) a ≤ 2 * C := by
-  simpa only [_root_.pow_zero, ennreal_checkedDiv_eq_mul_inv, inv_one, mul_one] using
+  simpa only [_root_.pow_zero, ENNReal.div_eq_mul_inv, inv_one, mul_one] using
     edist_le_of_edist_le_geometric_two_of_tendsto C hu ha 0
 
 end EDistLeGeometricTwo

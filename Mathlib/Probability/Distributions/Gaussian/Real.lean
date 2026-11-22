@@ -413,7 +413,7 @@ private lemma isUnit_nnreal_sq (c : ℝ) (hc : IsUnit c) : IsUnit (⟨c ^ 2, sq_
 
 /-- Scaling a Gaussian distribution by the reciprocal of a nonzero constant is Gaussian. -/
 lemma gaussianReal_map_div_const (c : ℝ) {hc : IsUnit c} :
-    (gaussianReal μ v).map (· / c) =
+    (gaussianReal μ v).map (fun x : ℝ ↦ x / c) =
       gaussianReal (μ / c)
         (Checked.div v ⟨c ^ 2, sq_nonneg _⟩ (by exact isUnit_nnreal_sq c hc)) := by
   have hinv : (⟨c⁻¹ ^ 2, sq_nonneg _⟩ : ℝ≥0) =

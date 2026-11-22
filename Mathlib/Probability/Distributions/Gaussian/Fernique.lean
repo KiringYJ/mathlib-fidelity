@@ -193,7 +193,7 @@ variable [CompleteSpace E] [SecondCountableTopology E]
 /-- A Gaussian measure has moments of all orders.
 That is, the identity is in L^p for all finite `p`. -/
 lemma memLp_id (μ : Measure E) [IsGaussian μ] (p : ℝ≥0∞) (hp : p ≠ ∞) : MemLp id p μ := by
-  suffices MemLp (fun x ↦ ‖x‖ ^ 2) (ENNReal.div p 2) μ by
+  suffices MemLp (fun x ↦ ‖x‖ ^ 2) (p / 2) μ by
     rw [← memLp_norm_rpow_iff (q := 2) (by fun_prop) (by simp) (by simp)]
     simpa using this
   lift p to ℝ≥0 using hp

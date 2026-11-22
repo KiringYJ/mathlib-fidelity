@@ -128,6 +128,10 @@ lemma sub_def (a b : G × H) : a - b = (a.1 - b.1, a.2 - b.2) := rfl
 
 end Sub
 
+@[to_additive existing]
+instance instDiv [Div G] [Div H] : Div (G × H) where
+  div a b := (a.1 / b.1, a.2 / b.2)
+
 section Pow
 
 variable {E α β : Type*} [Pow α E] [Pow β E]

@@ -1352,7 +1352,7 @@ theorem norm_toLp {f : 𝓢(E, F)} {p : ℝ≥0∞} {μ : Measure E} [hμ : μ.H
 
 theorem norm_toLp' {f : 𝓢(E, F)} {p : ℝ≥0∞} {μ : Measure E} (hp₁ : p ≠ 0) (hp₂ : p ≠ ⊤)
     [hμ : μ.HasTemperateGrowth] :
-    ‖f.toLp p μ‖ = (∫ x, ‖f x‖ ^ p.toReal ∂μ) ^ (ENNReal.div 1 p).toReal := by
+    ‖f.toLp p μ‖ = (∫ x, ‖f x‖ ^ p.toReal ∂μ) ^ (1 / p).toReal := by
   rw [norm_toLp, MeasureTheory.MemLp.eLpNorm_eq_integral_rpow_norm hp₁ hp₂ (f.memLp p μ),
     ENNReal.toReal_ofReal (by positivity)]
 

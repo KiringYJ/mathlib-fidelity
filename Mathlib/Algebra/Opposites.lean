@@ -282,6 +282,12 @@ instance instMul [Mul α] : Mul αᵃᵒᵖ where mul a b := op (unop a * unop b
 
 @[simp] lemma unop_mul [Mul α] (a b : αᵃᵒᵖ) : unop (a * b) = unop a * unop b := rfl
 
+instance instDiv [Div α] : Div αᵃᵒᵖ where div a b := op (unop a / unop b)
+
+@[simp] lemma op_div [Div α] (a b : α) : op (a / b) = op a / op b := rfl
+
+@[simp] lemma unop_div [Div α] (a b : αᵃᵒᵖ) : unop (a / b) = unop a / unop b := rfl
+
 instance instInv [Inv α] : Inv αᵃᵒᵖ where inv a := op (unop a)⁻¹
 
 instance instInvolutiveInv [InvolutiveInv α] : InvolutiveInv αᵃᵒᵖ where

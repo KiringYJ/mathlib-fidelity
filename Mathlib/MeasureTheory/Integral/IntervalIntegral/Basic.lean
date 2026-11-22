@@ -960,7 +960,7 @@ theorem integral_comp_div {hc : IsUnit c} :
     (∫ x in a..b, f (x / c)) = c • ∫ x in a / c..b / c, f x := by
   simpa only [div_eq_mul_inv₀, inv_inv₀] using integral_comp_mul_right f (hc := hc.inv₀.ne_zero)
 
-theorem inv_smul_integral_comp_div (c) {hc : IsUnit c} :
+theorem inv_smul_integral_comp_div (c : ℝ) {hc : IsUnit c} :
     (c⁻¹ • ∫ x in a..b, f (x / c)) = ∫ x in a / c..b / c, f x := by
   rw [integral_comp_div f (hc := hc), smul_smul, inv_mul_cancel₀, one_smul]
 
@@ -1008,7 +1008,7 @@ theorem integral_comp_div_add {hc : IsUnit c} (d) :
     (∫ x in a..b, f (x / c + d)) = c • ∫ x in a / c + d..b / c + d, f x := by
   simpa only [div_eq_inv_mul₀, inv_inv₀] using integral_comp_mul_add f (hc := hc.inv₀.ne_zero) d
 
-theorem inv_smul_integral_comp_div_add (c d) {hc : IsUnit c} :
+theorem inv_smul_integral_comp_div_add (c d : ℝ) {hc : IsUnit c} :
     (c⁻¹ • ∫ x in a..b, f (x / c + d)) = ∫ x in a / c + d..b / c + d, f x := by
   rw [integral_comp_div_add f (hc := hc), smul_smul, inv_mul_cancel₀, one_smul]
 
@@ -1017,7 +1017,7 @@ theorem integral_comp_add_div {hc : IsUnit c} (d) :
     (∫ x in a..b, f (d + x / c)) = c • ∫ x in d + a / c..d + b / c, f x := by
   simpa only [div_eq_inv_mul₀, inv_inv₀] using integral_comp_add_mul f (hc := hc.inv₀.ne_zero) d
 
-theorem inv_smul_integral_comp_add_div (c d) {hc : IsUnit c} :
+theorem inv_smul_integral_comp_add_div (c d : ℝ) {hc : IsUnit c} :
     (c⁻¹ • ∫ x in a..b, f (d + x / c)) = ∫ x in d + a / c..d + b / c, f x := by
   rw [integral_comp_add_div f (hc := hc), smul_smul, inv_mul_cancel₀, one_smul]
 
@@ -1050,7 +1050,7 @@ theorem integral_comp_div_sub {hc : IsUnit c} (d) :
     (∫ x in a..b, f (x / c - d)) = c • ∫ x in a / c - d..b / c - d, f x := by
   simpa only [div_eq_inv_mul₀, inv_inv₀] using integral_comp_mul_sub f (hc := hc.inv₀.ne_zero) d
 
-theorem inv_smul_integral_comp_div_sub (c d) {hc : IsUnit c} :
+theorem inv_smul_integral_comp_div_sub (c d : ℝ) {hc : IsUnit c} :
     (c⁻¹ • ∫ x in a..b, f (x / c - d)) = ∫ x in a / c - d..b / c - d, f x := by
   rw [integral_comp_div_sub f (hc := hc), smul_smul, inv_mul_cancel₀, one_smul]
 
@@ -1059,7 +1059,7 @@ theorem integral_comp_sub_div {hc : IsUnit c} (d) :
     (∫ x in a..b, f (d - x / c)) = c • ∫ x in d - b / c..d - a / c, f x := by
   simpa only [div_eq_inv_mul₀, inv_inv₀] using integral_comp_sub_mul f (hc := hc.inv₀.ne_zero) d
 
-theorem inv_smul_integral_comp_sub_div (c d) {hc : IsUnit c} :
+theorem inv_smul_integral_comp_sub_div (c d : ℝ) {hc : IsUnit c} :
     (c⁻¹ • ∫ x in a..b, f (d - x / c)) = ∫ x in d - b / c..d - a / c, f x := by
   rw [integral_comp_sub_div f (hc := hc), smul_smul, inv_mul_cancel₀, one_smul]
 

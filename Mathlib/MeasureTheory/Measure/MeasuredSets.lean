@@ -102,8 +102,8 @@ lemma exists_measure_symmDiff_lt_of_generateFrom_isSetRing [IsFiniteMeasure μ]
     enough approximation to `univ`. As `t' \ t` belongs to `C` when `t` and `t'` do, this
     concludes this step. -/
     intro s hs h's ε εpos
-    obtain ⟨t, tC, ht⟩ : ∃ t ∈ C, μ (t ∆ s) < ENNReal.div ε 2 := h's _ (ENNReal.half_pos εpos.ne')
-    obtain ⟨t', t'C, ht'⟩ : ∃ t' ∈ C, μ (t'ᶜ) < ENNReal.div ε 2 := by
+    obtain ⟨t, tC, ht⟩ : ∃ t ∈ C, μ (t ∆ s) < (ε / 2) := h's _ (ENNReal.half_pos εpos.ne')
+    obtain ⟨t', t'C, ht'⟩ : ∃ t' ∈ C, μ (t'ᶜ) < (ε / 2) := by
       obtain ⟨D, D_count, DC, hD, Dne⟩ :
           ∃ D : Set (Set α), D.Countable ∧ D ⊆ C ∧ μ (⋃₀ D)ᶜ = 0 ∧ D.Nonempty := by
         rcases h'C with ⟨D, D_count, DC, hD⟩
@@ -121,14 +121,14 @@ lemma exists_measure_symmDiff_lt_of_generateFrom_isSetRing [IsFiniteMeasure μ]
         apply MeasurableSet.nullMeasurableSet
         rw [h]
         exact (SigmaAlgebra.mem_generateFrom (fC i)).compl
-      obtain ⟨n, hn⟩ : ∃ n, μ (accumulate f n)ᶜ < ENNReal.div ε 2 :=
+      obtain ⟨n, hn⟩ : ∃ n, μ (accumulate f n)ᶜ < (ε / 2) :=
         ((tendsto_order.1 this).2 _ (ENNReal.half_pos εpos.ne')).exists
       exact ⟨accumulate f n, fC n, hn⟩
     refine ⟨t' \ t, hC.sdiff_mem t'C tC, ?_⟩
     calc μ ((t' \ t) ∆ sᶜ)
       _ ≤ μ (t ∆ s ∪ t'ᶜ) := by gcongr; grind
       _ ≤ μ (t ∆ s) + μ (t'ᶜ) := measure_union_le _ _
-      _ < ENNReal.div ε 2 + ENNReal.div ε 2 := by gcongr
+      _ < (ε / 2) + (ε / 2) := by gcongr
       _ = ε := ENNReal.add_halves ε
   · /- To check the stability under disjoint union, approximate `f n` by a set `t n ∈ C`. Then
     `⋃ i, f i` is well approximated by `U i < n, f i` for large enough `n`, which is itself
@@ -140,7 +140,7 @@ lemma exists_measure_symmDiff_lt_of_generateFrom_isSetRing [IsFiniteMeasure μ]
     have : Tendsto (fun n ↦ μ (⋃ i ∈ Ici n, f i)) atTop (𝓝 0) :=
       tendsto_measure_biUnion_Ici_zero_of_pairwise_disjoint
         (fun i ↦ MeasurableSet.nullMeasurableSet (f_meas i)) f_disj
-    obtain ⟨n, hn⟩ : ∃ n, μ (⋃ i ∈ Ici n, f i) < ENNReal.div ε 2 :=
+    obtain ⟨n, hn⟩ : ∃ n, μ (⋃ i ∈ Ici n, f i) < (ε / 2) :=
       ((tendsto_order.1 this).2 _ (ENNReal.half_pos εpos.ne')).exists
     refine ⟨⋃ i ∈ Finset.range n, t i, hC.biUnion_mem _ (fun i hi ↦ tC _), ?_⟩
     calc μ ((⋃ i ∈ Finset.range n, t i) ∆ (⋃ i, f i))
@@ -158,7 +158,7 @@ lemma exists_measure_symmDiff_lt_of_generateFrom_isSetRing [IsFiniteMeasure μ]
       gcongr with i; exact (ht i).le
     _ ≤ ∑' i, δ i + μ (⋃ i ∈ Ici n, f i) := by
       gcongr; exact ENNReal.sum_le_tsum (Finset.range n)
-    _ < ENNReal.div ε 2 + ENNReal.div ε 2 := by gcongr
+    _ < (ε / 2) + (ε / 2) := by gcongr
     _ = ε := ENNReal.add_halves ε
 
 /-- Given a semiring of sets `C` covering the space modulo `0` and generating the measurable space

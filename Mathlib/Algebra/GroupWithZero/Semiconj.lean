@@ -62,9 +62,9 @@ theorem inv_right_iff₀ {hx : IsUnit x} {hy : IsUnit y} :
   mpr h := h.inv_right₀
 
 /-- If `a` semiconjugates `x` to `y` and an invertible `x'` to an invertible `y'`, then it
-semiconjugates `Checked.div x x'` to `Checked.div y y'`. -/
+semiconjugates `(x / x')` to `(y / y')`. -/
 theorem div_right {hx' : IsUnit x'} {hy' : IsUnit y'} (h : SemiconjBy a x y)
-    (h' : SemiconjBy a x' y') : SemiconjBy a (Checked.div x x') (Checked.div y y') := by
+    (h' : SemiconjBy a x' y') : SemiconjBy a (x / x') (y / y') := by
   rw [div_eq_mul_inv₀, div_eq_mul_inv₀]
   exact h.mul_right h'.inv_right₀
 

@@ -401,8 +401,11 @@ instance Additive.subNegMonoid [h : DivInvMonoid α] : SubNegMonoid (Additive α
   zsmul_succ' := h.zpow_succ'
   zsmul_neg' := h.zpow_neg'
 
-instance Multiplicative.divInvMonoid [h : SubNegMonoid α] : DivInvMonoid (Multiplicative α) where
+instance Multiplicative.div [Sub α] : Div (Multiplicative α) where
   div x y := ofAdd (x.toAdd - y.toAdd)
+
+instance Multiplicative.divInvMonoid [h : SubNegMonoid α] : DivInvMonoid (Multiplicative α) where
+  toDiv := Multiplicative.div
   div_eq_mul_inv := h.sub_eq_add_neg
   zpow n a := ofAdd (n • a.toAdd)
   zpow_zero' := h.zsmul_zero'
@@ -450,10 +453,10 @@ instance Multiplicative.group [AddGroup α] : Group (Multiplicative α) :=
   { Multiplicative.divInvMonoid with inv_mul_cancel := @neg_add_cancel α _ }
 
 @[simp]
-theorem ofAdd_sub [AddGroup α] (x y : α) : ofAdd (x - y) = ofAdd x / ofAdd y := rfl
+theorem ofAdd_sub [Sub α] (x y : α) : ofAdd (x - y) = ofAdd x / ofAdd y := rfl
 
 @[simp]
-theorem toAdd_div [AddGroup α] (x y : Multiplicative α) : (x / y).toAdd = x.toAdd - y.toAdd := rfl
+theorem toAdd_div [Sub α] (x y : Multiplicative α) : (x / y).toAdd = x.toAdd - y.toAdd := rfl
 
 @[simp]
 theorem ofMul_div [Group α] (x y : α) : ofMul (x / y) = ofMul x - ofMul y :=

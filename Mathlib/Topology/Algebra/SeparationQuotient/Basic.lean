@@ -180,7 +180,7 @@ theorem mk_sub [Sub G] [ContinuousSub G] (x y : G) : mk (x - y) = mk x - mk y :=
 instance instContinuousSub [Sub G] [ContinuousSub G] : ContinuousSub (SeparationQuotient G) where
   continuous_sub := isQuotientMap_prodMap_mk.continuous_iff.2 <| continuous_mk.comp continuous_sub
 
-instance instDiv [Group G] [ContinuousDiv G] : Div (SeparationQuotient G) where
+instance instDiv [Div G] [ContinuousDiv G] : Div (SeparationQuotient G) where
   div := Quotient.map₂ (· / ·) fun _ _ h₁ _ _ h₂ ↦ (Inseparable.prod h₁ h₂).map continuous_div'
 
 instance instZSMul [AddGroup G] [IsTopologicalAddGroup G] : SMul ℤ (SeparationQuotient G) :=
@@ -201,9 +201,9 @@ instance instGroup [Group G] [IsTopologicalGroup G] : Group (SeparationQuotient 
   fast_instance% surjective_mk.group mk mk_one mk_mul mk_inv (fun _ _ => rfl) mk_pow mk_zpow
 
 @[simp]
-theorem mk_div [Group G] [IsTopologicalGroup G] (x y : G) : mk (x / y) = mk x / mk y := rfl
+theorem mk_div [Div G] [ContinuousDiv G] (x y : G) : mk (x / y) = mk x / mk y := rfl
 
-instance instContinuousDiv [Group G] [IsTopologicalGroup G] :
+instance instContinuousDiv [Div G] [ContinuousDiv G] :
     ContinuousDiv (SeparationQuotient G) where
   continuous_div' := isQuotientMap_prodMap_mk.continuous_iff.2 <| continuous_mk.comp continuous_div'
 

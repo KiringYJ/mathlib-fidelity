@@ -462,12 +462,12 @@ theorem div₀ [GroupWithZero β] [ContinuousMul β] [ContinuousInv₀ β]
     have hlim : Tendsto (fun _ : ℕ => (0 : β)) atTop (𝓝 a) :=
       tendsto_const_nhds.mono_right (specializes_iff_mem_closure.mpr ha)
     refine ⟨fun _ => SimpleFunc.const α 0, fun x => ?_⟩
-    have h := hlim.mul_const (a⁻¹ * Checked.div (f x) (g x) (h0 x))
+    have h := hlim.mul_const (a⁻¹ * ((f x) / (g x)))
     simpa only [zero_mul, ← mul_assoc, mul_inv_cancel₀, one_mul, SimpleFunc.const_apply] using h
 
 theorem div [GroupWithZero β] [ContinuousMul β] [ContinuousInv₀ β]
     {h0 : IsUnit g} (hf : StronglyMeasurable f) (hg : StronglyMeasurable g) :
-    StronglyMeasurable (Checked.div f g h0) := by
+    StronglyMeasurable (f / g) := by
   rw [funext (Pi.div_apply₀ f g)]
   exact hf.div₀ hg
 

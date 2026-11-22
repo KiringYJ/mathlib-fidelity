@@ -20,9 +20,9 @@ and similarly for other binary operations. The reason for introducing these clas
 of topological space `α` equipped with the Borel `σ`-algebra, instances for `MeasurableMul₂`
 etc. require `α` to have a second countable topology.
 
-`MeasurableDiv` and `MeasurableDiv₂` describe division in a group. The subtraction classes
-also apply to types with truncated subtraction, such as `ℕ` and `ℝ≥0∞`. For an explicit binary
-map `op` with `hop : Measurable (Function.uncurry op)`, the composition `hop.comp (hf.prodMk hg)`
+`MeasurableDiv` and `MeasurableDiv₂` describe separate and joint measurability of division.
+The subtraction classes also apply to truncated subtraction, such as that of `ℕ` and `ℝ≥0∞`.
+For a binary map `op` with `hop : Measurable (Function.uncurry op)`, `hop.comp (hf.prodMk hg)`
 proves measurability of `fun x ↦ op (f x) (g x)`.
 
 For instances relating, e.g., `ContinuousMul` to `MeasurableMul` see file
@@ -156,8 +156,8 @@ end Mul
 theorem measurable_sub_const' {G : Type*} [SubNegMonoid G] [SigmaAlgebra G] [MeasurableAdd G]
     (g : G) : Measurable fun h => h - g := by simp_rw [sub_eq_add_neg, measurable_add_const]
 
-/-- Dividing by a constant in a group is measurable when multiplication is separately measurable. -/
-theorem measurable_div_const' {G : Type*} [Group G] [SigmaAlgebra G] [MeasurableMul G]
+/-- Dividing by a constant is measurable when multiplication is separately measurable. -/
+theorem measurable_div_const' {G : Type*} [DivInvMonoid G] [SigmaAlgebra G] [MeasurableMul G]
     (g : G) : Measurable fun h => h / g := by simp_rw [div_eq_mul_inv, measurable_mul_const]
 
 /-- This class assumes that the map `β × γ → β` given by `(x, y) ↦ x ^ y` is measurable. -/
@@ -225,17 +225,17 @@ class MeasurableSub₂ (G : Type*) [SigmaAlgebra G] [Sub G] : Prop where
 
 export MeasurableSub₂ (measurable_sub)
 
-/-- Separate measurability of division in the group `G`.
+/-- Separate measurability of division on `G`.
 For a typeclass assuming measurability of `uncurry (· / ·)` see `MeasurableDiv₂`. -/
-class MeasurableDiv (G : Type*) [SigmaAlgebra G] [Group G] : Prop where
+class MeasurableDiv (G : Type*) [SigmaAlgebra G] [Div G] : Prop where
   measurable_const_div : ∀ c : G, Measurable (c / ·) := by intro; fun_prop
   measurable_div_const : ∀ c : G, Measurable (· / c) := by intro; fun_prop
 
 export MeasurableDiv (measurable_const_div measurable_div_const)
 
-/-- Joint measurability of division in the group `G`.
+/-- Joint measurability of division on `G`.
 For a typeclass assuming measurability of `(c / ·)` and `(· / c)` see `MeasurableDiv`. -/
-class MeasurableDiv₂ (G : Type*) [SigmaAlgebra G] [Group G] : Prop where
+class MeasurableDiv₂ (G : Type*) [SigmaAlgebra G] [Div G] : Prop where
   measurable_div : Measurable fun p : G × G => p.1 / p.2
 
 export MeasurableDiv₂ (measurable_div)
@@ -313,7 +313,7 @@ end Sub
 
 section Div
 
-variable {G α β : Type*} [SigmaAlgebra G] [Group G] {m : SigmaAlgebra α}
+variable {G α β : Type*} [SigmaAlgebra G] [Div G] {m : SigmaAlgebra α}
   {mβ : SigmaAlgebra β} {f g : α → G} {μ : Measure α}
 
 @[fun_prop]
@@ -361,14 +361,14 @@ instance (priority := 100) MeasurableDiv₂.toMeasurableDiv [MeasurableDiv₂ G]
   ⟨fun _ => measurable_div.comp (measurable_const.prodMk measurable_id),
    fun _ => measurable_div.comp (measurable_id.prodMk measurable_const)⟩
 
-instance Pi.measurableDiv {ι : Type*} {α : ι → Type*} [∀ i, Group (α i)]
+instance Pi.measurableDiv {ι : Type*} {α : ι → Type*} [∀ i, Div (α i)]
     [∀ i, SigmaAlgebra (α i)] [∀ i, MeasurableDiv (α i)] : MeasurableDiv (∀ i, α i) where
   measurable_const_div c := measurable_pi_iff.mpr fun i => by
     simpa only [Pi.div_apply] using (measurable_pi_apply i).const_div (c i)
   measurable_div_const c := measurable_pi_iff.mpr fun i => by
     simpa only [Pi.div_apply] using (measurable_pi_apply i).div_const (c i)
 
-instance Pi.measurableDiv₂ {ι : Type*} {α : ι → Type*} [∀ i, Group (α i)]
+instance Pi.measurableDiv₂ {ι : Type*} {α : ι → Type*} [∀ i, Div (α i)]
     [∀ i, SigmaAlgebra (α i)] [∀ i, MeasurableDiv₂ (α i)] : MeasurableDiv₂ (∀ i, α i) :=
   ⟨measurable_pi_iff.mpr fun i => by
     simp only [Pi.div_apply]
@@ -415,7 +415,7 @@ instance (priority := 100) measurableSub_of_add_neg (G : Type*) [SigmaAlgebra G]
     apply sub_eq_add_neg
 
 instance (priority := 100) measurableDiv_of_mul_inv (G : Type*) [SigmaAlgebra G]
-    [Group G] [MeasurableMul G] [MeasurableInv G] : MeasurableDiv G where
+    [DivInvMonoid G] [MeasurableMul G] [MeasurableInv G] : MeasurableDiv G where
   measurable_const_div c := by
     convert! measurable_inv.const_mul c using 1
     ext1
@@ -507,7 +507,7 @@ instance (priority := 100) measurableSub₂_of_add_neg (G : Type*) [SigmaAlgebra
     exact measurable_fst.add measurable_snd.neg⟩
 
 instance (priority := 100) measurableDiv₂_of_mul_inv (G : Type*) [SigmaAlgebra G]
-    [Group G] [MeasurableMul₂ G] [MeasurableInv G] : MeasurableDiv₂ G :=
+    [DivInvMonoid G] [MeasurableMul₂ G] [MeasurableInv G] : MeasurableDiv₂ G :=
   ⟨by
     simp only [div_eq_mul_inv]
     exact measurable_fst.mul measurable_snd.inv⟩
@@ -968,9 +968,9 @@ instance (priority := 100) DiscreteSigmaAlgebra.toMeasurableSub₂ [Sub α]
     [DiscreteSigmaAlgebra (α × α)] : MeasurableSub₂ α := ⟨.of_discrete⟩
 
 -- See note [lower instance priority]
-instance (priority := 100) DiscreteSigmaAlgebra.toMeasurableDiv [Group α] [DiscreteSigmaAlgebra α] :
+instance (priority := 100) DiscreteSigmaAlgebra.toMeasurableDiv [Div α] [DiscreteSigmaAlgebra α] :
     MeasurableDiv α where
 
 -- See note [lower instance priority]
-instance (priority := 100) DiscreteSigmaAlgebra.toMeasurableDiv₂ [Group α]
+instance (priority := 100) DiscreteSigmaAlgebra.toMeasurableDiv₂ [Div α]
     [DiscreteSigmaAlgebra (α × α)] : MeasurableDiv₂ α := ⟨.of_discrete⟩

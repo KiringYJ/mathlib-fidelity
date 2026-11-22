@@ -40,7 +40,7 @@ theorem cast_div_le {m n : ℕ} {hn : IsUnit (n : α)} :
 theorem inv_pos_of_nat {n : ℕ} : 0 < ((n : α) + 1)⁻¹ :=
   inv_pos.2 <| add_pos_of_nonneg_of_pos n.cast_nonneg zero_lt_one
 
-theorem one_div_pos_of_nat {n : ℕ} : 0 < Checked.div 1 ((n : α) + 1) := by
+theorem one_div_pos_of_nat {n : ℕ} : 0 < (1 / ((n : α) + 1)) := by
   rw [one_div₀]
   exact inv_pos_of_nat
 
@@ -56,13 +56,13 @@ theorem one_div_lt_one_div {n m : ℕ} (h : n < m) :
   · exact Nat.cast_add_one_pos _
   · simpa
 
-theorem one_div_cast_pos {n : ℕ} {hn : IsUnit (n : α)} : 0 < Checked.div 1 (n : α) hn :=
+theorem one_div_cast_pos {n : ℕ} {hn : IsUnit (n : α)} : 0 < (1 / (n : α)) :=
   one_div_pos.mpr ((cast_nonneg n).lt_of_ne' hn.ne_zero)
 
-theorem one_div_cast_nonneg (n : ℕ) {hn : IsUnit (n : α)} : 0 ≤ Checked.div 1 (n : α) hn :=
+theorem one_div_cast_nonneg (n : ℕ) {hn : IsUnit (n : α)} : 0 ≤ (1 / (n : α)) :=
   one_div_nonneg.mpr (cast_nonneg' n)
 
-theorem one_div_cast_ne_zero {n : ℕ} {hn : IsUnit (n : α)} : Checked.div 1 (n : α) hn ≠ 0 :=
+theorem one_div_cast_ne_zero {n : ℕ} {hn : IsUnit (n : α)} : (1 / (n : α)) ≠ 0 :=
   _root_.ne_of_gt one_div_cast_pos
 
 end LinearOrderedSemifield

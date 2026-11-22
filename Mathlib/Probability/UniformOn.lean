@@ -105,18 +105,15 @@ instance isProbabilityMeasure_uniformOn (hs : IsConditionable Measure.count s) :
 theorem uniformOn_empty (hs : IsConditionable Measure.count s) : uniformOn s hs ∅ = 0 := by simp
 
 theorem uniformOn_univ [Fintype Ω] [Nonempty Ω] {s : Set Ω} :
-    have : IsUnit (Fintype.card Ω : ℝ≥0∞) :=
-      ENNReal.isUnit_iff.2 ⟨Nat.cast_ne_zero.mpr Fintype.card_ne_zero, ENNReal.natCast_ne_top _⟩
     uniformOn Set.univ .univ s = Measure.count s / (Fintype.card Ω : ℝ≥0∞) := by
-  simp [uniformOn, cond_apply, ENNReal.checkedDiv_eq_div, ENNReal.div_eq_inv_mul]
+  simp [uniformOn, cond_apply, div_eq_mul_inv, mul_comm]
 
 lemma uniformOn_apply_finset' {Ω : Type*} [DecidableEq Ω] {_ : SigmaAlgebra Ω} {s t : Finset Ω}
     (hs : IsConditionable Measure.count (s : Set Ω)) (ht : MeasurableSet (t : Set Ω)) :
-    have := hs.isUnit_card
     uniformOn (s : Set Ω) hs (t : Set Ω) = (#(s ∩ t) : ℝ≥0∞) / (#s : ℝ≥0∞) := by
   rw [uniformOn, cond_apply hs, Measure.count_apply_finset' hs.measurableSet_of_count,
     ← coe_inter, Measure.count_apply_finset']
-  · simp only [ENNReal.checkedDiv_eq_div, ENNReal.div_eq_inv_mul]
+  · exact ENNReal.div_eq_inv_mul.symm
   rw [coe_inter]
   exact hs.measurableSet_of_count.inter ht
 
@@ -165,7 +162,6 @@ variable [MeasurableSingletonClass Ω]
 
 lemma uniformOn_apply_finset [DecidableEq Ω] {s t : Finset Ω}
     (hs : IsConditionable Measure.count (s : Set Ω)) :
-    have := hs.isUnit_card
     uniformOn (s : Set Ω) hs (t : Set Ω) = (#(s ∩ t) : ℝ≥0∞) / (#s : ℝ≥0∞) :=
   uniformOn_apply_finset' hs t.measurableSet
 
@@ -235,8 +231,10 @@ lemma uniformOn_pi [Finite Ω] {f : ι → Set Ω} (hf : ∀ i, (f i).Nonempty) 
   lift f to ι → Finset Ω using by simp [Set.toFinite]
   lift t to ι → Finset Ω using by simp [Set.toFinite]
   classical
-  simp [← Fintype.coe_piFinset, uniformOn_apply_finset, ← Fintype.piFinset_inter,
-    ENNReal.checkedDiv_eq_div,
-    ENNReal.prod_div_distrib_of_ne_top]
+  simp only [← Fintype.coe_piFinset, uniformOn_apply_finset, ← Fintype.piFinset_inter,
+    Fintype.card_piFinset, Nat.cast_prod]
+  symm
+  apply ENNReal.prod_div_distrib_of_ne_top
+  simp
 
 end ProbabilityTheory

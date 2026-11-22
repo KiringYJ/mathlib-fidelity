@@ -437,6 +437,14 @@ theorem untrop_inv [Neg R] (x : MinTropical R) : untrop x⁻¹ = -untrop x :=
   rfl
 
 @[to_dual]
+instance [Sub R] : Div (MinTropical R) :=
+  ⟨fun x y => trop (untrop x - untrop y)⟩
+
+@[to_dual (attr := simp)]
+theorem untrop_div [Sub R] (x y : MinTropical R) : untrop (x / y) = untrop x - untrop y :=
+  rfl
+
+@[to_dual]
 instance [AddSemigroup R] : Semigroup (MinTropical R) where
   mul_assoc _ _ _ := untrop_injective (add_assoc _ _ _)
 
@@ -476,15 +484,12 @@ instance [AddCommMonoid R] : CommMonoid (MinTropical R) where
 
 @[to_dual]
 instance [AddGroup R] : Group (MinTropical R) where
+  div_eq_mul_inv := fun _ _ => untrop_injective <| by simp [sub_eq_add_neg]
   inv_mul_cancel := fun _ => untrop_injective <| neg_add_cancel _
   zpow := fun n x => trop <| n • untrop x
   zpow_zero' := fun _ => untrop_injective <| zero_zsmul _
   zpow_succ' := fun _ _ => untrop_injective <| SubNegMonoid.zsmul_succ' _ _
   zpow_neg' := fun _ _ => untrop_injective <| SubNegMonoid.zsmul_neg' _ _
-
-@[to_dual (attr := simp)]
-theorem untrop_div [AddGroup R] (x y : MinTropical R) : untrop (x / y) = untrop x - untrop y := by
-  rw [div_eq_mul_inv, untrop_mul, untrop_inv, sub_eq_add_neg]
 
 @[to_dual]
 instance [AddCommGroup R] : CommGroup (MinTropical R) where

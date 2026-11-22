@@ -91,8 +91,6 @@ lemma bergelson' {s : ℕ → Set α} (hs : ∀ n, MeasurableSet (s n)) (hr₀ :
   -- By the first moment method, there exists some `x ∉ N` such that `limsup f n x` is at least `r`.
   obtain ⟨x, hxN, hx⟩ := exists_notMem_null_laverage_le hμ
     (ne_top_of_le_ne_top (by finiteness) this) hN₀
-  have hμunit : IsUnit (μ univ) :=
-    ENNReal.isUnit_iff.2 ⟨Measure.measure_univ_ne_zero.2 hμ, measure_ne_top _ _⟩
   replace hx : r / μ univ ≤ limsup (f · x) atTop :=
     calc
       _ ≤ limsup (⨍⁻ x, f · x ∂μ) atTop := le_limsup_of_le ⟨1, eventually_map.2 ?_⟩ fun b hb ↦ ?_
@@ -103,8 +101,7 @@ lemma bergelson' {s : ℕ → Set α} (hs : ∀ n, MeasurableSet (s n)) (hr₀ :
     -- This next block proves that a set of strictly positive natural density is infinite, mixed
     -- with the fact that `{n | x ∈ s n}` has strictly positive natural density.
     -- TODO: Separate it out to a lemma once we have a natural density API.
-    · rw [ENNReal.checkedDiv_eq_div] at hx
-      refine ENNReal.div_ne_zero.2 ⟨hr₀, by finiteness⟩ <| eq_bot_mono hx <|
+    · refine ENNReal.div_ne_zero.2 ⟨hr₀, by finiteness⟩ <| eq_bot_mono hx <|
         Tendsto.limsup_eq <| tendsto_of_tendsto_of_tendsto_of_le_of_le tendsto_const_nhds
         (h := fun n ↦ (n.succ : ℝ≥0∞)⁻¹ * hxs.toFinset.card) ?_ bot_le fun n ↦ mul_le_mul_right ?_ _
       · simpa using ENNReal.Tendsto.mul_const (ENNReal.tendsto_inv_nat_nhds_zero.comp <|
@@ -121,7 +118,6 @@ lemma bergelson' {s : ℕ → Set α} (hs : ∀ n, MeasurableSet (s n)) (hr₀ :
       exact lintegral_mono (hf₁ _)
   · obtain ⟨n, hn⟩ := hb.exists
     rw [laverage_eq] at hn
-    rw [ENNReal.checkedDiv_eq_div]
     exact (ENNReal.div_le_div_right (hrf _) _).trans hn
 
 /-- **Bergelson Intersectivity Lemma**: In a finite measure space, a sequence of events that have

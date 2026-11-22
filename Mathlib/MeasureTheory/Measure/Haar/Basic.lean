@@ -545,21 +545,11 @@ variable [TopologicalSpace G] [IsTopologicalGroup G] [SigmaAlgebra G] [BorelSpac
 noncomputable def haarMeasure (K₀ : PositiveCompacts G) : Measure G :=
   ((haarContent K₀).measure K₀)⁻¹ • (haarContent K₀).measure
 
-/-- The Haar normalization constant is an invertible extended nonnegative real. -/
-@[to_additive /-- The additive Haar normalization constant is an invertible element of `ℝ≥0∞`. -/]
-theorem isUnit_haarContent_measure_self (K₀ : PositiveCompacts G) :
-    IsUnit ((haarContent K₀).measure K₀) := by
-  have : LocallyCompactSpace G := K₀.locallyCompactSpace_of_group
-  rw [← K₀.isCompact.measure_closure, Content.measure_apply _ isClosed_closure.measurableSet]
-  exact ENNReal.isUnit_iff.mpr ⟨(haarContent_outerMeasure_closure_pos K₀).ne',
-    (Content.outerMeasure_lt_top_of_isCompact _ K₀.isCompact.closure).ne⟩
-
 @[to_additive]
 theorem haarMeasure_apply {K₀ : PositiveCompacts G} {s : Set G} (hs : MeasurableSet s) :
-    haarMeasure K₀ s = Checked.div ((haarContent K₀).outerMeasure s) ((haarContent K₀).measure K₀)
-      (isUnit_haarContent_measure_self K₀) := by
+    haarMeasure K₀ s = (haarContent K₀).outerMeasure s / (haarContent K₀).measure K₀ := by
   change ((haarContent K₀).measure K₀)⁻¹ * (haarContent K₀).measure s = _
-  simp only [ENNReal.checkedDiv_eq_div, ENNReal.div_eq_mul_inv, hs, mul_comm, Content.measure_apply]
+  simp only [ENNReal.div_eq_mul_inv, hs, mul_comm, Content.measure_apply]
 
 @[to_additive]
 instance isMulLeftInvariant_haarMeasure (K₀ : PositiveCompacts G) :
@@ -568,7 +558,7 @@ instance isMulLeftInvariant_haarMeasure (K₀ : PositiveCompacts G) :
   intro g A hA
   rw [haarMeasure_apply hA, haarMeasure_apply (measurable_const_mul g hA)]
   -- Porting note: Here was `congr 1`, but `to_additive` failed to generate a theorem.
-  refine congr_arg (fun x : ℝ≥0∞ => Checked.div x _ (isUnit_haarContent_measure_self K₀)) ?_
+  refine congr_arg (fun x : ℝ≥0∞ => x / (haarContent K₀).measure K₀) ?_
   apply Content.is_mul_left_invariant_outerMeasure
   apply is_left_invariant_haarContent
 
@@ -721,8 +711,8 @@ theorem haarMeasure_unique (μ : Measure G) [SigmaFinite μ] [IsMulLeftInvariant
     K₀.interior_nonempty.mono (interior_mono subset_closure)
   have := measure_eq_div_smul μ (haarMeasure K₀)
     (measure_pos_of_nonempty_interior _ A).ne' K₀.isCompact.closure.measure_ne_top
-  rwa [ENNReal.checkedDiv_eq_div, haarMeasure_closure_self, ENNReal.div_eq_mul_inv, inv_one,
-    mul_one, K₀.isCompact.measure_closure] at this
+  rwa [haarMeasure_closure_self, ENNReal.div_eq_mul_inv, inv_one, mul_one,
+    K₀.isCompact.measure_closure] at this
 
 /-- Let `μ` be a σ-finite left invariant measure on `G`. Then `μ` is equal to the Haar measure
 defined by `K₀` iff `μ K₀ = 1`. -/

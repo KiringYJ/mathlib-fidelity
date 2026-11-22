@@ -918,7 +918,7 @@ theorem L1.norm_of_fun_eq_integral_norm {f : α → H} (hf : Integrable f μ) :
 
 theorem MemLp.eLpNorm_eq_integral_rpow_norm {f : α → H} {p : ℝ≥0∞} (hp1 : p ≠ 0) (hp2 : p ≠ ∞)
     (hf : MemLp f p μ) :
-    eLpNorm f p μ = ENNReal.ofReal ((∫ a, ‖f a‖ ^ p.toReal ∂μ) ^ (ENNReal.div 1 p).toReal) := by
+    eLpNorm f p μ = ENNReal.ofReal ((∫ a, ‖f a‖ ^ p.toReal ∂μ) ^ (1 / p).toReal) := by
   have hpUnit : IsUnit p.toReal := (ENNReal.toReal_pos hp1 hp2).ne'.isUnit
   have A : ∫⁻ a : α, ENNReal.ofReal (‖f a‖ ^ p.toReal) ∂μ = ∫⁻ a : α, ‖f a‖ₑ ^ p.toReal ∂μ := by
     simp_rw [← ofReal_rpow_of_nonneg (norm_nonneg _) toReal_nonneg, ofReal_norm]

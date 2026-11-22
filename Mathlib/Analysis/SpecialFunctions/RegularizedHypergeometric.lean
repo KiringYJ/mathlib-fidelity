@@ -158,7 +158,7 @@ theorem regularizedHGFunCoeff_add_one_div_self (h : regularizedHGFunCoeff a b n 
 
 private theorem multiset_prod_eq_pow_mul_multiset_prod (a : Multiset ℂ) (hn : n ≠ 0) :
     (a.map (· + (n : ℂ))).prod = n ^ a.card * (a.map (· / (n : ℂ) + 1)).prod := calc
-  _ = (a.map (fun j ↦ n * (j / (n : ℂ) + 1))).prod := by
+  _ = (a.map (fun j ↦ (n : ℂ) * (j / (n : ℂ) + 1))).prod := by
     congr; ext; field_simp
   _ = _ := by
     simp [Multiset.prod_map_mul]

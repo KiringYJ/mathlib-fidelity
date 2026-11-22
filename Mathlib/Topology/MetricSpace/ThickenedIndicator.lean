@@ -52,12 +52,12 @@ these values using `infEDist _ E`.
 `thickenedIndicatorAux` is the unbundled `ℝ≥0∞`-valued function. See `thickenedIndicator`
 for the (bundled) bounded continuous function with `ℝ≥0`-values. -/
 def thickenedIndicatorAux (δ : ℝ) (E : Set α) : α → ℝ≥0∞ :=
-  fun x : α => (1 : ℝ≥0∞) - ENNReal.div (infEDist x E) (ENNReal.ofReal δ)
+  fun x : α => (1 : ℝ≥0∞) - (infEDist x E / ENNReal.ofReal δ)
 
 theorem continuous_thickenedIndicatorAux {δ : ℝ} (δ_pos : 0 < δ) (E : Set α) :
     Continuous (thickenedIndicatorAux δ E) := by
   unfold thickenedIndicatorAux
-  let f := fun x : α => (⟨1, ENNReal.div (infEDist x E) (ENNReal.ofReal δ)⟩ : ℝ≥0 × ℝ≥0∞)
+  let f := fun x : α => (⟨1, (infEDist x E / ENNReal.ofReal δ)⟩ : ℝ≥0 × ℝ≥0∞)
   let sub := fun p : ℝ≥0 × ℝ≥0∞ => (p.1 : ℝ≥0∞) - p.2
   change Continuous (sub ∘ f)
   apply (@ENNReal.continuous_nnreal_sub 1).comp
@@ -114,7 +114,7 @@ lemma thickenedIndicatorAux_mono_infEDist (δ : ℝ) {E : Set α} {x y : α}
     (h : infEDist x E ≤ infEDist y E) :
     thickenedIndicatorAux δ E y ≤ thickenedIndicatorAux δ E x := by
   simp only [thickenedIndicatorAux]
-  rcases le_total (ENNReal.div (infEDist x E) (ENNReal.ofReal δ)) 1 with hle | hle
+  rcases le_total (infEDist x E / ENNReal.ofReal δ) 1 with hle | hle
   · rw [ENNReal.sub_le_sub_iff_left hle (by simp)]
     gcongr
   · rw [tsub_eq_zero_of_le hle, tsub_eq_zero_of_le]

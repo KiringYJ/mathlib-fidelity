@@ -276,7 +276,7 @@ theorem tendsto_atTop_zero_iff_lt_of_antitone {β : Type*} [Nonempty β] [Semila
     Filter.Tendsto f Filter.atTop (𝓝 0) ↔ ∀ ε, 0 < ε → ∃ n : β, f n < ε := by
   rw [ENNReal.tendsto_atTop_zero_iff_le_of_antitone hf]
   constructor <;> intro h ε hε
-  · obtain ⟨n, hn⟩ := h (min 1 (ENNReal.div ε 2))
+  · obtain ⟨n, hn⟩ := h (min 1 (ε / 2))
       (lt_min_iff.mpr ⟨zero_lt_one, (ENNReal.div_pos_iff.mpr ⟨hε.ne', by finiteness⟩)⟩)
     · refine ⟨n, hn.trans_lt ?_⟩
       by_cases hε_top : ε = ∞
@@ -319,7 +319,7 @@ protected theorem tendsto_mul (ha : a ≠ 0 ∨ b ≠ ∞) (hb : b ≠ 0 ∨ a �
       Tendsto (fun p : ℝ≥0∞ × ℝ≥0∞ => p.1 * p.2) (𝓝 (∞, b)) (𝓝 ∞) := fun b hb => by
     refine tendsto_nhds_top_iff_nnreal.2 fun n => ?_
     rcases lt_iff_exists_nnreal_btwn.1 (pos_iff_ne_zero.2 hb) with ⟨ε, hε, hεb⟩
-    have : ∀ᶠ c : ℝ≥0∞ × ℝ≥0∞ in 𝓝 (∞, b), ENNReal.div ↑n ↑ε < c.1 ∧ ↑ε < c.2 :=
+    have : ∀ᶠ c : ℝ≥0∞ × ℝ≥0∞ in 𝓝 (∞, b), (n : ℝ≥0∞) / (ε : ℝ≥0∞) < c.1 ∧ ↑ε < c.2 :=
       (lt_mem_nhds <| div_lt_top coe_ne_top hε.ne').prod_nhds (lt_mem_nhds hεb)
     refine this.mono fun c hc => ?_
     exact (ENNReal.div_mul_cancel hε.ne' coe_ne_top).symm.trans_lt (mul_lt_mul hc.1 hc.2)
@@ -397,7 +397,7 @@ protected theorem continuous_mul_const {a : ℝ≥0∞} (ha : a ≠ ∞) : Conti
 
 @[fun_prop]
 protected theorem continuous_div_const (c : ℝ≥0∞) (c_ne_zero : c ≠ 0) :
-    Continuous fun x : ℝ≥0∞ => ENNReal.div x c :=
+    Continuous fun x : ℝ≥0∞ => x / c :=
   ENNReal.continuous_mul_const <| ENNReal.inv_ne_top.2 c_ne_zero
 
 @[continuity, fun_prop]
@@ -469,18 +469,18 @@ protected theorem continuous_zpow : ∀ n : ℤ, Continuous (· ^ n : ℝ≥0∞
 protected theorem Tendsto.div {f : Filter α} {ma : α → ℝ≥0∞} {mb : α → ℝ≥0∞} {a b : ℝ≥0∞}
     (hma : Tendsto ma f (𝓝 a)) (ha : a ≠ 0 ∨ b ≠ 0) (hmb : Tendsto mb f (𝓝 b))
     (hb : b ≠ ∞ ∨ a ≠ ∞) :
-    Tendsto (fun a => ENNReal.div (ma a) (mb a)) f (𝓝 (ENNReal.div a b)) := by
+    Tendsto (fun a => ma a / mb a) f (𝓝 (a / b)) := by
   apply Tendsto.mul hma _ (tendsto_inv_iff.2 hmb) _ <;> simp [ha, hb]
 
 protected theorem Tendsto.const_div {f : Filter α} {m : α → ℝ≥0∞} {a b : ℝ≥0∞}
     (hm : Tendsto m f (𝓝 b)) (hb : b ≠ ∞ ∨ a ≠ ∞) :
-    Tendsto (fun b => ENNReal.div a (m b)) f (𝓝 (ENNReal.div a b)) := by
+    Tendsto (fun b => a / m b) f (𝓝 (a / b)) := by
   apply Tendsto.const_mul (tendsto_inv_iff.2 hm)
   simp [hb]
 
 protected theorem Tendsto.div_const {f : Filter α} {m : α → ℝ≥0∞} {a b : ℝ≥0∞}
     (hm : Tendsto m f (𝓝 a)) (ha : a ≠ 0 ∨ b ≠ 0) :
-    Tendsto (fun x => ENNReal.div (m x) b) f (𝓝 (ENNReal.div a b)) := by
+    Tendsto (fun x => m x / b) f (𝓝 (a / b)) := by
   apply Tendsto.mul_const hm
   simp [ha]
 

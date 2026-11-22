@@ -31,7 +31,7 @@ variable {α : Type*} [DivisionRing α]
 /-- Evaluate a rational as the quotient of its numerator by its denominator, which must be
 nonzero in `α`. -/
 noncomputable def eval (q : ℚ) (hd : (q.den : α) ≠ 0) : α :=
-  Checked.div (q.num : α) (q.den : α) hd.isUnit
+  ((q.num : α) / (q.den : α))
 
 @[simp] theorem eval_mul_den (q : ℚ) (hd : (q.den : α) ≠ 0) :
     eval q hd * (q.den : α) = (q.num : α) :=
@@ -198,7 +198,7 @@ theorem quotient_den_ne_zero (a b : ℚ) (hb : b ≠ 0)
 theorem eval_quotient (a b : ℚ) (hb : b ≠ 0)
     (ha : (a.den : α) ≠ 0) (hd : (b.den : α) ≠ 0)
     (hr : ((quotient a b hb).den : α) ≠ 0) (hv : eval b hd ≠ 0) :
-    eval (quotient a b hb) hr = Checked.div (eval a ha) (eval b hd) hv.isUnit := by
+    eval (quotient a b hb) hr = ((eval a ha) / (eval b hd)) := by
   change ((a * reciprocal b hb).den : α) ≠ 0 at hr
   change eval (a * reciprocal b hb) hr = _
   rw [eval_mul _ _ ha (reciprocal_den_ne_zero b hb hd hv),
@@ -229,7 +229,7 @@ variable {α : Type*} [DivisionSemiring α]
 /-- Evaluate a nonnegative rational as the quotient of its numerator by its denominator, which
 must be nonzero in `α`. -/
 noncomputable def eval (q : ℚ≥0) (hd : (q.den : α) ≠ 0) : α :=
-  Checked.div (q.num : α) (q.den : α) hd.isUnit
+  ((q.num : α) / (q.den : α))
 
 @[simp] theorem eval_mul_den (q : ℚ≥0) (hd : (q.den : α) ≠ 0) :
     eval q hd * (q.den : α) = (q.num : α) := div_mul_cancel₀ _

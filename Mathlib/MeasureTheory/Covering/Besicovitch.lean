@@ -531,7 +531,7 @@ theorem exist_finset_disjoint_balls_large_measure (μ : Measure α) [IsFiniteMea
     {τ : ℝ} (hτ : 1 < τ) (hN : IsEmpty (SatelliteConfig α N τ)) (s : Set α) (r : α → ℝ)
     (rpos : ∀ x ∈ s, 0 < r x) (rle : ∀ x ∈ s, r x ≤ 1) :
     ∃ t : Finset α, ↑t ⊆ s ∧ μ (s \ ⋃ x ∈ t, closedBall x (r x)) ≤
-      ENNReal.div N ((N : ℝ≥0∞) + 1) * μ s ∧
+      ((N : ℝ≥0∞) / ((N : ℝ≥0∞) + 1)) * μ s ∧
       (t : Set α).PairwiseDisjoint fun x => closedBall x (r x) := by
   classical
   -- exclude the trivial case where `μ s = 0`.
@@ -577,9 +577,9 @@ theorem exist_finset_disjoint_balls_large_measure (μ : Measure α) [IsFiniteMea
     refine mem_iUnion.2 ⟨i, ⟨hx, ?_⟩⟩
     simp only [v, exists_prop, mem_iUnion, SetCoe.exists, exists_and_right]
     exact ⟨y, ⟨y.2, by simpa only [Subtype.coe_eta]⟩, ball_subset_closedBall h'⟩
-  have S : ∑ _i : Fin N, ENNReal.div (μ s) (N : ℝ≥0∞) ≤ ∑ i, μ (s ∩ v i) :=
+  have S : ∑ _i : Fin N, (μ s / (N : ℝ≥0∞)) ≤ ∑ i, μ (s ∩ v i) :=
     calc
-      ∑ _i : Fin N, ENNReal.div (μ s) (N : ℝ≥0∞) = μ s := by
+      ∑ _i : Fin N, (μ s / (N : ℝ≥0∞)) = μ s := by
         simp only [Finset.card_fin, Finset.sum_const, nsmul_eq_mul]
         rw [ENNReal.mul_div_cancel]
         · simp only [Npos, Ne, Nat.cast_eq_zero, not_false_iff]
@@ -589,10 +589,10 @@ theorem exist_finset_disjoint_balls_large_measure (μ : Measure α) [IsFiniteMea
         apply measure_iUnion_fintype_le
   -- choose an index `i` of a subfamily covering at least a proportion `1/N` of `s`.
   obtain ⟨i, -, hi⟩ : ∃ (i : Fin N), i ∈ Finset.univ ∧
-      ENNReal.div (μ s) (N : ℝ≥0∞) ≤ μ (s ∩ v i) := by
+      (μ s / (N : ℝ≥0∞)) ≤ μ (s ∩ v i) := by
     apply ENNReal.exists_le_of_sum_le _ S
     exact ⟨⟨0, bot_lt_iff_ne_bot.2 Npos⟩, Finset.mem_univ _⟩
-  replace hi : ENNReal.div (μ s) ((N : ℝ≥0∞) + 1) < μ (s ∩ v i) := by
+  replace hi : (μ s / ((N : ℝ≥0∞) + 1)) < μ (s ∩ v i) := by
     grw [← hi, ← _root_.zero_lt_one, add_zero] <;> finiteness
   have B : μ (o ∩ v i) = ∑' x : u i, μ (o ∩ closedBall x (r x)) := by
     have : o ∩ v i = ⋃ (x : s) (_ : x ∈ u i), o ∩ closedBall x (r x) := by
@@ -603,11 +603,11 @@ theorem exist_finset_disjoint_balls_large_measure (μ : Measure α) [IsFiniteMea
   -- A large enough finite subfamily of `u i` will also cover a proportion `> 1/(N+1)` of `s`.
   -- Since `s` might not be measurable, we express this in terms of the measurable superset `o`.
   obtain ⟨w, hw⟩ :
-    ∃ w : Finset (u i), ENNReal.div (μ s) ((N : ℝ≥0∞) + 1) <
+    ∃ w : Finset (u i), (μ s / ((N : ℝ≥0∞) + 1)) <
       ∑ x ∈ w, μ (o ∩ closedBall (x : α) (r (x : α))) := by
     have C : HasSum (fun x : u i => μ (o ∩ closedBall x (r x))) (μ (o ∩ v i)) := by
       rw [B]; exact ENNReal.summable.hasSum
-    have : ENNReal.div (μ s) ((N : ℝ≥0∞) + 1) < μ (o ∩ v i) :=
+    have : (μ s / ((N : ℝ≥0∞) + 1)) < μ (o ∩ v i) :=
       hi.trans_le (measure_mono (inter_subset_inter_left _ so))
     exact ((tendsto_order.1 C).1 _ this).exists
   -- Bring back the finset `w i` of `↑(u i)` to a finset of `α`, and check that it works by design.
@@ -619,7 +619,7 @@ theorem exist_finset_disjoint_balls_large_measure (μ : Measure α) [IsFiniteMea
   -- show that it covers a large enough proportion of `s`. For measure computations, we do not
   -- use `s` (which might not be measurable), but its measurable superset `o`. Since their measures
   -- are the same, this does not spoil the estimates
-  · suffices H : μ (o \ ⋃ x ∈ w, closedBall (↑x) (r ↑x)) ≤ ENNReal.div N ((N : ℝ≥0∞) + 1) * μ s by
+  · suffices H : μ (o \ ⋃ x ∈ w, closedBall (↑x) (r ↑x)) ≤ ((N : ℝ≥0∞) / ((N : ℝ≥0∞) + 1)) * μ s by
       rw [Finset.set_biUnion_finset_image]
       exact le_trans (measure_mono (sdiff_subset_sdiff so (Subset.refl _))) H
     rw [← sdiff_inter_self_eq_sdiff,
@@ -629,9 +629,9 @@ theorem exist_finset_disjoint_balls_large_measure (μ : Measure α) [IsFiniteMea
         (w.nullMeasurableSet_biUnion fun _ _ ↦ measurableSet_closedBall.nullMeasurableSet)
         omeas.nullMeasurableSet
     calc
-      μ o = ENNReal.div 1 ((N : ℝ≥0∞) + 1) * μ s + ENNReal.div N ((N : ℝ≥0∞) + 1) * μ s := by
+      μ o = (1 / ((N : ℝ≥0∞) + 1)) * μ s + ((N : ℝ≥0∞) / ((N : ℝ≥0∞) + 1)) * μ s := by
         rw [μo, ← add_mul, ENNReal.div_add_div_same, add_comm, ENNReal.div_self, one_mul] <;> simp
-      _ ≤ μ ((⋃ x ∈ w, closedBall (↑x) (r ↑x)) ∩ o) + ENNReal.div N ((N : ℝ≥0∞) + 1) * μ s := by
+      _ ≤ μ ((⋃ x ∈ w, closedBall (↑x) (r ↑x)) ∩ o) + ((N : ℝ≥0∞) / ((N : ℝ≥0∞) + 1)) * μ s := by
         gcongr
         rw [ENNReal.one_div, mul_comm, ← ENNReal.div_eq_mul_inv]
         apply hw.le.trans (le_of_eq _)
@@ -686,7 +686,7 @@ theorem exists_disjoint_closedBall_covering_ae_of_finiteMeasure_aux (μ : Measur
   have :
       ∀ t : Finset (α × ℝ), P t → ∃ u : Finset (α × ℝ), t ⊆ u ∧ P u ∧
         μ (s \ ⋃ (p : α × ℝ) (_ : p ∈ u), closedBall p.1 p.2) ≤
-          ENNReal.div N ((N : ℝ≥0∞) + 1) *
+          ((N : ℝ≥0∞) / ((N : ℝ≥0∞) + 1)) *
             μ (s \ ⋃ (p : α × ℝ) (_ : p ∈ t), closedBall p.1 p.2) := by
     intro t ht
     set B := ⋃ (p : α × ℝ) (_ : p ∈ t), closedBall p.1 p.2 with hB
@@ -709,7 +709,7 @@ theorem exists_disjoint_closedBall_covering_ae_of_finiteMeasure_aux (μ : Measur
     obtain ⟨v, vs', hμv, hv⟩ :
       ∃ v : Finset α,
         ↑v ⊆ s' ∧
-          μ (s' \ ⋃ x ∈ v, closedBall x (r x)) ≤ ENNReal.div N ((N : ℝ≥0∞) + 1) * μ s' ∧
+          μ (s' \ ⋃ x ∈ v, closedBall x (r x)) ≤ ((N : ℝ≥0∞) / ((N : ℝ≥0∞) + 1)) * μ s' ∧
             (v : Set α).PairwiseDisjoint fun x : α => closedBall x (r x) :=
       haveI rI : ∀ x ∈ s', r x ∈ Ioo (0 : ℝ) 1 := fun x hx => (hr x hx).1.2
       exist_finset_disjoint_balls_large_measure μ hτ hN s' r (fun x hx => (rI x hx).1) fun x hx =>
@@ -739,7 +739,7 @@ theorem exists_disjoint_closedBall_covering_ae_of_finiteMeasure_aux (μ : Measur
       · rcases Finset.mem_image.1 h'p with ⟨p', p'v, rfl⟩
         exact (hr p' (vs' p'v)).1.1
     · convert! hμv using 2
-      rw [Finset.set_biUnion_union, ← sdiff_sdiff, Finset.set_biUnion_finset_image]
+      rw [Finset.set_biUnion_union, ← Set.sdiff_sdiff, Finset.set_biUnion_finset_image]
   /- Define `F` associating to a finite good covering the above enlarged good covering, covering
     a proportion `1/(N+1)` of leftover points. Iterating `F`, one will get larger and larger good
     coverings, missing in the end only a measure-zero set. -/
@@ -773,20 +773,20 @@ theorem exists_disjoint_closedBall_covering_ae_of_finiteMeasure_aux (μ : Measur
       exact biUnion_subset_biUnion_left (subset_iUnion (fun i => (u i : Set (α × ℝ))) n)
     have B :
         ∀ n, μ (s \ ⋃ (p : α × ℝ) (_ : p ∈ u n), closedBall p.fst p.snd) ≤
-          (ENNReal.div N ((N : ℝ≥0∞) + 1)) ^ n * μ s := fun n ↦ by
+          ((N : ℝ≥0∞) / ((N : ℝ≥0∞) + 1)) ^ n * μ s := fun n ↦ by
       induction n with
       | zero =>
         simp only [u, le_refl, sdiff_empty, one_mul, iUnion_false, iUnion_empty, pow_zero,
           Function.iterate_zero, id, Finset.notMem_empty]
       | succ n IH =>
         calc
-          _ ≤ ENNReal.div N ((N : ℝ≥0∞) + 1) *
+          _ ≤ ((N : ℝ≥0∞) / ((N : ℝ≥0∞) + 1)) *
               μ (s \ ⋃ (p : α × ℝ) (_ : p ∈ u n), closedBall p.fst p.snd) := by
             rw [u_succ]; exact (hF (u n) (Pu n)).2.2
           _ ≤ _ := by
             simpa only [pow_succ', mul_assoc] using
-              (mul_le_mul_right IH (ENNReal.div N ((N : ℝ≥0∞) + 1)))
-    have C : Tendsto (fun n : ℕ => (ENNReal.div N ((N : ℝ≥0∞) + 1)) ^ n * μ s)
+              (mul_le_mul_right IH ((N : ℝ≥0∞) / ((N : ℝ≥0∞) + 1)))
+    have C : Tendsto (fun n : ℕ => ((N : ℝ≥0∞) / ((N : ℝ≥0∞) + 1)) ^ n * μ s)
         atTop (𝓝 (0 * μ s)) := by
       apply ENNReal.Tendsto.mul_const _ (Or.inr (measure_lt_top μ s).ne)
       apply ENNReal.tendsto_pow_atTop_nhds_zero_of_lt_one
@@ -876,7 +876,7 @@ theorem exists_closedBall_covering_tsum_measure_le (μ : Measure α) [SFinite μ
     measure at most `ε / (2 N)`, the sum of their measures is at most `ε / 2`,
     completing the proof. -/
   classical
-  obtain ⟨u, su, u_open, μu⟩ : ∃ U, U ⊇ s ∧ IsOpen U ∧ μ U ≤ μ s + ENNReal.div ε 2 :=
+  obtain ⟨u, su, u_open, μu⟩ : ∃ U, U ⊇ s ∧ IsOpen U ∧ μ U ≤ μ s + (ε / 2) :=
     Set.exists_isOpen_le_add _ _
       (by
         simpa only [or_false, Ne, ENNReal.div_eq_zero_iff, ENNReal.ofNat_ne_top] using hε)
@@ -895,7 +895,7 @@ theorem exists_closedBall_covering_tsum_measure_le (μ : Measure α) [SFinite μ
   obtain ⟨N, τ, hτ, H⟩ : ∃ N τ, 1 < τ ∧ IsEmpty (Besicovitch.SatelliteConfig α N τ) :=
     HasBesicovitchCovering.no_satelliteConfig
   obtain ⟨v, s'v, v_open, μv⟩ : ∃ v, v ⊇ s' ∧ IsOpen v ∧
-      μ v ≤ μ s' + ENNReal.div (ENNReal.div ε 2) (N : ℝ≥0∞) :=
+      μ v ≤ μ s' + ((ε / 2) / (N : ℝ≥0∞)) :=
     Set.exists_isOpen_le_add _ _
       (by simp only [ne_eq, ENNReal.div_eq_zero_iff, hε, ENNReal.ofNat_ne_top, or_self,
           ENNReal.natCast_ne_top, not_false_eq_true])
@@ -969,7 +969,7 @@ theorem exists_closedBall_covering_tsum_measure_le (μ : Measure α) [SFinite μ
       rwa [r_t0 _ yt0]
   -- the only nontrivial property is the measure control, which we check now
   · -- the sets in the first step have measure at most `μ s + ε / 2`
-    have A : (∑' x : t0, μ (closedBall x (r x))) ≤ μ s + ENNReal.div ε 2 :=
+    have A : (∑' x : t0, μ (closedBall x (r x))) ≤ μ s + (ε / 2) :=
       calc
         (∑' x : t0, μ (closedBall x (r x))) = ∑' x : t0, μ (closedBall x (r0 x)) := by
           congr 1; ext x; rw [r_t0 x x.2]
@@ -983,10 +983,10 @@ theorem exists_closedBall_covering_tsum_measure_le (μ : Measure α) [SFinite μ
           simp only [SetCoe.forall, iUnion_subset_iff]
           intro x hx
           apply Subset.trans (closedBall_subset_ball (hr0 x hx).2.2) (hR x (t0s hx)).2
-        _ ≤ μ s + ENNReal.div ε 2 := μu
+        _ ≤ μ s + (ε / 2) := μu
     -- each subfamily in the second step has measure at most `ε / (2 N)`.
     have B : ∀ i : Fin N, (∑' x : ((↑) : s' → α) '' S i, μ (closedBall x (r x))) ≤
-        ENNReal.div (ENNReal.div ε 2) (N : ℝ≥0∞) :=
+        ((ε / 2) / (N : ℝ≥0∞)) :=
       fun i =>
       calc
         (∑' x : ((↑) : s' → α) '' S i, μ (closedBall x (r x))) =
@@ -1006,7 +1006,7 @@ theorem exists_closedBall_covering_tsum_measure_le (μ : Measure α) [SFinite μ
           simp only [SetCoe.forall, iUnion_subset_iff]
           intro x xs' _
           exact (hr1 x xs').2
-        _ ≤ ENNReal.div (ENNReal.div ε 2) (N : ℝ≥0∞) := by
+        _ ≤ ((ε / 2) / (N : ℝ≥0∞)) := by
           have : μ s' = 0 := μt0
           rwa [this, zero_add] at μv
     -- add up all these to prove the desired estimate
@@ -1019,10 +1019,10 @@ theorem exists_closedBall_covering_tsum_measure_le (μ : Measure α) [SFinite μ
           (∑' x : t0, μ (closedBall x (r x))) +
             ∑ i : Fin N, ∑' x : ((↑) : s' → α) '' S i, μ (closedBall x (r x)) :=
         (add_le_add le_rfl (ENNReal.tsum_iUnion_le (fun x => μ (closedBall x (r x))) _))
-      _ ≤ μ s + ENNReal.div ε 2 + ∑ i : Fin N, ENNReal.div (ENNReal.div ε 2) (N : ℝ≥0∞) := by
+      _ ≤ μ s + (ε / 2) + ∑ i : Fin N, ((ε / 2) / (N : ℝ≥0∞)) := by
         gcongr
         apply B
-      _ ≤ μ s + ENNReal.div ε 2 + ENNReal.div ε 2 := by
+      _ ≤ μ s + (ε / 2) + (ε / 2) := by
         gcongr
         simp only [Finset.card_fin, Finset.sum_const, nsmul_eq_mul, ENNReal.mul_div_le]
       _ = μ s + ε := by rw [add_assoc, ENNReal.add_halves]
@@ -1090,7 +1090,7 @@ variable [MetricSpace β] [SigmaAlgebra β] [BorelSpace β] [SecondCountableTopo
 almost surely to the Radon-Nikodym derivative. -/
 theorem ae_tendsto_rnDeriv (ρ μ : Measure β) [IsLocallyFiniteMeasure μ] [IsLocallyFiniteMeasure ρ] :
     ∀ᵐ x ∂μ,
-      Tendsto (fun r => ENNReal.div (ρ (closedBall x r)) (μ (closedBall x r))) (𝓝[>] 0)
+      Tendsto (fun r => (ρ (closedBall x r) / μ (closedBall x r))) (𝓝[>] 0)
         (𝓝 (ρ.rnDeriv μ x)) := by
   filter_upwards [VitaliFamily.ae_tendsto_rnDeriv (Besicovitch.vitaliFamily μ) ρ] with x hx
   exact hx.comp (tendsto_filterAt μ x)
@@ -1103,7 +1103,7 @@ see `ae_tendsto_measure_inter_div`. -/
 theorem ae_tendsto_measure_inter_div_of_measurableSet (μ : Measure β) [IsLocallyFiniteMeasure μ]
     {s : Set β} (hs : MeasurableSet s) :
     ∀ᵐ x ∂μ,
-      Tendsto (fun r => ENNReal.div (μ (s ∩ closedBall x r)) (μ (closedBall x r))) (𝓝[>] 0)
+      Tendsto (fun r => (μ (s ∩ closedBall x r) / μ (closedBall x r))) (𝓝[>] 0)
         (𝓝 (s.indicator 1 x)) := by
   filter_upwards [VitaliFamily.ae_tendsto_measure_inter_div_of_measurableSet
       (Besicovitch.vitaliFamily μ) hs]
@@ -1118,7 +1118,7 @@ A stronger version holds for measurable sets, see `ae_tendsto_measure_inter_div_
 See also `IsUnifLocDoublingMeasure.ae_tendsto_measure_inter_div`. -/
 theorem ae_tendsto_measure_inter_div (μ : Measure β) [IsLocallyFiniteMeasure μ] (s : Set β) :
     ∀ᵐ x ∂μ.restrict s,
-      Tendsto (fun r => ENNReal.div (μ (s ∩ closedBall x r)) (μ (closedBall x r)))
+      Tendsto (fun r => (μ (s ∩ closedBall x r) / μ (closedBall x r)))
         (𝓝[>] 0) (𝓝 1) := by
   filter_upwards [VitaliFamily.ae_tendsto_measure_inter_div (Besicovitch.vitaliFamily μ) s] with x
     hx using hx.comp (tendsto_filterAt μ x)

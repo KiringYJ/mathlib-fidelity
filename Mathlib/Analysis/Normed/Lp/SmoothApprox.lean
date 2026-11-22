@@ -60,7 +60,7 @@ theorem exist_eLpNorm_sub_le_of_continuous (μ : Measure E := by volume_tac)
     exact toReal_pos (pos_mono (subset_tsupport f) (pos_of_ne_zero hf)).ne' hs₁
   set ε' := ε * (μ <| tsupport f).toReal ^ (-(1 / p.toReal)) with ε'_def
   have hε' : 0 < ε' := by positivity
-  have hε₂ : ENNReal.ofReal ε' * μ (tsupport f) ^ (ENNReal.div 1 p).toReal ≤ ENNReal.ofReal ε := by
+  have hε₂ : ENNReal.ofReal ε' * μ (tsupport f) ^ (1 / p).toReal ≤ ENNReal.ofReal ε := by
     rw [ENNReal.toReal_div (hb := hp_real.isUnit), ENNReal.toReal_one,
       ← ofReal_toReal hs₁, ofReal_rpow_of_pos hs₂, ← ofReal_mul hε'.le,
       ofReal_le_ofReal_iff hε.le, ε'_def, mul_assoc, ← Real.rpow_add hs₂, neg_add_cancel,

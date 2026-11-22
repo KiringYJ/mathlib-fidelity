@@ -305,8 +305,7 @@ private lemma sub_zero_finset {H : Type*} [DecidableEq H] [AddCommGroup H] (s : 
 
 @[to_additive existing]
 private lemma div_one_finset (s : Finset G) : s / 1 = s := by
-  change s * (1 : Finset G)⁻¹ = s
-  rw [inv_one, mul_one]
+  rw [div_eq_mul_inv, inv_one, mul_one]
 
 /-- Special case of the **Plünnecke-Ruzsa inequality**. Multiplication version. -/
 @[to_additive /-- Special case of the **Plünnecke-Ruzsa inequality**. Addition version. -/]

@@ -53,7 +53,7 @@ theorem summable_norm_of_tsum_eLpNorm_ne_top {ι : Type*} [Countable ι]
     rw [lintegral_tsum (fun i ↦ (hf i).restrict.enorm)]
     apply ne_of_lt
     have : ∑' n, eLpNorm (f n) p (μ.restrict s) *
-        (μ.restrict s) Set.univ ^ ((ENNReal.div 1 1).toReal - (ENNReal.div 1 p).toReal) < ∞ := by
+        (μ.restrict s) Set.univ ^ ((1 / 1 : ℝ≥0∞).toReal - (1 / p).toReal) < ∞ := by
       rw [ENNReal.tsum_mul_right]
       apply ENNReal.mul_lt_top ?_ ?_
       · apply lt_of_le_of_lt ?_ h'f.lt_top

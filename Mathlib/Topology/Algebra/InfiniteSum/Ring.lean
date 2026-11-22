@@ -88,11 +88,11 @@ variable [DivisionSemiring α] [TopologicalSpace α] [IsTopologicalSemiring α]
     {f : ι → α} {a a₁ a₂ : α}
 
 theorem HasSum.div_const (h : HasSum f a L) (b : α) {hb : IsUnit b} :
-    HasSum (fun i ↦ Checked.div (f i) b hb) (Checked.div a b hb) L := by
+    HasSum (fun i ↦ ((f i) / b)) (a / b) L := by
   simp only [div_eq_mul_inv₀, h.mul_right b⁻¹]
 
 theorem Summable.div_const (h : Summable f L) (b : α) {hb : IsUnit b} :
-    Summable (fun i ↦ Checked.div (f i) b hb) L :=
+    Summable (fun i ↦ ((f i) / b)) L :=
   (h.hasSum.div_const _).summable
 
 theorem hasSum_mul_left_iff (h : a₂ ≠ 0) : HasSum (fun i ↦ a₂ * f i) (a₂ * a₁) L ↔ HasSum f a₁ L :=
@@ -106,7 +106,7 @@ theorem hasSum_mul_right_iff (h : a₂ ≠ 0) : HasSum (fun i ↦ f i * a₂) (a
     simpa only [mul_inv_cancel_right₀] using H', HasSum.mul_right _⟩
 
 theorem hasSum_div_const_iff {ha₂ : IsUnit a₂} :
-    HasSum (fun i ↦ Checked.div (f i) a₂ ha₂) (Checked.div a₁ a₂ ha₂) L ↔ HasSum f a₁ L := by
+    HasSum (fun i ↦ ((f i) / a₂)) (a₁ / a₂) L ↔ HasSum f a₁ L := by
   simpa only [div_eq_mul_inv₀] using hasSum_mul_right_iff (a₂ := a₂⁻¹) inv_ne_zero
 
 theorem summable_mul_left_iff (h : a ≠ 0) : (Summable (fun i ↦ a * f i) L) ↔ Summable f L :=
@@ -120,7 +120,7 @@ theorem summable_mul_right_iff (h : a ≠ 0) : (Summable (fun i ↦ f i * a) L) 
     simpa only [mul_inv_cancel_right₀] using H', fun H ↦ H.mul_right _⟩
 
 theorem summable_div_const_iff {ha : IsUnit a} :
-    (Summable (fun i ↦ Checked.div (f i) a ha) L) ↔ Summable f L := by
+    (Summable (fun i ↦ ((f i) / a)) L) ↔ Summable f L := by
   simpa only [div_eq_mul_inv₀] using summable_mul_right_iff (a := a⁻¹) inv_ne_zero
 
 theorem tsum_mul_left [T2Space α] :
@@ -137,7 +137,7 @@ theorem tsum_mul_right [T2Space α] : ∑'[L] x, f x * a = (∑'[L] x, f x) * a 
       (g := AddMonoidHom.mulRight a)).symm
 
 theorem tsum_div_const [T2Space α] {ha : IsUnit a} :
-    ∑'[L] x, Checked.div (f x) a ha = Checked.div (∑'[L] x, f x) a ha := by
+    ∑'[L] x, ((f x) / a) = ((∑'[L] x, f x) / a) := by
   simpa only [div_eq_mul_inv₀] using tsum_mul_right
 
 /-! The reciprocals `1 / f i` below exist when every value of `f` is invertible, that is, when `f`
@@ -145,19 +145,19 @@ is a unit of the function monoid (`Pi.isUnit_iff`). -/
 
 theorem HasSum.const_div {hf : IsUnit f}
     (h : HasSum (fun x ↦ Checked.div 1 (f x) (Pi.isUnit_iff.mp hf x)) a L) (b : α) :
-    HasSum (fun i ↦ Checked.div b (f i) (Pi.isUnit_iff.mp hf i)) (b * a) L := by
+    HasSum (fun i ↦ (b / (f i))) (b * a) L := by
   have := h.mul_left b
   simpa only [div_eq_mul_inv₀, one_mul] using this
 
 theorem Summable.const_div {hf : IsUnit f}
     (h : Summable (fun x ↦ Checked.div 1 (f x) (Pi.isUnit_iff.mp hf x)) L) (b : α) :
-    Summable (fun i ↦ Checked.div b (f i) (Pi.isUnit_iff.mp hf i)) L :=
+    Summable (fun i ↦ (b / (f i))) L :=
   (h.hasSum.const_div (hf := hf) b).summable
 
 theorem hasSum_const_div_iff {hf : IsUnit f} (h : a₂ ≠ 0) :
     HasSum (fun i ↦ Checked.div a₂ (f i) (Pi.isUnit_iff.mp hf i)) (a₂ * a₁) L ↔
       HasSum (Checked.div 1 f hf) a₁ L := by
-  have hf' : Checked.div 1 f hf = fun i ↦ (f i)⁻¹ :=
+  have hf' : (1 / f) = fun i ↦ (f i)⁻¹ :=
     funext fun i ↦ by rw [Pi.div_apply₀, Pi.one_apply, one_div₀]
   rw [hf']
   simp only [div_eq_mul_inv₀]
@@ -166,7 +166,7 @@ theorem hasSum_const_div_iff {hf : IsUnit f} (h : a₂ ≠ 0) :
 theorem summable_const_div_iff {hf : IsUnit f} (h : a ≠ 0) :
     (Summable (fun i ↦ Checked.div a (f i) (Pi.isUnit_iff.mp hf i)) L) ↔
       Summable (Checked.div 1 f hf) L := by
-  have hf' : Checked.div 1 f hf = fun i ↦ (f i)⁻¹ :=
+  have hf' : (1 / f) = fun i ↦ (f i)⁻¹ :=
     funext fun i ↦ by rw [Pi.div_apply₀, Pi.one_apply, one_div₀]
   rw [hf']
   simp only [div_eq_mul_inv₀]

@@ -12,16 +12,16 @@ public import Mathlib.Data.Rat.Init
 /-!
 # Ordinary notation for inversion and division by invertible elements
 
-Ordinary `a / b` defaults to division by a unit in a commutative monoid. The documented
-alternatives are right division in groups and division rings, pointwise quotients in
-commutative groups, and ordered-group interval division. Write operand casts explicitly.
-Euclidean quotients use their named
-operations. In a monoid without an ambient inverse, `a⁻¹` and `a ^ n` for integer `n`
-use the checked operations with invertibility evidence found by `checked_unit`.
+Ordinary `a / b` uses the installed division or checked exact division on its domain.
+Euclidean quotients use their named operations. Natural and integer operands require a named
+operation or explicit casts to another carrier.
+In a monoid without an ambient inverse, `a⁻¹` and `a ^ n` for integer `n` use the checked
+operations with invertibility evidence found by `checked_unit`.
 
 The operator-tree algorithm follows the pinned official Lean elaborator in Lean/Elab/Extra.lean.
 Division checks its operands before the surrounding operators insert coercions.
-Genuine group operations and natural powers retain their ordinary elaborated heads.
+Ambient division, genuine group operations and natural powers retain their ordinary
+elaborated heads.
 -/
 
 public meta section

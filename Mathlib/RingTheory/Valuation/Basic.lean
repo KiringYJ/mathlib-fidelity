@@ -1292,7 +1292,7 @@ theorem map_inv {hx : IsUnit x} : v x⁻¹ = -(v x) :=
   eq_neg_of_add_eq_zero_left <| by rw [← v.map_mul, inv_mul_cancel₀, v.map_one]
 
 @[simp]
-theorem map_div {hy : IsUnit y} : v (Checked.div x y hy) = v x - v y := by
+theorem map_div {hy : IsUnit y} : v (x / y) = v x - v y := by
   rw [div_eq_mul_inv₀, v.map_mul, v.map_inv, sub_eq_add_neg]
 
 end Group

@@ -314,8 +314,8 @@ follows from §59, Th. D, but the second inequality is not justified. We prove t
 almost all `x` in `MeasureTheory.ae_measure_preimage_add_right_lt_top_of_ne_zero`. -/]
 theorem measure_lintegral_div_measure (sm : MeasurableSet s) (h2s : ν' s ≠ 0) (h3s : ν' s ≠ ∞)
     (f : G → ℝ≥0∞) (hf : Measurable f) :
-    (μ' s * ∫⁻ y, ENNReal.div (f y⁻¹) (ν' ((· * y⁻¹) ⁻¹' s)) ∂ν') = ∫⁻ x, f x ∂μ' := by
-  set g := fun y => ENNReal.div (f y⁻¹) (ν' ((fun x => x * y⁻¹) ⁻¹' s))
+    (μ' s * ∫⁻ y, (f y⁻¹ / ν' ((· * y⁻¹) ⁻¹' s)) ∂ν') = ∫⁻ x, f x ∂μ' := by
+  set g := fun y => (f y⁻¹ / ν' ((fun x => x * y⁻¹) ⁻¹' s))
   have hg : Measurable g :=
     (hf.comp measurable_inv).mul (measurable_inv.comp
       ((measurable_measure_mul_right ν' sm).comp measurable_inv))
@@ -344,9 +344,9 @@ theorem measure_mul_measure_eq (s t : Set G) (h2s : ν' s ≠ 0) (h3s : ν' s �
 @[to_additive
 /-- Left invariant Borel measures on an additive measurable group are unique (up to a scalar). -/]
 theorem measure_eq_div_smul (h2s : ν' s ≠ 0) (h3s : ν' s ≠ ∞) :
-    μ' = Checked.div (μ' s) (ν' s) (ENNReal.isUnit_iff.2 ⟨h2s, h3s⟩) • ν' := by
+    μ' = (μ' s / ν' s) • ν' := by
   ext1 t -
-  rw [Measure.smul_apply, smul_eq_mul, ENNReal.checkedDiv_eq_div, mul_comm, ← ENNReal.mul_div_assoc,
+  rw [Measure.smul_apply, smul_eq_mul, mul_comm, ← ENNReal.mul_div_assoc,
     mul_comm, measure_mul_measure_eq μ' ν' s t h2s h3s, ENNReal.mul_div_assoc,
     ENNReal.mul_div_cancel h2s h3s]
 

@@ -692,7 +692,7 @@ theorem rpow_neg (x : ℝ≥0∞) (y : ℝ) : x ^ (-y) = (x ^ y)⁻¹ := by
         _ = ((x : ℝ≥0∞) ^ y)⁻¹ := by rw [coe_inv, coe_rpow_of_ne_zero h]
 
 theorem rpow_sub {x : ℝ≥0∞} (y z : ℝ) (hx : x ≠ 0) (h'x : x ≠ ⊤) :
-    x ^ (y - z) = ENNReal.div (x ^ y) (x ^ z) := by
+    x ^ (y - z) = ((x ^ y) / (x ^ z)) := by
   rw [sub_eq_add_neg, rpow_add _ _ hx h'x, rpow_neg, ENNReal.div_eq_mul_inv]
 
 theorem rpow_neg_one (x : ℝ≥0∞) : x ^ (-1 : ℝ) = x⁻¹ := by simp [rpow_neg]
@@ -798,7 +798,7 @@ theorem inv_rpow (x : ℝ≥0∞) (y : ℝ) : x⁻¹ ^ y = (x ^ y)⁻¹ := by
     one_rpow]
 
 theorem div_rpow_of_nonneg (x y : ℝ≥0∞) {z : ℝ} (hz : 0 ≤ z) :
-    (ENNReal.div x y) ^ z = ENNReal.div (x ^ z) (y ^ z) := by
+    (x / y) ^ z = ((x ^ z) / (y ^ z)) := by
   rw [ENNReal.div_eq_mul_inv, mul_rpow_of_nonneg _ _ hz, inv_rpow, ENNReal.div_eq_mul_inv]
 
 theorem strictMono_rpow_of_pos {z : ℝ} (h : 0 < z) : StrictMono fun x : ℝ≥0∞ => x ^ z := by

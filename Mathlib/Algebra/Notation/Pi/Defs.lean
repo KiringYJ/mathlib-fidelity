@@ -123,6 +123,10 @@ lemma _root_.Function.const_sub (a b : G) : const ι a - const ι b = const ι (
 
 end Sub
 
+@[to_additive existing]
+instance instDiv [∀ i, Div (G i)] : Div (∀ i, G i) where
+  div f g i := f i / g i
+
 section Pow
 
 variable [∀ i, Pow (M i) α]

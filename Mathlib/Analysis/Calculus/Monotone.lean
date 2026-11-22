@@ -144,7 +144,7 @@ theorem StieltjesFunction.ae_hasDerivAt (f : StieltjesFunction ℝ) :
       ((ENNReal.tendsto_toReal h'x.ne).comp
         (hx.comp (Real.tendsto_Icc_vitaliFamily_right x)) |>.comp hR)
     filter_upwards [hright] with y hxy
-    change (ENNReal.div (f.measure (Icc x y)) (volume (Icc x y))).toReal = q f (f x) y
+    change (f.measure (Icc x y) / volume (Icc x y)).toReal = q f (f x) y
     simp only [StieltjesFunction.measure_Icc, Real.volume_Icc,
       Classical.not_not.1 h''x]
     rw [← ENNReal.ofReal_div_of_pos (sub_pos.2 hxy), ENNReal.toReal_ofReal]
@@ -154,7 +154,7 @@ theorem StieltjesFunction.ae_hasDerivAt (f : StieltjesFunction ℝ) :
       ((ENNReal.tendsto_toReal h'x.ne).comp
         (hx.comp (Real.tendsto_Icc_vitaliFamily_left x)) |>.comp hL)
     filter_upwards [hleft] with y hxy
-    change (ENNReal.div (f.measure (Icc (y : ℝ) x)) (volume (Icc (y : ℝ) x))).toReal =
+    change (f.measure (Icc (y : ℝ) x) / volume (Icc (y : ℝ) x)).toReal =
       q (leftLim f) (f x) y
     simp only [q, StieltjesFunction.measure_Icc, Real.volume_Icc]
     rw [← ENNReal.ofReal_div_of_pos (sub_pos.2 hxy), ENNReal.toReal_ofReal

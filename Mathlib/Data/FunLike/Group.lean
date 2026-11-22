@@ -223,44 +223,55 @@ protected abbrev invOneClass [InvOneClass β] [IsOneApply F α β] [IsInvApply F
 
 variable [Pow F ℤ]
 
-/-- Pointwise multiplication by the inverse gives the division instance used in transport. -/
-local instance : Div F := ⟨fun f g ↦ f * g⁻¹⟩
+omit [One F] [Pow F ℕ] [Pow F ℤ] in
+/-- Coercion sends multiplication by an inverse to the codomain's pointwise division. -/
+theorem coe_mul_inv_eq_div [DivInvMonoid β] [IsMulApply F α β] [IsInvApply F α β]
+    (f g : F) : ⇑(f * g⁻¹) = (f : α → β) / (g : α → β) := by
+  funext x
+  rw [mul_apply, inv_apply, Pi.div_apply]
+  exact (div_eq_mul_inv (f x) (g x)).symm
 
 /-- Transfer the `DivInvMonoid` structure using pointwise multiplication and inverse. -/
 protected abbrev divInvMonoid [DivInvMonoid β] [IsOneApply F α β] [IsMulApply F α β]
     [IsInvApply F α β] [IsPowApply ℕ F α β] [IsPowApply ℤ F α β] : DivInvMonoid F :=
+  letI : Div F := ⟨fun f g ↦ f * g⁻¹⟩
   DFunLike.coe_injective.divInvMonoid (fun (f : F) ↦ (f : α → β)) coe_one coe_mul coe_inv
-    coe_mul_inv coe_pow coe_pow
+    (coe_mul_inv_eq_div (F := F)) coe_pow coe_pow
 
 /-- Transfer the `DivInvOneMonoid` structure using pointwise multiplication and inverse. -/
 protected abbrev divInvOneMonoid [DivInvOneMonoid β] [IsOneApply F α β] [IsMulApply F α β]
     [IsInvApply F α β] [IsPowApply ℕ F α β] [IsPowApply ℤ F α β] : DivInvOneMonoid F :=
+  letI : Div F := ⟨fun f g ↦ f * g⁻¹⟩
   DFunLike.coe_injective.divInvOneMonoid (fun (f : F) ↦ (f : α → β)) coe_one coe_mul coe_inv
-    coe_mul_inv coe_pow coe_pow
+    (coe_mul_inv_eq_div (F := F)) coe_pow coe_pow
 
 /-- Transfer the `DivisionMonoid` structure using pointwise multiplication and inverse. -/
 protected abbrev divisionMonoid [DivisionMonoid β] [IsOneApply F α β] [IsMulApply F α β]
     [IsInvApply F α β] [IsPowApply ℕ F α β] [IsPowApply ℤ F α β] : DivisionMonoid F :=
+  letI : Div F := ⟨fun f g ↦ f * g⁻¹⟩
   DFunLike.coe_injective.divisionMonoid (fun (f : F) ↦ (f : α → β)) coe_one coe_mul coe_inv
-    coe_mul_inv coe_pow coe_pow
+    (coe_mul_inv_eq_div (F := F)) coe_pow coe_pow
 
 /-- Transfer the `DivisionCommMonoid` structure using pointwise multiplication and inverse. -/
 protected abbrev divisionCommMonoid [DivisionCommMonoid β] [IsOneApply F α β] [IsMulApply F α β]
     [IsInvApply F α β] [IsPowApply ℕ F α β] [IsPowApply ℤ F α β] : DivisionCommMonoid F :=
+  letI : Div F := ⟨fun f g ↦ f * g⁻¹⟩
   DFunLike.coe_injective.divisionCommMonoid (fun (f : F) ↦ (f : α → β)) coe_one coe_mul coe_inv
-    coe_mul_inv coe_pow coe_pow
+    (coe_mul_inv_eq_div (F := F)) coe_pow coe_pow
 
 /-- Transfer the `Group` structure using pointwise multiplication and inverse. -/
 protected abbrev group [Group β] [IsOneApply F α β] [IsMulApply F α β]
     [IsInvApply F α β] [IsPowApply ℕ F α β] [IsPowApply ℤ F α β] : Group F :=
+  letI : Div F := ⟨fun f g ↦ f * g⁻¹⟩
   DFunLike.coe_injective.group (fun (f : F) ↦ (f : α → β)) coe_one coe_mul coe_inv
-    coe_mul_inv coe_pow coe_pow
+    (coe_mul_inv_eq_div (F := F)) coe_pow coe_pow
 
 /-- Transfer the `CommGroup` structure using pointwise multiplication and inverse. -/
 protected abbrev commGroup [CommGroup β] [IsOneApply F α β] [IsMulApply F α β]
     [IsInvApply F α β] [IsPowApply ℕ F α β] [IsPowApply ℤ F α β] : CommGroup F :=
+  letI : Div F := ⟨fun f g ↦ f * g⁻¹⟩
   DFunLike.coe_injective.commGroup (fun (f : F) ↦ (f : α → β)) coe_one coe_mul coe_inv
-    coe_mul_inv coe_pow coe_pow
+    (coe_mul_inv_eq_div (F := F)) coe_pow coe_pow
 
 end GroupInstances
 

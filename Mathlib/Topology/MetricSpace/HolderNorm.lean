@@ -208,7 +208,7 @@ lemma eHolderNorm_eq_zero {r : ℝ≥0} {f : X → Y} :
     · rw [eHolderNorm, ← ENNReal.bot_eq_zero, iInf₂_eq_bot] at h
       rw [← edist_eq_zero, ← nonpos_iff_eq_zero]
       refine le_of_forall_gt fun b hb => ?_
-      obtain ⟨C, hC, hC'⟩ := h (ENNReal.div b (edist x₁ x₂ ^ (r : ℝ)))
+      obtain ⟨C, hC, hC'⟩ := h (b / (edist x₁ x₂ ^ (r : ℝ)))
         (ENNReal.div_pos hb.ne.symm (ENNReal.rpow_lt_top_of_nonneg zero_le_coe
           (edist_lt_top x₁ x₂).ne).ne)
       exact lt_of_le_of_lt (hC x₁ x₂) <| ENNReal.mul_lt_of_lt_div hC'

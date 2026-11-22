@@ -55,8 +55,8 @@ theorem mulSupport_mul_inv : (mulSupport fun x => f x * (g x)⁻¹) ⊆ mulSuppo
   mulSupport_binop_subset (fun a b => a * b⁻¹) (by simp) f g
 
 theorem mulSupport_div :
-    (mulSupport fun x => DivInvMonoid.div' (f x) (g x)) ⊆ mulSupport f ∪ mulSupport g :=
-  mulSupport_mul_inv f g
+    (mulSupport fun x => f x / g x) ⊆ mulSupport f ∪ mulSupport g := by
+  simpa only [div_eq_mul_inv] using mulSupport_mul_inv f g
 
 theorem support_sub {A : Type*} [SubtractionMonoid A] (f g : α → A) :
     (support fun x => f x - g x) ⊆ support f ∪ support g := by

@@ -121,19 +121,18 @@ instance ZPow.toPow {M : Type*} [ZPow M] : Pow M ℤ :=
 @[to_additive ofSMul]
 instance ZPow.ofPow {M : Type*} [Pow M ℤ] : ZPow M := ⟨fun n x ↦ Pow.pow x n⟩
 
-/-- A `DivInvMonoid` is a `Monoid` with division and inversion satisfying
-`div_eq_mul_inv : ∀ a b, HDiv.hDiv a b = a * b⁻¹`.
+/-- A `DivInvMonoid` is a `Monoid` with operations `/` and `⁻¹` satisfying
+`div_eq_mul_inv : ∀ a b, a / b = a * b⁻¹`.
 
 This deduplicates the name `div_eq_mul_inv`.
-The default for `div` is such that `HDiv.hDiv a b = a * b⁻¹` holds by definition.
+The default for `div` is such that `a / b = a * b⁻¹` holds by definition.
 
 Adding `div` as a field rather than defining `a / b := a * b⁻¹` allows us to
 avoid certain classes of unification failures, for example:
 Let `Foo X` be a type with a `∀ X, Div (Foo X)` instance but no
-`∀ X, Inv (Foo X)`, e.g. when `Foo X` is a `EuclideanDomain`. Suppose we
-also have an instance `∀ X [Cromulent X], GroupWithZero (Foo X)`. Then the
-`(/)` coming from `GroupWithZero.div` cannot be definitionally equal to
-the `(/)` coming from `Foo.Div`.
+`∀ X, Inv (Foo X)`. Suppose we also have an instance
+`∀ X [Cromulent X], DivInvMonoid (Foo X)`. The `div` field lets this instance
+reuse the existing `Div` and prove that its division is multiplication by the inverse.
 
 In the same way, adding a `zpow` field makes it possible to avoid definitional failures
 in diamonds. See the definition of `Monoid` and Note [forgetful inheritance] for more
@@ -142,7 +141,7 @@ explanations on this.
 class DivInvMonoid (G : Type*) extends Monoid G, Inv G, Div G, ZPow G where
   protected div := DivInvMonoid.div'
   /-- Division is multiplication by the inverse. -/
-  protected div_eq_mul_inv : ∀ a b : G, HDiv.hDiv a b = a * b⁻¹ := by intros; rfl
+  protected div_eq_mul_inv : ∀ a b : G, a / b = a * b⁻¹ := by intros; rfl
   zpow := zpowRec npowRec
   /-- `a ^ 0 = 1` -/
   protected zpow_zero' (a : G) : a ^ (0 : ℤ) = 1 := by intros; rfl
@@ -253,7 +252,7 @@ This is a duplicate of `DivInvMonoid.div_eq_mul_inv` ensuring that the types unf
 -/
 @[to_additive /-- Subtracting an element is the same as adding by its negative.
 This is a duplicate of `SubNegMonoid.sub_eq_add_neg` ensuring that the types unfold better. -/]
-theorem div_eq_mul_inv (a b : G) : HDiv.hDiv a b = a * b⁻¹ :=
+theorem div_eq_mul_inv (a b : G) : a / b = a * b⁻¹ :=
   DivInvMonoid.div_eq_mul_inv _ _
 
 alias division_def := div_eq_mul_inv

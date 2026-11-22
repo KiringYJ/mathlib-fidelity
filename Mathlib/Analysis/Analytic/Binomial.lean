@@ -116,7 +116,7 @@ private theorem one_div_sub_pow_of_one {𝕜 : Type*} [NontriviallyNormedField �
   have hp : HasFPowerSeriesOnBall p.sum p (u 0) 1 := by
     rw [map_zero]
     exact (p.hasFPowerSeriesOnBall (hunit.r_pos.trans_le hunit.r_le)).mono hunit.r_pos hunit.r_le
-  have hrad : ENNReal.div 1 ‖u‖ₑ = ‖z‖ₑ := by simp [u, enorm_smul, enorm_inv]
+  have hrad : (1 / ‖u‖ₑ) = ‖z‖ₑ := by simp [u, enorm_smul, enorm_inv]
   have hcomp := hp.compContinuousLinearMap (u := u) (x := (0 : 𝕜))
   have hscaled := hcomp.const_smul (c := (z ^ (a + 1))⁻¹)
   have hcoeff : (z ^ (a + 1))⁻¹ • p.compContinuousLinearMap u =

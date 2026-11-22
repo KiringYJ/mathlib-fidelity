@@ -64,7 +64,7 @@ theorem div_right {hc : IsUnit c} (hab : Commute a b) (hac : Commute a c) :
 
 @[simp]
 theorem div_left {hb : IsUnit b} (hac : Commute a c) (hbc : Commute b c) :
-    Commute (Checked.div a b hb) c := by
+    Commute (a / b) c := by
   rw [div_eq_mul_inv₀]
   exact hac.mul_left hbc.inv_left₀
 

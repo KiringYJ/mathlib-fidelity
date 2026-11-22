@@ -795,7 +795,7 @@ theorem hausdorffMeasure_preimage_le (hf : AntilipschitzWith K f) (hd : 0 ≤ d)
   simp only [hausdorffMeasure_apply, ENNReal.mul_iSup, ENNReal.mul_iInf_of_ne hKd0 hKd,
     ← ENNReal.tsum_mul_left]
   refine iSup₂_le fun ε ε0 => ?_
-  refine le_iSup₂_of_le (ENNReal.div ε K)
+  refine le_iSup₂_of_le (ε / K)
     (ENNReal.div_pos_iff.mpr ⟨ε0.ne', ENNReal.coe_ne_top⟩) ?_
   refine le_iInf₂ fun t hst => le_iInf fun htε => ?_
   replace hst : f ⁻¹' s ⊆ _ := preimage_mono hst; rw [preimage_iUnion] at hst
@@ -920,7 +920,7 @@ theorem hausdorffMeasure_pi_real {ι : Type*} [Fintype ι] :
     have hn := (npos n).ne'
     exact Set.pi univ fun i => Icc (a i + ((f i : ℕ) : ℝ) / ((n : ℕ) : ℝ))
       (a i + (((f i : ℕ) : ℝ) + 1) / ((n : ℕ) : ℝ))
-  let δ (n : ℕ+) := ENNReal.div 1 ((n : ℕ) : ℝ≥0∞)
+  let δ (n : ℕ+) := (1 / ((n : ℕ) : ℝ≥0∞))
   have A : Tendsto δ atTop (𝓝 0) := by
     simpa only [δ, ENNReal.one_div, Function.comp_def] using
       ENNReal.tendsto_inv_nat_nhds_zero.comp tendsto_PNat_val_atTop_atTop
@@ -972,7 +972,7 @@ theorem hausdorffMeasure_pi_real {ι : Type*} [Fintype ι] :
         exact pow_le_pow_left' (hn i) _
       · isBoundedDefault
     _ = liminf (fun n : ℕ+ => ∏ i : ι,
-        ENNReal.div (⌈((b i : ℝ) - a i) * (n : ℕ)⌉₊ : ℝ≥0∞) ((n : ℕ) : ℝ≥0∞)) atTop := by
+        ((⌈((b i : ℝ) - a i) * (n : ℕ)⌉₊ : ℝ≥0∞) / ((n : ℕ) : ℝ≥0∞))) atTop := by
       simp only [γ, Finset.card_univ, Nat.cast_prod, one_mul, Fintype.card_fin, Finset.sum_const,
         nsmul_eq_mul, Fintype.card_pi, δ, ENNReal.div_eq_mul_inv, Finset.prod_mul_distrib,
         Finset.prod_const]

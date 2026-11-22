@@ -15,11 +15,11 @@ example {a : ℝ≥0∞} (ha : a ≠ ∞) : a + 3 < ∞ := by finiteness
 example {a : ℝ≥0∞} (ha : a < ∞) : a + 3 < ∞ := by finiteness
 
 example {a : ℝ≥0∞} (ha : a ≠ ∞) : a ^ 10 ≠ ∞ := by finiteness
-example {a : ℝ≥0∞} (ha : a ≠ ∞) : ENNReal.div a 10 + 5 ≠ ∞ := by finiteness
-example {a b : ℝ≥0∞} (ha : a ≠ ∞) (hb : b ≠ 0) : ENNReal.div a b ≠ ∞ := by finiteness
+example {a : ℝ≥0∞} (ha : a ≠ ∞) : (a / 10) + 5 ≠ ∞ := by finiteness
+example {a b : ℝ≥0∞} (ha : a ≠ ∞) (hb : b ≠ 0) : (a / b) ≠ ∞ := by finiteness
 example {a : ℝ≥0∞} {b : ℝ≥0} (ha : a ≠ ∞) (hb : b ≠ 0) :
-    ENNReal.div a (b : ℝ≥0∞) ≠ ∞ := by finiteness
-example {a b : ℝ≥0∞} (ha : a ≠ ∞) : ENNReal.div a (b + 5) ≠ ∞ := by finiteness
+    (a / (b : ℝ≥0∞)) ≠ ∞ := by finiteness
+example {a b : ℝ≥0∞} (ha : a ≠ ∞) : (a / (b + 5)) ≠ ∞ := by finiteness
 
 example {a b : ℝ≥0∞} (ha : a ≠ ∞) (hb : b ≠ ∞) : a * b ≠ ∞ := by finiteness
 example {a : ℝ≥0∞} (ha : 0 < a) : a⁻¹ ≠ ∞ := by finiteness

@@ -1072,7 +1072,7 @@ theorem normSq_inv {ha : IsUnit a} : normSq a⁻¹ = Checked.inv (normSq a) (ha.
   Eq.symm <| inv_eq_of_mul_eq_one_right₀ <| map_mul_eq_one normSq mul_inv_cancel₀
 
 theorem normSq_div {hb : IsUnit b} :
-    normSq (Checked.div a b hb) = Checked.div (normSq a) (normSq b) (hb.map normSq) := by
+    normSq (a / b) = Checked.div (normSq a) (normSq b) (hb.map normSq) := by
   rw [div_eq_mul_inv₀, map_mul, normSq_inv, div_eq_mul_inv₀]
 
 theorem normSq_zpow (z : ℤ) {h : z < 0 → IsUnit a} :

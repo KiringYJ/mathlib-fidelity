@@ -383,7 +383,7 @@ theorem evariance_def' [IsProbabilityMeasure μ] {X : Ω → ℝ} (hX : AEStrong
 /-- **Chebyshev's inequality** for `ℝ≥0∞`-valued variance. -/
 theorem meas_ge_le_evariance_div_sq {X : Ω → ℝ} (hX : AEStronglyMeasurable X μ) {c : ℝ≥0}
     (hc : c ≠ 0) : μ {ω | ↑c ≤ |X ω - ∫ x, X x ∂μ|} ≤
-      ENNReal.div (evariance X μ) ((c : ℝ≥0∞) ^ 2) := by
+      (evariance X μ / ((c : ℝ≥0∞) ^ 2)) := by
   have A : (c : ℝ≥0∞) ≠ 0 := by rwa [Ne, ENNReal.coe_eq_zero]
   have B : AEStronglyMeasurable (fun _ : Ω => ∫ ω, X ω ∂μ) μ := aestronglyMeasurable_const
   convert!

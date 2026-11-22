@@ -26,10 +26,9 @@ variable {X : Type*} [TopologicalSpace X] [IsCompletelyPseudoMetrizableSpace X]
 instance (priority := 100) BaireSpace.of_completelyPseudoMetrizable : BaireSpace X := by
   let _ := upgradeIsCompletelyPseudoMetrizable X
   refine ⟨fun f ho hd => ?_⟩
-  let B : ℕ → ℝ≥0∞ := fun n => Checked.div 1 (2 ^ n) (ENNReal.isUnit_two_pow n)
+  let B : ℕ → ℝ≥0∞ := fun n => 1 / (2 : ℝ≥0∞) ^ n
   have Bpos (n : ℕ) : 0 < B n := by
     dsimp only [B]
-    rw [ENNReal.checkedDiv_eq_div]
     exact ENNReal.div_pos one_ne_zero (by finiteness)
   /- Translate the density assumption into two functions `center` and `radius` associating
     to any n, x, δ, δpos a center and a positive radius such that
@@ -39,26 +38,26 @@ instance (priority := 100) BaireSpace.of_completelyPseudoMetrizable : BaireSpace
       ∃ y r, 0 < r ∧ r ≤ B (n + 1) ∧ closedEBall y r ⊆ closedEBall x δ ∩ f n := by
     intro n x δ δpos
     have : x ∈ closure (f n) := hd n x
-    rcases EMetric.mem_closure_iff.1 this (ENNReal.div δ 2) (ENNReal.half_pos δpos) with ⟨y, ys, xy⟩
+    rcases EMetric.mem_closure_iff.1 this (δ / 2) (ENNReal.half_pos δpos) with ⟨y, ys, xy⟩
     rw [edist_comm] at xy
     obtain ⟨r, rpos, hr⟩ : ∃ r > 0, closedEBall y r ⊆ f n :=
       nhds_basis_closedEBall.mem_iff.1 (isOpen_iff_mem_nhds.1 (ho n) y ys)
-    refine ⟨y, min (min (ENNReal.div δ 2) r) (B (n + 1)), ?_, ?_, fun z hz => ⟨?_, ?_⟩⟩
-    · show 0 < min (min (ENNReal.div δ 2) r) (B (n + 1))
+    refine ⟨y, min (min (δ / 2) r) (B (n + 1)), ?_, ?_, fun z hz => ⟨?_, ?_⟩⟩
+    · show 0 < min (min (δ / 2) r) (B (n + 1))
       exact lt_min (lt_min (ENNReal.half_pos δpos) rpos) (Bpos (n + 1))
-    · show min (min (ENNReal.div δ 2) r) (B (n + 1)) ≤ B (n + 1)
+    · show min (min (δ / 2) r) (B (n + 1)) ≤ B (n + 1)
       exact min_le_right _ _
     · show z ∈ closedEBall x δ
       calc
         edist z x ≤ edist z y + edist y x := edist_triangle _ _ _
-        _ ≤ min (min (ENNReal.div δ 2) r) (B (n + 1)) + ENNReal.div δ 2 :=
+        _ ≤ min (min (δ / 2) r) (B (n + 1)) + (δ / 2) :=
           add_le_add hz (le_of_lt xy)
-        _ ≤ ENNReal.div δ 2 + ENNReal.div δ 2 :=
+        _ ≤ (δ / 2) + (δ / 2) :=
           add_le_add (le_trans (min_le_left _ _) (min_le_left _ _)) le_rfl
         _ = δ := ENNReal.add_halves δ
     show z ∈ f n
     exact hr (calc
-      edist z y ≤ min (min (ENNReal.div δ 2) r) (B (n + 1)) := hz
+      edist z y ≤ min (min (δ / 2) r) (B (n + 1)) := hz
       _ ≤ r := le_trans (min_le_left _ _) (min_le_right _ _))
   choose! center radius Hpos HB Hball using this
   refine fun x => (mem_closure_iff_nhds_basis nhds_basis_closedEBall).2 fun ε εpos => ?_

@@ -80,7 +80,7 @@ theorem blimsup_cthickening_ae_le_of_eventually_mul_le_aux (p : ℕ → Prop) {s
   by_contra contra
   obtain ⟨d, hd, hd'⟩ : ∃ d, d ∈ W ∧ ∀ {ι : Type _} {l : Filter ι} (w : ι → α) (δ : ι → ℝ),
       Tendsto δ l (𝓝[>] 0) → (∀ᶠ j in l, d ∈ closedBall (w j) (2 * δ j)) →
-        Tendsto (fun j => ENNReal.div (μ (W ∩ closedBall (w j) (δ j))) (μ (closedBall (w j) (δ j))))
+        Tendsto (fun j => (μ (W ∩ closedBall (w j) (δ j)) / μ (closedBall (w j) (δ j))))
           l (𝓝 1) :=
     Measure.exists_mem_of_measure_ne_zero_of_ae contra
       (IsUnifLocDoublingMeasure.ae_tendsto_measure_inter_div μ W 2)
@@ -107,8 +107,7 @@ theorem blimsup_cthickening_ae_le_of_eventually_mul_le_aux (p : ℕ → Prop) {s
   have hC : 0 < C :=
     lt_of_lt_of_le zero_lt_one (IsUnifLocDoublingMeasure.one_le_scalingConstantOf μ M⁻¹)
   suffices ∃ η < (1 : ℝ≥0),
-      ∀ᶠ j in atTop, ENNReal.div (μ (W ∩ closedBall (w j) (r₁ (f j))))
-        (μ (closedBall (w j) (r₁ (f j)))) ≤ η by
+      ∀ᶠ j in atTop, (μ (W ∩ closedBall (w j) (r₁ (f j))) / μ (closedBall (w j) (r₁ (f j)))) ≤ η by
     obtain ⟨η, hη, hη'⟩ := this
     replace hη' : 1 ≤ η := by
       simpa only [ENNReal.one_le_coe_iff] using
@@ -136,7 +135,7 @@ theorem blimsup_cthickening_ae_le_of_eventually_mul_le_aux (p : ℕ → Prop) {s
     (hr.eventually (IsUnifLocDoublingMeasure.eventually_measure_le_scaling_constant_mul'
       μ M hM)).mono fun j hj => hj (w j)
   refine (h₃.and h₄).mono fun j hj₀ => ?_
-  change ENNReal.div (μ (W ∩ B j)) (μ (B j)) ≤ ↑(1 - C⁻¹)
+  change (μ (W ∩ B j) / μ (B j)) ≤ ↑(1 - C⁻¹)
   rcases eq_or_ne (μ (B j)) ∞ with (hB | hB); · simp [hB]
   apply ENNReal.div_le_of_le_mul
   rw [ENNReal.coe_sub, ENNReal.coe_one, ENNReal.sub_mul fun _ _ => hB, one_mul]

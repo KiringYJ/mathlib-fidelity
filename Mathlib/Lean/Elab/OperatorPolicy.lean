@@ -17,9 +17,10 @@ import Mathlib.Tactic.Linter.Header
 /-!
 # Instance inference boundary for retired arithmetic operations
 
-Ordinary division uses a unit denominator in a commutative monoid by default. The operator
-elaborator implements the documented mathematical alternatives. The core natural and integer
-quotient instances and the total rational operators are excluded from ordinary inference.
+Slash uses installed division operations and the unit evidence required by checked exact division.
+Euclidean quotients use their named operations.
+Natural and integer operands are rejected by the operator elaborator. The core natural and
+integer quotient instances and the total rational operators are excluded from ordinary inference.
 
 Instance-attribute erasures do not survive imports. These exported command elaborators apply
 the same selective erasure in each importing module before delegating directly to Lean's

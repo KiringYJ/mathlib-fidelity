@@ -27,7 +27,7 @@ For finsets `s` and `t`:
 * `s + t` (`Finset.add`): Addition, finset of all `x + y` where `x ∈ s` and `y ∈ t`.
 * `s * t` (`Finset.mul`): Multiplication, finset of all `x * y` where `x ∈ s` and `y ∈ t`.
 * `s - t` (`Finset.sub`): Subtraction, finset of all `x - y` where `x ∈ s` and `y ∈ t`.
-* `s / t` (`Finset.div`): the product `s * t⁻¹` for finsets in a commutative group.
+* `s / t` (`Finset.div`): the finset of quotients `x / y` for `x ∈ s` and `y ∈ t`.
 
 For `α` a semigroup/monoid, `Finset α` is a semigroup/monoid.
 As an unfortunate side effect, this means that `n • s`, where `n : ℕ`, is ambiguous between
@@ -662,21 +662,18 @@ lemma inf_sub_right [SemilatticeInf β] [OrderTop β] (s t : Finset α) (f : α 
 end Sub
 
 section Div
-variable [DecidableEq α] [CommGroup α] {s s₁ s₂ t t₁ t₂ u : Finset α} {a b : α}
+variable [DecidableEq α] [Div α] {s s₁ s₂ t t₁ t₂ u : Finset α} {a b : α}
 
-/-- Pointwise subtraction with the binder shape needed by `to_additive` for Finset.div. -/
+/-- Pointwise subtraction on finsets in an additive commutative group. -/
 protected abbrev addCommGroupSub [AddCommGroup α] : Sub (Finset α) := Finset.sub
-/-- The pointwise quotient of finsets consists of the products of an element of the first
-finset with the inverse of an element of the second. -/
-@[to_additive existing Finset.addCommGroupSub, instance_reducible]
+/-- Pointwise division takes the quotients of all pairs of elements. -/
+@[to_additive existing, instance_reducible]
 protected def div : Div (Finset α) :=
-  ⟨fun s t ↦ s * t⁻¹⟩
+  ⟨image₂ (· / ·)⟩
+
 scoped[Pointwise] attribute [instance] Finset.div
 
-theorem image₂_div : image₂ (fun x y : α ↦ x / y) s t = s / t := by
-  change image₂ (fun x y : α ↦ x / y) s t = image₂ (· * ·) s (t.image fun x ↦ x⁻¹)
-  rw [image₂_image_right]
-  simp only [div_eq_mul_inv]
+theorem image₂_div : image₂ (fun x y : α ↦ x / y) s t = s / t := rfl
 
 theorem div_def : s / t = (s ×ˢ t).image fun p : α × α => p.1 / p.2 :=
   (image₂_div (s := s) (t := t)).symm
@@ -688,9 +685,7 @@ theorem mem_div : a ∈ s / t ↔ ∃ b ∈ s, ∃ c ∈ t, b / c = a := by
   simp only [← image₂_div]; exact mem_image₂
 
 @[simp, norm_cast]
-theorem coe_div (s t : Finset α) : (↑(s / t) : Set α) = (s : Set α) / (t : Set α) := by
-  change ((s * t⁻¹ : Finset α) : Set α) = (s : Set α) * (t : Set α)⁻¹
-  rw [coe_mul, coe_inv]
+theorem coe_div (s t : Finset α) : (↑(s / t) : Set α) = (s : Set α) / (t : Set α) := coe_image₂ ..
 
 theorem div_mem_div : a ∈ s → b ∈ t → a / b ∈ s / t := by
   simp only [← image₂_div]; exact mem_image₂_of_mem
@@ -1082,11 +1077,7 @@ protected theorem mul_eq_one_iff : s * t = 1 ↔ ∃ a b, s = {a} ∧ t = {b} �
 /-- `Finset α` is a division monoid under pointwise operations if `α` is. -/
 @[instance_reducible]
 protected def divisionMonoid : DivisionMonoid (Finset α) :=
-  letI : Div (Finset α) := ⟨fun s t ↦ s * t⁻¹⟩
-  coe_injective.divisionMonoid _ coe_one coe_mul coe_inv
-    (fun s t ↦ by
-      change ((s * t⁻¹ : Finset α) : Set α) = (s : Set α) * (t : Set α)⁻¹
-      rw [coe_mul, coe_inv]) coe_pow coe_zpow
+  coe_injective.divisionMonoid _ coe_one coe_mul coe_inv coe_div coe_pow coe_zpow
 
 attribute [to_additive existing] Finset.divisionMonoid
 scoped[Pointwise] attribute [instance] Finset.divisionMonoid

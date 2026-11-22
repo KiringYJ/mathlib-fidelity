@@ -220,7 +220,7 @@ a `SubNegMonoid`. This version takes custom `nsmul` and `zsmul` as `[SMul ℕ M�
 arguments. -/]
 protected abbrev divInvMonoid [DivInvMonoid M₂] (f : M₁ → M₂) (hf : Injective f) (one : f 1 = 1)
     (mul : ∀ x y, f (x * y) = f x * f y) (inv : ∀ x, f x⁻¹ = (f x)⁻¹)
-    (div : ∀ x y, f (HDiv.hDiv x y) = HDiv.hDiv (f x) (f y))
+    (div : ∀ x y, f (x / y) = f x / f y)
     (npow : ∀ (x) (n : ℕ), f (x ^ n) = f x ^ n)
     (zpow : ∀ (x) (n : ℤ), f (x ^ n) = f x ^ n) : DivInvMonoid M₁ :=
   { hf.monoid f one mul npow with
@@ -240,7 +240,7 @@ map that preserves `1`, `*`, `⁻¹`, and `/` to a `DivInvOneMonoid`. See note
 `[SMul ℤ M₁]` arguments. -/]
 protected abbrev divInvOneMonoid [DivInvOneMonoid M₂] (f : M₁ → M₂) (hf : Injective f)
     (one : f 1 = 1) (mul : ∀ x y, f (x * y) = f x * f y) (inv : ∀ x, f x⁻¹ = (f x)⁻¹)
-    (div : ∀ x y, f (HDiv.hDiv x y) = HDiv.hDiv (f x) (f y))
+    (div : ∀ x y, f (x / y) = f x / f y)
     (npow : ∀ (x) (n : ℕ), f (x ^ n) = f x ^ n)
     (zpow : ∀ (x) (n : ℤ), f (x ^ n) = f x ^ n) : DivInvOneMonoid M₁ :=
   { hf.divInvMonoid f one mul inv div npow zpow, hf.invOneClass f one inv with }
@@ -254,7 +254,7 @@ binary `-` to a `SubtractionMonoid`. This version takes custom `nsmul` and `zsmu
 and `[SMul ℤ M₁]` arguments. -/]
 protected abbrev divisionMonoid [DivisionMonoid M₂] (f : M₁ → M₂) (hf : Injective f) (one : f 1 = 1)
     (mul : ∀ x y, f (x * y) = f x * f y) (inv : ∀ x, f x⁻¹ = (f x)⁻¹)
-    (div : ∀ x y, f (HDiv.hDiv x y) = HDiv.hDiv (f x) (f y))
+    (div : ∀ x y, f (x / y) = f x / f y)
     (npow : ∀ (x) (n : ℕ), f (x ^ n) = f x ^ n)
     (zpow : ∀ (x) (n : ℤ), f (x ^ n) = f x ^ n) : DivisionMonoid M₁ :=
   { hf.divInvMonoid f one mul inv div npow zpow, hf.involutiveInv f inv with
@@ -272,7 +272,7 @@ and binary `-` to a `SubtractionCommMonoid`. This version takes custom `nsmul` a
 `[SMul ℕ M₁]` and `[SMul ℤ M₁]` arguments. -/]
 protected abbrev divisionCommMonoid [DivisionCommMonoid M₂] (f : M₁ → M₂) (hf : Injective f)
     (one : f 1 = 1) (mul : ∀ x y, f (x * y) = f x * f y) (inv : ∀ x, f x⁻¹ = (f x)⁻¹)
-    (div : ∀ x y, f (HDiv.hDiv x y) = HDiv.hDiv (f x) (f y))
+    (div : ∀ x y, f (x / y) = f x / f y)
     (npow : ∀ (x) (n : ℕ), f (x ^ n) = f x ^ n)
     (zpow : ∀ (x) (n : ℤ), f (x ^ n) = f x ^ n) : DivisionCommMonoid M₁ :=
   { hf.divisionMonoid f one mul inv div npow zpow, hf.commSemigroup f mul with }
@@ -284,7 +284,7 @@ protected abbrev divisionCommMonoid [DivisionCommMonoid M₂] (f : M₁ → M₂
 injective map that preserves `0` and `+` to an additive group. -/]
 protected abbrev group [Group M₂] (f : M₁ → M₂) (hf : Injective f) (one : f 1 = 1)
     (mul : ∀ x y, f (x * y) = f x * f y) (inv : ∀ x, f x⁻¹ = (f x)⁻¹)
-    (div : ∀ x y, f (HDiv.hDiv x y) = HDiv.hDiv (f x) (f y))
+    (div : ∀ x y, f (x / y) = f x / f y)
     (npow : ∀ (x) (n : ℕ), f (x ^ n) = f x ^ n)
     (zpow : ∀ (x) (n : ℤ), f (x ^ n) = f x ^ n) : Group M₁ :=
   { hf.divInvMonoid f one mul inv div npow zpow with
@@ -298,7 +298,7 @@ preserves `1`, `*` and `⁻¹` to a commutative group. See note [reducible non-i
 admits an injective map that preserves `0` and `+` to an additive commutative group. -/]
 protected abbrev commGroup [CommGroup M₂] (f : M₁ → M₂) (hf : Injective f) (one : f 1 = 1)
     (mul : ∀ x y, f (x * y) = f x * f y) (inv : ∀ x, f x⁻¹ = (f x)⁻¹)
-    (div : ∀ x y, f (HDiv.hDiv x y) = HDiv.hDiv (f x) (f y))
+    (div : ∀ x y, f (x / y) = f x / f y)
     (npow : ∀ (x) (n : ℕ), f (x ^ n) = f x ^ n)
     (zpow : ∀ (x) (n : ℤ), f (x ^ n) = f x ^ n) : CommGroup M₁ :=
   { hf.group f one mul inv div npow zpow, hf.commMonoid f one mul npow with }
@@ -400,7 +400,7 @@ that preserves `1`, `*`, `⁻¹`, and `/` to a `DivInvMonoid`. See note [reducib
 a `SubNegMonoid`. -/]
 protected abbrev divInvMonoid [DivInvMonoid M₁] (f : M₁ → M₂) (hf : Surjective f) (one : f 1 = 1)
     (mul : ∀ x y, f (x * y) = f x * f y) (inv : ∀ x, f x⁻¹ = (f x)⁻¹)
-    (div : ∀ x y, f (HDiv.hDiv x y) = HDiv.hDiv (f x) (f y))
+    (div : ∀ x y, f (x / y) = f x / f y)
     (npow : ∀ (x) (n : ℕ), f (x ^ n) = f x ^ n)
     (zpow : ∀ (x) (n : ℤ), f (x ^ n) = f x ^ n) : DivInvMonoid M₂ :=
   { hf.monoid f one mul npow with
@@ -419,7 +419,7 @@ protected abbrev divInvMonoid [DivInvMonoid M₁] (f : M₁ → M₂) (hf : Surj
 surjective map that preserves `0` and `+` to an additive group. -/]
 protected abbrev group [Group M₁] (f : M₁ → M₂) (hf : Surjective f) (one : f 1 = 1)
     (mul : ∀ x y, f (x * y) = f x * f y) (inv : ∀ x, f x⁻¹ = (f x)⁻¹)
-    (div : ∀ x y, f (HDiv.hDiv x y) = HDiv.hDiv (f x) (f y))
+    (div : ∀ x y, f (x / y) = f x / f y)
     (npow : ∀ (x) (n : ℕ), f (x ^ n) = f x ^ n)
     (zpow : ∀ (x) (n : ℤ), f (x ^ n) = f x ^ n) : Group M₂ :=
   { hf.divInvMonoid f one mul inv div npow zpow with
@@ -433,7 +433,7 @@ map that preserves `1`, `*`, `⁻¹`, and `/` from a commutative group. See note
 admits a surjective map that preserves `0` and `+` to an additive commutative group. -/]
 protected abbrev commGroup [CommGroup M₁] (f : M₁ → M₂) (hf : Surjective f) (one : f 1 = 1)
     (mul : ∀ x y, f (x * y) = f x * f y) (inv : ∀ x, f x⁻¹ = (f x)⁻¹)
-    (div : ∀ x y, f (HDiv.hDiv x y) = HDiv.hDiv (f x) (f y))
+    (div : ∀ x y, f (x / y) = f x / f y)
     (npow : ∀ (x) (n : ℕ), f (x ^ n) = f x ^ n)
     (zpow : ∀ (x) (n : ℤ), f (x ^ n) = f x ^ n) : CommGroup M₂ :=
   { hf.group f one mul inv div npow zpow, hf.commMonoid f one mul npow with }

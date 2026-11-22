@@ -4486,7 +4486,7 @@ not production conjecture roots; distinguish goal metadata and test scaffolding 
   operator audits, and `git diff --check` passed. The source scan found no references to the
   retired Euclidean quotient surface and no added proof holes or axioms.
 
-- [ ] **Migrate native natural and integer quotients and restrict ordinary division notation.**
+- [ ] **Audit native natural and integer quotients.**
   The official Lean definitions `Nat.div` and `Int.ediv` and their native `/` instances
   have values at divisor zero. Use `Nat.euclideanDiv` and `Int.euclideanDiv` with an explicit or
   automatically established nonzero divisor. Use `Int.exactQuotient` for the integer solution
@@ -4494,14 +4494,13 @@ not production conjecture roots; distinguish goal metadata and test scaffolding 
   law at zero. Audit mathematical definitions, statements, instances, and proof dependencies
   under the official-toolchain boundary.
 
-  Apply the ordinary `/` contract throughout the fork. The default is division by a unit in
-  a single commutative monoid. Keep the literature-supported exceptions listed in
-  `FORK_DESIGN.md` on their stated mathematical domains. Cast operands explicitly and use
-  the named operations for native Euclidean quotients. Audit every mathematical use written
-  with `HDiv.hDiv` or `Div.div` during the migration. Use slash where the documented operation
-  applies, and give other operations their own mathematical definitions or explicit function
-  parameters. Verify elaboration, delaboration, instance inference, all affected callers,
-  the exception list, and the full acceptance matrix.
+  Ordinary division notation uses the installed operation or checked exact
+  division. Euclidean quotients use their named operations. Reject slash on
+  operands definitionally equal to `Nat` or `Int`, including unit denominators,
+  aliases, and locally installed instances. Use explicit casts for quotients on
+  another carrier. Audit direct uses of `HDiv.hDiv` and `Div.div` for dependencies
+  on the retired native quotients. Verify elaboration, delaboration, instance
+  inference, and affected callers.
 
   The scoped semantic and proof audit of the native quotient module and the focused
   integration targets pass. The full operator-fidelity acceptance gate remains open.

@@ -22,7 +22,7 @@ For sets `s` and `t` and scalar `a`:
 * `s + t`: Addition, set of all `x + y` where `x ∈ s` and `y ∈ t`.
 * `s⁻¹`: Inversion, set of all `x⁻¹` where `x ∈ s`.
 * `-s`: Negation, set of all `-x` where `x ∈ s`.
-* For a commutative group, `s / t`: the set of all `x / y` where `x ∈ s` and `y ∈ t`.
+* `s / t`: the set of all `x / y` where `x ∈ s` and `y ∈ t`.
 * `s - t`: Subtraction, set of all `x - y` where `x ∈ s` and `y ∈ t`.
 
 For `α` a semigroup/monoid, `Set α` is a semigroup/monoid.
@@ -528,24 +528,21 @@ end Sub
 
 section Div
 
-variable [CommGroup α] {s s₁ s₂ t t₁ t₂ u : Set α} {a b : α}
+variable [Div α] {s s₁ s₂ t t₁ t₂ u : Set α} {a b : α}
 
-/-- Pointwise subtraction with the binder shape needed by `to_additive` for Set.div. -/
+/-- Pointwise subtraction on sets in an additive commutative group. -/
 protected abbrev addCommGroupSub {β : Type*} [AddCommGroup β] : Sub (Set β) :=
   Set.sub
 
-/-- The pointwise quotient of subsets of a commutative group is the product with the inverse set. -/
-@[to_additive existing Set.addCommGroupSub, instance_reducible]
+/-- Pointwise division takes the quotients of all pairs of elements. -/
+@[to_additive existing, instance_reducible]
 protected def div : Div (Set α) :=
-  ⟨fun s t => s * t⁻¹⟩
+  ⟨image2 (· / ·)⟩
 
 scoped[Pointwise] attribute [instance] Set.div
 
 @[simp]
-theorem image2_div : image2 (· / ·) s t = s / t := by
-  change image2 (· / ·) s t = s * t⁻¹
-  rw [← image_id (image2 (· / ·) s t), ← image_inv_eq_inv]
-  exact image_image2_distrib_right div_eq_mul_inv
+theorem image2_div : image2 (· / ·) s t = s / t := rfl
 
 @[push]
 theorem mem_div : a ∈ s / t ↔ ∃ x ∈ s, ∃ y ∈ t, x / y = a := by
@@ -648,8 +645,14 @@ theorem union_div_inter_subset_union : (s₁ ∪ s₂) / (t₁ ∩ t₂) ⊆ s�
   exact image2_union_inter_subset_union
 
 @[simp]
-lemma prod_div_prod_comm [CommGroup β] (s₁ s₂ : Set α) (t₁ t₂ : Set β) :
-    (s₁ ×ˢ t₁) / (s₂ ×ˢ t₂) = (s₁ / s₂) ×ˢ (t₁ / t₂) := by aesop (add simp mem_div)
+lemma prod_div_prod_comm [Div β] (s₁ s₂ : Set α) (t₁ t₂ : Set β) :
+    (s₁ ×ˢ t₁) / (s₂ ×ˢ t₂) = (s₁ / s₂) ×ˢ (t₁ / t₂) := by
+  ext ⟨a, b⟩
+  constructor
+  · rintro ⟨⟨x, y⟩, ⟨hx, hy⟩, ⟨u, v⟩, ⟨hu, hv⟩, h⟩
+    exact ⟨⟨x, hx, u, hu, congrArg Prod.fst h⟩, ⟨y, hy, v, hv, congrArg Prod.snd h⟩⟩
+  · rintro ⟨⟨x, hx, u, hu, rfl⟩, ⟨y, hy, v, hv, rfl⟩⟩
+    exact ⟨(x, y), ⟨hx, hy⟩, (u, v), ⟨hu, hv⟩, rfl⟩
 
 end Div
 
@@ -922,15 +925,16 @@ protected theorem mul_eq_one_iff : s * t = 1 ↔ ∃ a b, s = {a} ∧ t = {b} �
 /-- Pointwise multiplication and inversion induce a division monoid on sets. -/
 @[to_additive existing, instance_reducible]
 protected def divisionMonoid : DivisionMonoid (Set α) :=
-  { Set.monoid, Set.involutiveInv, @Set.ZPow α _ _ _ with
-    div := fun s t => s * t⁻¹
+  { Set.monoid, Set.involutiveInv, Set.div, @Set.ZPow α _ _ _ with
     mul_inv_rev := fun s t => by
       simp_rw [← image_inv_eq_inv]
       exact image_image2_antidistrib mul_inv_rev
     inv_eq_of_mul := fun s t h => by
       obtain ⟨a, b, rfl, rfl, hab⟩ := Set.mul_eq_one_iff.1 h
       rw [inv_singleton, inv_eq_of_mul_eq_one_right hab]
-    div_eq_mul_inv := fun _ _ => rfl }
+    div_eq_mul_inv := fun s t => by
+      rw [← image_id (s / t), ← image_inv_eq_inv]
+      exact image_image2_distrib_right div_eq_mul_inv }
 
 scoped[Pointwise] attribute [instance] Set.divisionMonoid Set.subtractionMonoid
 

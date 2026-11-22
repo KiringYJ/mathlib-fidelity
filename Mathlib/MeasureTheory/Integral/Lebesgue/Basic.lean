@@ -365,7 +365,7 @@ theorem exists_pos_setLIntegral_lt_of_measure_lt {f : α → ℝ≥0∞} (h : �
   rcases exists_between hε₂0 with ⟨ε₁, hε₁0, hε₁₂⟩
   rcases exists_simpleFunc_forall_lintegral_sub_lt_of_pos h hε₁0.ne' with ⟨φ, _, hφ⟩
   rcases φ.exists_forall_le with ⟨C, hC⟩
-  use ENNReal.div (ε₂ - ε₁) (C : ℝ≥0∞),
+  use ((ε₂ - ε₁) / (C : ℝ≥0∞)),
     ENNReal.div_pos_iff.2 ⟨(tsub_pos_iff_lt.2 hε₁₂).ne', ENNReal.coe_ne_top⟩
   refine fun s hs => lt_of_le_of_lt ?_ hε₂ε
   simp only [lintegral_eq_nnreal, iSup_le_iff]
@@ -387,7 +387,7 @@ theorem exists_pos_setLIntegral_lt_of_measure_lt {f : α → ℝ≥0∞} (h : �
     _ = C * μ s + ε₁ := by
       simp only [← SimpleFunc.lintegral_eq_lintegral, coe_const, lintegral_const,
         Measure.restrict_apply, MeasurableSet.univ, univ_inter, Function.const]
-    _ ≤ C * ENNReal.div (ε₂ - ε₁) (C : ℝ≥0∞) + ε₁ := by gcongr
+    _ ≤ C * ((ε₂ - ε₁) / (C : ℝ≥0∞)) + ε₁ := by gcongr
     _ ≤ ε₂ - ε₁ + ε₁ := by gcongr; apply ENNReal.mul_div_le
     _ = ε₂ := tsub_add_cancel_of_le hε₁₂.le
 

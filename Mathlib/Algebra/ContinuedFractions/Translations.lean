@@ -94,7 +94,7 @@ theorem conv_eq_num_div_den {hB : IsUnit (g.dens n)} :
   rfl
 
 theorem conv_eq_conts_a_div_conts_b {hB : IsUnit (g.dens n)} :
-    g.convs n = Checked.div (g.conts n).a (g.conts n).b hB :=
+    g.convs n = ((g.conts n).a / (g.conts n).b) :=
   rfl
 
 theorem exists_conts_a_of_num {A : K} (nth_num_eq : g.nums n = A) :
@@ -157,7 +157,7 @@ open scoped Classical in
 and the resulting denominator is a unit. -/
 theorem convs'Aux_succ_some {s : Stream'.Seq (Pair K)} {p : Pair K} (h : s.head = some p)
     (n : ℕ) : convs'Aux s (n + 1) = (convs'Aux s.tail n).bind fun t ↦
-      if hB : IsUnit (p.b + t) then some (Checked.div p.a (p.b + t) hB) else none := by
+      if hB : IsUnit (p.b + t) then some (p.a / (p.b + t)) else none := by
   simp [convs'Aux, h]
 
 /-- One step of the direct evaluation has a value exactly when the evaluation of the tail has a

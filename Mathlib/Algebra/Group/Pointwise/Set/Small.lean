@@ -34,5 +34,5 @@ instance small_inv [InvolutiveInv α] [Small.{u} s] : Small.{u} (s⁻¹ :) := by
 instance small_add [Add α] [Small.{u} s] [Small.{u} t] : Small.{u} (s + t) := small_image2 ..
 instance small_sub [Sub α] [Small.{u} s] [Small.{u} t] : Small.{u} (s - t) := small_image2 ..
 instance small_mul [Mul α] [Small.{u} s] [Small.{u} t] : Small.{u} (s * t) := small_image2 ..
-instance small_div [CommGroup α] [Small.{u} s] [Small.{u} t] : Small.{u} (s / t) :=
-  small_mul s t⁻¹
+instance small_div [Div α] [Small.{u} s] [Small.{u} t] : Small.{u} (s / t) :=
+  small_image2 ..

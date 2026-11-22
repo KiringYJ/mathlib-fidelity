@@ -94,8 +94,8 @@ instance subNegMonoid [∀ i, SubNegMonoid (f i)] : SubNegMonoid (∀ i, f i) wh
 @[to_additive existing subNegMonoid]
 instance divInvMonoid [∀ i, DivInvMonoid (f i)] : DivInvMonoid (∀ i, f i) where
   zpow := fun z x i => x i ^ z
-  div := DivInvMonoid.div'
-  div_eq_mul_inv _ _ := rfl
+  toDiv := Pi.instDiv
+  div_eq_mul_inv _ _ := funext fun _ ↦ DivInvMonoid.div_eq_mul_inv _ _
   zpow_zero' := by intros; ext; exact DivInvMonoid.zpow_zero' _
   zpow_succ' := by intros; ext; exact DivInvMonoid.zpow_succ' _ _
   zpow_neg' := by intros; ext; exact DivInvMonoid.zpow_neg' _ _
@@ -123,25 +123,18 @@ instance divisionCommMonoid [∀ i, DivisionCommMonoid (f i)] : DivisionCommMono
 instance group [∀ i, Group (f i)] : Group (∀ i, f i) where
   inv_mul_cancel := by intros; ext; exact inv_mul_cancel _
 
-@[to_additive groupSub_apply, simp]
-lemma div_apply [∀ i, Group (f i)] (u v : ∀ i, f i) (i : I) : (u / v) i = u i / v i := by
-  rw [div_eq_mul_inv, div_eq_mul_inv]
-  rfl
+@[to_additive existing, simp]
+lemma div_apply [∀ i, Div (f i)] (u v : ∀ i, f i) (i : I) : (u / v) i = u i / v i := rfl
 
-@[to_additive groupSub_def, push ←]
-lemma div_def [∀ i, Group (f i)] (u v : ∀ i, f i) : u / v = fun i ↦ u i / v i :=
-  funext (div_apply u v)
+@[to_additive existing, push ←]
+lemma div_def [∀ i, Div (f i)] (u v : ∀ i, f i) : u / v = fun i ↦ u i / v i := rfl
 
-@[to_additive groupSub_comp]
-lemma div_comp [Group γ] (u v : β → γ) (z : α → β) : (u / v) ∘ z = (u ∘ z) / (v ∘ z) := by
-  funext x
-  simp only [Function.comp_apply, div_apply]
+@[to_additive existing]
+lemma div_comp [Div γ] (u v : β → γ) (z : α → β) : (u / v) ∘ z = (u ∘ z) / (v ∘ z) := rfl
 
-@[to_additive Function.const_groupSub, simp]
-lemma _root_.Function.const_div [Group γ] (a b : γ) :
-    Function.const α a / Function.const α b = Function.const α (a / b) := by
-  funext x
-  exact Pi.div_apply _ _ _
+@[to_additive existing, simp]
+lemma _root_.Function.const_div [Div γ] (a b : γ) :
+    Function.const α a / Function.const α b = Function.const α (a / b) := rfl
 
 @[to_additive]
 instance commGroup [∀ i, CommGroup (f i)] : CommGroup (∀ i, f i) := { group, commMonoid with }

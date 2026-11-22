@@ -118,8 +118,8 @@ instance subNegMonoid [SubNegMonoid G] [SubNegMonoid H] : SubNegMonoid (G × H) 
 
 @[to_additive existing subNegMonoid]
 instance [DivInvMonoid G] [DivInvMonoid H] : DivInvMonoid (G × H) where
-  div := DivInvMonoid.div'
-  div_eq_mul_inv _ _ := rfl
+  toDiv := Prod.instDiv
+  div_eq_mul_inv _ _ := Prod.ext (DivInvMonoid.div_eq_mul_inv ..) (DivInvMonoid.div_eq_mul_inv ..)
   zpow z a := ⟨ZPow.zpow z a.1, ZPow.zpow z a.2⟩
   zpow_zero' _ := by ext <;> exact DivInvMonoid.zpow_zero' _
   zpow_succ' _ _ := by ext <;> exact DivInvMonoid.zpow_succ' ..
@@ -141,32 +141,25 @@ instance [DivisionCommMonoid G] [DivisionCommMonoid H] : DivisionCommMonoid (G �
 instance instGroup [Group G] [Group H] : Group (G × H) where
   inv_mul_cancel _ := by ext <;> exact inv_mul_cancel _
 
-section Group
-variable [Group G] [Group H]
+section Div
+variable [Div G] [Div H]
 
-@[to_additive fst_groupSub, simp]
-theorem fst_div (a b : G × H) : (a / b).1 = a.1 / b.1 := by
-  rw [div_eq_mul_inv, div_eq_mul_inv]
-  rfl
+@[to_additive existing, simp]
+theorem fst_div (a b : G × H) : (a / b).1 = a.1 / b.1 := rfl
 
-@[to_additive snd_groupSub, simp]
-theorem snd_div (a b : G × H) : (a / b).2 = a.2 / b.2 := by
-  rw [div_eq_mul_inv, div_eq_mul_inv]
-  rfl
+@[to_additive existing, simp]
+theorem snd_div (a b : G × H) : (a / b).2 = a.2 / b.2 := rfl
 
-@[to_additive mk_groupSub_mk, simp]
-theorem mk_div_mk (a b : G) (c d : H) : (a, c) / (b, d) = (a / b, c / d) :=
-  Prod.ext (fst_div ..) (snd_div ..)
+@[to_additive existing, simp]
+theorem mk_div_mk (a b : G) (c d : H) : (a, c) / (b, d) = (a / b, c / d) := rfl
 
-@[to_additive swap_groupSub, simp]
-theorem swap_div (a b : G × H) : (a / b).swap = a.swap / b.swap := by
-  ext <;> simp
+@[to_additive existing, simp]
+theorem swap_div (a b : G × H) : (a / b).swap = a.swap / b.swap := rfl
 
-@[to_additive groupSub_def]
-lemma div_def (a b : G × H) : a / b = (a.1 / b.1, a.2 / b.2) :=
-  Prod.ext (fst_div ..) (snd_div ..)
+@[to_additive existing]
+lemma div_def (a b : G × H) : a / b = (a.1 / b.1, a.2 / b.2) := rfl
 
-end Group
+end Div
 
 @[to_additive]
 instance [Mul G] [Mul H] [IsLeftCancelMul G] [IsLeftCancelMul H] : IsLeftCancelMul (G × H) where

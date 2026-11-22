@@ -358,7 +358,7 @@ lemma nnnorm_compContinuousLinearMap_le (p : FormalMultilinearSeries 𝕜 F G)
   norm_compContinuousLinearMap_le p u n
 
 theorem div_le_radius_compContinuousLinearMap (p : FormalMultilinearSeries 𝕜 F G) (u : E →L[𝕜] F) :
-    ENNReal.div p.radius ‖u‖ₑ ≤ (p.compContinuousLinearMap u).radius := by
+    (p.radius / ‖u‖ₑ) ≤ (p.compContinuousLinearMap u).radius := by
   obtain (rfl | h_zero) := eq_zero_or_nnnorm_pos u
   · simp
   have huₑ : ‖u‖ₑ ≠ 0 := by

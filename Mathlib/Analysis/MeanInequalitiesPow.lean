@@ -280,7 +280,7 @@ theorem rpow_arith_mean_le_arith_mean2_rpow (w₁ w₂ z₁ z₂ : ℝ≥0∞) (
 theorem rpow_add_le_mul_rpow_add_rpow (z₁ z₂ : ℝ≥0∞) {p : ℝ} (hp : 1 ≤ p) :
     (z₁ + z₂) ^ p ≤ (2 : ℝ≥0∞) ^ (p - 1) * (z₁ ^ p + z₂ ^ p) := by
   convert!
-    rpow_arith_mean_le_arith_mean2_rpow (ENNReal.div 1 2) (ENNReal.div 1 2) (2 * z₁) (2 * z₂)
+    rpow_arith_mean_le_arith_mean2_rpow (1 / 2 : ℝ≥0∞) (1 / 2 : ℝ≥0∞) (2 * z₁) (2 * z₂)
       (ENNReal.add_halves 1) hp
       using 1
   · simp [← mul_assoc, ENNReal.inv_mul_cancel two_ne_zero ofNat_ne_top]

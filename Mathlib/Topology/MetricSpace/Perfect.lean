@@ -40,9 +40,9 @@ section CantorInjMetric
 variable {α : Type*} [MetricSpace α] {C : Set α} {ε : ℝ≥0∞}
 
 private theorem Perfect.small_diam_aux (hC : Perfect C) (ε_pos : 0 < ε) {x : α} (xC : x ∈ C) :
-    let D := closure (Metric.eball x (ENNReal.div ε 2) ∩ C)
+    let D := closure (Metric.eball x (ε / 2) ∩ C)
     Perfect D ∧ D.Nonempty ∧ D ⊆ C ∧ Metric.ediam D ≤ ε := by
-  have : x ∈ Metric.eball x (ENNReal.div ε 2) := by
+  have : x ∈ Metric.eball x (ε / 2) := by
     apply Metric.mem_eball_self
     exact ENNReal.half_pos ε_pos.ne'
   have := hC.closure_nhds_inter x xC this Metric.isOpen_eball
@@ -65,8 +65,8 @@ theorem Perfect.small_diam_splitting (hC : Perfect C) (hnonempty : C.Nonempty) (
   rcases perf0.small_diam_aux ε_pos hx₀ with ⟨perf0', non0', sub0', diam0⟩
   rcases perf1.small_diam_aux ε_pos hx₁ with ⟨perf1', non1', sub1', diam1⟩
   refine
-    ⟨closure (Metric.eball x₀ (ENNReal.div ε 2) ∩ D₀),
-      closure (Metric.eball x₁ (ENNReal.div ε 2) ∩ D₁),
+    ⟨closure (Metric.eball x₀ (ε / 2) ∩ D₀),
+      closure (Metric.eball x₁ (ε / 2) ∩ D₁),
       ⟨perf0', non0', sub0'.trans sub0, diam0⟩, ⟨perf1', non1', sub1'.trans sub1, diam1⟩, ?_⟩
   apply Disjoint.mono _ _ hdisj <;> assumption
 

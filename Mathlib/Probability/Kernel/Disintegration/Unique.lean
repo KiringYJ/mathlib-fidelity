@@ -369,7 +369,7 @@ private lemma ae_apply_eq_zero_or_one_of_isCondKernel {ρ : Measure (α × Ω)}
     exact hρB _ (inter_subset_right.trans inter_subset_left) (ht.inter hC)
   set g : α → Ω → ℝ≥0∞ := fun a ω ↦
     if a ∈ C then
-      (if ω ∈ s then 2⁻¹ else ENNReal.div (1 - ENNReal.div (η a s) 2) (1 - η a s))
+      (if ω ∈ s then 2⁻¹ else ((1 - (η a s / 2)) / (1 - η a s)))
     else 1 with hg_def
   have hg : Measurable (Function.uncurry g) := by
     refine Measurable.ite (hC.preimage measurable_fst)
@@ -399,7 +399,7 @@ private lemma ae_apply_eq_zero_or_one_of_isCondKernel {ρ : Measure (α × Ω)}
       rw [← lintegral_add_compl _ hs,
         setLIntegral_congr_fun (g := fun _ ↦ 2⁻¹) hs (fun ω hω ↦ by simp [hg_def, ha, hω]),
         setLIntegral_congr_fun
-          (g := fun _ ↦ ENNReal.div (1 - ENNReal.div (η a s) 2) (1 - η a s)) hs.compl
+          (g := fun _ ↦ ((1 - (η a s / 2)) / (1 - η a s))) hs.compl
           (fun ω hω ↦ by simp [hg_def, ha, notMem_of_mem_compl hω]),
         setLIntegral_const, setLIntegral_const, prob_compl_eq_one_sub hs,
         ENNReal.div_mul_cancel (tsub_pos_of_lt h1).ne' (ENNReal.sub_ne_top ENNReal.one_ne_top),

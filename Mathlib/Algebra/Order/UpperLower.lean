@@ -77,11 +77,13 @@ theorem IsLowerSet.inv {α : Type*} [CommGroup α] [PartialOrder α] [IsOrderedM
   {s : Set α} (hs : IsLowerSet s) : IsUpperSet s⁻¹ := fun _ _ h ↦ hs <| inv_le_inv' h
 
 theorem IsUpperSet.div_left {α : Type*} [CommGroup α] [PartialOrder α] [IsOrderedMonoid α]
-    {s t : Set α} (ht : IsUpperSet t) : IsLowerSet (s / t) :=
-  ht.inv.mul_left
+    {s t : Set α} (ht : IsUpperSet t) : IsLowerSet (s / t) := by
+  rw [div_eq_mul_inv]
+  exact ht.inv.mul_left
 
-theorem IsUpperSet.div_right (hs : IsUpperSet s) : IsUpperSet (s / t) :=
-  hs.mul_right
+theorem IsUpperSet.div_right (hs : IsUpperSet s) : IsUpperSet (s / t) := by
+  rw [div_eq_mul_inv]
+  exact hs.mul_right
 
 theorem IsLowerSet.div_left {α : Type*} [CommGroup α] [PartialOrder α] [IsOrderedMonoid α]
   {s t : Set α} (ht : IsLowerSet t) : IsUpperSet (s / t) := ht.toDual.div_left
@@ -123,6 +125,8 @@ instance : Mul (UpperSet α) :=
 @[expose] def div (s t : UpperSet α) : UpperSet α :=
   ⟨(s : Set α) / (t : Set α), s.2.div_right⟩
 
+instance instDiv : Div (UpperSet α) := ⟨UpperSet.div⟩
+
 instance {B : Type*} [AddCommGroup B] [Preorder B] [IsOrderedAddMonoid B] : Sub (UpperSet B) :=
   ⟨fun s t ↦ ⟨(s : Set B) - (t : Set B), s.2.sub_right⟩⟩
 
@@ -140,7 +144,7 @@ theorem coe_mul (s t : UpperSet α) : (↑(s * t) : Set α) = s * t :=
   rfl
 
 @[simp, norm_cast] theorem coe_div (s t : UpperSet α) :
-    (↑(s.div t) : Set α) = (s : Set α) / (t : Set α) := rfl
+    ((s / t : UpperSet α) : Set α) = (s : Set α) / (t : Set α) := rfl
 
 @[simp, norm_cast] theorem coe_sub {B : Type*} [AddCommGroup B] [Preorder B] [IsOrderedAddMonoid B]
     (s t : UpperSet B) : (↑(s - t) : Set B) = (s : Set B) - (t : Set B) := rfl
@@ -189,6 +193,8 @@ instance : Mul (LowerSet α) :=
 @[expose] def div (s t : LowerSet α) : LowerSet α :=
   ⟨(s : Set α) / (t : Set α), s.2.div_right⟩
 
+instance instDiv : Div (LowerSet α) := ⟨LowerSet.div⟩
+
 instance {B : Type*} [AddCommGroup B] [Preorder B] [IsOrderedAddMonoid B] : Sub (LowerSet B) :=
   ⟨fun s t ↦ ⟨(s : Set B) - (t : Set B), s.2.sub_right⟩⟩
 
@@ -201,7 +207,7 @@ theorem coe_mul (s t : LowerSet α) : (↑(s * t) : Set α) = s * t :=
   rfl
 
 @[simp, norm_cast] theorem coe_div (s t : LowerSet α) :
-    (↑(s.div t) : Set α) = (s : Set α) / (t : Set α) := rfl
+    ((s / t : LowerSet α) : Set α) = (s : Set α) / (t : Set α) := rfl
 
 @[simp, norm_cast] theorem coe_sub {B : Type*} [AddCommGroup B] [Preorder B] [IsOrderedAddMonoid B]
     (s t : LowerSet B) : (↑(s - t) : Set B) = (s : Set B) - (t : Set B) := rfl

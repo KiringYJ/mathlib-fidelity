@@ -68,7 +68,8 @@ lemma coe_mul_inv_coe [SetLike S G] [DivisionMonoid G] [SubgroupClass S G] (H : 
 
 @[simp, norm_cast]
 lemma coe_div_coe [SetLike S G] [CommGroup G] [SubgroupClass S G] (H : S) :
-    (H : Set G) / (H : Set G) = (H : Set G) := coe_mul_inv_coe H
+    (H : Set G) / (H : Set G) = (H : Set G) := by
+  rw [div_eq_mul_inv, coe_mul_inv_coe]
 
 @[simp, norm_cast]
 lemma _root_.AddSubgroup.coe_sub_coe

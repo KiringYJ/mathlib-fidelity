@@ -601,7 +601,8 @@ instance [Mul α] : Mul (Part α) where mul a b := (· * ·) <$> a <*> b
 @[to_additive]
 instance [Inv α] : Inv (Part α) where inv := map Inv.inv
 
-instance [Sub α] : Sub (Part α) where sub a b := (· - ·) <$> a <*> b
+@[to_additive]
+instance [Div α] : Div (Part α) where div a b := (· / ·) <$> a <*> b
 
 instance [Mod α] : Mod (Part α) where mod a b := (· % ·) <$> a <*> b
 
@@ -624,7 +625,8 @@ theorem one_def [One α] : (1 : Part α) = some 1 := rfl
 @[to_additive]
 theorem inv_def [Inv α] (a : Part α) : a⁻¹ = Part.map (·⁻¹) a := rfl
 
-theorem sub_def [Sub α] (a b : Part α) : a - b = bind a fun y => map (y - ·) b := rfl
+@[to_additive]
+theorem div_def [Div α] (a b : Part α) : a / b = bind a fun y => map (y / ·) b := rfl
 
 theorem mod_def [Mod α] (a b : Part α) : a % b = bind a fun y => map (y % ·) b := rfl
 theorem append_def [Append α] (a b : Part α) : a ++ b = bind a fun y => map (y ++ ·) b := rfl
@@ -663,18 +665,22 @@ theorem inv_mem_inv [Inv α] (a : Part α) (ma : α) (ha : ma ∈ a) : ma⁻¹ �
 theorem inv_some [Inv α] (a : α) : (some a)⁻¹ = some a⁻¹ :=
   rfl
 
-theorem sub_mem_sub [Sub α] (a b : Part α) (ma mb : α) (ha : ma ∈ a) (hb : mb ∈ b) :
-    ma - mb ∈ a - b := by simp [sub_def]; aesop
+@[to_additive]
+theorem div_mem_div [Div α] (a b : Part α) (ma mb : α) (ha : ma ∈ a) (hb : mb ∈ b) :
+    ma / mb ∈ a / b := by simp [div_def]; aesop
 
-theorem left_dom_of_sub_dom [Sub α] {a b : Part α} (hab : Dom (a - b)) : a.Dom := hab.1
+@[to_additive]
+theorem left_dom_of_div_dom [Div α] {a b : Part α} (hab : Dom (a / b)) : a.Dom := hab.1
 
-theorem right_dom_of_sub_dom [Sub α] {a b : Part α} (hab : Dom (a - b)) : b.Dom := hab.2
+@[to_additive]
+theorem right_dom_of_div_dom [Div α] {a b : Part α} (hab : Dom (a / b)) : b.Dom := hab.2
 
-@[simp]
-theorem sub_get_eq [Sub α] (a b : Part α) (hab : Dom (a - b)) :
-    (a - b).get hab = a.get (left_dom_of_sub_dom hab) - b.get (right_dom_of_sub_dom hab) := rfl
+@[to_additive (attr := simp)]
+theorem div_get_eq [Div α] (a b : Part α) (hab : Dom (a / b)) :
+    (a / b).get hab = a.get (left_dom_of_div_dom hab) / b.get (right_dom_of_div_dom hab) := rfl
 
-theorem some_sub_some [Sub α] (a b : α) : some a - some b = some (a - b) := by simp [sub_def]
+@[to_additive]
+theorem some_div_some [Div α] (a b : α) : some a / some b = some (a / b) := by simp [div_def]
 
 theorem mod_mem_mod [Mod α] (a b : Part α) (ma mb : α) (ha : ma ∈ a) (hb : mb ∈ b) :
     ma % mb ∈ a % b := by simp [mod_def]; aesop

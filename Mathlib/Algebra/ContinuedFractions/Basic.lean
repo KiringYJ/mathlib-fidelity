@@ -332,7 +332,7 @@ for example `B₁ = b₀` for `g = [h; (a₀, b₀), ...]`; the denominators of 
 fraction are positive. -/
 noncomputable def convs (g : GenContFract K) (n : ℕ)
     (hB : IsUnit (g.dens n) := by checked_unit) : K :=
-  Checked.div (g.nums n) (g.dens n) hB
+  ((g.nums n) / (g.dens n))
 
 open scoped Classical in
 /--
@@ -349,7 +349,7 @@ noncomputable def convs'Aux : Stream'.Seq (Pair K) → ℕ → Option K
     match s.head with
     | none => some 0
     | some gp => (convs'Aux s.tail n).bind fun t ↦
-      if hB : IsUnit (gp.b + t) then some (Checked.div gp.a (gp.b + t) hB) else none
+      if hB : IsUnit (gp.b + t) then some (gp.a / (gp.b + t)) else none
 
 /-- Evaluates the fraction described by `g` up to a given position `n`, that is
 `h + a₀ / (b₀ + a₁ / (b₁ + ⋯ + aₙ₋₁ / (bₙ₋₁ + 0)))`, dividing in `K` as `convs'Aux` does.

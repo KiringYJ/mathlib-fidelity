@@ -184,10 +184,10 @@ lemma exists_null_set_measure_lt_of_disjoint (h : Disjoint μ ν) {ε : ℝ≥0}
     ∃ s, μ s = 0 ∧ ν sᶜ ≤ 2 * ε := by
   have h₁ : (μ ⊓ ν) univ = 0 := le_bot_iff.1 (h (inf_le_left (b := ν)) inf_le_right) ▸ rfl
   simp_rw [Measure.inf_apply MeasurableSet.univ, inter_univ] at h₁
-  have h₂ : ∀ n : ℕ, ∃ t, μ t + ν tᶜ < (ε : ℝ≥0∞) * (ENNReal.div 1 2) ^ n := by
+  have h₂ : ∀ n : ℕ, ∃ t, μ t + ν tᶜ < (ε : ℝ≥0∞) * (1 / 2 : ℝ≥0∞) ^ n := by
     intro n
     obtain ⟨m, ⟨t, ht₁, rfl⟩, hm₂⟩ :
-        ∃ x ∈ {m | ∃ t, m = μ t + ν tᶜ}, x < ε * (ENNReal.div 1 2) ^ n := by
+        ∃ x ∈ {m | ∃ t, m = μ t + ν tᶜ}, x < ε * (1 / 2 : ℝ≥0∞) ^ n := by
       refine exists_lt_of_csInf_lt ⟨ν univ, ∅, by simp⟩ <| h₁ ▸ ENNReal.mul_pos ?_ (by simp)
       norm_cast
       exact hε.ne.symm
@@ -198,13 +198,13 @@ lemma exists_null_set_measure_lt_of_disjoint (h : Disjoint μ ν) {ε : ℝ≥0}
       fun n ↦ ((measure_mono <| iInter_subset_of_subset n fun _ ht ↦ ht).trans
       (le_add_right le_rfl)).trans (ht₂ n).le
   · rw [compl_iInter, (by simp [ENNReal.tsum_mul_left, mul_comm] :
-      2 * (ε : ℝ≥0∞) = ∑' (n : ℕ), ε * (ENNReal.div 1 2) ^ n)]
+      2 * (ε : ℝ≥0∞) = ∑' (n : ℕ), ε * (1 / 2 : ℝ≥0∞) ^ n)]
     refine (measure_iUnion_le _).trans ?_
     exact ENNReal.summable.tsum_le_tsum (fun n ↦ (le_add_left le_rfl).trans (ht₂ n).le)
       ENNReal.summable
 
 lemma mutuallySingular_of_disjoint (h : Disjoint μ ν) : μ ⟂ₘ ν := by
-  have h' (n : ℕ) : ∃ s, μ s = 0 ∧ ν sᶜ ≤ (ENNReal.div 1 2) ^ n := by
+  have h' (n : ℕ) : ∃ s, μ s = 0 ∧ ν sᶜ ≤ (1 / 2 : ℝ≥0∞) ^ n := by
     convert!
       exists_null_set_measure_lt_of_disjoint h (ε := ((1 : ℝ≥0) / 2) ^ (n + 1)) <|
         pow_pos (by simp) (n + 1)
@@ -213,7 +213,7 @@ lemma mutuallySingular_of_disjoint (h : Disjoint μ ν) : μ ⟂ₘ ν := by
   choose s hs₂ hs₃ using h'
   refine Measure.MutuallySingular.mk (t := (⋃ n, s n)ᶜ) (measure_iUnion_null hs₂) ?_ ?_
   · rw [compl_iUnion]
-    refine eq_zero_of_le_mul_pow (ε := 1) (by simp : ENNReal.div 1 2 < 1) <| fun n ↦ ?_
+    refine eq_zero_of_le_mul_pow (ε := 1) (by simp : (1 / 2 : ℝ≥0∞) < 1) <| fun n ↦ ?_
     rw [ENNReal.coe_one, one_mul]
     exact (measure_mono <| iInter_subset_of_subset n fun _ ht ↦ ht).trans (hs₃ n)
   · rw [union_compl_self]

@@ -53,12 +53,12 @@ instance invertibleInv {a : α} [Invertible a] : Invertible a⁻¹ :=
 @[instance_reducible]
 noncomputable def invertibleDiv (a b : α) [Invertible a] [Invertible b] :
     Invertible (Checked.div a b (isUnit_of_invertible b)) :=
-  ⟨Checked.div b a (isUnit_of_invertible a), by rw [← mul_div_assoc₀, div_mul_cancel₀, div_self],
+  ⟨(b / a), by rw [← mul_div_assoc₀, div_mul_cancel₀, div_self],
     by rw [← mul_div_assoc₀, div_mul_cancel₀, div_self]⟩
 
 theorem invOf_div (a b : α) [Invertible a] [Invertible b]
     [Invertible (Checked.div a b (isUnit_of_invertible b))] :
-    ⅟(Checked.div a b (isUnit_of_invertible b)) = Checked.div b a (isUnit_of_invertible a) :=
+    ⅟(a / b) = (b / a) :=
   invOf_eq_right_inv (by rw [← mul_div_assoc₀, div_mul_cancel₀, div_self])
 
 end GroupWithZero

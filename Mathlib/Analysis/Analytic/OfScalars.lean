@@ -375,7 +375,7 @@ theorem ofScalars_radius_eq_zero_of_tendsto [NormOneClass E]
 /-- The intrinsic extended-nonnegative ratio combines the finite, zero, and infinite
 cases, including sequences which are eventually zero. -/
 theorem ofScalars_radius_eq_inv_of_tendsto_ENNReal [NormOneClass E] {r : ℝ≥0∞}
-    (hc' : Tendsto (fun n ↦ ENNReal.div (ENNReal.ofReal ‖c n.succ‖) (ENNReal.ofReal ‖c n‖))
+    (hc' : Tendsto (fun n ↦ (ENNReal.ofReal ‖c n.succ‖ / ENNReal.ofReal ‖c n‖))
       atTop (𝓝 r)) :
       (ofScalars E c).radius = r⁻¹ := by
   have hce (hr : r ≠ 0) : ∀ᶠ n in atTop, c n ≠ 0 := by

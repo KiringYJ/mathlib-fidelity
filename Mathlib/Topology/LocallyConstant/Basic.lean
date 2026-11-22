@@ -173,10 +173,9 @@ theorem sub [Sub Y] ⦃f g : X → Y⦄ (hf : IsLocallyConstant f) (hg : IsLocal
     IsLocallyConstant (f - g) :=
   hf.comp₂ hg (· - ·)
 
-theorem div [Group Y] ⦃f g : X → Y⦄ (hf : IsLocallyConstant f) (hg : IsLocallyConstant g) :
-    IsLocallyConstant (f / g) := by
-  rw [Pi.div_def]
-  exact hf.comp₂ hg (· / ·)
+theorem div [Div Y] ⦃f g : X → Y⦄ (hf : IsLocallyConstant f) (hg : IsLocallyConstant g) :
+    IsLocallyConstant (f / g) :=
+  hf.comp₂ hg (· / ·)
 
 /-- If a composition of a function `f` followed by an injection `g` is locally
 constant, then the locally constant property descends to `f`. -/

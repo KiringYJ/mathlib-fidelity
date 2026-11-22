@@ -428,7 +428,7 @@ end Abs
 -- Probe the division handler without its algebraic assumptions.
 example {R : Type*} [Zero R] [Div R] [LinearOrder R] {a b c : R} (_h1 : 0 < a) (_h2 : 0 < b)
   (h3 : 0 < c) :
-  0 < max (HDiv.hDiv a b) c := by positivity
+  0 < max (a / b) c := by positivity
 
 example
     [Semiring α] [PartialOrder α] [IsOrderedRing α]

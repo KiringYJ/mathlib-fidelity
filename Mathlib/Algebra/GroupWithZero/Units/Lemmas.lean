@@ -52,7 +52,7 @@ variable [Monoid M] {a b c d : M}
 /-- The version of `div_eq_div_iff_mul_eq_mul` for commuting invertible denominators in a
 monoid. -/
 protected lemma div_eq_div_iff (hbd : Commute b d) {hb : IsUnit b} {hd : IsUnit d} :
-    Checked.div a b hb = Checked.div c d hd ↔ a * d = c * b := by
+    (a / b) = (c / d) ↔ a * d = c * b := by
   rw [← (hb.mul hd).mul_left_inj, ← mul_assoc, div_mul_cancel₀, ← mul_assoc, hbd.right_comm,
     div_mul_cancel₀]
 
@@ -116,7 +116,7 @@ theorem map_inv₀ (f : F) (a : M) {ha : IsUnit a} : f a⁻¹ = Checked.inv (f a
 /-- A monoid homomorphism preserves division by an invertible element. -/
 @[simp]
 theorem map_div₀ (f : F) (a b : M) {hb : IsUnit b} :
-    f (Checked.div a b hb) = Checked.div (f a) (f b) (hb.map f) := by
+    f (a / b) = Checked.div (f a) (f b) (hb.map f) := by
   rw [div_eq_mul_inv₀, map_mul, map_inv₀, div_eq_mul_inv₀]
 
 /-- A monoid homomorphism `f` maps `x ^ n` to `f x ^ n` for an integer `n`; only a negative

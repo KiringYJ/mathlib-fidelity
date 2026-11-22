@@ -294,20 +294,20 @@ theorem FiniteMeasure.limsup_measure_closed_le_of_tendsto {Ω ι : Type*} {L : F
   let fs := F_closed.apprSeq
   have key₁ : Tendsto (fun n ↦ ∫⁻ ω, (fs n ω : ℝ≥0∞) ∂μ) atTop (𝓝 ((μ : Measure Ω) F)) :=
     HasOuterApproxClosed.tendsto_lintegral_apprSeq F_closed (μ : Measure Ω)
-  have room₁ : (μ : Measure Ω) F < (μ : Measure Ω) F + ENNReal.div (ε : ℝ≥0∞) 2 :=
+  have room₁ : (μ : Measure Ω) F < (μ : Measure Ω) F + ((ε : ℝ≥0∞) / 2) :=
     ENNReal.lt_add_right (measure_lt_top (μ : Measure Ω) F).ne ε_pos'
   obtain ⟨M, hM⟩ := eventually_atTop.mp <| key₁.eventually_lt_const room₁
   have key₂ := FiniteMeasure.tendsto_iff_forall_lintegral_tendsto.mp μs_lim (fs M)
   have room₂ :
     (lintegral (μ : Measure Ω) fun a ↦ fs M a) <
-      (lintegral (μ : Measure Ω) fun a ↦ fs M a) + ENNReal.div (ε : ℝ≥0∞) 2 :=
+      (lintegral (μ : Measure Ω) fun a ↦ fs M a) + ((ε : ℝ≥0∞) / 2) :=
     ENNReal.lt_add_right (ne_of_lt ((fs M).lintegral_lt_top_of_nnreal _)) ε_pos'
   have ev_near := key₂.eventually_le_const room₂
   have ev_near' := ev_near.mono
     (fun n ↦ le_trans (HasOuterApproxClosed.measure_le_lintegral F_closed (μs n) M))
   apply (Filter.limsup_le_limsup ev_near').trans
   rw [limsup_const]
-  apply le_trans (add_le_add (hM M rfl.le).le (le_refl (ENNReal.div (ε : ℝ≥0∞) 2)))
+  apply le_trans (add_le_add (hM M rfl.le).le (le_refl ((ε : ℝ≥0∞) / 2)))
   simp only [add_assoc, ENNReal.add_halves, le_refl]
 
 /-- One implication of the portmanteau theorem:

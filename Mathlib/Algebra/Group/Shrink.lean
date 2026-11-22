@@ -21,7 +21,7 @@ namespace Shrink
 
 @[to_additive] instance [One α] : One (Shrink.{v} α) := (equivShrink α).symm.one
 @[to_additive] instance [Mul α] : Mul (Shrink.{v} α) := (equivShrink α).symm.mul
-instance [Sub α] : Sub (Shrink.{v} α) := (equivShrink α).symm.sub
+@[to_additive] instance [Div α] : Div (Shrink.{v} α) := (equivShrink α).symm.div
 @[to_additive] instance [Inv α] : Inv (Shrink.{v} α) := (equivShrink α).symm.Inv
 @[to_additive] instance [Pow α M] : Pow (Shrink.{v} α) M := (equivShrink α).symm.pow M
 
@@ -115,12 +115,12 @@ instance [Monoid M] [MulAction M α] : MulAction M (Shrink.{v} α) := (equivShri
 end Shrink
 
 @[simp]
-lemma equivShrink_symm_div [Group α] (x y : Shrink α) :
+lemma equivShrink_symm_div [Div α] (x y : Shrink α) :
     (equivShrink α).symm (x / y) =
       (equivShrink α).symm x / (equivShrink α).symm y := by
   simp [Equiv.div_def]
 
 @[simp]
-lemma equivShrink_div [Group α] (x y : α) :
+lemma equivShrink_div [Div α] (x y : α) :
     equivShrink α (x / y) = equivShrink α x / equivShrink α y := by
   simp [Equiv.div_def]

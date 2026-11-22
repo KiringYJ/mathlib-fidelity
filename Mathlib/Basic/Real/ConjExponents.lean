@@ -656,7 +656,7 @@ protected lemma conjExponent {p : ℝ≥0∞} (hp : 1 ≤ p) : p.HolderConjugate
   obtain rfl | hp := eq_or_ne p ∞
   · simp
   calc
-    1 + (p - 1)⁻¹ = ENNReal.div (p - 1 + 1) (p - 1) := by
+    1 + (p - 1)⁻¹ = ((p - 1 + 1) / (p - 1)) := by
       rw [ENNReal.add_div, ENNReal.div_self ((tsub_pos_of_lt hp₁).ne') (sub_ne_top hp),
         ENNReal.one_div]
     _ = (1⁻¹ - p⁻¹)⁻¹ := by
@@ -683,7 +683,7 @@ lemma mul_eq_add : p * q = p + q := by
   simpa [add_comm p, mul_add, add_mul, hp, hq, ne_zero p q, ne_zero q p, ENNReal.mul_inv_cancel,
     ENNReal.inv_mul_cancel_right] using congr(p * $((inv_add_inv_eq_one p q).symm) * q)
 
-lemma div_conj_eq_sub_one : ENNReal.div p q = p - 1 := by
+lemma div_conj_eq_sub_one : (p / q) = p - 1 := by
   obtain rfl | hq := eq_or_ne q ∞
   · obtain rfl := unique ∞ p 1
     simp

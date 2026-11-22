@@ -61,9 +61,9 @@ def variation (counts : List Nat) : List Nat :=
     let toFloat (n : Nat) := n.toUInt64.toFloat
     let counts' := counts.map toFloat
     let count := toFloat counts.length
-    let μ := Float.div (counts'.foldl (· + ·) 0) count
+    let μ : Float := counts'.foldl (· + ·) 0 / count
     let sumSquared := (counts'.map fun i => (i - μ)^2).foldl (· + ·) 0
-    let stddev := Float.sqrt (Float.div sumSquared count)
+    let stddev := Float.sqrt (sumSquared / count)
     [min, max, stddev.toUInt64.toNat]
 
 /-- Convert the internal count to the units used by `maxHeartbeats`. -/

@@ -162,8 +162,8 @@ theorem mulTSupport_mul_inv [DivisionMonoid α] (f g : X → α) :
   mulTSupport_binop_subset (· * ·⁻¹) (by simp) f g
 
 theorem mulTSupport_div [DivisionMonoid α] (f g : X → α) :
-    (mulTSupport fun x => DivInvMonoid.div' (f x) (g x)) ⊆ mulTSupport f ∪ mulTSupport g :=
-  mulTSupport_mul_inv f g
+    (mulTSupport fun x => f x / g x) ⊆ mulTSupport f ∪ mulTSupport g := by
+  simpa only [div_eq_mul_inv] using mulTSupport_mul_inv f g
 
 theorem tsupport_sub [SubtractionMonoid α] (f g : X → α) :
     (tsupport fun x => f x - g x) ⊆ tsupport f ∪ tsupport g := by
@@ -446,8 +446,8 @@ protected lemma HasCompactMulSupport.inv {α β : Type*} [TopologicalSpace α] [
 
 theorem HasCompactSupport.div {α β : Type*} [TopologicalSpace α] [DivisionMonoid β]
     {f f' : α → β} (hf : HasCompactMulSupport f) (hf' : HasCompactMulSupport f') :
-    HasCompactMulSupport (DivInvMonoid.div' f f') :=
-  hf.mul hf'.inv
+    HasCompactMulSupport (f / f') := by
+  simpa only [div_eq_mul_inv] using hf.mul hf'.inv
 
 theorem HasCompactSupport.sub {α β : Type*} [TopologicalSpace α] [SubtractionMonoid β]
     {f f' : α → β} (hf : HasCompactSupport f) (hf' : HasCompactSupport f') :

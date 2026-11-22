@@ -173,7 +173,7 @@ lemma le_egauge_of_forall_ne_zero [(𝓝[≠] (0 : 𝕜)).NeBot] {r : ℝ≥0∞
   exact (h c (by simpa using hc₀) ⟨_, hs₀, by simp⟩).trans_lt (by simpa using hcb)
 
 lemma le_egauge_smul_left (c : 𝕜) (s : Set E) (x : E) :
-    ENNReal.div (egauge 𝕜 s x) ‖c‖ₑ ≤ egauge 𝕜 (c • s) x := by
+    (egauge 𝕜 s x / ‖c‖ₑ) ≤ egauge 𝕜 (c • s) x := by
   simp_rw [le_egauge_iff, smul_smul]
   rintro a ⟨x, hx, rfl⟩
   apply ENNReal.div_le_of_le_mul
@@ -181,11 +181,11 @@ lemma le_egauge_smul_left (c : 𝕜) (s : Set E) (x : E) :
   exact egauge_le_of_mem_smul <| smul_mem_smul_set hx
 
 lemma egauge_smul_left (hc : c ≠ 0) (s : Set E) (x : E) :
-    egauge 𝕜 (c • s) x = ENNReal.div (egauge 𝕜 s x) ‖c‖ₑ := by
+    egauge 𝕜 (c • s) x = (egauge 𝕜 s x / ‖c‖ₑ) := by
   refine le_antisymm ?_ (le_egauge_smul_left _ _ _)
   rw [ENNReal.le_div_iff_mul_le (by simp [*]) (by simp)]
   calc
-    egauge 𝕜 (c • s) x * ‖c‖ₑ = ENNReal.div (egauge 𝕜 (c • s) x) ‖c⁻¹‖ₑ := by
+    egauge 𝕜 (c • s) x * ‖c‖ₑ = (egauge 𝕜 (c • s) x / ‖c⁻¹‖ₑ) := by
       rw [enorm_inv, ENNReal.div_eq_mul_inv, inv_inv]
     _ ≤ egauge 𝕜 (c⁻¹ • c • s) x := le_egauge_smul_left _ _ _
     _ = egauge 𝕜 s x := by rw [inv_smul_smul₀ (ha := hc.isUnit)]
@@ -201,7 +201,7 @@ lemma le_egauge_smul_right (c : 𝕜) (s : Set E) (x : E) :
       egauge 𝕜 s x ≤ ‖c⁻¹ * a‖ₑ := by
         refine egauge_le_of_mem_smul ⟨y, hy, ?_⟩
         simp only [mul_smul, hxy, inv_smul_smul₀ (ha := hc.isUnit)]
-      _ = ENNReal.div ‖a‖ₑ ‖c‖ₑ := by rw [enorm_mul, enorm_inv, ENNReal.div_eq_inv_mul]
+      _ = (‖a‖ₑ / ‖c‖ₑ) := by rw [enorm_mul, enorm_inv, ENNReal.div_eq_inv_mul]
 
 lemma egauge_smul_right (h : c = 0 → s.Nonempty) (x : E) :
     egauge 𝕜 s (c • x) = ‖c‖ₑ * egauge 𝕜 s x := by
@@ -315,7 +315,7 @@ section SeminormedAddCommGroup
 variable (𝕜 : Type*) [NormedField 𝕜] {E : Type*} [SeminormedAddCommGroup E] [NormedSpace 𝕜 E]
 
 lemma div_le_egauge_closedBall (r : ℝ≥0) (x : E) :
-    ENNReal.div ‖x‖ₑ (r : ℝ≥0∞) ≤ egauge 𝕜 (closedBall 0 r) x := by
+    (‖x‖ₑ / (r : ℝ≥0∞)) ≤ egauge 𝕜 (closedBall 0 r) x := by
   rw [le_egauge_iff]
   rintro c ⟨y, hy, rfl⟩
   rw [mem_closedBall_zero_iff, ← coe_nnnorm, NNReal.coe_le_coe] at hy
@@ -327,7 +327,7 @@ lemma div_le_egauge_closedBall (r : ℝ≥0) (x : E) :
 lemma le_egauge_closedBall_one (x : E) : ‖x‖ₑ ≤ egauge 𝕜 (closedBall 0 1) x := by
   simpa [ENNReal.div_eq_mul_inv] using div_le_egauge_closedBall 𝕜 1 x
 
-lemma div_le_egauge_ball (r : ℝ≥0) (x : E) : ENNReal.div ‖x‖ₑ (r : ℝ≥0∞) ≤ egauge 𝕜 (ball 0 r) x :=
+lemma div_le_egauge_ball (r : ℝ≥0) (x : E) : (‖x‖ₑ / (r : ℝ≥0∞)) ≤ egauge 𝕜 (ball 0 r) x :=
   (div_le_egauge_closedBall 𝕜 r x).trans <| egauge_anti _ ball_subset_closedBall _
 
 lemma le_egauge_ball_one (x : E) : ‖x‖ₑ ≤ egauge 𝕜 (ball 0 1) x := by
@@ -337,7 +337,7 @@ variable {𝕜}
 variable {c : 𝕜} {x : E} {r : ℝ≥0}
 
 lemma egauge_ball_le_of_one_lt_norm (hc : 1 < ‖c‖) (h₀ : r ≠ 0 ∨ ‖x‖ ≠ 0) :
-    egauge 𝕜 (ball 0 r) x ≤ ENNReal.div (‖c‖ₑ * ‖x‖ₑ) (r : ℝ≥0∞) := by
+    egauge 𝕜 (ball 0 r) x ≤ ((‖c‖ₑ * ‖x‖ₑ) / (r : ℝ≥0∞)) := by
   let : NontriviallyNormedField 𝕜 := ⟨c, hc⟩
   rcases eq_zero_or_pos r with rfl | hr
   · rw [ENNReal.coe_zero, ENNReal.div_zero (mul_ne_zero _ _)]
@@ -358,7 +358,7 @@ lemma egauge_ball_le_of_one_lt_norm (hc : 1 < ‖c‖) (h₀ : r ≠ 0 ∨ ‖x�
           apply NNReal.coe_le_coe.mp
           convert! hainv using 1 <;> simp only [NNReal.coe_inv, NNReal.coe_mul, coe_nnnorm]
           congr 2
-        _ = ENNReal.div (‖c‖ₑ * ‖x‖ₑ) (r : ℝ≥0∞) := by
+        _ = ((‖c‖ₑ * ‖x‖ₑ) / (r : ℝ≥0∞)) := by
           simp only [ENNReal.coe_div, ENNReal.coe_mul, enorm_eq_nnnorm]
 
 lemma egauge_ball_one_le_of_one_lt_norm (hc : 1 < ‖c‖) (x : E) :

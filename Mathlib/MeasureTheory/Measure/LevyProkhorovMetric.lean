@@ -132,16 +132,15 @@ lemma levyProkhorovEDist_triangle [OpensSigmaAlgebra Ω] (μ ν κ : Measure Ω)
   · simp [LPνκ_finite]
   apply levyProkhorovEDist_le_of_forall_add_pos_le
   intro ε B ε_pos ε_lt_top B_mble
-  have htwo : IsUnit (2 : ℝ≥0∞) := ENNReal.isUnit_iff.2 ⟨two_ne_zero, ofNat_ne_top⟩
-  have hhalf : ε / 2 = ENNReal.div ε 2 := ENNReal.checkedDiv_eq_div ε 2 htwo
-  have half_ε_pos : 0 < ε / 2 := hhalf ▸ ENNReal.div_pos ε_pos.ne' ofNat_ne_top
-  have half_ε_finite : ε / 2 ≠ ∞ := hhalf ▸ ENNReal.div_ne_top ε_lt_top.ne two_ne_zero
+  have half_ε_pos : 0 < ε / 2 := ENNReal.div_pos ε_pos.ne' ofNat_ne_top
+  have half_ε_finite : ε / 2 ≠ ∞ := ENNReal.div_ne_top ε_lt_top.ne two_ne_zero
   let r := levyProkhorovEDist μ ν + ε / 2
   let s := levyProkhorovEDist ν κ + ε / 2
   have lt_r : levyProkhorovEDist μ ν < r := lt_add_right LPμν_finite half_ε_pos.ne'
   have lt_s : levyProkhorovEDist ν κ < s := lt_add_right LPνκ_finite half_ε_pos.ne'
   have hs_add_r : s + r = levyProkhorovEDist μ ν + levyProkhorovEDist ν κ + ε := by
-    simp_rw [s, r, add_assoc, add_comm (ε / 2), add_assoc, hhalf, ENNReal.add_halves, ← add_assoc,
+    have hadd : ε / 2 + ε / 2 = ε := ENNReal.add_halves ε
+    simp_rw [s, r, add_assoc, add_comm (ε / 2), add_assoc, hadd, ← add_assoc,
       add_comm (levyProkhorovEDist μ ν)]
   have hs_add_r' : s.toReal + r.toReal
       = (levyProkhorovEDist μ ν + levyProkhorovEDist ν κ + ε).toReal := by

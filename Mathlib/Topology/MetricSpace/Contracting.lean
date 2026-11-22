@@ -64,7 +64,7 @@ theorem one_sub_K_ne_top : (1 : ℝ≥0∞) - K ≠ ∞ := by
   exact ENNReal.coe_ne_top
 
 theorem edist_inequality (hf : ContractingWith K f) {x y} (h : edist x y ≠ ∞) :
-    edist x y ≤ (edist x (f x) + edist y (f y)).div (1 - K) :=
+    edist x y ≤ (edist x (f x) + edist y (f y)) / (1 - (K : ℝ≥0∞)) :=
   suffices edist x y ≤ edist x (f x) + edist y (f y) + K * edist x y by
     rwa [ENNReal.le_div_iff_mul_le (Or.inl hf.one_sub_K_ne_zero) (Or.inl one_sub_K_ne_top),
       mul_comm, ENNReal.sub_mul fun _ _ ↦ h, one_mul, tsub_le_iff_right]
@@ -74,7 +74,7 @@ theorem edist_inequality (hf : ContractingWith K f) {x y} (h : edist x y ≠ ∞
     _ ≤ edist x (f x) + edist y (f y) + K * edist x y := add_le_add le_rfl (hf.2 _ _)
 
 theorem edist_le_of_fixedPoint (hf : ContractingWith K f) {x y} (h : edist x y ≠ ∞)
-    (hy : IsFixedPt f y) : edist x y ≤ (edist x (f x)).div (1 - K) := by
+    (hy : IsFixedPt f y) : edist x y ≤ edist x (f x) / (1 - (K : ℝ≥0∞)) := by
   simpa only [hy.eq, edist_self, add_zero] using hf.edist_inequality h
 
 theorem eq_or_edist_eq_top_of_fixedPoints (hf : ContractingWith K f) {x y} (hx : IsFixedPt f x)
@@ -100,13 +100,13 @@ and lemmas about these functions. -/
 @[wikidata Q220680]
 theorem exists_fixedPoint (hf : ContractingWith K f) (x : α) (hx : edist x (f x) ≠ ∞) :
     ∃ y, IsFixedPt f y ∧ Tendsto (fun n ↦ f^[n] x) atTop (𝓝 y) ∧
-      ∀ n : ℕ, edist (f^[n] x) y ≤ (edist x (f x) * (K : ℝ≥0∞) ^ n).div (1 - K) :=
+      ∀ n : ℕ, edist (f^[n] x) y ≤ edist x (f x) * (K : ℝ≥0∞) ^ n / (1 - (K : ℝ≥0∞)) :=
   have : CauchySeq fun n ↦ f^[n] x :=
     cauchySeq_of_edist_le_geometric K (edist x (f x)) (ENNReal.coe_lt_one_iff.2 hf.1) hx
       (hf.toLipschitzWith.edist_iterate_succ_le_geometric x)
   let ⟨y, hy⟩ := cauchySeq_tendsto_of_complete this
   ⟨y, isFixedPt_of_tendsto_iterate hy hf.2.continuous.continuousAt, hy, fun n ↦ by
-    simpa only [ENNReal.tsum_geometric, ENNReal.div] using
+    simpa only [ENNReal.tsum_geometric, ENNReal.div_eq_mul_inv] using
       edist_le_of_edist_le_geometric_of_tendsto K (edist x (f x))
         (hf.toLipschitzWith.edist_iterate_succ_le_geometric x) hy n⟩
 
@@ -128,11 +128,11 @@ theorem tendsto_iterate_efixedPoint (hf : ContractingWith K f) {x : α} (hx : ed
 
 theorem apriori_edist_iterate_efixedPoint_le (hf : ContractingWith K f) {x : α}
     (hx : edist x (f x) ≠ ∞) (n : ℕ) :
-    edist (f^[n] x) (efixedPoint f hf x hx) ≤ (edist x (f x) * (K : ℝ≥0∞) ^ n).div (1 - K) :=
+    edist (f^[n] x) (efixedPoint f hf x hx) ≤ edist x (f x) * (K : ℝ≥0∞) ^ n / (1 - (K : ℝ≥0∞)) :=
   (Classical.choose_spec <| hf.exists_fixedPoint x hx).2.2 n
 
 theorem edist_efixedPoint_le (hf : ContractingWith K f) {x : α} (hx : edist x (f x) ≠ ∞) :
-    edist x (efixedPoint f hf x hx) ≤ (edist x (f x)).div (1 - K) := by
+    edist x (efixedPoint f hf x hx) ≤ edist x (f x) / (1 - (K : ℝ≥0∞)) := by
   convert! hf.apriori_edist_iterate_efixedPoint_le hx 0
   simp only [pow_zero, mul_one]
 
@@ -159,7 +159,7 @@ end
 theorem exists_fixedPoint' {s : Set α} (hsc : IsComplete s) (hsf : MapsTo f s s)
     (hf : ContractingWith K <| hsf.restrict f s s) {x : α} (hxs : x ∈ s) (hx : edist x (f x) ≠ ∞) :
     ∃ y ∈ s, IsFixedPt f y ∧ Tendsto (fun n ↦ f^[n] x) atTop (𝓝 y) ∧
-      ∀ n : ℕ, edist (f^[n] x) y ≤ (edist x (f x) * (K : ℝ≥0∞) ^ n).div (1 - K) := by
+      ∀ n : ℕ, edist (f^[n] x) y ≤ edist x (f x) * (K : ℝ≥0∞) ^ n / (1 - (K : ℝ≥0∞)) := by
   have := hsc.completeSpace_coe
   rcases hf.exists_fixedPoint ⟨x, hxs⟩ hx with ⟨y, hfy, h_tendsto, hle⟩
   refine ⟨y, y.2, Subtype.ext_iff.1 hfy, ?_, fun n ↦ ?_⟩
@@ -198,12 +198,12 @@ theorem apriori_edist_iterate_efixedPoint_le' {s : Set α} (hsc : IsComplete s) 
     (hf : ContractingWith K <| hsf.restrict f s s) {x : α} (hxs : x ∈ s) (hx : edist x (f x) ≠ ∞)
     (n : ℕ) :
     edist (f^[n] x) (efixedPoint' f hsc hsf hf x hxs hx) ≤
-      (edist x (f x) * (K : ℝ≥0∞) ^ n).div (1 - K) :=
+      edist x (f x) * (K : ℝ≥0∞) ^ n / (1 - (K : ℝ≥0∞)) :=
   (Classical.choose_spec <| hf.exists_fixedPoint' hsc hsf hxs hx).2.2.2 n
 
 theorem edist_efixedPoint_le' {s : Set α} (hsc : IsComplete s) (hsf : MapsTo f s s)
     (hf : ContractingWith K <| hsf.restrict f s s) {x : α} (hxs : x ∈ s) (hx : edist x (f x) ≠ ∞) :
-    edist x (efixedPoint' f hsc hsf hf x hxs hx) ≤ (edist x (f x)).div (1 - K) := by
+    edist x (efixedPoint' f hsc hsf hf x hxs hx) ≤ edist x (f x) / (1 - (K : ℝ≥0∞)) := by
   convert! hf.apriori_edist_iterate_efixedPoint_le' hsc hsf hxs hx 0
   rw [pow_zero, mul_one]
 

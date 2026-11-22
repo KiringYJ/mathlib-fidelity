@@ -200,7 +200,7 @@ theorem covolume_div_covolume_eq_relIndex' {E : Type*} [NormedAddCommGroup E]
 theorem volume_image_eq_volume_div_covolume {ι : Type*} [Fintype ι] (L : Submodule ℤ (ι → ℝ))
     [DiscreteTopology L] [IsZLattice ℝ L] (b : Basis ι ℤ L) {s : Set (ι → ℝ)} :
     volume ((b.ofZLatticeBasis ℝ L).equivFun '' s) =
-      ENNReal.div (volume s) (ENNReal.ofReal (covolume L)) := by
+      (volume s / ENNReal.ofReal (covolume L)) := by
   rw [LinearEquiv.image_eq_preimage_symm, Measure.addHaar_preimage_linearEquiv,
     LinearEquiv.symm_symm, covolume_eq_det_inv L b, ENNReal.div_eq_inv_mul,
     ENNReal.ofReal_inv_of_pos (abs_pos.2 (LinearEquiv.det _).ne_zero), inv_inv, LinearEquiv.coe_det]
@@ -213,7 +213,7 @@ theorem volume_image_eq_volume_div_covolume' {E : Type*} [NormedAddCommGroup E]
     (L : Submodule ℤ E) [DiscreteTopology L] [IsZLattice ℝ L] {ι : Type*} [Fintype ι]
     (b : Basis ι ℤ L) {s : Set E} (hs : NullMeasurableSet s) :
     volume ((b.ofZLatticeBasis ℝ).equivFun '' s) =
-      ENNReal.div (volume s) (ENNReal.ofReal (covolume L)) := by
+      (volume s / ENNReal.ofReal (covolume L)) := by
   let e : Fin (finrank ℝ E) ≃ ι :=
     Fintype.equivOfCardEq (by rw [Fintype.card_fin, finrank_eq_card_basis (b.ofZLatticeBasis ℝ)])
   let f := (EuclideanSpace.equiv ι ℝ).symm.trans
@@ -232,7 +232,7 @@ end Basic
 namespace covolume
 
 private theorem toReal_div_ofReal_pos (a : ENNReal) {b : ℝ} (hb : 0 < b) :
-    (ENNReal.div a (ENNReal.ofReal b)).toReal = Checked.div a.toReal b hb.ne'.isUnit := by
+    (a / ENNReal.ofReal b).toReal = Checked.div a.toReal b hb.ne'.isUnit := by
   have h := ENNReal.toReal_ofReal hb.le
   have hu : IsUnit (ENNReal.ofReal b).toReal := h.symm ▸ hb.ne'.isUnit
   rw [ENNReal.toReal_div _ _ (hb := hu)]

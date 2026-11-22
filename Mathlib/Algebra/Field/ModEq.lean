@@ -28,7 +28,7 @@ variable {K : Type*} [Semiring K] {a b c p : K}
   simp [modEq_iff_nsmul, add_div', div_left_inj', mul_assoc]
 
 @[simp] lemma mul_modEq_mul_right (hc : IsUnit c) :
-    a * c ≡ b * c [PMOD p] ↔ a ≡ b [PMOD (Checked.div p c hc)] := by
+    a * c ≡ b * c [PMOD p] ↔ a ≡ b [PMOD (p / c)] := by
   rw [div_eq_mul_inv₀, ← div_modEq_div (hc := hc.inv₀), div_inv_eq_mul₀, div_inv_eq_mul₀]
 
 end Semiring
@@ -37,7 +37,7 @@ section CommSemiring
 variable {K : Type*} [CommSemiring K] {a b c p : K}
 
 @[simp] lemma mul_modEq_mul_left (hc : IsUnit c) :
-    c * a ≡ c * b [PMOD p] ↔ a ≡ b [PMOD (Checked.div p c hc)] := by
+    c * a ≡ c * b [PMOD p] ↔ a ≡ b [PMOD (p / c)] := by
   simpa only [mul_comm c] using (mul_modEq_mul_right (a := a) (b := b) (p := p) hc)
 
 end CommSemiring

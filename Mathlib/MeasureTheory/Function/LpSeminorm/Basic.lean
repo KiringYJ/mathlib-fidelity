@@ -199,7 +199,7 @@ theorem eLpNorm'_const_of_isProbabilityMeasure (c : ε) (hq_pos : 0 < q) [IsProb
     eLpNorm' (fun _ : α => c) q μ = ‖c‖ₑ := by simp [eLpNorm'_const c hq_pos, measure_univ]
 
 theorem eLpNorm_const (c : ε) (h0 : p ≠ 0) (hμ : μ ≠ 0) :
-    eLpNorm (fun _ : α => c) p μ = ‖c‖ₑ * μ Set.univ ^ (ENNReal.div 1 p).toReal := by
+    eLpNorm (fun _ : α => c) p μ = ‖c‖ₑ * μ Set.univ ^ (1 / p).toReal := by
   by_cases h_top : p = ∞
   · simp [h_top, eLpNormEssSup_const c hμ]
   have hp : IsUnit p.toReal := (ENNReal.toReal_pos h0 h_top).ne'.isUnit
@@ -207,7 +207,7 @@ theorem eLpNorm_const (c : ε) (h0 : p ≠ 0) (hμ : μ ≠ 0) :
     ENNReal.toReal_inv p (ha := hp)]
 
 theorem eLpNorm_const' (c : ε) (h0 : p ≠ 0) (h_top : p ≠ ∞) :
-    eLpNorm (fun _ : α => c) p μ = ‖c‖ₑ * μ Set.univ ^ (ENNReal.div 1 p).toReal := by
+    eLpNorm (fun _ : α => c) p μ = ‖c‖ₑ * μ Set.univ ^ (1 / p).toReal := by
   have hp : IsUnit p.toReal := (ENNReal.toReal_pos h0 h_top).ne'.isUnit
   simp [eLpNorm_eq_eLpNorm' h0 h_top, eLpNorm'_const, ENNReal.toReal_pos h0 h_top,
     ENNReal.toReal_inv p (ha := hp)]
@@ -384,7 +384,7 @@ theorem eLpNormEssSup_lt_top_of_ae_bound {f : α → F} {C : ℝ} (hfC : ∀ᵐ 
 
 theorem eLpNorm_le_of_ae_enorm_bound {ε} [TopologicalSpace ε] [ESeminormedAddMonoid ε]
     {f : α → ε} {C : ℝ≥0∞} (hfC : ∀ᵐ x ∂μ, ‖f x‖ₑ ≤ C) :
-    eLpNorm f p μ ≤ C • μ Set.univ ^ (ENNReal.div 1 p).toReal := by
+    eLpNorm f p μ ≤ C • μ Set.univ ^ (1 / p).toReal := by
   rcases eq_zero_or_neZero μ with rfl | hμ
   · simp
   by_cases hp0 : p = 0
@@ -395,13 +395,13 @@ theorem eLpNorm_le_of_ae_enorm_bound {ε} [TopologicalSpace ε] [ESeminormedAddM
 
 theorem eLpNorm_le_of_ae_nnnorm_bound {f : α → F} {C : ℝ≥0}
     (hfC : ∀ᵐ x ∂μ, ‖f x‖₊ ≤ C) :
-    eLpNorm f p μ ≤ C • μ Set.univ ^ (ENNReal.div 1 p).toReal := by
+    eLpNorm f p μ ≤ C • μ Set.univ ^ (1 / p).toReal := by
   simpa [C.enorm_eq, ENNReal.smul_def, smul_eq_mul] using
     (eLpNorm_le_of_ae_enorm_bound (f := f) (C := (C : ℝ≥0∞))
       (hfC.mono fun _ hx => by simpa using hx))
 
 theorem eLpNorm_le_of_ae_bound {f : α → F} {C : ℝ} (hfC : ∀ᵐ x ∂μ, ‖f x‖ ≤ C) :
-    eLpNorm f p μ ≤ μ Set.univ ^ (ENNReal.div 1 p).toReal * ENNReal.ofReal C := by
+    eLpNorm f p μ ≤ μ Set.univ ^ (1 / p).toReal * ENNReal.ofReal C := by
   rw [← mul_comm]
   exact eLpNorm_le_of_ae_nnnorm_bound (hfC.mono fun x hx => hx.trans C.le_coe_toNNReal)
 
@@ -655,7 +655,7 @@ variable {ε : Type*} [TopologicalSpace ε] [ContinuousENorm ε]
 /-- Use `eLpNorm_smul_measure_of_ne_top` instead. -/
 private theorem eLpNorm_smul_measure_of_ne_zero_of_ne_top {p : ℝ≥0∞} (hp_ne_zero : p ≠ 0)
     (hp_ne_top : p ≠ ∞) {f : α → ε} (c : ℝ≥0∞) :
-    eLpNorm f p (c • μ) = c ^ (ENNReal.div 1 p).toReal • eLpNorm f p μ := by
+    eLpNorm f p (c • μ) = c ^ (1 / p).toReal • eLpNorm f p μ := by
   have hpUnit : IsUnit p.toReal := (ENNReal.toReal_pos hp_ne_zero hp_ne_top).ne'.isUnit
   simp_rw [eLpNorm_eq_eLpNorm' hp_ne_zero hp_ne_top]
   rw [eLpNorm'_smul_measure ENNReal.toReal_nonneg]
@@ -664,7 +664,7 @@ private theorem eLpNorm_smul_measure_of_ne_zero_of_ne_top {p : ℝ≥0∞} (hp_n
 /-- See `eLpNorm_smul_measure_of_ne_zero'` for a version with scalar multiplication by `ℝ≥0`. -/
 theorem eLpNorm_smul_measure_of_ne_zero {c : ℝ≥0∞} (hc : c ≠ 0) (f : α → ε) (p : ℝ≥0∞)
     (μ : Measure α) :
-    eLpNorm f p (c • μ) = c ^ (ENNReal.div 1 p).toReal • eLpNorm f p μ := by
+    eLpNorm f p (c • μ) = c ^ (1 / p).toReal • eLpNorm f p μ := by
   by_cases hp0 : p = 0
   · simp [hp0]
   by_cases hp_top : p = ∞
@@ -672,7 +672,7 @@ theorem eLpNorm_smul_measure_of_ne_zero {c : ℝ≥0∞} (hc : c ≠ 0) (f : α 
   exact eLpNorm_smul_measure_of_ne_zero_of_ne_top hp0 hp_top c
 
 theorem eLpNorm_smul_measure_le (c : ℝ≥0∞) (f : α → ε) (p : ℝ≥0∞) (μ : Measure α) :
-    eLpNorm f p (c • μ) ≤ c ^ (ENNReal.div 1 p).toReal • eLpNorm f p μ := by
+    eLpNorm f p (c • μ) ≤ c ^ (1 / p).toReal • eLpNorm f p μ := by
   rcases eq_or_ne c 0 with rfl | hc
   · simp
   · exact (eLpNorm_smul_measure_of_ne_zero hc f p μ).le
@@ -680,20 +680,20 @@ theorem eLpNorm_smul_measure_le (c : ℝ≥0∞) (f : α → ε) (p : ℝ≥0∞
 /-- See `eLpNorm_smul_measure_of_ne_zero` for a version with scalar multiplication by `ℝ≥0∞`. -/
 lemma eLpNorm_smul_measure_of_ne_zero' {c : ℝ≥0} (hc : c ≠ 0) (f : α → ε) (p : ℝ≥0∞)
     (μ : Measure α) :
-    eLpNorm f p (c • μ) = c ^ (ENNReal.div 1 p).toReal • eLpNorm f p μ :=
+    eLpNorm f p (c • μ) = c ^ (1 / p).toReal • eLpNorm f p μ :=
   (eLpNorm_smul_measure_of_ne_zero (ENNReal.coe_ne_zero.2 hc) f p μ).trans (by simp; norm_cast)
 
 /-- See `eLpNorm_smul_measure_of_ne_top'` for a version with scalar multiplication by `ℝ≥0`. -/
 theorem eLpNorm_smul_measure_of_ne_top {p : ℝ≥0∞} (hp_ne_top : p ≠ ∞)
     (f : α → ε) (c : ℝ≥0∞) :
-    eLpNorm f p (c • μ) = c ^ (ENNReal.div 1 p).toReal • eLpNorm f p μ := by
+    eLpNorm f p (c • μ) = c ^ (1 / p).toReal • eLpNorm f p μ := by
   by_cases hp0 : p = 0
   · simp [hp0]
   exact eLpNorm_smul_measure_of_ne_zero_of_ne_top hp0 hp_ne_top c
 
 /-- See `eLpNorm_smul_measure_of_ne_top'` for a version with scalar multiplication by `ℝ≥0∞`. -/
 lemma eLpNorm_smul_measure_of_ne_top' (hp : p ≠ ∞) (c : ℝ≥0) (f : α → ε) :
-    eLpNorm f p (c • μ) = c ^ (ENNReal.div 1 p).toReal • eLpNorm f p μ := by
+    eLpNorm f p (c • μ) = c ^ (1 / p).toReal • eLpNorm f p μ := by
   refine (eLpNorm_smul_measure_of_ne_top hp ..).trans ?_
   simp [ENNReal.smul_def, ENNReal.coe_rpow_of_nonneg]
 
@@ -703,7 +703,7 @@ theorem eLpNorm_one_smul_measure {f : α → ε} (c : ℝ≥0∞) :
 
 theorem eLpNorm_le_of_measure_le_smul {c : ℝ≥0∞}
     {μ μ' : Measure α} (h : μ' ≤ c • μ) {f : α → ε} {p : ℝ≥0∞} :
-    eLpNorm f p μ' ≤ c ^ (ENNReal.div 1 p).toReal • eLpNorm f p μ := by
+    eLpNorm f p μ' ≤ c ^ (1 / p).toReal • eLpNorm f p μ := by
   grw [h, eLpNorm_smul_measure_le]
 
 theorem MemLp.of_measure_le_smul {μ' : Measure α} {c : ℝ≥0∞} (hc : c ≠ ∞)

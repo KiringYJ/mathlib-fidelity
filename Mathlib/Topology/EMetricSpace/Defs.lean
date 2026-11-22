@@ -74,11 +74,8 @@ end Metric
 
 /-- Every positive extended radius bounds the sum of any two distances below half that radius. -/
 theorem ENNReal.exists_pos_forall_add_lt (ε : ℝ≥0∞) (hε : 0 < ε) :
-    ∃ δ > (0 : ℝ≥0∞), ∀ x < δ, ∀ y < δ, x + y < ε := by
-  have : IsUnit (2 : ℝ≥0∞) := ENNReal.isUnit_iff.2 ⟨by simp, ENNReal.ofNat_ne_top⟩
-  refine ⟨ε / 2, ?_⟩
-  rw [ENNReal.checkedDiv_eq_div]
-  exact ⟨ENNReal.half_pos hε.ne', fun _ hx _ hy ↦
+    ∃ δ > (0 : ℝ≥0∞), ∀ x < δ, ∀ y < δ, x + y < ε :=
+  ⟨ε / 2, ENNReal.half_pos hε.ne', fun _ hx _ hy ↦
     (ENNReal.add_lt_add hx hy).trans_eq (ENNReal.add_halves ε)⟩
 
 /-- Creating a uniform space from an extended distance. -/

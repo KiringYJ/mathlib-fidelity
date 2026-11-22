@@ -118,7 +118,6 @@ instance instCompleteSpace [CompleteSpace α] : CompleteSpace (Closeds α) := by
     `edist (s n) (s (n+1)) < 2^{-n}`, then it converges. This is enough to guarantee
     completeness, by a standard completeness criterion.
     We use the shorthand `B n = 2^{-n}` in ennreal. -/
-  have : IsUnit (2 : ℝ≥0∞) := ENNReal.isUnit_iff.2 ⟨by simp, ENNReal.ofNat_ne_top⟩
   let B : ℕ → ℝ≥0∞ := fun n => 2⁻¹ ^ n
   have B_pos : ∀ n, (0 : ℝ≥0∞) < B n := by simp [B, ENNReal.pow_pos]
   have B_ne_top : ∀ n, B n ≠ ⊤ := by finiteness
@@ -147,7 +146,7 @@ instance instCompleteSpace [CompleteSpace α] : CompleteSpace (Closeds α) := by
         intro l z
         obtain ⟨z', z'_mem, hz'⟩ : ∃ z' ∈ s (n + l + 1), edist (z : α) z' < B n / 2 ^ l := by
           refine exists_edist_lt_of_hausdorffEDist_lt (s := s (n + l)) z.2 ?_
-          simp only [ENNReal.checkedDiv_eq_div, ENNReal.div_eq_mul_inv, ENNReal.inv_pow]
+          simp only [div_eq_mul_inv, ENNReal.inv_pow]
           rw [← pow_add]
           apply hs <;> simp
         exact ⟨⟨z', z'_mem⟩, le_of_lt hz'⟩

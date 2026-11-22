@@ -99,6 +99,9 @@ lemma UniformOnFun.toFun_inv [Inv β] (f : α →ᵤ[𝔖] β) : toFun 𝔖 (f�
 @[to_additive (attr := simp)]
 lemma UniformOnFun.ofFun_inv [Inv β] (f : α → β) : ofFun 𝔖 (f⁻¹) = (ofFun 𝔖 f)⁻¹ := rfl
 
+instance [Div β] : Div (α →ᵤ β) := inferInstanceAs <| Div (α → β)
+instance [Div β] : Div (α →ᵤ[𝔖] β) := inferInstanceAs <| Div (α → β)
+
 instance [Sub β] : Sub (α →ᵤ β) := inferInstanceAs <| Sub (α → β)
 
 @[simp]
@@ -166,18 +169,18 @@ instance [AddGroup β] : AddGroup (α →ᵤ[𝔖] β) := inferInstanceAs <| Add
 instance [Group β] : Group (α →ᵤ[𝔖] β) := inferInstanceAs <| Group (α → β)
 
 @[simp]
-lemma UniformFun.toFun_div [Group β] (f g : α →ᵤ β) : toFun (f / g) = toFun f / toFun g := rfl
+lemma UniformFun.toFun_div [Div β] (f g : α →ᵤ β) : toFun (f / g) = toFun f / toFun g := rfl
 
 @[simp]
-lemma UniformFun.ofFun_div [Group β] (f g : α → β) : ofFun (f / g) = ofFun f / ofFun g := rfl
+lemma UniformFun.ofFun_div [Div β] (f g : α → β) : ofFun (f / g) = ofFun f / ofFun g := rfl
 
 @[simp]
-lemma UniformOnFun.toFun_div [Group β] (f g : α →ᵤ[𝔖] β) :
+lemma UniformOnFun.toFun_div [Div β] (f g : α →ᵤ[𝔖] β) :
     toFun 𝔖 (f / g) = toFun 𝔖 f / toFun 𝔖 g :=
   rfl
 
 @[simp]
-lemma UniformOnFun.ofFun_div [Group β] (f g : α → β) :
+lemma UniformOnFun.ofFun_div [Div β] (f g : α → β) :
     ofFun 𝔖 (f / g) = ofFun 𝔖 f / ofFun 𝔖 g := rfl
 
 @[to_additive]

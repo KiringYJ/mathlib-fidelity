@@ -115,7 +115,7 @@ theorem HasIntegral.of_aeEq_zero {l : IntegrationParams} {I : Box ι} {f : (ι �
   set N : (ι → ℝ) → ℕ := fun x => ⌈‖f x‖⌉₊
   have N0 : ∀ {x}, N x = 0 ↔ f x = 0 := by simp [N]
   have : ∀ n, ∃ U, N ⁻¹' {n} ⊆ U ∧ IsOpen U ∧
-      μ.restrict I U < ENNReal.div (δ n : ℝ≥0∞) (n : ℝ≥0∞) := fun n ↦ by
+      μ.restrict I U < ((δ n : ℝ≥0∞) / (n : ℝ≥0∞)) := fun n ↦ by
     refine (N ⁻¹' {n}).exists_isOpen_lt_of_lt _ ?_
     rcases n with - | n
     · simp [ENNReal.div_zero (ENNReal.coe_pos.2 (δ0 _)).ne']
@@ -143,7 +143,7 @@ theorem HasIntegral.of_aeEq_zero {l : IntegrationParams} {I : Box ι} {f : (ι �
   rw [← sum_mul, ← Prepartition.measure_iUnion_toReal]
   let m := μ (π.filter fun J => N (π.tag J) = n).iUnion
   change m.toReal * ↑n ≤ ↑(δ n)
-  have : m < ENNReal.div (δ n : ℝ≥0∞) (n : ℝ≥0∞) := by
+  have : m < ((δ n : ℝ≥0∞) / (n : ℝ≥0∞)) := by
     simp only [Measure.restrict_apply (hUo _).measurableSet] at hμU
     refine (measure_mono ?_).trans_lt (hμU _)
     simp only [Set.subset_def, TaggedPrepartition.mem_iUnion, TaggedPrepartition.mem_filter]

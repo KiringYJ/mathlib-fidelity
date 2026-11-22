@@ -161,9 +161,7 @@ theorem exists_ne_zero_mem_ideal_of_norm_le_mul_sqrt_discr (I : (FractionalIdeal
   have hdeg : 0 < (finrank ℚ K : ℝ) := Nat.cast_pos.mpr finrank_pos
   have hfactor : (convexBodySumFactor K : ℝ≥0∞) ≠ 0 :=
     ENNReal.coe_ne_zero.mpr (convexBodySumFactor_ne_zero K)
-  have hunit : IsUnit (convexBodySumFactor K : ℝ≥0∞) :=
-    ENNReal.isUnit_iff.mpr ⟨hfactor, ENNReal.coe_ne_top⟩
-  let A := (minkowskiBound K I / (convexBodySumFactor K : ℝ≥0∞)).toReal
+  let A := (minkowskiBound K I / convexBodySumFactor K).toReal
   let B := A ^ (1 / (finrank ℚ K : ℝ))
   have hA : 0 ≤ A := ENNReal.toReal_nonneg
   have hB : 0 ≤ B := Real.rpow_nonneg hA _
@@ -174,8 +172,7 @@ theorem exists_ne_zero_mem_ideal_of_norm_le_mul_sqrt_discr (I : (FractionalIdeal
   have h_le : (minkowskiBound K I) ≤ volume (convexBodySum K B) := by
     rw [convexBodySum_volume, ← ENNReal.ofReal_pow hB, hpow]
     dsimp only [A]
-    rw [ENNReal.checkedDiv_eq_div _ _ hunit,
-      ENNReal.ofReal_toReal (ENNReal.div_ne_top (minkowskiBound_lt_top K I).ne hfactor),
+    rw [ENNReal.ofReal_toReal (ENNReal.div_ne_top (minkowskiBound_lt_top K I).ne hfactor),
       ENNReal.mul_div_cancel hfactor ENNReal.coe_ne_top]
   obtain ⟨a, ha, hne, hbound⟩ := exists_ne_zero_mem_ideal_of_norm_le K I h_le
   refine ⟨a, ha, hne, hbound.trans_eq ?_⟩
@@ -199,7 +196,7 @@ theorem exists_ne_zero_mem_ideal_of_norm_le_mul_sqrt_discr (I : (FractionalIdeal
       ((2 : ℝ) ^ nrRealPlaces K * (π / 2) ^ nrComplexPlaces K / ((finrank ℚ K).factorial : ℝ))
       (hden ▸ hfactor_real) := by
     dsimp only [A]
-    rw [ENNReal.checkedDiv_eq_div _ _ hunit, ENNReal.toReal_div _ _ (hb := hfactor_real)]
+    rw [ENNReal.toReal_div _ _ (hb := hfactor_real)]
     apply div_eq_div_iff.mpr
     rw [hnum, hden]
   have htwo : (2 : ℝ) ^ finrank ℚ K =
