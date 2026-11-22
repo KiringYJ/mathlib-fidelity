@@ -4512,15 +4512,54 @@ not production conjecture roots; distinguish goal metadata and test scaffolding 
   `Mathlib.Tactic.Linter.OperatorFidelity`, followed by
   `#operator_fidelity with_proofs in Mathlib.Data.Nat.Factorization.Defs`.
 
-- [ ] **Audit negation at the top element of additive ordered groups with top.**
-  `LinearOrderedAddCommGroupWithTop` in `Mathlib/Algebra/Order/AddGroupWithTop.lean` retains total
-  negation and its `neg_top` convention. The reverse `Multiplicative` adapters in
-  `Mathlib/Algebra/Order/GroupWithZero/Canonical.lean` construct units only for nonzero elements:
-  the corresponding additive element is not top, and both inverse laws use
-  `LinearOrderedAddCommGroupWithTop.add_neg_cancel_of_ne_top` on that finite domain. These laws
-  do not validate negation at top. Migrate the additive foundation separately, including generic
-  type-tag instances; it must not supply an unrestricted multiplicative inverse to the selected
-  field/group-with-zero interface.
+- [ ] **Restrict inverse operations in additive ordered groups with top to additive units.**
+  In `Mathlib/Algebra/Order/AddGroupWithTop.lean`, replace the `SubNegMonoid` parent and axioms
+  involving ambient negation with `isAddUnit_of_ne_top : a ≠ ⊤ → IsAddUnit a`. Derive
+  `isAddUnit_iff` from this field, absorption at `⊤`, and nontriviality. Derive finite-element
+  regularity from units and use the group operations of `AddUnits`. The direct `neg_top` proof
+  dependencies are `neg_eq_top`, `sub_top`, `add_neg_cancel_iff_ne_top`, and the proofs in
+  `toSubtractionMonoid`. Remove the fallback laws and ambient inverse, group-style subtraction,
+  and integer scalar instances. Give `WithTop.untop₀_neg` a finite-domain formulation if needed.
+
+  - For `WithTop G`, extract a finite representative `g : G` and use `↑(-g)` as its inverse.
+    Replace `ArchimedeanClass.instNeg` in `Mathlib/Algebra/Order/Ring/Archimedean.lean` with a
+    unit construction on non-top classes. A nonzero representative `x` gives `u : Rˣ` with
+    value `x` and inverse class `mk u.inv`. The two inverse equations follow from `mk_mul`,
+    `u.val_inv`, `u.inv_val`, and `mk_one`. Identify the existing `FiniteArchimedeanClass R`
+    with additive units where finite classes need a group API. Port `mk_inv`, `mk_div`, and
+    `mk_zpow` using their existing unit hypotheses.
+  - A finite subtrahend `b` makes `d + b = a` uniquely solvable for every `a`, including `⊤`.
+    When `b = ⊤`, the equation has no solution for finite `a` and every `d` is a solution for
+    `a = ⊤`. Preserve the independently specified `OrderedSub` in
+    `Mathlib/Algebra/Order/Sub/WithTop.lean`. Integer scaling uses natural scaling for
+    nonnegative scalars and requires a unit argument only for a negative scalar.
+  - Keep the generic `Multiplicative`, `MinTropical`, and `MaxTropical` transports for valid
+    input operations in `Mathlib/Algebra/Group/TypeTags/Basic.lean` and
+    `Mathlib/Algebra/Tropical/Basic.lean`. Close the inherited `Inv` paths through `InvolutiveNeg`
+    and `SubNegMonoid`, the direct `Div` path through `Sub`, and the tropical `Pow _ ℤ` path
+    through `SMul ℤ`. The resulting `Pow _ ℤ` also enables `ZPow.ofPow`. Transport `IsAddUnit`
+    to `IsUnit` and reuse `Checked.inv`, `Checked.div`, and `Checked.zpow`. On either tropical
+    carrier the witness comes from `untrop x ≠ ⊤`, including when the carrier has no `Zero`. Build
+    `isUnit_of_ne_zero` in `Mathlib/Algebra/Order/GroupWithZero/Canonical.lean` from the additive
+    unit witness and preserve the ordered group-with-zero adapter.
+  - Port `AddValuation.map_inv` and `map_div` using the image of the source unit. Check
+    `StandardPart` through the valuation subring adapter and replace the use of ambient
+    negation in `Hyperreal.archimedeanClassMk_epsilon_pos` using `mk (ω * ε) = 0` and
+    `mk ω < 0`. In `Mathlib/Analysis/Meromorphic/`, retain translation of a possibly infinite
+    order by the finite shift in `Order` and the nonzero denominator germ's finite order in
+    `GermOrder`. Use the unit-locus hypotheses in the inverse, division, signed-power, and
+    log-derivative theorems to prove finiteness where required. Recheck `NormalForm`,
+    `TrailingCoefficient`, `Divisor`, `FactorizedRational`, `CanonicalDecomposition`,
+    `LogCounting`, and the Weierstrass order formulas. At `TrailingCoefficientStrict`, use the
+    existing finite-order hypothesis in place of the ambient `neg_eq_top` rewrite.
+  - Verify that raw `Neg`, `Sub`, and `SMul ℤ` fail to synthesize on `WithTop ℤ` and
+    `ArchimedeanClass ℝ`, and that raw `Inv`, `Div`, `Pow _ ℤ`, and `ZPow` fail on their
+    multiplicative and tropical wrappers, including the ordered `Multiplicative Aᵒᵈ` adapter.
+    Check genuine group instances, checked inversion of a finite element, division with a top
+    numerator and finite denominator, rejection of a negative exponent at top, and the zero
+    and positive exponent rules there. Scratch Lean checks established the two finite-unit
+    constructions, the three wrapper transports, and top translated by a finite inverse.
+    Full migration and downstream acceptance remain pending.
 
 - [ ] **Separate natural monus from partial subtraction and predecessor.**
   Work on official Lean without replacing core `Nat` or changing its kernel/compiler primitives.
