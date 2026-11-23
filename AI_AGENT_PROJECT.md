@@ -99,8 +99,9 @@ or prepare an upstream pull request, and never push to `upstream`.
 
 Contribution and intake policy, including review eligibility, the division of
 work between contributors and maintainers, admission criteria, integration
-modes, and provenance requirements, is in `FORK_DESIGN.md`. This section covers
-the mechanics.
+modes, and provenance requirements, is in `FORK_DESIGN.md`. Follow its
+[placement policy](FORK_DESIGN.md#mathematical-scope-and-placement) for work
+that will be integrated in-tree.
 
 ### Moving `main` and open pull requests
 
@@ -129,9 +130,10 @@ merely recapture the advanced head and overwrite it.
 Before copying or adapting external material, verify the exact source revision,
 license and redistribution conditions, per-file authorship, third-party content,
 `NOTICE` obligations, axioms, `sorry`s, generated artifacts, mathematical
-status, and overlap with existing declarations. Record the source and every
-integration in `UPSTREAMS.md`. If permission is absent or unclear, retain only a
-reference until a separate license review establishes an authorized path.
+status, and overlap with existing declarations. Record the source, in-tree
+destination modules where applicable, and integration evidence in
+`UPSTREAMS.md`. If permission is absent or unclear, retain only a reference
+until a separate license review establishes an authorized path.
 
 ## Design Contract
 
@@ -311,11 +313,12 @@ Desktop chat billing follows its own sign-in.
 
 ## Architecture
 
-- `Mathlib/` contains library modules.
+- `Mathlib/` contains the canonical mathematical theory modules.
 - `Mathlib.lean` is the generated import root and must be refreshed when new
   modules are added.
-- `MathlibTest/`, `Archive/`, `Counterexamples/`, and `scripts/` provide tests,
-  historical material, examples, and repository tooling.
+- [`Archive/`](Archive/README.md) contains standalone mathematical formalizations.
+- `MathlibTest/`, `Counterexamples/`, and `scripts/` provide tests, examples,
+  and repository tooling.
 - `FORK_DESIGN.md` is the authoritative design and complete-migration contract.
 - `UPSTREAMS.md` records external source identity, license evidence,
   provenance, integration mode, and status.

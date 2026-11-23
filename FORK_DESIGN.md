@@ -913,10 +913,10 @@ proof-status infrastructure.
 
 This is a maintainer-curated library that accepts external pull requests which
 follow the repository's mathematical, API, provenance, licensing, testing, and
-review policies. Policy compliance makes a contribution eligible for review;
-it does not guarantee merger. The maintainer may request revisions or decline a
-contribution because of scope, duplication, maintenance cost, or conflict with
-the fork's design direction.
+review policies. Policy compliance makes a contribution eligible for review.
+Maintainers may request revisions, defer integration, or decline work for
+concrete reasons such as duplication, design conflicts, or integration and
+maintenance costs.
 
 The default branch is periodically rebased during upstream reconciliation.
 Maintainers should batch those rewrites, avoid unnecessary merge-base churn
@@ -929,47 +929,81 @@ access when work must be pushed to the contributor's branch. The rebase and
 force-update procedure for open pull requests is in `AI_AGENT_PROJECT.md`.
 
 External formalizations may be proposed through a pull request or selected by
-the maintainer from other repositories. A suggestion, public repository, or
-valid result does not by itself create a review deadline or permanent backlog.
-Intake may slow or stop when the available audit and migration capacity is
-exhausted.
+the maintainer from other repositories. Maintainers select and schedule intake
+within the available audit and migration capacity. Assess costs through build
+time, dependency footprint, and the work required to integrate and maintain the
+development.
 
-Project scale, popularity, and subject fashion are not admission criteria. A
-small paper, a single theorem, or an obscure but reusable construction may be a
-complete ingestion unit. Prefer preserving and integrating already formalized
-mathematics over rebuilding it merely because it currently lives outside this
-tree.
+### Admission and review
 
-Evaluate candidate content separately from its current presentation. Admission
-requires evidence for:
+The library welcomes mathematics from every field, including specialized and
+unpublished work. Apply the same admission criteria regardless of journal
+prestige, citation counts, popularity, research fashion, mathematical novelty
+or importance, expected downstream use, or the subject expertise of
+maintainers. A small paper, a single theorem, or a construction can be a
+complete contribution. Preserve and reuse existing formalizations where the
+audit supports doing so.
 
-- a faithful, audited mathematical statement and either a complete proof under
-  the conjecture and proof-status policy above or an explicitly registered
-  unresolved root of either epistemic kind, with assumptions, axioms, generated
-  material, and status explicit;
-- a sufficiently identified source revision and provenance trail;
-- permission to copy, modify, and redistribute every imported part;
-- the absence of a materially equivalent canonical development, or a clear
-  deduplication plan; and
-- a technically credible route into the maintained library.
+Evaluate the mathematics separately from its current presentation. Admission
+requires the following evidence.
 
-Naming, namespace layout, imports, abstraction level, proof locality, or use of
-a noncanonical API are not by themselves reasons to discard valid mathematical
-content. They are migration work owned by the maintainer. Once selected, a
-development passes through mathematical audit, deduplication, faithful API
-migration, repository-wide consistency work, and final verification before it
-becomes canonical here. A raw external snapshot may be retained as evidence,
-but it is not a second public API.
+- A faithful, audited mathematical statement and either a complete proof or
+  an explicitly registered unresolved root of either epistemic kind under the
+  [conjecture and proof-status policy](#conjectures-and-proof-status). Make
+  assumptions, axioms, trusted evaluation, generated material, and status explicit.
+- For external material, an exact source revision, traceable provenance, and
+  permission to copy, modify, and redistribute every imported part.
+- A technically credible integration route, with a deduplication plan if the
+  library already contains materially equivalent declarations.
 
-For an unfamiliar field, typechecking and general API taste do not establish
-the right mathematical abstraction. Compare the source literature and other
-formalizations, and obtain domain-appropriate review before canonicalizing the
-interface. The policy is:
+For source-based results, record how the formal objects, domains, hypotheses,
+and conclusions correspond to the source statement. Kernel checking validates
+the proof of the Lean statement under its actual dependencies. The mathematical
+review must also establish that the statement expresses the intended result.
+For unfamiliar material, consult the source literature and compare relevant
+formalizations where available. AI may perform maintenance and mathematical
+review. Require auditable mathematical evidence for every review.
 
-> Faithful mathematical content with an admissible proof status, provenance,
-> and legal ingestibility determines eligibility for admission; repository
-> consistency determines migration, not rejection. Actual admission remains a
-> discretionary, evidence-based curatorial decision.
+Treat differences in naming, namespaces, imports, abstraction, proof locality,
+and API usage as integration work. Selected developments undergo audit,
+deduplication, faithful adaptation to the maintained API, and final
+verification. Treat any raw external snapshots as provenance evidence outside
+the public API. Keep external candidates with open admission checks in the
+[source registry](UPSTREAMS.md#candidate-sources) pending review.
+
+### Mathematical scope and placement
+
+Apply the same standards for mathematical fidelity, proof status, axiom and
+evaluation trust, provenance, and licensing in both `Mathlib/` and `Archive/`.
+Choose the destination based on how the mathematics fits the library. A
+development may span both locations.
+
+- **`Mathlib/`** contains canonical definitions, structures, constructions,
+  and theorems that naturally belong to an extensible mathematical theory.
+  Specialized and research-level results may qualify before they have
+  downstream users. Apply the fork's public API standards for generality,
+  naming, and integration with existing theory.
+- **`Archive/`** preserves self-contained formalizations of particular results,
+  problems, computations, classifications, and distinctive alternative proofs.
+  Statements may be specialized to the problem, and local names and interfaces
+  can follow the organization of the development. Reuse canonical statements
+  when recording alternative proofs of existing results.
+
+Put generally useful definitions, constructions, and lemmas in their subject
+modules in `Mathlib/`. For example, general hypergeometric summation lemmas
+belong with the theory, while a paper-specific evaluation and proof may belong
+in `Archive/`. A standard named identity may itself fit naturally in the
+theory.
+
+Review new canonical interfaces for the chosen abstraction, its mathematical
+generality, and its fit with related theories. Keep unresolved semantic
+questions explicit and defer canonicalization until they are resolved.
+Promote archived material when it fits the canonical interface and passes the
+same review as a new contribution to `Mathlib/`.
+
+`Archive` modules may import `Mathlib`. Keep the full import closure of
+`Mathlib` and `Mathlib.*` free of `Archive` and `Archive.*`. Repository-wide CI
+enforcement is [pending](TODO.md#fork-ci-rollout).
 
 ### Recovery modes for older formalizations
 
@@ -1010,9 +1044,8 @@ Choose an integration mode from the source relationship:
 - For another fork with shared Git ancestry, inspect and selectively
   cherry-pick or port coherent commits.
 - For an independent repository, do not merge unrelated histories merely to
-  preserve its Git graph. Use a reviewed source port when the material is to
-  become canonical here, or a Lake dependency when it should remain an
-  independently versioned library.
+  preserve its Git graph. Use a reviewed source port for in-tree integration
+  or a Lake dependency for an independently versioned library.
 - For reference-only candidates, record the source without importing code.
 
 Every source and import must be recorded in `UPSTREAMS.md` with its exact
@@ -1050,9 +1083,8 @@ migration.
   keep the inherited interface; evidence from downstream use, maintenance,
   performance, and verification bears on which interface the rules select, not
   on whether the inherited one is protected.
-- Additional source repositories do not become alternate design authorities.
-  Material becomes part of this library only through the same faithful,
-  canonicalizing integration process.
+- Apply this fork's [intake and placement policy](#contributions-curated-intake-and-canonicalization)
+  to material from every source repository.
 
 ## Total-Inverse Migration Contract
 

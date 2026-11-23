@@ -1,16 +1,24 @@
 # Archive
 
-This is an archive for formalizations which don't have a good place in mathlib, probably because there is (almost) no math depending on these results.
+`Archive/` preserves self-contained formalizations of particular results,
+problems, computations, classifications, and distinctive alternative proofs.
+Put generally useful definitions, constructions, and lemmas in their subject
+modules in `Mathlib/`. Results that naturally extend a mathematical theory can
+belong in `Mathlib/` before they have downstream users. Archived material can
+move into `Mathlib/` when it passes the review for a canonical interface.
+[Mathematical scope and placement](../FORK_DESIGN.md#mathematical-scope-and-placement)
 
-We keep these formalizations here so that when mathlib changes, we can keep these formalizations up to date.
+Both locations apply the same requirements for mathematical fidelity, proof
+status, axiom and evaluation trust, provenance, and licensing. An Archive
+development may use problem-specific statements, local names, and local
+interfaces. Follow the repository's shared style and documentation conventions.
+
+`Archive` modules may import `Mathlib`. Keep `Mathlib` free of direct and
+transitive dependencies on `Archive`.
 
 ## Contributing
 
-If you have done a formalization which you want to add here, just make a pull request to mathlib.
-
-When you make a pull request, do make sure that you put all lemmas which are generally useful in right place in mathlib (in the `Mathlib/` directory).
-
-Try to adhere to the guidelines for mathlib. They will be much less strictly enforced for the archive, but we still want you to adhere to all the conventions that make maintenance easier. This ensures that when mathlib is changing, the mathlib maintainers can fix these contributions without much effort. Here are the guidelines:
-- The [style guide](https://leanprover-community.github.io/contribute/style.html) for contributors.
-- The [git commit conventions](https://github.com/leanprover/lean4/blob/master/doc/dev/commit_convention.md).
-- You don't have to follow the [naming conventions](https://leanprover-community.github.io/contribute/naming.html).
+Submit a pull request to this fork's `main` branch. Describe the result,
+explain its proposed placement and any reusable prerequisites, and include
+the mathematical, source, and verification evidence required by the
+[contribution guide](../.github/CONTRIBUTING.md).

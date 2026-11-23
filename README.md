@@ -155,10 +155,17 @@ still applies to the surrounding Lake project setup.
 
 Pull requests to this fork are welcome when they follow the mathematical
 fidelity, API, source, licensing, provenance, testing, and review requirements
-in the [contribution guide](.github/CONTRIBUTING.md). Meeting those requirements
-makes a contribution eligible for review but does not guarantee merger;
-maintainers may request revisions or decline work because of scope,
-duplication, maintenance cost, or design direction.
+in the [contribution guide](.github/CONTRIBUTING.md). Maintainers select and
+schedule integration based on the work required to review, integrate, and
+maintain eligible contributions.
+
+The fork welcomes mathematics from every field, including specialized and
+unpublished work. `Mathlib/` holds definitions and results that naturally
+extend a mathematical theory. `Archive/` preserves standalone formalizations
+of particular results and proofs. Both apply the same standards for
+mathematical fidelity, proof status, provenance, and licensing.
+[Placement policy](FORK_DESIGN.md#mathematical-scope-and-placement) ·
+[Archive guide](Archive/README.md)
 
 Because `main` may be periodically rebased, an open pull request may need a new
 base. Maintainers batch reconciliation and may handle repository-driven rebase

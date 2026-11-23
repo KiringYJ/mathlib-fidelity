@@ -6,10 +6,9 @@ policies. Read the [README](../README.md),
 [project-specific requirements](../AI_AGENT_PROJECT.md) before preparing a
 change.
 
-Policy compliance makes a contribution eligible for review; it does not
-guarantee merger. Maintainers may request revisions or decline a contribution
-because of scope, duplication, maintenance cost, or conflict with the fork's
-design direction.
+Policy compliance makes a contribution eligible for review. Maintainers may
+request revisions, defer integration, or decline work for concrete reasons
+such as duplication, design conflicts, or integration and maintenance costs.
 
 ## Submission requirements
 
@@ -17,6 +16,9 @@ design direction.
   not need to follow the repository's internal topic-branch taxonomy.
 - Keep the change logically coherent and explain the mathematical or technical
   need it addresses.
+- For new formalizations, explain which results and prerequisites belong in
+  `Mathlib/` or `Archive/` under the fork's
+  [mathematical scope and placement policy](../FORK_DESIGN.md#mathematical-scope-and-placement).
 - For a new theory or mathematical interface, show how it reuses existing
   results and composes with related constructions. Explain what determines
   any implicit mathematical structures or operations it introduces.
@@ -73,8 +75,10 @@ workflow or secret access as ordinary integration authority.
 ## Mathematical and API requirements
 
 - Preserve the intended mathematical objects, domains, hypotheses, and
-  conclusions. Do not simplify a formal interface by weakening its mathematics
-  or hiding a genuine definedness obligation.
+  conclusions, including genuine definedness obligations. For source-based
+  results, document the correspondence between the source and the Lean
+  statement. The same fidelity and proof standards apply to both `Mathlib/`
+  and `Archive/`.
 - Follow the [official-Lean and operator-fidelity boundary](../FORK_DESIGN.md#official-lean-and-operator-fidelity).
   Exclude unfaithful operators from mathematical definitions and statements,
   including uses hidden by private helpers or aliases. Retain legitimate core
@@ -109,9 +113,9 @@ When a contribution copies, adapts, or reconstructs external material:
   fork.
 
 A public repository or mathematically valid result is not sufficient evidence
-that material may be redistributed or integrated unchanged. Maintainers may
-canonicalize admitted material to this fork's public API and conventions while
-preserving required provenance and attribution.
+that material may be redistributed or integrated unchanged. Maintainers adapt
+admitted material to the API and conventions for its destination and preserve
+required provenance and attribution.
 
 ## Pull request description
 

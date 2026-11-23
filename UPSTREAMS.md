@@ -74,10 +74,10 @@ provenance, mathematical fidelity, proof, axiom, `sorry`, dependency, overlap,
 maintenance, or migration audit is implied. No local remotes have been added
 for them, and their moving default refs are not intake revision pins.
 
-Before promoting any row to `accepted`, record its full immutable source commit
-and complete the required intake record below. Work through this list at the
-maintainer's discretion; its presence creates no completeness or schedule
-commitment.
+Keep sources with open admission checks in the candidate registry. Before
+promoting any row to `accepted`, record its full immutable source commit and
+complete the required intake record below. Maintainers select and schedule
+intake within the available audit and migration capacity.
 
 ### Lean 3 preservation and reconstruction leads
 
@@ -224,6 +224,7 @@ NOTICE / attribution obligations:
 Third-party or per-file exceptions:
 Intended mode: reference-only | dependency | cherry-pick | source-port
 Mathematical scope:
+In-tree destination modules (if applicable):
 Proof status: verified | conditional | incomplete | unknown
 Axioms / sorry / generated-code status:
 Overlap and deduplication plan:
@@ -255,12 +256,15 @@ independently deferred foundational TODOs together with their proved boundaries.
    before importing another version of the same concept.
 5. Choose the integration mode. Multiple Git remotes are useful for discovery
    and shared-history review, but independent histories are normally source
-   ports or Lake dependencies, not unrelated-history merges.
+   ports or Lake dependencies, not unrelated-history merges. For in-tree work,
+   record the proposed destination modules and any split between `Mathlib/`
+   and `Archive/` under the
+   [placement policy](FORK_DESIGN.md#mathematical-scope-and-placement).
 6. Record file- or declaration-level provenance and preserve applicable notices
    before editing the imported material.
-7. Migrate accepted content to the canonical mathematical API and repository
-   conventions. Presentation problems are integration work, not retroactive
-   evidence that the mathematics was invalid.
+7. Integrate accepted content in the recorded mode. For in-tree work, reuse
+   the canonical mathematical API and follow the conventions for the selected
+   destination.
 8. Run mathematical and technical review at the final integrated state, then
    update the record to `integrated` only when the evidence is complete.
 

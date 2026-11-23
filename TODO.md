@@ -150,6 +150,12 @@ and overlap with existing declarations before selecting exact theorem coverage a
   chain. Record any concrete capacity failure before selecting runner or sharding
   changes. Local syntax/tests do not certify hosted execution, full library
   success, or the separate proof-status admission contract below.
+- [ ] **Enforce the Archive import boundary in Fidelity CI.** Check the
+  resolved import closure of `Mathlib` and every `Mathlib.*` module for
+  `Archive` and `Archive.*`. Report an offending import path. Verify direct
+  and transitive violations and the permitted imports from `Archive` to
+  `Mathlib`. See the
+  [placement policy](FORK_DESIGN.md#mathematical-scope-and-placement).
 - [ ] **Resolve the existing source-style blockers exposed by the CI rollout.**
   At the unchanged Lean source of `70546ea86382`, `lake --no-build exe lint-style`
   reports that `Mathlib/Lean/Elab/OperatorPolicy.lean` is transitively imported by
