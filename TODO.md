@@ -4574,6 +4574,35 @@ and uses the official Lean toolchain.
   indeterminate quotients fail to elaborate, that the other boundary cases elaborate with evidence,
   and that instance inference cannot recover ambient `Div` or `HDiv` on `ENNReal`.
 
+- [ ] **Separate signed extended-real subtraction from nonnegative monus.**
+  **Accepted design, pending implementation.** Give ordinary `EReal` subtraction the exact domain
+  `(a ≠ ⊤ ∨ b ≠ ⊤) ∧ (a ≠ ⊥ ∨ b ≠ ⊥)` through a proof-bearing `EReal.sub a b h`
+  and checked `a - b` notation. For any real `c`, the finite pair `(t + c, t)` has difference
+  `c` as `t` tends to either signed infinity. Both pairs of equal infinities therefore lack a unique
+  continuous extension. Retain the signed differences for finite operands, one infinite operand,
+  and opposite infinities. In `Mathlib/Data/EReal/Operations.lean`, separate negation from the
+  ambient total subtraction supplied by `SubNegZeroMonoid` and restrict `bot_sub`
+  and `sub_top` to their checked domains.
+
+  - Expose `ENNReal.monus a b` explicitly as the least `q` satisfying `a ≤ q + b`. It satisfies
+    `ENNReal.monus a b ≤ q ↔ a ≤ q + b` for all inputs, so `ENNReal.monus ⊤ ⊤ = 0`.
+    Reuse the specification proved by `ENNReal.sub_eq_sInf` in
+    `Mathlib/Basic/ENNReal/Operations.lean` and the order law of `OrderedSub`. See
+    [Bacci et al., Rational Lawvere Logic, §2 and Table 1](https://drops.dagstuhl.de/storage/00lipics/lipics-vol363-csl2026/html/LIPIcs.CSL.2026.3/LIPIcs.CSL.2026.3.html).
+  - For a signed difference of `ENNReal` inputs, cast explicitly with `ENNReal.toEReal` and use
+    `(a : EReal) - (b : EReal)`. The cast is an order embedding and sends `⊤` to `⊤`,
+    so only the pair `(⊤, ⊤)` is excluded on these inputs. Adapt the existing
+    `ENNReal.toEReal_sub` bridge to compare monus with checked subtraction when `b ≤ a` and
+    `b ≠ ⊤`. Ordinary `-` on `ENNReal` itself is unavailable even for finite ordered inputs.
+
+  Remove the ambient subtraction paths in `Mathlib/Basic/ENNReal/Basic.lean`, including inference
+  through the `WithTop ℝ≥0` representation in `Mathlib/Algebra/Order/Sub/WithTop.lean`.
+  Audit `Sub`, `HSub`, implicit coercions, elaboration, and delaboration. Migrate callers according
+  to the required law, including the exact equality `measure_sdiff` and the monus inequality
+  `le_measure_sdiff` in `Mathlib/MeasureTheory/Measure/Basic.lean`. Check rejection of both
+  indeterminate `EReal` expressions and bare `ENNReal` subtraction, and check finite negative
+  results, opposite infinities, explicit casts, and the total monus law.
+
 - [ ] **Restrict inverse operations in additive ordered groups with top to additive units.**
   In `Mathlib/Algebra/Order/AddGroupWithTop.lean`, replace the `SubNegMonoid` parent and axioms
   involving ambient negation with `isAddUnit_of_ne_top : a ≠ ⊤ → IsAddUnit a`. Derive
