@@ -1,11 +1,11 @@
 # Mathematical fidelity and API hygiene backlog
 
 This file records completed migrations, unresolved audit candidates, planned paper formalizations
-and Palomar submissions, and the accepted conjecture and proof-status implementation backlog under
-the policies in `FORK_DESIGN.md`. A checked item records a completed migration or an explicit
+and Palomar submissions, and implementation work for adopted policies in `FORK_DESIGN.md`.
+A checked item records a completed migration or an explicit
 classification decision. An unchecked audit candidate
 is only a hypothesis to investigate: neither its diagnosis nor its proposed replacement is approved
-until it passes the fidelity gate below. The separate accepted-design section uses unchecked boxes
+until it passes the fidelity gate below. The accepted-design sections use unchecked boxes
 to track implementation only. Imperative wording in a candidate heading names the suspected problem;
 it does not authorize that particular repair.
 
@@ -387,6 +387,33 @@ in this checkout. External-only catalogue entries (such as Catalan/modularity st
 `docs/1000.yaml` and reference repositories in `UPSTREAMS.md`) are discovery evidence, not new
 local code or an authorized intake task. Deliberate `MathlibTest/` axiom/opaque/sorry fixtures are
 not production conjecture roots; distinguish goal metadata and test scaffolding from result proofs.
+
+## Priority-independent elaboration
+
+The [design policy](FORK_DESIGN.md#priority-independent-mathematical-semantics) is adopted.
+Enforcement and coverage are pending foundational work. Implementation requires an explicit task
+and uses the official Lean toolchain.
+
+- [ ] **Audit instance and coercion coherence.** Use
+  [`OverlappingInstances`](Mathlib/Tactic/Linter/OverlappingInstances.lean) as a starting point for
+  local diamonds. Inventory overlapping global candidates and inherited projections in the
+  algebraic and order hierarchies, including actions, modules, and algebras. Check whether candidate
+  premises can hold together and compare the supplied data by definitional equality. Audit coercion
+  chains and elaborator or notation priority where they can change mathematical meaning. Repair
+  confirmed conflicts by unifying coherent paths or requiring explicit structures and maps.
+- [ ] **Check defaulting at elaboration time.** Track how numerals, overloaded operations, and output
+  parameters get their types, including defaults introduced by outer elaborators or generated code.
+  [`OperatorPolicy`](Mathlib/Lean/Elab/OperatorPolicy.lean) illustrates interception of selected
+  commands. Default instances have their own registry, and a finished term can hide the fact that
+  fallback was used. Establish which entry points can enforce the rule and report cases where
+  uniqueness cannot be verified. A successful ordinary instance search does not certify uniqueness.
+- [ ] **Verify and enforce the covered scope.** Test distinct data at the same class goal,
+  propositionally equal but definitionally distinct data, definitionally equal diamonds, and
+  proof-irrelevant choices. Test underconstrained numeral and operator defaults, context-determined
+  inference, conflicting coercions or notation, and explicit disambiguation. Reorder priorities,
+  declarations, and imports with the candidate set fixed and check elaborated statements and data
+  definitions. Make violations and unresolved cases fail CI in the covered scope. Inventory
+  uncovered entry points before making any repository-wide enforcement claim.
 
 ## S -- bounded candidates and completed corrections
 

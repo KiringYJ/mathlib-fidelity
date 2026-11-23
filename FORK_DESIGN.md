@@ -22,6 +22,10 @@ not implement or authorize those changes.
 The official-Lean and operator-fidelity boundary below applies to each
 operator migration and its semantic dependency checks.
 
+The policies below on interoperability between mathematical theories and
+priority-independent semantics are adopted. Automated elaboration checks are
+[pending](TODO.md#priority-independent-elaboration).
+
 ## Purpose
 
 This fork is an independent downstream mathematical library built from
@@ -259,6 +263,114 @@ the interface.
   removal of its old machinery from reliance on an existing lower-level API:
   a proved use of a separately tracked foundational dependency can support a
   completed scoped migration, but does not establish removal of that dependency.
+
+#### Priority-independent mathematical semantics
+
+The written expression, its explicit inputs, and the constraints supplied by
+the active context must determine its mathematical types, operations, and
+structures. With the available declarations and scopes fixed, require all
+admissible implicit interpretations to be definitionally equal. Instance and
+parser priorities, declaration order, import order, and other search
+heuristics may affect search cost within this boundary. Reject an implicit
+default that supplies otherwise undetermined mathematical data, even when the
+default is fixed by convention.
+
+- Audit data-carrying instances and their inherited projections, including
+  those that share a fully specified class goal. A carrier type alone may
+  leave its order, topology, scalar action, or algebra structure open. Check
+  `Fintype` and `Decidable` as data-carrying classes too. Proof search may
+  produce any proof of the same already determined proposition.
+- Check the types and operations selected by overloading, numeral inference,
+  `outParam`, `semiOutParam`, and `default_instance`. For example, `(2 : Nat)`
+  and `Fin 3` supply a type for the literal, while an unconstrained `#check 2`
+  depends on a default. In `x + 2`, knowing `x : Int` alone does not establish
+  uniqueness for heterogeneous `HAdd`. `Int.add x 2` explicitly fixes the
+  operation and constrains the literal.
+- Audit competing coercion paths and interpretations of the same notation,
+  including those introduced by macros and custom elaborators. `↑x` still
+  asks Lean to select a coercion. Name the map when the conversion needs a
+  choice. Ordinary precedence and associativity specify how operators group.
+- Require explicit disambiguation for distinct terms, even if their equality
+  is provable as a theorem. Use a type annotation when a type is missing, or
+  a named construction, explicit structure argument, bundled object, or
+  deliberately selected local instance when the structure itself is open.
+  Equality theorems and equivalences can support explicit transport or a
+  refactor to a common definitional form.
+
+For an enforced scope, reject expressions when no interpretation fits, when
+multiple definitionally distinct interpretations fit, or when uniqueness
+cannot be established. Distinguish these cases in diagnostics.
+Accept the annotations and elaboration cost needed to maintain this standard.
+The fork uses the official Lean toolchain. A repository-wide enforcement claim
+requires verified coverage of the fork's elaboration entry points, including
+those that generate declarations. The official toolchain documents its own
+[instance synthesis](https://lean-lang.org/doc/reference/latest/Type-Classes/Instance-Synthesis/)
+and [notation resolution](https://lean-lang.org/doc/reference/latest/Notations-and-Macros/Notations/).
+
+### Interoperability between mathematical theories
+
+Make known, useful structural relationships between formalized theories
+available as verifiable constructions and composable theorems. These
+relationships are part of the mathematics the library aims to cover. Assess a
+new theory's integration with existing mathematics alongside the completeness
+of its internal development.
+
+- **Generality.** Prove results in natural structures that express the
+  mathematics with the hypotheses it needs. Different useful generalizations
+  can have incomparable hypotheses. Introduce a shared abstraction when it
+  has an identifiable mathematical role.
+- **Reuse.** Apply existing theorems directly, specialize a common theorem,
+  or transfer a result along an explicit mathematical relationship. Choose
+  the route that preserves the mathematical explanation and reduces the need
+  to reprove it in downstream work.
+- **Interoperability.** Provide the constructions, morphisms, forgetful maps,
+  equivalences, or universal properties that make important relationships
+  usable. State their source, target, and hypotheses. Prove the composition
+  laws, naturality, and compatibility needed by consumers, including the
+  agreement of routes that should commute. Use the mathematical form that
+  expresses the relationship, from a single compatibility lemma to a functor
+  or an adjunction.
+- **Fidelity.** Preserve the choice of mathematical object and its exact
+  assumptions throughout. Distinguish definitional equality, a specified
+  isomorphism, equivalence of categories, and weaker correspondences. Keep
+  appropriate representations for each theory and expose noncanonical
+  choices explicitly under the rule above.
+- **Engineering.** Use representative downstream proofs to assess theorem
+  reuse and composition. Check import direction, elaboration and instance
+  search costs, and maintenance effort. A module that imports both theories
+  can host their relationship. Reuse a proved composite when it exposes the
+  needed relationship and add a direct interface when it exposes additional
+  mathematical behavior. Weigh the expected uses of a new interface as well
+  as its immediate uses. For documented typeclass design and performance
+  trade-offs, see [Anne Baanen's study of mathlib](https://link.springer.com/article/10.1007/s10817-024-09712-7).
+
+Existing interfaces illustrate the standard.
+
+- `borel` constructs a sigma-algebra from a topology. `BorelSpace` identifies
+  an existing sigma-algebra with that construction. `Continuous.measurable`
+  transfers continuity to measurability with `OpensSigmaAlgebra` on the source
+  and `BorelSpace` on the target.
+  [Borel space API](Mathlib/MeasureTheory/Constructions/BorelSpace/Basic.lean)
+- For an ideal in a commutative ring,
+  `Ideal.polynomialQuotientEquivQuotientPolynomial` supplies a bundled ring
+  equivalence between polynomials over the quotient ring and the quotient of
+  the polynomial ring by the extended ideal. Its companion lemmas relate it
+  to the coefficientwise and polynomial quotient maps.
+  [Polynomial quotient API](Mathlib/RingTheory/Polynomial/Quotient.lean)
+- `Module.compHom` restricts scalars along a specified semiring homomorphism.
+  `RingHom.toModule` uses the specified homomorphism and the target's
+  multiplication to construct the associated module structure.
+  [Restriction of scalars API](Mathlib/Algebra/Module/RingHom.lean)
+- The forgetful functor from `ℤ`-modules to additive commutative groups carries
+  an `IsEquivalence` instance. Each category has its own interface.
+  [Equivalence of categories](Mathlib/Algebra/Category/Grp/ZModuleEquivalence.lean)
+
+Review new theories for access to existing structures, important connections
+to other theories, and the laws that let those connections compose. Record a
+known, independently scoped gap in [`TODO.md`](TODO.md) with the structures,
+hypotheses, missing construction or law, and intended use. Complete the
+interfaces and laws that belong to the selected contribution or migration in
+that delivery.
 
 ### API quality and quality of life
 
@@ -580,22 +692,20 @@ semantically loose." It is a faithful mathematical API whose routine
 well-definedness work is handled by the library and whose genuine obligations
 remain explicit.
 
-Code quality requires new formalizations to maximize semantic coupling to the
-existing library and to factor shared mechanisms at the most general natural
-abstraction supported by real consumers. Here, coupling means using the same
-canonical definitions, theorems, and proof infrastructure as related modules,
-so that improvements propagate through one dependency path; it does not mean
-introducing cyclic imports or leaking representation details. When two
-developments share a proof engine, move that engine to their weakest natural
-common abstraction and make the specialized results thin corollaries. Do not
-retain a parallel private implementation merely because it follows one source
-more literally.
+Use the library's canonical definitions, theorems, and proof infrastructure
+where they express the same mathematics. When two developments share an
+argument, prove it once at a natural abstraction supported by real consumers
+and derive specialized results as corollaries, including when a source presents
+a different proof. For different mathematical structures, use explicit
+transfers and compatibility laws to support
+[interoperability between theories](#interoperability-between-mathematical-theories).
 
 Mathematical faithfulness constrains public definitions and names, domains,
 hypotheses, conclusions, and theorem interfaces. It does not require proof
 scripts or dependency graphs to imitate the source proof. Once the public
-mathematics is faithful, prefer the proof with the greatest justified reuse,
-coupling, and abstraction, even when its argument differs from the source.
+mathematics is faithful, prefer the proof with the greatest justified reuse
+at a natural level of abstraction, even when its argument differs from the
+source.
 
 When several proofs establish the same proposition, choose the canonical proof
 by mathematical and architectural evidence rather than source length or raw

@@ -17,6 +17,11 @@ design direction.
   not need to follow the repository's internal topic-branch taxonomy.
 - Keep the change logically coherent and explain the mathematical or technical
   need it addresses.
+- For a new theory or mathematical interface, show how it reuses existing
+  results and composes with related constructions. Explain what determines
+  any implicit mathematical structures or operations it introduces.
+  [Interoperability between theories](../FORK_DESIGN.md#interoperability-between-mathematical-theories)
+  and [priority-independent semantics](../FORK_DESIGN.md#priority-independent-mathematical-semantics)
 - Write repository artifacts, commit messages, and PR descriptions in English;
   use Conventional Commit subjects and do not bypass repository hooks.
 - Preserve existing public behavior unless the PR explicitly motivates and

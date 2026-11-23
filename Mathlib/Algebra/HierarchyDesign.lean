@@ -116,6 +116,14 @@ when applicable:
   def Equiv.ZEquiv (e : α ≃ β) [Z β] : by { letI := Equiv.Z e, exact α ≃Z β } := ...
   ```
 
+### Coherence of instance paths
+
+In this fork, check the data produced by overlapping instance paths, including inherited
+projections through a diamond. Keep multiple implicit paths when they produce definitionally
+equal structures. When the caller must choose a structure, expose it through a named
+construction, an explicit argument, or a deliberately selected local instance. Use instance
+priority to order searches that already satisfy this coherence requirement.
+
 ## Subobjects
 
 When a new typeclass `Z` adds new data fields,
@@ -235,10 +243,9 @@ resolution problems of the form `AddGroup _`, and type-class inference will then
 exhaustive search to find a commutative group. These instances take a long time to fail.
 Other instances will only apply if the goal has a certain shape. For example
 `Int.instAddGroup : AddGroup ℤ` or
-`Prod.instAddGroup {α β} [AddGroup α] [AddGroup β] : AddGroup (α × β)`. Usually these instances
-will fail quickly, and when they apply, they are almost always the desired instance.
-For this reason, we want the instances of the second type (that only apply in specific cases) to
-always have higher priority than the instances of the first type (that always apply).
+`Prod.instAddGroup {α β} [AddGroup α] [AddGroup β] : AddGroup (α × β)`. These instances usually
+fail quickly. When the competing paths are coherent, try the shape-specific instances first to
+avoid expensive failed searches along the general paths.
 See also [mathlib#1561](https://github.com/leanprover-community/mathlib/issues/1561).
 
 Therefore, if we create an instance that always applies, we set the priority of these instances to
@@ -248,15 +255,12 @@ Therefore, if we create an instance that always applies, we set the priority of 
 library_note «higher instance priority» /--
 Certain instances only apply if the goal has a certain shape. For example
 `Semiring.toModule [Semiring R] : Module R R` or `Int.instAddGroup : AddGroup ℤ`.
-Usually these instances will fail quickly, and when they apply, they are almost always
-the desired instance. For performance reasons it is sometimes useful to increase the
-priority of these instances, especially if they are defined very early on in mathlib
-(which would mean that they would be tried very late if they had the default priority).
+These instances usually fail quickly. When they agree by definitional equality with
+competing paths, increasing their priority can make search faster, especially for instances
+defined early in mathlib that would otherwise be tried late.
 
-Therefore, if we create an instance that only applies in specific circumstances, and that
-is essentially always the right answer when it does apply, we may want to set the
-priority of these instances to 1100 (or something similar, which is above the default
-value of 1000).
+In such cases, a priority of 1100 puts the instance ahead of candidates at the default
+priority of 1000.
 -/
 library_note «instance argument order» /--
 When type class inference applies an instance, it attempts to solve the sub-goals from left to

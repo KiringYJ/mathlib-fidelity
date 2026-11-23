@@ -14,6 +14,12 @@ it is not the design authority for this fork.
 
 ## Design priorities
 
+- Formalize useful relationships between mathematical theories through
+  explicit constructions, maps, equivalences, and laws governing their composition.
+  [Interoperability between mathematical theories](FORK_DESIGN.md#interoperability-between-mathematical-theories)
+- Require context or explicit input to determine mathematical types,
+  operations, and structures. Use priorities to order coherent searches.
+  [Priority-independent mathematical semantics](FORK_DESIGN.md#priority-independent-mathematical-semantics)
 - Represent genuinely partial mathematical operations with explicit domains or
   explicit partiality rather than silent fallback values.
 - Retain official Lean and legitimate core types such as `Rat`. Exclude
