@@ -1367,8 +1367,6 @@ the completed inverse/division interface faithful.
 
 ## Current Non-goals
 
-- Treating this documentation update as authorization to implement the
-  total-inverse migration or rename its hierarchy and consumers.
 - Repairing every documented fallback now. The 2026-10-20 inventory of
   documented fallbacks is recorded as candidates in `TODO.md`; an audit of every
   totalization in the repository, declaration by declaration, remains out of
