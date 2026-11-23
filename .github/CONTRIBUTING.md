@@ -87,8 +87,10 @@ workflow or secret access as ordinary integration authority.
   boundary. Keep official Lean unchanged and audit semantics rather than
   banning imports or every proof dependency.
 - Prefer established mathematical vocabulary and natural theorem statements.
-- Exercise new or changed APIs in real formalizations or meaningful regression
-  tests when practical.
+- Follow the [regression coverage policy](../FORK_DESIGN.md#regression-coverage).
+  Exercise new or changed Fidelity behavior in `FidelityTest/` or in a
+  consumer that checks the intended contract. Run `lake test` to build both
+  test suites.
 - State unresolved mathematical, implementation, or verification gaps
   explicitly.
 

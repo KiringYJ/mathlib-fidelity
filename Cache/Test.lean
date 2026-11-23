@@ -57,10 +57,8 @@ archive; neither makes a network request.
 
 Run with `lake exe cache-test`. Exits 0 on success, non-zero on failure.
 
-The tests stand alone (no dependency on `MathlibTest`). A Lake package has a
-single `testDriver`, and the enclosing `mathlib` package binds that to
-`MathlibTest` (see `lakefile.lean`); if the cache tool moves to its own Lake
-project, the `cache-test` `lean_exe` here can become that project's `testDriver`.
+The cache executable has its own test command. The `mathlib` package's
+`lake test` driver builds the `MathlibTest` and `FidelityTest` suites.
 -/
 
 namespace Cache.Test

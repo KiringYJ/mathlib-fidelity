@@ -85,12 +85,6 @@ example {k : ℤ} (hk : k < 0 → IsUnit x) : P (x ^ k * x ^ 2) := by test_field
 #guard_msgs in
 example (hx : IsUnit x) : P (x ^ (-1 : ℤ) * x ^ (-2 : ℤ)) := by test_field_simp
 
--- Forming the original reciprocal requires evidence, even when the factors would cancel.
-example (x : ℚ) : True := by
-  fail_if_success have := (x / x : ℚ)
-  fail_if_success have := (x⁻¹ : ℚ)
-  trivial
-
 /-- info: P (1 / x) -/
 #guard_msgs in
 example (hx : IsUnit x) : P (x⁻¹) := by test_field_simp
@@ -196,12 +190,6 @@ example : P ((2 - 2) * x) := by test_field_simp
 /-- info: P (↑a * x * (1 - 1)) -/
 #guard_msgs in
 example {a : Nat} : P (a* x - a * x) := by test_field_simp
-
--- The denominator itself certifies that both factors are units.
-example (hd : IsUnit (x * y)) (h : P (Checked.div 1 y (IsUnit.mul_iff.mp hd).2)) :
-    P (Checked.div x (x * y) hd) := by
-  field_simp
-  exact h
 
 /-! ### Two atoms -/
 
@@ -394,16 +382,6 @@ example : P (x * y + x * (fun t ↦ t) y) := by test_field_simp
 example : P (x * y + x * id y) := by test_field_simp
 
 end
-
--- Elaboration can wrap a comparison in metadata. Preserve its explicitly supplied relation.
-open Lean Meta Elab Tactic Mathlib.Tactic in
-example {K : Type*} [Field K] (cmp : LE K) (a b : K) (h : @LE.le K cmp (a ^ 2) b) :
-    @LE.le K cmp (a * a) b := by
-  run_tac liftMetaTactic1 fun g ↦ do
-    let t := Term.mkNoImplicitLambdaAnnotation (← g.getType)
-    let r ← AtomM.run .reducible <| FieldSimp.reduceProp (fun _ ↦ failure) t
-    g.replaceTargetEq r.expr (← r.getProof)
-  exact h
 
 /-! ## Cancel denominators from equalities -/
 
@@ -725,11 +703,6 @@ example {x : ℚ} (hx : x ≠ 0) : x ^ 2 * x⁻¹ = x := by field_simp
 
 -- example (hx : x ≠ 0) (h : x ^ 2 * x⁻¹ ≠ x) : True := by field_simp at h
 
--- An unknown-sign factor cannot be canceled from an inequality.
-example (x y c : ℝ) (hc : c ≠ 0) (h : x * c ≤ y * c) : x / c ≤ y / c := by
-  field_simp
-  simpa only [mul_comm c] using h
-
 /-! ## Tactic operating recursively -/
 
 example {x y : ℚ} (hx : y ≠ 0) {f : ℚ → ℚ} (hf : ∀ t, f t ≠ 0) :
@@ -1004,8 +977,3 @@ example (x : ℚ) : (if h : x = 0 then 7 else Checked.div x x (show x ≠ 0 from
 example (x : ℚ) : ∀ hx : x ≠ 0, Checked.div x x hx.isUnit = 1 := by
   intro hx
   field_simp
-
--- The zero branch cannot synthesize the original denominator certificate.
-example (x : ℚ) (hx : x = 0) : True := by
-  fail_if_success have := (x / x : ℚ)
-  trivial

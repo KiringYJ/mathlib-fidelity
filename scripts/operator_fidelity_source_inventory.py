@@ -13,7 +13,7 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
-SOURCE_ROOTS = ("Mathlib", "Archive", "Counterexamples", "Wanted", "MathlibTest")
+SOURCE_ROOTS = ("Mathlib", "Archive", "Counterexamples", "Wanted", "MathlibTest", "FidelityTest")
 SELECTED = re.compile(
     r"(?<![A-Za-z0-9_])Rat\.(?:inv|div|zpow|divInt)(?![A-Za-z0-9_])"
     r"|(?<![A-Za-z0-9_.])mkRat(?![A-Za-z0-9_])"

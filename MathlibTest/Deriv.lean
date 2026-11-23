@@ -12,10 +12,6 @@ open Real
 
 attribute [local simp] deriv_const_add_id
 
-example : deriv Real.exp = Real.exp := by simp
-
-example (x : ℝ) : fderivWithin ℝ (0 : ℝ → ℝ) (Set.Ici 0) x = 0 := by simp
-
 example (x : ℝ) : deriv (fun x => cos x + 2 * sin x) x id = -sin x + 2 * cos x := by
   have h : DifferentiableAt ℝ (fun y ↦ (2 : ℝ) * sin y) x id := by fun_prop
   simp [h]

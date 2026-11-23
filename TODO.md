@@ -9,6 +9,9 @@ until it passes the fidelity gate below. The accepted-design sections use unchec
 to track implementation only. Imperative wording in a candidate heading names the suspected problem;
 it does not authorize that particular repair.
 
+Completed records may be removed once the formal Lean API captures the specification and the
+necessary [regression coverage](FORK_DESIGN.md#regression-coverage) is in place.
+
 Mathematical fidelity is not the same as partiality or proof-carrying syntax.  A total operation may
 be a genuine extended invariant, an order-theoretic operation, or a choice operator whose input
 carries existence evidence, whose theorems prove the specifying property, and whose specification
@@ -226,8 +229,9 @@ does not authorize their implementation in a documentation task.
   `unpermitted_axiom_hard_error: false`. Neither that snapshot nor the active bundled
   kernel replay establishes this contract. Audit `Wanted/` `proof_wanted` goal metadata separately from proved
   results: its private `ProofWanted P` wrappers are neither proofs of `P` nor `sorryAx` roots.
-  Guarded `MathlibTest/` negative fixtures are not admitted results; unowned proof placeholders
-  reached through private library helpers still fail the gate. Acceptance requires positive
+  The admission gate excludes guarded negative fixtures in `MathlibTest/` and `FidelityTest/`.
+  Unowned proof placeholders reached through private library helpers still fail the gate.
+  Acceptance requires positive
   three-status fixtures and negative tests for unregistered, hidden/imported, nested, type-level, synthetic,
   and extra-local placeholders plus unapproved axioms. Do not publish an admitted index after a
   failed or incomplete audit.
@@ -400,7 +404,7 @@ Robbins and `Counterexample.aharoni_korman_false` are already proved results. CH
 Weinstein, Duffin-Schaeffer and other reference-only hits create no additional declaration migration
 in this checkout. External-only catalogue entries (such as Catalan/modularity statements in
 `docs/1000.yaml` and reference repositories in `UPSTREAMS.md`) are discovery evidence, not new
-local code or an authorized intake task. Deliberate `MathlibTest/` axiom/opaque/sorry fixtures are
+local code or an authorized intake task. Deliberate test-suite axiom/opaque/sorry fixtures are
 not production conjecture roots; distinguish goal metadata and test scaffolding from result proofs.
 
 ## Priority-independent elaboration
@@ -824,7 +828,7 @@ and uses the official Lean toolchain.
   `Padic.mulValuation` keeps its value `0` at `0`, the zero of `ℤᵐ⁰`, as every valuation does.  The
   consumers are `PadicInt.unitCoeff`, the discrete valuation ring and fraction field structures of
   `ℤ_[p]`, `PadicInt.appr`, the Mahler basis, and the divided powers of `ℤ_[p]`.  Tests are in
-  `MathlibTest/PadicValuationStrict.lean`.
+  `FidelityTest/NumberTheory/PadicValuationStrict.lean`.
 
 - [x] **Require monicity for polynomial division-by-monic notation.**
   `Polynomial.divByMonic` and `Polynomial.modByMonic` in `Mathlib/Algebra/Polynomial/Div.lean` take
@@ -901,7 +905,7 @@ and uses the official Lean toolchain.
   expressed.  The action of `Polynomial.Gal p` on roots takes `[NeZero p]`, alongside its splitting
   hypothesis, and `Gal.ext` quantifies over `p ≠ 0`, so that it still covers the trivial group
   `Gal 0`. The separate entries below specify the nonzero domains of `natSepDegree` and
-  `primitiveRoots`. Tests are in `MathlibTest/RootsStrict.lean`.
+  `primitiveRoots`. Tests are in `FidelityTest/RingTheory/RootsStrict.lean`.
 
 - [x] **Decide the separable degree of the zero polynomial.**
   `Polynomial.natSepDegree f hf` in `Mathlib/FieldTheory/SeparableDegree.lean` takes `hf : f ≠ 0`,
@@ -918,7 +922,7 @@ and uses the official Lean toolchain.
   `mem_perfectClosure_iff_natSepDegree_eq_one`, state
   `∃ hx : IsIntegral F x, (minpoly F x).natSepDegree (minpoly.ne_zero hx) = 1`, which the former
   value `0` at a nonintegral element expressed, and `perfectField_iff_splits_of_natSepDegree_eq_one`
-  quantifies over nonzero polynomials.  Tests are in `MathlibTest/NatSepDegreeStrict.lean`.
+  quantifies over nonzero polynomials.  Tests are in `FidelityTest/FieldTheory/NatSepDegreeStrict.lean`.
 
 - [x] **Give `primitiveRoots` and the modified cyclotomic polynomial the domain `n ≠ 0`.**
   `primitiveRoots k R` and `Polynomial.cyclotomic' n R` take `[NeZero k]` and `[NeZero n]`, and
@@ -932,7 +936,7 @@ and uses the official Lean toolchain.
   `rootsOfUnityEquivOfPrimitiveRoots` state the existence of a primitive root as
   `∃ ζ, IsPrimitiveRoot ζ n` instead of `(primitiveRoots n K).Nonempty`.  The value
   `Polynomial.cyclotomic 0 R = 1` is a separate entry.  Tests are in
-  `MathlibTest/PrimitiveRootsStrict.lean`.
+  `FidelityTest/RingTheory/PrimitiveRootsStrict.lean`.
 
 - [x] **Identify `Polynomial.natDegree` as the supremum of the support.**
   `natDegree p` is the supremum in `ℕ` of the exponents with nonzero coefficient
@@ -995,7 +999,7 @@ and uses the official Lean toolchain.
   the resultant of the constant `0` and `g` is `0 ^ n` (`resultant_zero_left_deg`), as for any
   constant, and `resultant_self` is stated with them.  `natDegree_derivative_le` and the other
   statements with natural subtraction are statements about the supremum of the support, which hold
-  at `0`.  Tests are in `MathlibTest/IntDegreeDiscrStrict.lean`.
+  at `0`.  Tests are in `FidelityTest/FieldTheory/IntDegreeDiscrStrict.lean`.
 
 - [x] **Make scheme order of vanishing carry its point and function domains.**
   `AlgebraicGeometry.Scheme.ord f z hz` takes `hz : coheight z = 1`, the condition that `ordHom`
@@ -1092,7 +1096,7 @@ and uses the official Lean toolchain.
   `image_target_subset_target`, `continuousOn_of_eqOn`, and `contMDiffOn_of_eqOn` replace the
   versions stated with the chosen charts, among them `continuousOn` and `contMDiffOn`.
   `smallComplement`, which shrinks a given complement `F` into the universe of the model space,
-  stays, since it depends only on `F`.  Tests are in `MathlibTest/ManifoldPresentationStrict.lean`.
+  stays, since it depends only on `F`.  Tests are in `FidelityTest/Geometry/ManifoldPresentationStrict.lean`.
 
 - [x] **Bundle admissible root pairs for root-chain data.**
   `RootPairing.chainTopCoeff i j` and `chainBotCoeff i j` are the largest natural numbers `p` and
@@ -1508,7 +1512,7 @@ and uses the official Lean toolchain.
   `Measure.mem_condKernel_iff_of_isMarkovKernel`, and their `condDistrib` versions) take it, and the
   others kept finite measures, which remain sufficient; the next entry weakens them, and
   `condExpKernel`, which keeps its finite-measure domain, is recorded after it.  Tests are in
-  `MathlibTest/CondKernelStrict.lean`.
+  `FidelityTest/Probability/Kernel/CondKernelStrict.lean`.
 
 - [x] **Extend the conditional-kernel domain beyond finite measures.**
   `MeasureTheory.Measure.HasUniqueCondKernel ρ` has the instance
@@ -1559,7 +1563,7 @@ and uses the official Lean toolchain.
   disintegration, since it gives `univ ×ˢ {0}` mass one; with the first example, the domains of the
   conditional cdf and of the conditional kernel are incomparable.  The remaining finite-measure
   lemmas are recorded in the next entry, and `condExpKernel` in the one after it.  Tests are in
-  `MathlibTest/CondKernelSigmaFinite.lean`.
+  `FidelityTest/Probability/Kernel/CondKernelSigmaFinite.lean`.
 
 - [x] **Weaken the remaining finite-measure hypotheses around conditional kernels.**
   The lemmas of the previous entry that kept finite measures, a standard Borel space, or stronger
@@ -1688,7 +1692,7 @@ and uses the official Lean toolchain.
   `Measure.compProd_congr_measure` transport a pushforward and a composition-product along an
   equation of measures.  In a countable space, `Measure.absolutelyContinuous_comp_of_countable`
   needs no measurable singletons, since almost everywhere means at every point of positive mass.
-  Tests are in `MathlibTest/CondKernelClassDomain.lean`.
+  Tests are in `FidelityTest/Probability/Kernel/CondKernelClassDomain.lean`.
 
 - [x] **Give `condExpKernel` the class of its diagonal law.**
   `ProbabilityTheory.condExpKernel μ hm` in `Mathlib/Probability/Kernel/Condexp.lean` is the
@@ -1727,7 +1731,7 @@ and uses the official Lean toolchain.
   σ-algebra is σ-finite (`sigmaFinite_trim_self`).  The consumers in
   `Mathlib/Probability/Independence/` and `Mathlib/Probability/Moments/SubGaussian.lean` took a
   standard Borel space and a finite measure, which supply the class, until a later change (entry on
-  conditional independence below).  Tests are in `MathlibTest/CondExpKernelStrict.lean`.
+  conditional independence below).  Tests are in `FidelityTest/Probability/Kernel/CondExpKernelStrict.lean`.
 
 - [x] **Give the Bayes estimator statements the domain of the posterior.**
   The statements of `Mathlib/Probability/Decision/BayesEstimator.lean` took a nonempty standard
@@ -1744,7 +1748,7 @@ and uses the official Lean toolchain.
   `HasArgminEstimator` take the class and the domain as parameters: with the class as a field, the
   predicates would be silently false outside it.  Instance search supplies the class for a nonempty
   standard Borel `Θ` and a σ-finite law `P ∘ₘ π` of the data, which admits improper priors such as
-  Lebesgue measure.  Tests are in `MathlibTest/CondDistribStrict.lean`.
+  Lebesgue measure.  Tests are in `FidelityTest/Probability/Kernel/CondDistribStrict.lean`.
 
 - [x] **Give parametric distributions their parameter domains.**
   `gammaMeasure a r ha hr`, `expMeasure r hr`, `paretoMeasure t r ht hr`, and
@@ -1860,7 +1864,7 @@ and uses the official Lean toolchain.
   through that convention, as a comment in its proof says.  The consumers are
   `Mathlib/Probability/Distributions/Gaussian/CharFun.lean`, `Gaussian/Multivariate.lean`,
   `Gaussian/HasGaussianLaw/Independence.lean`, `Mathlib/Probability/BrownianMotion/Basic.lean`, and
-  `MathlibTest/MultivariateGaussianStrict.lean`, which supply `IsGaussian.memLp_two_id` or an
+  `FidelityTest/Probability/MultivariateGaussianStrict.lean`, which supply `IsGaussian.memLp_two_id` or an
   equivalent.  Decide whether the covariance takes `MemLp id 2 μ` as an argument or class, how the
   mean enters the centered form without the totalized integral, and whether `StrongDual.toLp` is
   stated only on measures with `MemLp id p μ`.
@@ -2388,7 +2392,7 @@ and uses the official Lean toolchain.
   `proximity_top_eval_zero` give the values at radius `0` (next entry), and
   `frequently_coe_sub_const_ne_zero` and `eventually_ne_of_frequently_coe_ne` in
   `LogCounting/Basic.lean` state the value condition for `f - a` and its consequence for `f`.  Tests
-  in `MathlibTest/ProximityStrict.lean` cover the missing meromorphy, complex conjugation, the
+  in `FidelityTest/Analysis/Complex/ProximityStrict.lean` cover the missing meromorphy, complex conjugation, the
   missing value condition, the radius after the proofs, the finite value set and the integrability
   on the domain, the values at radius `0`, the characteristic function, `proximity_inv`, and the
   continuity for an entire function, also through `fun_prop`.  The definition matches on the
@@ -2430,7 +2434,7 @@ and uses the official Lean toolchain.
   `ValueDistribution.isBigO_characteristic_sub_characteristic_inv`, keep their hypotheses: a
   meromorphic function on `ℝ` or `ℂ` of infinite order at a point vanishes on a codiscrete set
   (`Meromorphic.eventuallyEq_zero_of_meromorphicOrderAt_eq_top`), which settles the constant case.
-  Tests are in `MathlibTest/TrailingCoefficientStrict.lean`.
+  Tests are in `FidelityTest/Analysis/Complex/TrailingCoefficientStrict.lean`.
 
 - [x] **Make the normal-form conversions domain-bearing.**
   `toMeromorphicNFAt f x hf` and `toMeromorphicNFOn f U hf` in
@@ -2438,7 +2442,7 @@ and uses the official Lean toolchain.
   `U`, and `fun_prop` supplies it by default.  The zero function for a function that is not
   meromorphic (`toMeromorphicNFAt_of_not_meromorphicAt`, `toMeromorphicNFOn_of_not_meromorphicOn`)
   is removed, and the lemmas about a conversion take its meromorphy proof.  Tests are in
-  `MathlibTest/MeromorphicNormalFormStrict.lean`.
+  `FidelityTest/Analysis/Meromorphic/MeromorphicNormalFormStrict.lean`.
 
 - [ ] **Give `covolume` its domain and independence hypotheses.**
   `covolume G α ν` and `addCovolume` in `Mathlib/MeasureTheory/Group/FundamentalDomain.lean:685` are
@@ -2949,7 +2953,7 @@ and uses the official Lean toolchain.
   versions, which removes the σ-finiteness of several of their statements.  The false goal
   `condVar_of_hasLaw_binomial` was removed from `Wanted/` (inventory above).  Completed records
   elsewhere in this file that name the function-valued lemmas describe the API before this
-  migration.  Tests are in `MathlibTest/CondExpStrict.lean` and the existing strictness tests.
+  migration.  Tests are in `FidelityTest/MeasureTheory/Function/CondExpStrict.lean` and the existing strictness tests.
 
 - [ ] **Construct conditional expectations on their whole domains.**
   `HasUniqueCondExp m μ f` in `Mathlib/MeasureTheory/Function/ConditionalExpectation/Basic.lean` is
@@ -3158,7 +3162,7 @@ and uses the official Lean toolchain.
   the bounded increments `min f (n + 1) - min f n` sum to `f` also at infinity.  The former
   automatic s-finiteness instance for every nonnegative-real-valued density is removed; consumers
   in composition and Radon--Nikodym theory supply the joint measurability used in that proof.
-  Tests in `MathlibTest/KernelWithDensityStrict.lean` cover the exact domain, routine evidence,
+  Tests in `FidelityTest/Probability/Kernel/KernelWithDensityStrict.lean` cover the exact domain, routine evidence,
   invalid inputs, proof independence, counting kernels, zero kernels with arbitrary densities,
   the generalized algebra and finiteness lemmas, and infinite-valued densities.
 
@@ -3226,7 +3230,7 @@ and uses the official Lean toolchain.
   `add_comp`, and `integrable_exp_add_compProd` without an s-finite measure; and the Lebesgue
   integrals against a conditional kernel in `Disintegration/Integral.lean` without a finite `κ` or
   `ρ` or an s-finite `η`.  The items below record the lemmas that still assume more.  Tests in
-  `MathlibTest/CompProdTonelliStrict.lean` cover the theorems against counting measure and the
+  `FidelityTest/Probability/Kernel/CompProdTonelliStrict.lean` cover the theorems against counting measure and the
   constant kernel of counting measure on `ℝ`, which are not s-finite, the closure instances, the
   uncountable sum that instance search does not cover, associativity on the domains, and
   rectangles.
@@ -3421,11 +3425,11 @@ and uses the official Lean toolchain.
   The module documentation, which described the conditional property as a kernel property, and the
   claims that the kernel and unconditional properties force expectation `0`, which hold only for
   Markov kernels and probability measures, are corrected.
-  Tests in `MathlibTest/CondIndepStrict.lean` cover the definitions on a space without a standard
+  Tests in `FidelityTest/Probability/CondIndepStrict.lean` cover the definitions on a space without a standard
   Borel structure, the domain accessors, the π-system lemmas, the zero-one law, the sum of
   conditionally sub-Gaussian variables, the finiteness from integrability, the rejection of
   Lebesgue measure, and the kernel characterizations under the class, also for the σ-algebra
-  generated by one set on every space; `MathlibTest/CondExpKernelStrict.lean` is updated.
+  generated by one set on every space; `FidelityTest/Probability/Kernel/CondExpKernelStrict.lean` is updated.
 
 - [x] **Drop the standard Borel spaces from the conditional-distribution characterizations of
   conditional independence.**
@@ -3461,10 +3465,10 @@ and uses the official Lean toolchain.
   over the sets `k ⁻¹' s` are the right sides, and the uniqueness of conditional expectations
   concludes.  The paper proof first proposed here used the joint conditional distribution of
   `(f, g)` and a countable generating π-system; neither is needed.  Tests in
-  `MathlibTest/CondIndepStrict.lean` state both with only the classes on a space without a standard
+  `FidelityTest/Probability/CondIndepStrict.lean` state both with only the classes on a space without a standard
   Borel structure, and with standard Borel value spaces, for which instance search supplies the
-  classes; the test of the second moved there from `MathlibTest/CondExpKernelStrict.lean`.
-  `MathlibTest/CondDistribStrict.lean` states `condDistrib_ae_eq_condExp` for an almost everywhere
+  classes; the test of the second moved there from `FidelityTest/Probability/Kernel/CondExpKernelStrict.lean`.
+  `FidelityTest/Probability/Kernel/CondDistribStrict.lean` states `condDistrib_ae_eq_condExp` for an almost everywhere
   measurable `Y` and the new lemma for a null-measurable set.
 
 - [ ] **Determine whether conditional independence should extend beyond finite measures.**
@@ -3475,7 +3479,7 @@ and uses the official Lean toolchain.
   of the indicator and is unique almost everywhere, so the specification extends canonically there.
   The class-only formulation that this entry's predecessor proposed would also have covered some
   measures whose trim is not σ-finite, such as counting measure on `ℝ` given the whole σ-algebra
-  (`id_mem_condExpKernel_count` in `MathlibTest/CondExpKernelStrict.lean`).  For `CondIndepSets` of
+  (`id_mem_condExpKernel_count` in `FidelityTest/Probability/Kernel/CondExpKernelStrict.lean`).  For `CondIndepSets` of
   families that do not contain `Set.univ`, sets of finite measure under a σ-finite trim would
   suffice; without a σ-finite trim a set of finite measure need not have a conditional probability:
   on `[0, 1] × Bool` with Lebesgue measure on the `false` copy and counting measure on the `true`
@@ -3516,7 +3520,7 @@ and uses the official Lean toolchain.
   condition `EventuallyMeasurable m' (ae μ)`, which is weaker in general than being almost
   everywhere equal to an `m'`-measurable random variable, and `CondIndepFun.congr` gives the
   invariance under almost everywhere equality; `condIndepFun_of_measurable_left` keeps the routine
-  case.  Tests in `MathlibTest/CondIndepStrict.lean` cover these lemmas, the σ-algebra generated by
+  case.  Tests in `FidelityTest/Probability/CondIndepStrict.lean` cover these lemmas, the σ-algebra generated by
   a null set given the trivial σ-algebra, and, on `Bool` with the Dirac mass at `true`, a σ-algebra
   that is not contained in the trivial σ-algebra but is conditionally independent given it of every
   σ-algebra.
@@ -3538,7 +3542,7 @@ and uses the official Lean toolchain.
   `eventuallyEq_prod`).  `iCondIndepFun_congr` and its alias `iCondIndepFun.congr`, mirroring
   `iIndepFun_congr` and `iIndepFun.congr`, follow through
   `Measurable.eventuallyMeasurable_of_eventuallyEq`.  Tests are in
-  `MathlibTest/CondIndepStrict.lean`.
+  `FidelityTest/Probability/CondIndepStrict.lean`.
 
 - [ ] **Give `HasSubgaussianMGF.fun_zero` its exact condition.**
   `HasSubgaussianMGF.fun_zero` and `HasSubgaussianMGF.zero` in
@@ -3569,7 +3573,7 @@ and uses the official Lean toolchain.
   probability measure almost everywhere can take other values: the constant kernel of
   `2 • dirac true` disintegrates `(∞ • dirac ()) ⊗ₘ Kernel.const Unit (dirac true)`, which has a
   unique conditional kernel, and gives `{true}` mass `2`.  Tests are in
-  `MathlibTest/CondExpKernelStrict.lean` and `MathlibTest/CondKernelClassDomain.lean`, including
+  `FidelityTest/Probability/Kernel/CondExpKernelStrict.lean` and `FidelityTest/Probability/Kernel/CondKernelClassDomain.lean`, including
   this counterexample.
 
 - [x] **Supply the class of the joint law of `(ω, ω)` for the σ-algebra generated by one set.**
@@ -3593,7 +3597,7 @@ and uses the official Lean toolchain.
   measure the class therefore holds exactly when the measure is finite, so no σ-finiteness
   hypothesis can replace finiteness: a σ-finite `μ` does not suffice, and a σ-finite `μ.trim hm` is
   equivalent to a finite `μ`.  No consumer needs the general case.  Tests are in
-  `MathlibTest/CondExpKernelStrict.lean`, including the failure of instance search for Lebesgue
+  `FidelityTest/Probability/Kernel/CondExpKernelStrict.lean`, including the failure of instance search for Lebesgue
   measure.
 
 - [ ] **Determine whether the converse absolute-continuity lemma of the posterior needs an s-finite
@@ -3737,7 +3741,7 @@ and uses the official Lean toolchain.
   The pinned official Lean toolchain passed `lake build`, `lake build MathlibTest Archive
   Counterexamples Wanted`, `lake test`, `lake lint`, `lake exe lint-style`,
   `lake exe mk_all --check`, and `git diff --check` on the final source state. The full
-  `MathlibTest.OperatorFidelityFull` audit and the four companion audits from
+  operator audit (now `FidelityTest.Linter.OperatorFidelityFull`) and the four companion audits from
   `scripts/operator_fidelity_packages.py` passed on that state. Each proof report found zero
   dependencies on retired operators in its audited declarations. Review covered the remaining
   exact-name source matches, and the source scan found zero added proof holes or axioms.
@@ -3838,7 +3842,7 @@ and uses the official Lean toolchain.
     `InstanceDiamonds/Algebra/Field/RationalData`, `CheckedFieldSimp`, `CheckedCancelDenoms`,
     `CheckedFieldOrder`, `NormNumCheckedPowers`, `NormNumCheckedDivision`,
     `RatEvaluationDomain`, `RatOperatorBoundary`, and `OperatorFidelity`, all under
-    `MathlibTest/`. The homomorphism tests retain generic monoid coverage through unit
+    `FidelityTest/`. The homomorphism tests retain generic monoid coverage through unit
     transport and separately exercise the canonical group-with-zero rewrite lemmas. The
     arithmetic suite now covers division-free `field` goals. Nonfatal unused-variable and
     unused-simp warnings remain; this is a build result, not a clean-lint claim.
@@ -3873,7 +3877,8 @@ and uses the official Lean toolchain.
   consumer repair within the unfinished migration, not completion or a supported intermediate API.
 
   - The final scoped `lake build` passes all six targets (2775 jobs): the three affected modules
-    and `MathlibTest.{DifferentialLogDerivStrict,LieCorootStrict,BoundCheckedDivision}`. The three
+    and `FidelityTest.FieldTheory.DifferentialLogDerivStrict`,
+    `FidelityTest.Algebra.LieCorootStrict`, and `FidelityTest.Tactic.BoundCheckedDivision`. The three
     modules pass all 16 enabled environment linters, including the semantic operator-fidelity
     linter. Their separate proof-dependency reports find no retired operators. Independent source
     review found no remaining issue in this repair. `lake exe mk_all --check` passes. The
@@ -3899,7 +3904,7 @@ and uses the official Lean toolchain.
   All statements and domains are preserved; this is another repair within the unfinished migration.
 
   - The final scoped `lake build` passes all four targets (2088 jobs): the three repaired modules
-    and `MathlibTest.InstanceDiamonds.Algebra.Field.RationalData`. The modules pass all 16 enabled
+    and `FidelityTest.InstanceDiamonds.Algebra.Field.RationalData`. The modules pass all 16 enabled
     environment linters, including the semantic operator-fidelity linter, and their separate
     proof-dependency reports find no retired operators. Independent source review found no
     remaining issue in this repair. `lake exe mk_all --check` passes, and the supplemental lexical
@@ -3916,19 +3921,20 @@ and uses the official Lean toolchain.
       Quotient-limit characterizations retain eventual zero compatibility instead of requiring
       eventual nonvanishing; simultaneous zeros and empty quotient domains remain valid.
       Integer powers require units only for negative exponents. Both modules and their
-      `MathlibTest/{ThetaInverseDomain,AsymptoticEquivalentInverseDomain}.lean` regressions
+      `FidelityTest/Analysis/Asymptotics/{ThetaInverseDomain,AsymptoticEquivalentInverseDomain}.lean`
+      regressions
       pass scoped builds, all 16 module linters, and proof dependency reports (2026-10-30).
       Higher asymptotic consumers remain part of the unfinished migration.
     - [x] `Analysis/Normed/Module/RCLike/Real.lean`: normalization now takes implicit evidence
       for its exact domain `‖x‖ ≠ 0`, and `exists_norm_eq` uses the canonical cancellation API.
-      The module and `MathlibTest/NormedNormalizationDomain.lean` pass their scoped build;
+      The module and `FidelityTest/Analysis/Normed/NormedNormalizationDomain.lean` pass their scoped build;
       exact diagnostics reject using `x ≠ 0` alone in a seminormed space. All 16 environment
       linters and the semantic/proof operator audits pass (2026-10-30).
     - `MeasureTheory/Function/StronglyMeasurable/{Basic,AEStronglyMeasurable}.lean`: the root
       operations now use actual unit domains and unit-valued representatives. Radial truncation
       divides only by a positive cap denominator; `div₀` retains arbitrary topology and a.e.
       scalar cancellation retains its a.e. premise and distinct sigma algebras. The two modules
-      and `MathlibTest/StronglyMeasurableInverseDomain.lean` pass scoped builds, all 16 module
+      and `FidelityTest/MeasureTheory/Function/StronglyMeasurableInverseDomain.lean` pass scoped builds, all 16 module
       linters, semantic/proof operator audits, and independent review (2026-10-30). Consumer
       integration, including weighted vector-measure normalization below, remains unfinished.
     - [x] `Analysis/Normed/Affine/AddTorsor.lean`: checked real/NNReal coercions, midpoint
@@ -3941,7 +3947,7 @@ and uses the official Lean toolchain.
       summability criterion retains its sufficient eventual-nonzero hypothesis. Geometric
       series construct the unit `1 - ξ` from the norm bound. Weighted geometric, power-series,
       factorial, and bounded-scalar proofs use the canonical checked laws. The module and
-      `MathlibTest/SpecificLimitsDomain.lean` pass scoped builds, all 16 module linters, and
+      `FidelityTest/Analysis/SpecificLimitsDomain.lean` pass scoped builds, all 16 module linters, and
       proof dependency reports (2026-10-30). Tests cover the characteristic-two index-zero
       denominator, the exponent-zero geometric term, and vacuous restricted ratio limits.
     - [x] `Analysis/Normed/Field/WithAbs.lean`: checked inverses and quotients transport their
@@ -3959,7 +3965,7 @@ and uses the official Lean toolchain.
       `index K₀ U ≠ 0`, and `clPrehaar` ranges over admissible neighborhoods. The positive-compact
       construction supplies the evidence; content, measure, and additive translations all build.
       Five ratio lemmas retain arbitrary normalization sets instead of unnecessary positive
-      compactness. The module and `MathlibTest/HaarPrehaarDomain.lean` pass their scoped build
+      compactness. The module and `FidelityTest/MeasureTheory/Measure/HaarPrehaarDomain.lean` pass their scoped build
       (1884 jobs), all 16 module linters, and semantic/proof operator audits (2026-10-30).
 
     Fix operation definitions and statements before cascading proof errors. These eight roots do
@@ -3972,7 +3978,7 @@ and uses the official Lean toolchain.
   scalar normalization and NNReal bridges in `Operator/{Basic,Bilinear,NNNorm}` and
   `Module/RCLike/Basic` pass scoped builds, all 16 module linters, and semantic/proof operator
   audits. The three named ratio callers are ported in source, and
-  `MathlibTest/OperatorRatioDomain.lean` passes its exact-domain regression. Broader caller builds
+  `FidelityTest/Analysis/Normed/OperatorRatioDomain.lean` passes its exact-domain regression. Broader caller builds
   and the complete-library acceptance gate remain open.
 
   **Committed lower-dependency checkpoint, 2026-10-30.** Fourteen further modules pass their
@@ -3988,7 +3994,7 @@ and uses the official Lean toolchain.
 
   - Multilinear normalized bounds require exactly a unit product of coordinate norms. Empty
     index families retain denominator `1`, and unnormalized bounds still cover zero coordinates;
-    `MathlibTest/MultilinearRatioDomain.lean` checks these cases and exact rejection diagnostics.
+    `FidelityTest/Analysis/Normed/MultilinearRatioDomain.lean` checks these cases and exact rejection diagnostics.
   - Inner-product normalization carries norm-product evidence, while the equality-case TFAE
     binds its nonzero-vector coefficient dependently. Circle norm formulas retain their separate
     zero-period formula and all-period bounds; only formulas using a reciprocal period restrict it.
@@ -3998,7 +4004,8 @@ and uses the official Lean toolchain.
   - `Asymptotics/TVS` and `Calculus/FDeriv/{Defs,Basic}` also pass their scoped builds, all
     16 module linters, and complete proof dependency reports. Normalized errors live on their
     actual nonzero-displacement domains; the converse keeps eventual compatibility on collapsed
-    coordinate fibers. `MathlibTest/{TVSInverseDomain,DerivativeDomain}.lean` check empty domains,
+    coordinate fibers. `FidelityTest/Analysis/Asymptotics/TVSInverseDomain.lean` and
+    `FidelityTest/Analysis/Calculus/DerivativeDomain.lean` check empty domains,
     incompatible fibers, genuine restrictions, zero initial scaling terms, and defaults that work
     independently of caller namespaces and binder names.
 
@@ -4019,7 +4026,7 @@ and uses the official Lean toolchain.
   with unrelated work temporarily stashed, passes its scoped build (2350 jobs).
   All four production modules also pass the 16 enabled environment linters and complete
   proof dependency reports without retired-operator findings.
-  `MathlibTest/ApproximatesLinearOnDomain.lean` covers zero inverse norms, a positive nonminimal
+  `FidelityTest/Analysis/Calculus/ApproximatesLinearOnDomain.lean` covers zero inverse norms, a positive nonminimal
   bound on a trivial codomain, the `c * N = 1` zero-radius case, and zero-radius source
   surjectivity. Independent review accepted the core and these four boundary cases.
   This is a stopping checkpoint at the user's request. The Jacobian caller, wider consumer
@@ -4033,7 +4040,7 @@ and uses the official Lean toolchain.
   support proofs in `FDeriv/Const` and `Deriv/Support` use evaluated-function equalities and
   explicit identity coordinates without changing their mathematical hypotheses.
 
-  `MathlibTest/ScalarDerivativeDomain.lean` checks all three defaults, unit-valued source
+  `FidelityTest/Analysis/Calculus/ScalarDerivativeDomain.lean` checks all three defaults, unit-valued source
   domains, a concrete derivative-one coordinate map, incompatible collapsed fibers, and
   compatible empty quotient domains. With unrelated drafts temporarily stashed, the prospective
   commit passes its scoped build (1935 jobs), all 16 enabled environment linters on each of
@@ -4088,7 +4095,7 @@ and uses the official Lean toolchain.
   - Carried-evidence discovery in `checked_unit`/`checked_nonzero` now projects local subtype
     properties before applying the existing evidence rules. This covers inverses through
     subtype coercions, pointwise function inverses, and normalized-coordinate quotients through
-    norms. `MathlibTest/CheckedEvidenceRules.lean` checks these cases and exact rejection
+    norms. `FidelityTest/Algebra/CheckedEvidenceRules.lean` checks these cases and exact rejection
     diagnostics for unsupported sums, numerals in unknown characteristic, and missing units.
     This is a scoped automation checkpoint within the unfinished inverse migration; it does not
     certify the remaining consumers or the complete-library acceptance gates.
@@ -4268,14 +4275,14 @@ and uses the official Lean toolchain.
     passed direct checks. `checked_unit` now propagates evidence under multiplicative scalar actions
     and submonoid coercions. The simplification fallback contracts self-referential equalities,
     including `q = ↑q.num / ↑↑q.den`. `CheckedEvidenceRules` covers these cases and the ordinary
-    missing-proof diagnostics. `MathlibTest/CheckedRingInverses.lean` covers monomial-inverse
+    missing-proof diagnostics. `FidelityTest/Tactic/CheckedRingInverses.lean` covers monomial-inverse
     normalization and variable-exponent powers. The ring steps in `LinearAlgebra/Vandermonde`
     and `SimpleGraph/Triangle/Removal` pass without their former preliminary `field_simp`.
     Kernel probes passed for the
     Euclidean integer and `Multiplicative ℤ` quotients with pending power operand types.
     The Haar normalization and additive translations pass on the scoped source graph.
     The `field` tactic now restores the original goal when denominator clearing makes no
-    progress, then runs `ring1`; `MathlibTest/CheckedArithmeticTactics.lean` covers reflexive
+    progress, then runs `ring1`; `FidelityTest/Tactic/CheckedArithmeticTactics.lean` covers reflexive
     and commutative division-free goals as well as checked quotients. `FDeriv/Defs.lean` now
     uses `_root_.id` for coordinate defaults, avoiding capture by `LinearMap.id`. Recheck the
     downstream `match_scalars <;> field` and default-coordinate consumers; add regression tests
@@ -4326,7 +4333,8 @@ and uses the official Lean toolchain.
     witness. The earlier concrete Pi leak did not reproduce.
   - [x] **Finish `cancel_denoms` runtime closure.** Check
     `Mathlib/Tactic/CancelDenoms/{Core,Denominator}.lean` and
-    `MathlibTest/{CheckedCancelDenoms,Tactic/CancelDenoms}.lean`. Cancellation-factor nonzeroness
+    `FidelityTest/Tactic/CheckedCancelDenoms.lean` and `MathlibTest/Tactic/CancelDenoms.lean`.
+    Cancellation-factor nonzeroness
     must follow from the original denominator certificates, including products in positive
     characteristic, without adding `CharZero`. Verify normalized rational and negative
     denominators, unit-coercion reciprocals, nested quotients, natural powers, and the named-carrier
@@ -4351,7 +4359,7 @@ and uses the official Lean toolchain.
     positive-denominator evidence, and `series_ratio_test` splits `r = 0` before constructing a
     reciprocal: that branch has eventually zero terms and eventually constant partial sums;
     only the positive branch uses geometric reciprocal bounds. This module and
-    `MathlibTest/InverseCauchy.lean` passed the 2026-10-28 scoped build. The completed
+    `FidelityTest/Analysis/InverseCauchy.lean` passed the 2026-10-28 scoped build. The completed
     foundation's semantic audit remains part of the open full-migration acceptance gate.
   - [x] **Verify chosen-root and localization transports.** `RootableBy`/`DivisibleBy` now require
     a nonzero index, and Ore localization constructs actual inverse units with no zero fallback.
@@ -4391,7 +4399,7 @@ and uses the official Lean toolchain.
     for negation, scaling, affine normalization, and the duplication denominator.
     The remaining elliptic consumers and complete-library acceptance gates are still open.
   - [x] **Complete finite-ratio and convex consumers.** Recheck finite expectations, density,
-    Sedrakyan, Pluennecke-Ruzsa, doubling constants, and `MathlibTest/ExpectDomain.lean` together.
+    Sedrakyan, Pluennecke-Ruzsa, doubling constants, and `FidelityTest/Algebra/ExpectDomain.lean` together.
     The checkpoint build of `Algebra/Order/BigOperators/Ring/Finset.lean` fails in
     `sq_sum_div_le_sum_sq_div`: expose the `Units.mk0` coercion for pointwise `divp` cancellation
     and transport the subtype-indexed sums to the original finset sum. These are two unresolved
@@ -4465,11 +4473,11 @@ and uses the official Lean toolchain.
     checks and restricted-domain examples passed with pinned imports. Verify the same cases in
     the final library build.
   - [x] **Complete operator/dependency audits and residual production ports.** The SCC-safe graph
-    prefilter and audit fixture passed locally. Run `MathlibTest/OperatorFidelityFull.lean` after
+    prefilter and audit fixture passed locally. Run `FidelityTest/Linter/OperatorFidelityFull.lean` after
     rebuilding `Mathlib`; its package-scoped gate checks semantics and reports proofs. Run
-    the companion gates for Archive, Counterexamples, Wanted, and MathlibTest using
+    the companion gates for Archive, Counterexamples, Wanted, MathlibTest, and FidelityTest using
     `scripts/operator_fidelity_packages.py`. The package audit loads private declarations and the
-    MathlibTest aggregation excludes the explicit negative linter fixture. The lexical inventory
+    FidelityTest aggregation excludes the explicit negative linter fixture. The lexical inventory
     covers all five source trees. The scoped Cauchy/Real normalizing audit passed on the rebuilt
     exports, including private declarations and theorem bodies. Classify lexical candidates in
     `Basic/Real/Embedding`, `Data/FP/Basic`, `Testing/Plausible/Sampleable`, `Tactic/Echelon/Rat`,
@@ -4518,9 +4526,9 @@ and uses the official Lean toolchain.
   propagated through divisibility, polynomial and rational function consumers.
 
   `Field.quotient_eq_div` proves agreement with checked exact division for nonzero divisors.
-  `MathlibTest/CheckedOperations.lean` checks the named and notation boundaries, including
+  `FidelityTest/Algebra/CheckedOperations.lean` checks the named and notation boundaries, including
   pending powers, nominal integer carriers, local `Div` instances, and exact field notation.
-  `MathlibTest/DivByMonicStrict.lean` covers the polynomial divisor domain and the remainder at
+  `FidelityTest/Algebra/DivByMonicStrict.lean` covers the polynomial divisor domain and the remainder at
   zero.
 
   **Final verification.** `lake --wfail build Mathlib MathlibTest Archive Counterexamples Wanted`,
@@ -5147,7 +5155,7 @@ decision; it changes no statement.
   `nullMeasurableSet_of_mem_comap` of both files is `hf.measurable'.comap_le hs`
   (`NullMeasurable.measurable'` and `Measurable.comap_le`).  `nullMeasurableSet_of_mem_generateFrom`
   and the π-system step `condExp_inter_of_mem_generateFrom` stay private in `Conditional.lean`,
-  their only user.  Tests are in `MathlibTest/CondDistribStrict.lean`.
+  their only user.  Tests are in `FidelityTest/Probability/Kernel/CondDistribStrict.lean`.
 
 - [x] **[S] State the normalization of conditional probabilities with `μ⟦s | m⟧`.**
   `Mathlib/MeasureTheory/Function/ConditionalExpectation/Indicator.lean` states
@@ -5172,7 +5180,7 @@ decision; it changes no statement.
   hold for every measure by `condExp_nonneg` and `condExp_le_nonneg_const`, and monotonicity in `s`
   holds when the indicator of the larger set is integrable, by `condExp_mono`, or by
   `condExp_nonneg` if the smaller indicator is not integrable.  Tests are in
-  `MathlibTest/CondDistribStrict.lean`.
+  `FidelityTest/Probability/Kernel/CondDistribStrict.lean`.
 
 - [ ] **[S] Expose the private helpers of the conditional expectation consumers.**
   The bridges between versions and classes of conditional probabilities are private in

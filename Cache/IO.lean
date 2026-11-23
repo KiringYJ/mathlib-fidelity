@@ -40,6 +40,7 @@ def isPartOfMathlibCache (mod : Name) : Bool := #[
   `Counterexamples,
   `Wanted,
   `MathlibTest,
+  `FidelityTest,
   -- Allow PRs to upload oleans for Reap for testing.
   `Requests,
   `OpenAIClient,

@@ -9,7 +9,7 @@ the repository; local validation does not establish a successful hosted run.
 
 | Workflow | Events | Checks |
 | --- | --- | --- |
-| `fidelity-ci.yml` | Push to `main`, PR to `main`, manual, reusable call | Workflow inventory, generated imports, source style, library build with warnings as errors, `MathlibTest`, `Archive`, `Counterexamples`, `Wanted`, test driver, environment linters |
+| `fidelity-ci.yml` | Push to `main`, PR to `main`, manual, reusable call | Workflow inventory, generated imports, source style, library build with warnings as errors, `MathlibTest`, `FidelityTest`, `Archive`, `Counterexamples`, `Wanted`, test driver, environment linters |
 | `fidelity-proof-check.yml` | Monday at 02:23 UTC, manual | All Fidelity CI checks, fresh-kernel replay of `Mathlib` and `Batteries`, Mathlib test executable |
 | `actionlint.yml` | Changes under `.github/` on `main` pushes and PRs, manual | Workflow syntax, expressions, shell snippets, SHA-pinned action references |
 | `pre-commit.yml` | Push to `main`, PR to `main`, manual | Repository pre-commit hooks, without automated writeback |
@@ -23,7 +23,7 @@ on the first unsuccessful check:
 lake exe cache get --cache-from=master,legacy
 lake exe mk_all --check
 lake build --wfail
-lake build MathlibTest Archive Counterexamples Wanted
+lake build MathlibTest FidelityTest Archive Counterexamples Wanted
 lake test
 lake lint
 lake exe lint-style
@@ -46,8 +46,9 @@ nanoda result is claimed by these workflows. The conjecture registry, named
 root dependency analysis, reviewed axiom base, and three-status admission gate
 remain the separate accepted implementation tasks in
 [`TODO.md`](../TODO.md#conjectures-and-proof-status----accepted-design-pending-implementation).
-Existing fidelity regression tests run as part of `MathlibTest`. Build and
-checker success do not by themselves certify mathematical statement fidelity.
+The `lake test` driver builds both `MathlibTest` and `FidelityTest`.
+Mathematical statement fidelity is evaluated under the
+[fork design policy](../FORK_DESIGN.md#mathematical-fidelity).
 
 ## Workflow lint before pushing
 

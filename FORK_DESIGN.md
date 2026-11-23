@@ -971,6 +971,20 @@ verification. Treat any raw external snapshots as provenance evidence outside
 the public API. Keep external candidates with open admission checks in the
 [source registry](UPSTREAMS.md#candidate-sources) pending review.
 
+### Regression coverage
+
+Every Fidelity-specific feature, modification, or deliberate deviation from upstream must retain
+appropriate regression coverage. Keep inherited tests and their ports in `MathlibTest/`, and put
+Fidelity-specific regression tests in `FidelityTest/`. Organize those modules by the main API or
+behavior under test. Reuse Mathlib's subject directory names for mathematical tests.
+
+State mathematical specifications in the public Lean API, where Lean checks each proof against
+its theorem statement. Add regression cases for public interfaces, mathematical domains, tactics,
+elaboration, diagnostics, and important consumers wherever a change could break behavior that
+the existing proofs do not exercise. Test expected failures when rejection is part of the contract.
+Enforce library-wide semantic requirements with global linters. Test the linters with focused
+fixtures.
+
 ### Mathematical scope and placement
 
 Apply the same standards for mathematical fidelity, proof status, axiom and

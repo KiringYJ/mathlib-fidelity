@@ -320,13 +320,9 @@ CLI parsing) is covered by a standalone test exe:
 lake exe cache-test
 ```
 
-The exe builds only `Cache.*` and its direct deps — it does not require
-Mathlib or `MathlibTest`. Exits 0 on success, non-zero on failure.
-
-> A Lake package has a single `testDriver`, which the enclosing `mathlib`
-> package already binds to `MathlibTest`. If the cache tool ever moves to
-> its own Lake project, the `cache-test` exe can be promoted to that
-> project's `testDriver` so `lake test` invokes it directly.
+The exe builds only `Cache.*` and its dependencies. It exits 0 on success and
+non-zero on failure. The `mathlib` package's `lake test` driver builds the
+`MathlibTest` and `FidelityTest` suites.
 
 ## Dependencies
 

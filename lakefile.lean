@@ -48,14 +48,13 @@ abbrev mathlibLeanOptions := #[
   ] ++ -- options that are used in `lake build`
     mathlibOnlyLinters.map fun s ↦ { s with name := `weak ++ s.name }
 
-/-- These options are passed as `leanOptions` when building `MathlibTest`. We don't use the typical
-mathlib options in order to simulate the default downstream environment. -/
+/-- Both test suites use these `leanOptions` to simulate the default downstream environment. -/
 abbrev mathlibTestOptions : Array LeanOption := #[
     ⟨`pp.mvars.anonymous, false⟩ -- test stability: pretty-print `?m.37` as `?_`
   ]
 
 package mathlib where
-  testDriver := "MathlibTest"
+  testDriver := "testMathlib"
   lintDriver := "lintMathlib"
   lintDriverArgs := #["Mathlib"]
   -- Run the builtin linting steps in addition to the `lintDriver` set above.
@@ -80,7 +79,7 @@ script lintMathlib (args) do
     let child ← IO.Process.spawn { cmd := lake.toString, args := arguments, cwd := some pkg.dir }
     child.wait
   let buildOptions := if args.contains "--no-build" then #["--no-build"] else #[]
-  let status ← runLake (buildOptions ++ #["build", "MathlibTest.OperatorFidelityFull"])
+  let status ← runLake (buildOptions ++ #["build", "FidelityTest.Linter.OperatorFidelityFull"])
   if status != 0 then
     return status
   runLake (#["exe", "batteries/runLinter"] ++ args.toArray)
@@ -102,6 +101,17 @@ lean_lib Cache where
 lean_lib MathlibTest where
   globs := #[`MathlibTest.+]
   leanOptions := mathlibTestOptions
+
+lean_lib FidelityTest where
+  globs := #[`FidelityTest.+]
+  leanOptions := mathlibTestOptions
+
+/-- Build the inherited and Fidelity regression tests in a single Lake build. -/
+script testMathlib (args) do
+  unless args.isEmpty do
+    error "The mathlib test driver does not accept arguments"
+  runBuild (do return (← MathlibTest.fetch).mix (← FidelityTest.fetch)) {out := .stdout}
+  return 0
 
 lean_lib Archive where
   leanOptions := mathlibLeanOptions
@@ -146,7 +156,7 @@ lean_exe cache where
 
 /-- `lake exe cache-test` runs the cache tool's unit tests (container URL
 construction, per-repo trust-ordered allowlist, `--cache-from` parsing).
-Runnable standalone — does not require building Mathlib or `MathlibTest`. -/
+Runs independently of Mathlib and the Lean test libraries. -/
 lean_exe «cache-test» where
   root := `Cache.Test
 

@@ -205,7 +205,7 @@ private def moduleOwnership (env : Environment) (declName : Name) : SourceOwners
       let moduleName := env.header.moduleNames[moduleIdx]!
       if #[`Init, `Lean, `Std].any (·.isPrefixOf moduleName) then
         .officialToolchain
-      else if #[`Mathlib, `MathlibTest, `Archive, `Counterexamples, `Wanted].any
+      else if #[`Mathlib, `MathlibTest, `FidelityTest, `Archive, `Counterexamples, `Wanted].any
           (·.isPrefixOf moduleName) then
         if isGenerated then .generatedProject else .project
       else

@@ -3,7 +3,7 @@ Copyright (c) 2026 Yi-Jing Tseng. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Yi-Jing Tseng
 -/
-import MathlibTest.OperatorPolicy.Import
+import FidelityTest.OperatorPolicy.Import
 import Mathlib.Algebra.Group.Units.Basic
 example {M : Type*} [Monoid M] : Inv Mˣ := inferInstance
 example {M : Type*} [Monoid M] : Div Mˣ := inferInstance

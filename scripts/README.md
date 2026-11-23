@@ -239,11 +239,12 @@ to module `Foo.Bar` (no `srcDir` indirection).
   Medium-term, the Python linter and shell wrapper should be rewritten and incorporated in
   `lint-style.lean`.
 - `operator_fidelity_source_inventory.py`
-  lists source references to the retired rational operators with their file and line numbers.
+  lists source references to retired operators with their file and line numbers.
   Run `python scripts/operator_fidelity_source_inventory.py` from the repository root.
   The elaborated operator audit classifies the mathematical and proof dependencies.
 - `operator_fidelity_packages.py`
-  runs the semantic and proof audits for Archive, Counterexamples, Wanted, and MathlibTest.
+  runs the semantic and proof audits for Archive, Counterexamples, Wanted, MathlibTest,
+  and FidelityTest.
   Run `python scripts/operator_fidelity_packages.py` after building those targets. The reports
   are saved under `.lake/operator-fidelity-packages`.
 - `check_title_labels.lean` verifies that a (non-WIP, non-draft) PR has a well-formed title.

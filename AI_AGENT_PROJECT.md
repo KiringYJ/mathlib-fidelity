@@ -258,7 +258,7 @@ For an explicitly authorized public-API canonicalization:
    class names out of the public mathematical language.
 6. During iteration, build the narrow affected modules. At the final source
    state, run `lake build`,
-   `lake build MathlibTest Archive Counterexamples Wanted`, `lake test`,
+   `lake build MathlibTest FidelityTest Archive Counterexamples Wanted`, `lake test`,
    `lake lint`, `lake exe lint-style`, `lake exe mk_all --check`, and
    `git diff --check` for a cross-cutting refactor of this scale.
 7. Add repository-wide negative scans for every removed surface, obsolete
@@ -276,9 +276,10 @@ and report inherited failures accurately without expanding the refactor.
 
 ## Remaining Work
 
-`TODO.md` is the fork's backlog: it keeps completed migrations as records and
-unresolved items as candidates under its fidelity gate. Resolve every obligation
-of the selected migration before reporting it complete. Record independent
+`TODO.md` is the fork's backlog. Completed records can be removed once the formal
+Lean API and [regression coverage](FORK_DESIGN.md#regression-coverage) preserve the
+completed work. Resolve every obligation of the selected migration before reporting
+it complete. Record independent
 foundational problems and other separately scoped work in `TODO.md`; never
 leave them only in a final report or conversation. A TODO cannot substitute for
 an in-scope proof, consumer migration, or removal. Remaining items include open
@@ -317,8 +318,9 @@ Desktop chat billing follows its own sign-in.
 - `Mathlib.lean` is the generated import root and must be refreshed when new
   modules are added.
 - [`Archive/`](Archive/README.md) contains standalone mathematical formalizations.
-- `MathlibTest/`, `Counterexamples/`, and `scripts/` provide tests, examples,
-  and repository tooling.
+- `MathlibTest/` contains inherited and ported upstream tests. `FidelityTest/`
+  contains Fidelity-specific regression tests.
+- `Counterexamples/` and `scripts/` provide examples and repository tooling.
 - `FORK_DESIGN.md` is the authoritative design and complete-migration contract.
 - `UPSTREAMS.md` records external source identity, license evidence,
   provenance, integration mode, and status.
@@ -340,14 +342,17 @@ the scope and risk of the change; do not report it unless it actually ran.
 ## Test Commands
 
 ```powershell
+lake build MathlibTest FidelityTest
 lake test
 lake exe mk_all
 lake exe lint-style Mathlib.Import.Path
 lake lint
 ```
 
-Run `lake exe mk_all` when adding a new module. CI also runs both linter
-families: `lake exe lint-style` applies the text-based style linters to the
+Either test command builds both suites. Use `lake build MathlibTest FidelityTest`
+with explicit Lake build flags when needed. Run `lake exe mk_all` when adding a
+module to a generated import root. Lake discovers test modules from the suite globs.
+CI also runs both linter families: `lake exe lint-style` applies the text-based style linters to the
 listed modules and their imports, and `lake lint` runs the environment linters
 (`batteries/runLinter`) over `Mathlib`. A successful build does not imply that
 the environment linters pass; for example, they reject underscores in
@@ -363,9 +368,8 @@ they remain applicable to the affected area.
 - `FORK_DESIGN.md`: authoritative design contract: purpose, design rules,
   contribution and intake policy, and foundational migration contracts.
 - `UPSTREAMS.md`: canonical source-repository and provenance registry.
-- `TODO.md`: backlog of fidelity and API-hygiene work, with completed
-  migrations kept as records and unresolved items as candidates under its
-  fidelity gate.
+- `TODO.md`: backlog of fidelity and API-hygiene work, with unresolved
+  candidates subject to its fidelity gate.
 - `.github/CONTRIBUTING.md`: contribution requirements for pull requests to
   this fork and the separate upstream boundary.
 - `.github/PULL_REQUEST_TEMPLATE.md`: fork-specific submission prompts,

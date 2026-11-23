@@ -33,7 +33,7 @@ def scopedProofUse (a b : Nat) : Nat := useScopedCertificate (scopedCertificate 
 info: scopedCertificate: Nat.div from scopedCertificate (Mathlib.Linter.OperatorFidelity.SourceOwnership.project)
 -/
 #guard_msgs (whitespace := lax) in
-#operator_fidelity with_proofs in MathlibTest.OperatorFidelity
+#operator_fidelity with_proofs in FidelityTest.Linter.OperatorFidelity
 
 private def coveredPair (n : Nat) : Nat × Nat := (n, 1)
 
@@ -47,7 +47,7 @@ error: Operator-fidelity semantic audit failed:
       selectedNativeQuotient: data: Nat.div
 -/
 #guard_msgs (whitespace := lax) in
-#operator_fidelity in MathlibTest.OperatorFidelity
+#operator_fidelity in FidelityTest.Linter.OperatorFidelity
 
 def badDirect (q : Rat) : Rat := Rat.inv q
 

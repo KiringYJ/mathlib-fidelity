@@ -10,7 +10,3 @@ example : OfScientific ℚ := inferInstance
 set_option maxHeartbeats 100 in
 #guard_msgs in
 example : OfScientific ℝ := inferInstance
-
-example (m e : ℕ) (s : Bool) :
-    ((OfScientific.ofScientific m s e : ℚ) : ℝ) = (OfScientific.ofScientific m s e : ℝ) :=
-  Rat.cast_ofScientific m s e

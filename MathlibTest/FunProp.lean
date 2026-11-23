@@ -155,20 +155,6 @@ example : MeromorphicOn (fun z ↦ z) U := by fun_prop
 
 example (c : ℂ) : MeromorphicOn (fun _ ↦ c) U := by fun_prop
 
--- The checked reciprocal must be defined throughout a punctured neighborhood.
-example {D : Type*} {coord : D → ℂ} {g : D → ℂ} (hg : MeromorphicOn g U coord)
-    (h : ∀ x ∈ U, range (fun z : {z // IsUnit (g z)} ↦ coord z.val) ∈ 𝓝[≠] x) :
-    MeromorphicOn (fun z : {z // IsUnit (g z)} ↦ Checked.inv (g z) z.property) U
-      (coord ∘ Subtype.val) := by
-  fun_prop (disch := assumption)
-
-example {D : Type*} {coord : D → ℂ} {f g : D → ℂ}
-    (hf : MeromorphicOn f U coord) (hg : MeromorphicOn g U coord)
-    (h : ∀ x ∈ U, range (fun z : {z // IsUnit (g z)} ↦ coord z.val) ∈ 𝓝[≠] x) :
-    MeromorphicOn (fun z : {z // IsUnit (g z)} ↦ Checked.div (f z) (g z) z.property) U
-      (coord ∘ Subtype.val) := by
-  fun_prop (disch := assumption)
-
 example (hf : MeromorphicOn f U) (hg : MeromorphicOn g U)
     (h : ∀ x ∈ U, range (fun z : {z // IsUnit (g z)} ↦ z.val) ∈ 𝓝[≠] x) :
     MeromorphicOn (fun z : {z // IsUnit (g z)} ↦

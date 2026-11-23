@@ -98,7 +98,7 @@ jobs:
         run: lake build --wfail
 
       - name: Build all regression tests and companion libraries
-        run: lake build MathlibTest Archive Counterexamples Wanted
+        run: lake build MathlibTest FidelityTest Archive Counterexamples Wanted
 
       - name: Run the configured test driver
         run: lake test
@@ -133,6 +133,6 @@ jobs:
       - name: Record validation scope
         run: |
           {
-            printf '\nPassed: library build, MathlibTest, Archive, Counterexamples, Wanted, test driver, both linter families, generated imports.\n'
+            printf '\nPassed: library build, MathlibTest, FidelityTest, Archive, Counterexamples, Wanted, test driver, both linter families, generated imports.\n'
             printf 'The conjecture registry and proof-status admission gate remain pending in TODO.md.\n'
           } >> "$GITHUB_STEP_SUMMARY"

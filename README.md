@@ -115,6 +115,10 @@ lake build Mathlib.Import.Path
 lake test
 ```
 
+`lake test` builds the inherited suite in `MathlibTest/` and the fork's
+regressions in `FidelityTest/`. Both suites are also available as build targets
+with `lake build MathlibTest FidelityTest`.
+
 Run `lake exe mk_all` after adding a new Mathlib module so that `Mathlib.lean`
 remains current.
 

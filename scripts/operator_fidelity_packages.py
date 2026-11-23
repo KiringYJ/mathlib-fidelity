@@ -9,12 +9,13 @@ import subprocess
 
 
 ROOT = Path(__file__).resolve().parents[1]
-PACKAGES = ("Archive", "Counterexamples", "Wanted", "MathlibTest")
+TEST_PACKAGES = ("MathlibTest", "FidelityTest")
+PACKAGES = ("Archive", "Counterexamples", "Wanted", *TEST_PACKAGES)
 TEST_EXCLUSIONS = {
     # Deliberate retired operations checked by the linter's negative regression fixture.
-    "MathlibTest.OperatorFidelity",
+    "FidelityTest.Linter.OperatorFidelity",
     # The command-only Mathlib audit is already run by the test target.
-    "MathlibTest.OperatorFidelityFull",
+    "FidelityTest.Linter.OperatorFidelityFull",
 }
 
 
@@ -40,7 +41,7 @@ def run_audit(package: str, modules: list[str], output_dir: Path, label: str) ->
         return True
 
     # Independent test fixtures can define the same global name. Only split on import collisions.
-    if package == "MathlibTest" and len(modules) > 1:
+    if package in TEST_PACKAGES and len(modules) > 1:
         with log.open(encoding="utf-8", errors="replace") as stream:
             collision = any("failed, environment already contains" in line for line in stream)
         if collision:
@@ -65,14 +66,14 @@ def main() -> int:
     success = True
     for package in args.packages or PACKAGES:
         modules = [package]
-        if package == "MathlibTest":
+        if package in TEST_PACKAGES:
             modules = [
                 ".".join(path.relative_to(ROOT).with_suffix("").parts)
                 for path in sorted((ROOT / package).rglob("*.lean"))
             ]
             modules = [module for module in modules if module not in TEST_EXCLUSIONS]
             if not modules:
-                raise SystemExit("No MathlibTest source modules found.")
+                raise SystemExit(f"No {package} source modules found.")
         success = run_audit(package, modules, output_dir, package) and success
     return int(not success)
 

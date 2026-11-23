@@ -3,7 +3,7 @@ Copyright (c) 2026 Yi-Jing Tseng. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Yi-Jing Tseng
 -/
-import MathlibTest.OperatorPolicy.Import
+import FidelityTest.OperatorPolicy.Import
 import Lean.Elab.GuardMsgs
 /-- error: failed to synthesize instance of type class
   Inv Rat
