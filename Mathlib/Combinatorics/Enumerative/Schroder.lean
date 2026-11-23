@@ -86,8 +86,8 @@ lemma smallSchroder_succ_eq_largeSchroder_div_two (h : n ≠ 0) :
     smallSchroder (n + 1) = Nat.euclideanDiv (largeSchroder n) 2 := by simp [smallSchroder]
 
 lemma two_mul_smallSchroder_succ (hn : n ≠ 0) : 2 * smallSchroder (n + 1) = largeSchroder n := by
-  rw [smallSchroder_succ_eq_largeSchroder_div_two hn, Nat.euclideanDiv_eq_core,
-    Nat.mul_div_cancel_left' (even_largeSchroder hn).two_dvd]
+  rw [smallSchroder_succ_eq_largeSchroder_div_two hn,
+    Nat.mul_euclideanDiv_cancel (by decide) (even_largeSchroder hn).two_dvd]
 
 theorem smallSchroder_succ (hn : 1 < n) :
     smallSchroder (n + 1) =

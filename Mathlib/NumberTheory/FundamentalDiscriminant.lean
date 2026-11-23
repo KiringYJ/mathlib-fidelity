@@ -71,7 +71,7 @@ theorem isFundamentalDiscr_iff_squarefree :
     exact (IsCoprime.pow hp.isCoprime_two).dvd_mul_left_iff
   by_cases h : 4 ∣ D
   · obtain ⟨d, rfl⟩ := h
-    simp +contextual only [Int.euclideanDiv_eq_core, Int.mul_ediv_cancel_left d four_ne_zero]
+    simp +contextual only [Int.euclideanDiv_mul_left_cancel]
     grind [isFundamentalDiscr_def]
   · grind [isFundamentalDiscr_def]
 
@@ -95,6 +95,6 @@ theorem isFundamentalDiscr_four_mul_add_one {m : ℤ} :
 
 theorem isFundamentalDiscr_four_mul {m : ℤ} :
     IsFundamentalDiscr (4 * m) ↔ Squarefree m ∧ (m % 4 = 2 ∨ m % 4 = 3) := by
-  simp [isFundamentalDiscr_iff_squarefree, Int.euclideanDiv_eq_core]
+  simp [isFundamentalDiscr_iff_squarefree]
 
 end Int

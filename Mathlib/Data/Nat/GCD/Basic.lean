@@ -264,9 +264,10 @@ lemma div_mul_div (hkm : m ∣ k) (hkn : n ∣ m) (hm : m ≠ 0 := by checked_na
         Nat.euclideanDiv m n (Nat.ne_of_gt (Nat.pos_of_dvd_of_pos hkn (Nat.pos_of_ne_zero hm))) =
       Nat.euclideanDiv k n (Nat.ne_of_gt (Nat.pos_of_dvd_of_pos hkn (Nat.pos_of_ne_zero hm))) := by
   have hn := Nat.pos_of_dvd_of_pos hkn (Nat.pos_of_ne_zero hm)
-  simp only [Nat.euclideanDiv_eq_core]
-  refine (Nat.div_eq_of_eq_mul_left hn ?_).symm
-  rw [mul_assoc, Nat.div_mul_cancel hkn, Nat.div_mul_cancel hkm]
+  symm
+  refine Nat.euclideanDiv_eq_of_remainder (r := 0) (Nat.ne_of_gt hn) ?_ hn
+  rw [Nat.add_zero, Nat.mul_comm (Nat.euclideanDiv k m hm), ← Nat.mul_assoc,
+    Nat.mul_euclideanDiv_cancel (Nat.ne_of_gt hn) hkn, Nat.mul_euclideanDiv_cancel hm hkm]
 
 lemma div_dvd_div_left (hkm : m ∣ k) (hkn : n ∣ m) (hm : m ≠ 0 := by checked_native_nonzero) :
     Nat.euclideanDiv k m hm ∣
@@ -279,21 +280,21 @@ lemma div_dvd_div_iff_left (hk : 0 < k) (hmk : m ∣ k) (hnk : n ∣ k) :
       Nat.euclideanDiv k n (Nat.ne_of_gt (Nat.pos_of_dvd_of_pos hnk hk)) ↔ n ∣ m := by
   constructor
   · intro h
-    have hn := Nat.pos_of_dvd_of_pos hnk hk
-    have hq := Nat.div_pos (Nat.le_of_dvd hk hnk) hn
-    simp only [Nat.euclideanDiv_eq_core] at h
-    have rev := div_dvd_div_left (Nat.div_dvd_of_dvd hnk) h (Nat.ne_of_gt hq)
-    simpa only [Nat.euclideanDiv_eq_core, Nat.div_div_self hmk (Nat.ne_of_gt hk),
-      Nat.div_div_self hnk (Nat.ne_of_gt hk)] using rev
+    have hm := Nat.ne_of_gt (Nat.pos_of_dvd_of_pos hmk hk)
+    have hn := Nat.ne_of_gt (Nat.pos_of_dvd_of_pos hnk hk)
+    obtain ⟨q, hq⟩ := h
+    refine ⟨q, Nat.eq_of_mul_eq_mul_right
+      (Nat.euclideanDiv_pos hm (Nat.le_of_dvd hk hmk)) ?_⟩
+    rw [Nat.mul_euclideanDiv_cancel hm hmk, Nat.mul_right_comm, Nat.mul_assoc, ← hq,
+      Nat.mul_euclideanDiv_cancel hn hnk]
   · intro h
     exact div_dvd_div_left hmk h (Nat.ne_of_gt (Nat.pos_of_dvd_of_pos hmk hk))
 
 /-- `Nat.euclideanDiv m k ∣ Nat.euclideanDiv n k` iff `m ∣ n`, when `k` divides both `m` and `n`. -/
 lemma div_dvd_div_iff_right (hkm : k ∣ m) (hkn : k ∣ n) (hk : k ≠ 0 := by checked_native_nonzero) :
     Nat.euclideanDiv m k ∣ Nat.euclideanDiv n k ↔ m ∣ n := by
-  simp only [Nat.euclideanDiv_eq_core]
-  have hk := Nat.pos_of_ne_zero hk
-  rw [← Nat.mul_dvd_mul_iff_left hk, Nat.mul_div_cancel' hkm, Nat.mul_div_cancel' hkn]
+  rw [← Nat.mul_dvd_mul_iff_left (Nat.pos_of_ne_zero hk), Nat.mul_euclideanDiv_cancel hk hkm,
+    Nat.mul_euclideanDiv_cancel hk hkn]
 
 lemma div_lcm_eq_div_gcd (hkm : m ∣ k) (hkn : n ∣ k) (hm : m ≠ 0 := by checked_native_nonzero)
     (hn : n ≠ 0 := by checked_native_nonzero) :
@@ -302,12 +303,10 @@ lemma div_lcm_eq_div_gcd (hkm : m ∣ k) (hkn : n ∣ k) (hm : m ≠ 0 := by che
   rw [Nat.lcm_eq_iff]
   refine ⟨div_dvd_div_left hkm (Nat.gcd_dvd_left m n),
         div_dvd_div_left hkn (Nat.gcd_dvd_right m n), fun c hmc hnc ↦ ?_⟩
-  have hm := Nat.pos_of_ne_zero hm
-  have hn := Nat.pos_of_ne_zero hn
-  simp only [Nat.euclideanDiv_eq_core] at hmc hnc ⊢
-  rw [Nat.div_dvd_iff_dvd_mul hkm hm] at hmc
-  rw [Nat.div_dvd_iff_dvd_mul hkn hn] at hnc
-  simpa [Nat.div_dvd_iff_dvd_mul (Nat.dvd_trans (Nat.gcd_dvd_left m n) hkm)
-    (gcd_pos_of_pos_left n hm), Nat.gcd_mul_right m c n] using (Nat.dvd_gcd hmc hnc)
+  have hiff {b : ℕ} (hb : b ≠ 0) (h : b ∣ k) : Nat.euclideanDiv k b hb ∣ c ↔ k ∣ b * c := by
+    rw [← Nat.mul_dvd_mul_iff_left (Nat.pos_of_ne_zero hb), Nat.mul_euclideanDiv_cancel hb h]
+  apply (hiff (Nat.gcd_ne_zero_left hm) ((Nat.gcd_dvd_left m n).trans hkm)).2
+  have h := Nat.dvd_gcd ((hiff hm hkm).1 hmc) ((hiff hn hkn).1 hnc)
+  rwa [Nat.gcd_mul_right] at h
 
 end Nat

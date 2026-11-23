@@ -121,7 +121,7 @@ lemma exists_one_add_mul_pow_prime_eq
       _ = u ^ 2 * x ^ 2 * (u * x) ^ (i - 2) * p.choose i := by ring_nf
       _ = u ^ 2 * x ^ 2 * (u * x) ^ (i - 2) * (p * c i : ℕ) := by
         dsimp only [c]
-        rw [Nat.euclideanDiv_eq_core, Nat.mul_div_cancel' (hp.dvd_choose_self hi.2.2.1 <| by lia)]
+        rw [Nat.mul_euclideanDiv_cancel hp.ne_zero (hp.dvd_choose_self hi.2.2.1 <| by lia)]
       _ = u ^ 2 * x ^ 2 * (u * x) ^ (i - 2) * p * (c i : ℕ) := by
         simp only [Nat.cast_mul]; ring_nf
       _ = p * u * (v * (a * x ^ 2 * ((u * x) ^ (i - 2) * (c i : ℕ)))) := by

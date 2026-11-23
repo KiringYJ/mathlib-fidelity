@@ -150,14 +150,13 @@ theorem preimage_floor_of_ne_zero {n : ℕ} (hn : n ≠ 0) :
 
 theorem mul_cast_floor_div_cancel {n : ℕ} (hn : n ≠ 0) (a : R) :
     Nat.euclideanDiv ⌊a * n⌋₊ n hn = ⌊a⌋₊ := by
-  rw [Nat.euclideanDiv_eq_core]
   rcases le_total a 0 with ha | ha
-  · rw [floor_of_nonpos, floor_of_nonpos ha]
-    · simp
-    apply mul_nonpos_of_nonpos_of_nonneg ha n.cast_nonneg
+  · rw [floor_of_nonpos (mul_nonpos_of_nonpos_of_nonneg ha n.cast_nonneg), floor_of_nonpos ha]
+    exact Nat.euclideanDiv_zero n hn
   refine eq_of_forall_le_iff fun m ↦ ?_
-  rw [le_div_iff_mul_le (zero_lt_of_ne_zero hn), le_floor_iff (mul_nonneg ha (cast_nonneg' n)),
-    le_floor_iff ha, cast_mul, mul_le_mul_iff_of_pos_right (cast_pos'.mpr (zero_lt_of_ne_zero hn))]
+  rw [Nat.le_euclideanDiv_iff_mul_le hn, Nat.mul_comm n m,
+    le_floor_iff (mul_nonneg ha (cast_nonneg' n)), le_floor_iff ha, cast_mul,
+    mul_le_mul_iff_of_pos_right (cast_pos'.mpr (zero_lt_of_ne_zero hn))]
 
 theorem cast_mul_floor_div_cancel {n : ℕ} (hn : n ≠ 0) (a : R) :
     Nat.euclideanDiv ⌊n * a⌋₊ n hn = ⌊a⌋₊ := by

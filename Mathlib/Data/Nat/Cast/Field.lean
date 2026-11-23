@@ -33,7 +33,8 @@ variable {K : Type*} [DivisionSemiring K] {d m n : ℕ}
 lemma cast_div (hnm : n ∣ m) (hn : (n : K) ≠ 0) :
     (Nat.euclideanDiv m n (fun he => hn (he ▸ Nat.cast_zero)) : K) =
       Checked.div (m : K) (n : K) hn.isUnit := by
-  rw [eq_div_iff, ← Nat.cast_mul, Nat.euclideanDiv_eq_core, Nat.div_mul_cancel hnm]
+  have hn' : n ≠ 0 := fun he => hn (he ▸ Nat.cast_zero)
+  rw [eq_div_iff, ← Nat.cast_mul, Nat.mul_comm, Nat.mul_euclideanDiv_cancel hn' hnm]
 
 variable [CharZero K]
 
@@ -45,12 +46,9 @@ lemma cast_div_charZero (hnm : n ∣ m) (hn : n ≠ 0) :
 /-- A nonzero multiple has a nonzero natural quotient by its divisor. -/
 lemma cast_div_ne_zero (hnm : n ∣ m) (hm : m ≠ 0) :
     (Nat.euclideanDiv m n (fun he => hm (Nat.eq_zero_of_zero_dvd (he ▸ hnm))) : K) ≠ 0 := by
-  rw [Nat.euclideanDiv_eq_core]
-  apply Nat.cast_ne_zero.mpr
-  intro hq
-  apply hm
-  have h := Nat.div_mul_cancel hnm
-  simpa only [hq, Nat.zero_mul] using h.symm
+  exact Nat.cast_ne_zero.mpr (Nat.ne_of_gt
+    (Nat.euclideanDiv_pos (fun he => hm (Nat.eq_zero_of_zero_dvd (he ▸ hnm)))
+      (Nat.le_of_dvd (Nat.pos_of_ne_zero hm) hnm)))
 
 /- Evidence for a quotient by a natural quotient: a nonzero multiple has a nonzero quotient by its
 divisor. -/

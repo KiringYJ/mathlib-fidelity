@@ -192,7 +192,6 @@ theorem discr_powerBasis_eq_prod'' [Algebra.IsSeparable K L] (e : Fin pb.dim ≃
     rw [← hn, Nat.one_le_iff_ne_zero, ← zero_lt_iff, Module.finrank_pos_iff]
     infer_instance
   have hcast := Nat.cast_div h₂ hne
-  simp only [Nat.euclideanDiv_eq_core] at hcast ⊢
   rw [hn, hcast, Nat.cast_mul, Nat.cast_sub hle]
   ring
 

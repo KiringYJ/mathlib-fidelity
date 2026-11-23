@@ -71,7 +71,6 @@ theorem discr_prime_pow_ne_two [IsCyclotomicExtension {p ^ (k + 1)} K L] [hp : F
   rw [discr_powerBasis_eq_norm, finrank L hirr, hζ.powerBasis_gen _,
     ← hζ.minpoly_eq_cyclotomic_of_irreducible hirr, totient_prime_pow hp.out (succ_pos k),
     Nat.add_one_sub_one]
-  simp only [Nat.euclideanDiv_eq_core]
   have hp2 : p = 2 → k ≠ 0 := by
     rintro rfl rfl
     exact absurd rfl hk
@@ -79,16 +78,17 @@ theorem discr_prime_pow_ne_two [IsCyclotomicExtension {p ^ (k + 1)} K L] [hp : F
   · rcases eq_or_ne p 2 with (rfl | hp2)
     · rcases Nat.exists_eq_succ_of_ne_zero (hp2 rfl) with ⟨k, rfl⟩
       rw [succ_sub_succ_eq_sub, tsub_zero, mul_one]; simp only [_root_.pow_succ']
-      rw [mul_assoc, Nat.mul_div_cancel_left _ zero_lt_two, Nat.mul_div_cancel_left _ zero_lt_two]
+      rw [mul_assoc, Nat.euclideanDiv_mul_left_cancel _ two_ne_zero,
+        Nat.euclideanDiv_mul_left_cancel _ two_ne_zero]
       cases k
       · simp
       · simp_rw [_root_.pow_succ', (even_two.mul_right _).neg_one_pow,
           ((even_two.mul_right _).mul_right _).neg_one_pow]
     · have hpo : Odd p := hp.out.odd_of_ne_two hp2
       obtain ⟨a, ha⟩ := (hp.out.even_sub_one hp2).two_dvd
-      rw [ha, mul_left_comm, mul_assoc, Nat.mul_div_cancel_left _ two_pos,
-        Nat.mul_div_cancel_left _ two_pos, mul_right_comm, pow_mul, (hpo.pow.mul _).neg_one_pow,
-        pow_mul, hpo.pow.neg_one_pow]
+      rw [ha, mul_left_comm, mul_assoc, Nat.euclideanDiv_mul_left_cancel _ two_ne_zero,
+        Nat.euclideanDiv_mul_left_cancel _ two_ne_zero, mul_right_comm, pow_mul,
+        (hpo.pow.mul _).neg_one_pow, pow_mul, hpo.pow.neg_one_pow]
       refine Nat.Even.sub_odd ?_ (even_two_mul _) odd_one
       rw [mul_left_comm, ← ha]
       exact one_le_mul (one_le_pow _ _ hp.1.pos) (succ_le_iff.2 <| tsub_pos_of_lt hp.1.one_lt)
@@ -139,7 +139,7 @@ theorem discr_prime_pow [hcycl : IsCyclotomicExtension {p ^ k} K L] [hp : Fact p
       (-1) ^ Nat.euclideanDiv (p ^ k).totient 2 * p ^ (p ^ (k - 1) * ((p - 1) * k - 1)) := by
   rcases k with - | k
   · simp only [coe_basis, _root_.pow_zero, powerBasis_gen _ hζ, totient_one, mul_zero,
-      Nat.euclideanDiv_eq_core, Nat.div_eq_of_lt Nat.one_lt_two, discr, traceMatrix]
+      Nat.euclideanDiv_eq_zero_of_lt two_ne_zero Nat.one_lt_two, discr, traceMatrix]
     have hζone : ζ = 1 := by simpa using hζ
     rw [hζ.powerBasis_dim _, hζone, ← (algebraMap K L).map_one,
       minpoly.eq_X_sub_C_of_algebraMap_inj _ (algebraMap K L).injective, natDegree_X_sub_C]
@@ -162,7 +162,7 @@ theorem discr_prime_pow [hcycl : IsCyclotomicExtension {p ^ k} K L] [hp : Fact p
       rcases Fin.equiv_iff_eq.2 this with ⟨e⟩
       rw [← Algebra.discr_reindex K (hζ.powerBasis K).basis e, coe_basis, powerBasis_gen]
       simp only [powerBasis_dim,
-        zero_add, pow_one, totient_two, Nat.euclideanDiv_eq_core, Nat.div_eq_of_lt Nat.one_lt_two,
+        zero_add, pow_one, totient_two, Nat.euclideanDiv_eq_zero_of_lt two_ne_zero Nat.one_lt_two,
         pow_zero, cast_ofNat, tsub_self,
         Nat.add_one_sub_one, mul_one, mul_zero]
       simp_rw [hζ.eq_neg_one_of_two_right, show (-1 : L) = algebraMap K L (-1) by simp]

@@ -41,14 +41,13 @@ theorem lucas_primality (p : ℕ) (a : ZMod p) (ha : a ^ (p - 1) = 1)
     p.Prime := by
   have h : p ≠ 0 ∧ p ≠ 1 := by
     constructor <;> rintro rfl <;>
-      exact hd 2 Nat.prime_two (dvd_zero _) (by simp [Nat.euclideanDiv_eq_core])
+      exact hd 2 Nat.prime_two (dvd_zero _) (by simp)
   have hp1 : 1 < p := Nat.one_lt_iff_ne_zero_and_ne_one.2 h
   have : NeZero p := ⟨h.1⟩
   rw [Nat.prime_iff_card_units]
   apply (Nat.card_units_zmod_lt_sub_one hp1).antisymm
   let a' : (ZMod p)ˣ := Units.mkOfMulEqOne a _ (by rwa [← pow_succ', tsub_add_eq_add_tsub hp1])
-  calc p - 1 = orderOf a := (orderOf_eq_of_pow_and_pow_div_prime (tsub_pos_of_lt hp1) ha
-    fun q hq hqd ↦ by simpa only [Nat.euclideanDiv_eq_core] using hd q hq hqd).symm
+  calc p - 1 = orderOf a := (orderOf_eq_of_pow_and_pow_div_prime (tsub_pos_of_lt hp1) ha hd).symm
     _ = orderOf a' := orderOf_injective (Units.coeHom _) Units.val_injective a'
     _ ≤ Fintype.card (ZMod p)ˣ := orderOf_le_card_univ
 
@@ -68,9 +67,8 @@ theorem reverse_lucas_primality (p : ℕ) (hP : p.Prime) :
   have h2 := tsub_pos_iff_lt.2 hP.one_lt
   rw [← orderOf_injective (Units.coeHom _) Units.val_injective _, orderOf_eq_iff h2] at h1
   refine ⟨g, h1.1, fun q hq hqd ↦ ?_⟩
-  rw [Nat.euclideanDiv_eq_core]
-  replace hq := hq.one_lt
-  exact h1.2 _ (Nat.div_lt_self h2 hq) (Nat.div_pos (Nat.le_of_dvd h2 hqd) (zero_lt_one.trans hq))
+  exact h1.2 _ (Nat.euclideanDiv_lt_self h2 hq.one_lt)
+    (Nat.euclideanDiv_pos hq.ne_zero (Nat.le_of_dvd h2 hqd))
 
 /-- A number `p` is prime if and only if there exists an `a` such that
 `a^(p-1) = 1 mod p` and `a^((p-1)/q) ≠ 1 mod p` for all prime factors `q` of `p-1`.

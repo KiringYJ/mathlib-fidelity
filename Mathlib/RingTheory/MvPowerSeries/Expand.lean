@@ -139,9 +139,9 @@ theorem coeff_expand_of_not_dvd (φ : MvPowerSeries σ R) {m : σ →₀ ℕ} {i
 include hp in
 private theorem exists_smul_of_forall_dvd {d : σ →₀ ℕ} (h : ∀ i, p ∣ d i) :
     ∃ m, p • m = d := by
-  refine ⟨d.mapRange (fun a ↦ Nat.euclideanDiv a p hp) (by simp [Nat.euclideanDiv_eq_core]), ?_⟩
+  refine ⟨d.mapRange (fun a ↦ Nat.euclideanDiv a p hp) (Nat.euclideanDiv_zero p hp), ?_⟩
   ext i
-  simp [Nat.euclideanDiv_eq_core, Nat.mul_div_cancel' (h i)]
+  simp [Nat.mul_euclideanDiv_cancel hp (h i)]
 
 set_option backward.isDefEq.respectTransparency.types false in
 theorem support_expand_subset (φ : MvPowerSeries σ R) :

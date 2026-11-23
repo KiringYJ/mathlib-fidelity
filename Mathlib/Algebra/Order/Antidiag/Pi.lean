@@ -225,10 +225,10 @@ lemma nsmul_piAntidiag [DecidableEq (ι → ℕ)] (s : Finset ι) (m : ℕ) {n :
   · intro i hi
     apply hfsup i
     rintro hzero
-    exact hi (by simp [hzero, Nat.euclideanDiv_eq_core])
+    exact hi (by simp [hzero])
   · funext i
     change n * Nat.euclideanDiv (f i) n hn = f i
-    simpa only [Nat.euclideanDiv_eq_core] using Nat.mul_div_cancel' (hdvd i)
+    exact Nat.mul_euclideanDiv_cancel hn (hdvd i)
 
 lemma map_nsmul_piAntidiag (s : Finset ι) (m : ℕ) {n : ℕ} (hn : n ≠ 0) :
     (piAntidiag s m).map ⟨(n • ·), nsmul_right_injective hn⟩ =

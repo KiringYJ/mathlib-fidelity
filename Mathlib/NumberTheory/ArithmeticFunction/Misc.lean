@@ -421,18 +421,13 @@ theorem sum_Ioc_mul_eq_sum_sum (f g : ArithmeticFunction R) (N : ℕ) :
   conv_lhs => rw [← Finset.sum_attach]
   refine sum_congr rfl fun n _ ↦ ?_
   have hn := n.property
-  simp only [Nat.euclideanDiv_eq_core]
   simp only [sum_ite, not_le, sum_const_zero, add_zero, mul_sum]
   congr
   ext
   simp only [mem_filter, mem_Ioc, and_assoc, and_congr_right_iff] at hn ⊢
   intro _
-  constructor
-  · intro ⟨_, h⟩
-    grw [← h, Nat.mul_div_cancel_left _ (by lia)]
-  · intro hm
-    grw [hm]
-    simp [mul_div_le, div_le_self]
+  rw [Nat.le_euclideanDiv_iff_mul_le]
+  exact ⟨And.right, fun h => ⟨(Nat.le_mul_of_pos_left _ hn.1).trans h, h⟩⟩
 
 theorem sum_Ioc_mul_zeta_eq_sum (f : ArithmeticFunction R) (N : ℕ) :
     ∑ n ∈ Ioc 0 N, (f * zeta) n = ∑ n ∈ (Ioc 0 N).attach,

@@ -450,7 +450,7 @@ def subgroupOfCoprimeConductor [NeZero n] (d : ℕ) :
   carrier := {χ | d.Coprime χ.conductor}
   mul_mem' hχ hψ := by
     apply Nat.Coprime.of_dvd_right (conductor_mul_dvd_lcm_conductor _ _)
-    exact (Nat.Coprime.mul_right hχ hψ).coprime_div_right <| Nat.gcd_dvd_mul _ _
+    exact (Nat.Coprime.mul_right hχ hψ).of_dvd_right (Nat.lcm_dvd_mul _ _)
   one_mem' := by simp [conductor_one]
   inv_mem' hχ := by rwa [Set.mem_ofPred, conductor_inv]
 

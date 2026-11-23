@@ -43,7 +43,7 @@ than `log p n` for `n ≠ 0`. -/
 theorem factorization_factorial {p : ℕ} (hp : p.Prime) :
     ∀ {n b : ℕ}, n < p ^ b → (n)!.factorization p =
       ∑ i ∈ Ico 1 b, Nat.euclideanDiv n (p ^ i) (pow_ne_zero _ hp.ne_zero)
-  | 0, b, _ => by simp [Nat.euclideanDiv_eq_core]
+  | 0, b, _ => by simp
   | n + 1, b, hb =>
     calc
       (n + 1)!.factorization p = (n + 1).factorization p + (n)!.factorization p := by
@@ -60,7 +60,7 @@ theorem factorization_factorial {p : ℕ} (hp : p.Prime) :
       _ = ∑ i ∈ Ico 1 b, Nat.euclideanDiv (n + 1) (p ^ i) (pow_ne_zero _ hp.ne_zero) := by
         apply Finset.sum_congr rfl
         intro i hi
-        simpa only [Nat.euclideanDiv_eq_core] using (Nat.succ_div (a := n) (b := p ^ i)).symm
+        exact (Nat.euclideanDiv_succ n (pow_ne_zero i hp.ne_zero)).symm
 
 /-- For a prime number `p`, taking `(p - 1)` times the factorization of `p` in `n!` equals `n` minus
 the sum of base `p` digits of `n`. -/
@@ -105,7 +105,7 @@ theorem factorization_factorial_le_div_pred {p : ℕ} (hp : p.Prime) (n : ℕ) :
     (n)!.factorization p ≤
       Nat.euclideanDiv n (p - 1) (Nat.ne_of_gt (Nat.sub_pos_of_lt hp.one_lt)) := by
   rw [factorization_factorial hp (Nat.lt_pow_self hp.one_lt)]
-  simpa only [Nat.euclideanDiv_eq_core] using Nat.geom_sum_Ico_le hp.two_le n n
+  exact Nat.geom_sum_Ico_le hp.two_le n n
 
 lemma multiplicity_choose_aux {p n b k : ℕ} (hp : p.Prime) (hkn : k ≤ n) :
     ∑ i ∈ Finset.Ico 1 b, Nat.euclideanDiv n (p ^ i) (pow_ne_zero _ hp.ne_zero) =
@@ -121,7 +121,7 @@ lemma multiplicity_choose_aux {p n b k : ℕ} (hp : p.Prime) (hkn : k ≤ n) :
           (Nat.euclideanDiv k (p ^ i) (pow_ne_zero _ hp.ne_zero) +
             Nat.euclideanDiv (n - k) (p ^ i) (pow_ne_zero _ hp.ne_zero) +
             if p ^ i ≤ k % p ^ i + (n - k) % p ^ i then 1 else 0) := by
-      simp only [Nat.euclideanDiv_eq_core, Nat.add_div (pow_pos hp.pos _)]
+      simp only [Nat.euclideanDiv_add]
     _ = _ := by simp [sum_add_distrib, sum_boole]
 
 /-- The factorization of `p` in `choose (n + k) k` is the number of carries when `k` and `n` are
@@ -241,10 +241,11 @@ theorem factorization_choose_of_lt_three_mul (hp' : p ≠ 2) (hk : p ≤ k) (hk'
     exact
       lt_of_le_of_lt
         (add_le_add
-          (add_le_add_left (le_mul_of_one_le_right' ((one_le_div_iff hp.pos).mpr hk)) (k % p))
-          (add_le_add_left (le_mul_of_one_le_right' ((one_le_div_iff hp.pos).mpr hk'))
+          (add_le_add_left (le_mul_of_one_le_right' (Nat.euclideanDiv_pos hp.ne_zero hk)) (k % p))
+          (add_le_add_left (le_mul_of_one_le_right' (Nat.euclideanDiv_pos hp.ne_zero hk'))
             ((n - k) % p)))
-        (by rwa [div_add_mod, div_add_mod, add_tsub_cancel_of_le hkn])
+        (by rwa [Nat.euclideanDiv_mul_add_mod, Nat.euclideanDiv_mul_add_mod,
+          add_tsub_cancel_of_le hkn])
   · replace hn : n < p ^ i := by
       have : 3 ≤ p := lt_of_le_of_ne hp.two_le hp'.symm
       calc

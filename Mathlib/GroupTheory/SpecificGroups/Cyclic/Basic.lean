@@ -320,8 +320,7 @@ theorem IsCyclic.card_pow_eq_one_le [DecidableEq α] [Fintype α] [IsCyclic α] 
   have hd : 0 < d := gcd_pos_of_pos_left _ hn0
   let q := Nat.euclideanDiv (Fintype.card α) d hd.ne'
   have hcard : q * d = Fintype.card α := by
-    rw [show q = _ from Nat.euclideanDiv_eq_core _ _ _]
-    exact Nat.div_mul_cancel (Nat.gcd_dvd_right _ _)
+    simpa only [Nat.mul_comm] using Nat.mul_euclideanDiv_cancel hd.ne' (Nat.gcd_dvd_right _ _)
   calc
     #{a : α | a ^ n = 1} ≤ #(zpowers (g ^ q) : Set α).toFinset := by
       gcongr
@@ -340,10 +339,11 @@ theorem IsCyclic.card_pow_eq_one_le [DecidableEq α] [Fintype α] [IsCyclic α] 
         Fintype.card_ne_zero (α := α) (by simpa [e] using hcard.symm)
       have hgd : (Fintype.card α).gcd q = q := Nat.gcd_eq_right ⟨d, hcard.symm⟩
       simp only [Set.toFinset_card, SetLike.coe_sort_coe]
-      rw [Fintype.card_zpowers, orderOf_pow g, Nat.euclideanDiv_eq_core,
-        orderOf_eq_card_of_forall_mem_zpowers hg, Nat.card_eq_fintype_card]
-      rw [hgd, Nat.div_eq_of_eq_mul_right hq hcard.symm]
-      exact Nat.le_of_dvd hn0 (Nat.gcd_dvd_left _ _)
+      have hquot : Nat.euclideanDiv (Fintype.card α) q hq.ne' = d :=
+        Nat.euclideanDiv_eq_of_remainder (r := 0) hq.ne' (by simpa using hcard.symm) hq
+      simpa only [Fintype.card_zpowers, orderOf_pow g, orderOf_eq_card_of_forall_mem_zpowers hg,
+        Nat.card_eq_fintype_card, hgd, hquot] using
+        Nat.le_of_dvd hn0 (Nat.gcd_dvd_left n (Fintype.card α))
 
 end Classical
 

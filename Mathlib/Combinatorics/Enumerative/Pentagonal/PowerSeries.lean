@@ -159,8 +159,8 @@ private theorem tprod_one_sub_X_pow' [IsTopologicalRing R] [T2Space R] :
     apply coeff_of_lt_order
     grw [← le_order_mul, ← le_order_mul]
     refine (lt_add_of_lt_of_nonneg (lt_add_of_nonneg_of_lt (by simp) ?_) (by simp))
-    rw [order_X_pow, Nat.cast_lt, ← Nat.add_one_le_iff, Nat.euclideanDiv_eq_core,
-      Nat.le_div_iff_mul_le (by simp)]
+    rw [order_X_pow, Nat.cast_lt, ← Nat.add_one_le_iff,
+      Nat.le_euclideanDiv_iff_mul_le (by decide), Nat.mul_comm 2]
     apply Nat.mul_le_mul <;> linarith
 
 end WithPiTopology

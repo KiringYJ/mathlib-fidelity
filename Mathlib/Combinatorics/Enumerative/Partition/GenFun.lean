@@ -130,8 +130,9 @@ private theorem aux_prod_coeff_eq_zero_of_notMem_range (f : ℕ → ℕ → R) {
     cases i with
     | zero => simp [hg0]
     | succ i =>
-      simpa [count, Nat.euclideanDiv_eq_core] using
-        Nat.div_mul_cancel (aux_dvd_of_coeff_ne_zero hs0 hg hprod (i + 1))
+      simpa [count, Nat.mul_comm] using
+        Nat.mul_euclideanDiv_cancel (Nat.succ_ne_zero i)
+          (aux_dvd_of_coeff_ne_zero hs0 hg hprod (i + 1))
   refine ⟨Nat.Partition.mk (Finsupp.mk g.support count ?_).toMultiset ?_ ?_, ?_⟩
   · intro i
     cases i with

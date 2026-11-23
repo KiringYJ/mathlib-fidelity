@@ -136,7 +136,6 @@ section HelperLemmas
 private theorem a_id_helper {a b : ℕ} (ha : 2 ≤ a) (hb : 2 < b) :
     b < Nat.euclideanDiv (a ^ b - 1) (a - 1) (by omega) := by
   have hsum := Nat.geomSum_eq ha b
-  simp only [Nat.euclideanDiv_eq_core] at hsum ⊢
   rw [← hsum]
   calc
     b = ∑ _ ∈ Finset.range b, (1 : ℕ) := by simp
@@ -146,7 +145,7 @@ private theorem a_id_helper {a b : ℕ} (ha : 2 ≤ a) (hb : 2 < b) :
 
 private theorem b_id_helper {a b : ℕ} (ha : 2 ≤ a) (hb : 2 < b) :
     2 ≤ Nat.euclideanDiv (a ^ b + 1) (a + 1) (Nat.succ_ne_zero _) := by
-  rw [Nat.euclideanDiv_eq_core, Nat.le_div_iff_mul_le (Nat.zero_lt_succ _)]
+  rw [Nat.le_euclideanDiv_iff_mul_le (Nat.succ_ne_zero a), Nat.mul_comm (a + 1) 2]
   apply Nat.succ_le_succ
   calc
     2 * a + 1 ≤ a ^ 2 * a := by nlinarith
@@ -159,11 +158,25 @@ private theorem AB_id_helper (b p : ℕ) (hb : 2 ≤ b) (hp : Odd p) :
       Nat.euclideanDiv (b ^ (2 * p) - 1) (b ^ 2 - 1) (by
         have := Nat.pow_le_pow_left hb 2
         omega) := by
-  simp only [Nat.euclideanDiv_eq_core]
-  have q₁ : b - 1 ∣ b ^ p - 1 := by simpa only [one_pow] using Nat.sub_dvd_pow_sub_pow b 1 p
-  have q₂ : b + 1 ∣ b ^ p + 1 := by simpa only [one_pow] using hp.nat_add_dvd_pow_add_pow b 1
-  convert! Nat.div_mul_div_comm q₁ q₂ using 2 <;> rw [mul_comm (_ - 1), ← Nat.sq_sub_sq]
-  ring_nf
+  have h₁ : b - 1 ≠ 0 := by omega
+  have h₂ : b + 1 ≠ 0 := Nat.succ_ne_zero _
+  have hd₁ : b - 1 ∣ b ^ p - 1 := by simpa only [one_pow] using Nat.sub_dvd_pow_sub_pow b 1 p
+  have hd₂ : b + 1 ∣ b ^ p + 1 := by simpa only [one_pow] using hp.nat_add_dvd_pow_add_pow b 1
+  have hp₂ : 0 < b ^ 2 - 1 := by
+    have := Nat.pow_le_pow_left hb 2
+    omega
+  have hfactor : b ^ 2 - 1 = (b + 1) * (b - 1) := by simpa using Nat.sq_sub_sq b 1
+  symm
+  refine Nat.euclideanDiv_eq_of_remainder (r := 0) _ ?_ hp₂
+  rw [Nat.add_zero]
+  calc
+    b ^ (2 * p) - 1 = (b ^ p - 1) * (b ^ p + 1) := by
+      rw [Nat.mul_comm 2 p, pow_mul, Nat.mul_comm (_ - 1), ← Nat.sq_sub_sq, one_pow]
+    _ = ((b - 1) * Nat.euclideanDiv (b ^ p - 1) (b - 1) h₁) *
+        ((b + 1) * Nat.euclideanDiv (b ^ p + 1) (b + 1) h₂) :=
+      congrArg₂ (· * ·) (Nat.mul_euclideanDiv_cancel h₁ hd₁).symm
+        (Nat.mul_euclideanDiv_cancel h₂ hd₂).symm
+    _ = _ := by rw [hfactor]; ac_rfl
 
 /-- Used in the proof of `psp_from_prime_psp`
 -/
@@ -227,8 +240,8 @@ private theorem psp_from_prime_psp {b : ℕ} (b_ge_two : 2 ≤ b) {p : ℕ} (p_p
   have hd : b ^ 2 - 1 ∣ b ^ (2 * p) - 1 := by
     simpa only [one_pow, pow_mul] using Nat.sub_dvd_pow_sub_pow _ 1 p
   have AB_mul : A * B * (b ^ 2 - 1) = b ^ (2 * p) - 1 := by
-    rw [show A * B = _ from AB_id_helper _ _ b_ge_two p_odd, Nat.euclideanDiv_eq_core,
-      Nat.div_mul_cancel hd]
+    rw [show A * B = _ from AB_id_helper _ _ b_ge_two p_odd, Nat.mul_comm,
+      Nat.mul_euclideanDiv_cancel hi_bsquared.ne' hd]
   -- We know that `A * B` is not prime, and that `1 < A * B`. Since two conditions of being
   -- pseudoprime are satisfied, we only need to show that `A * B` is probable prime to base `b`
   refine ⟨?_, AB_not_prime, one_lt_mul'' hi_A hi_B⟩

@@ -348,7 +348,7 @@ theorem erdos_ko_rado {𝒜 : Finset (Finset (Fin n))} {r : ℕ}
     (h𝒜 : (𝒜 : Set (Finset (Fin n))).Intersecting) (h₂ : (𝒜 : Set (Finset (Fin n))).Sized r)
     (h₃ : r ≤ n.euclideanDiv 2) :
     #𝒜 ≤ (n - 1).choose (r - 1) := by
-  rw [Nat.euclideanDiv_eq_core] at h₃
+  have hnr := (Nat.le_euclideanDiv_iff_mul_le (by decide)).1 h₃
   -- Take care of the r=0 case first: it's not very interesting.
   rcases Nat.eq_zero_or_pos r with b | h1r
   · convert! Nat.zero_le _
@@ -363,7 +363,7 @@ theorem erdos_ko_rado {𝒜 : Finset (Finset (Fin n))} {r : ℕ}
     simp only [mem_shadow_iterate_iff_exists_sdiff, mem_compls] at hAbar
     obtain ⟨C, hC, hAC, _⟩ := hAbar
     exact h𝒜 hA hC (disjoint_of_subset_left hAC disjoint_compl_right)
-  have : r ≤ n := h₃.trans (Nat.div_le_self n 2)
+  have : r ≤ n := by omega
   have : 1 ≤ n := ‹1 ≤ r›.trans ‹r ≤ n›
   -- We know the size of 𝒜ᶜˢ since it's the same size as 𝒜
   have z : (n - 1).choose (n - r) < #𝒜ᶜˢ := by

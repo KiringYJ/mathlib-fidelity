@@ -126,6 +126,11 @@ Pattern a + b
 info: Pattern n.euclideanDiv 2 Nat.shiftRight_one._proof_1
 · n >>> 1
   Nat.shiftRight_one
+
+Pattern a.euclideanDiv b hb
+· 0
+  ⊢ n < 2
+  Nat.euclideanDiv_eq_zero_of_lt
 -/
 #guard_msgs in
 #rw?? Nat.euclideanDiv n 2

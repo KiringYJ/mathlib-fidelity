@@ -80,13 +80,13 @@ theorem Module.finrank_dvd_finrank_right :
 
 theorem Module.finrank_div_finrank_cancel_right (h : Module.finrank K A ≠ 0) :
     Nat.euclideanDiv (Module.finrank F A) (Module.finrank K A) h = Module.finrank F K := by
-  rw [Nat.euclideanDiv_eq_core]
-  exact Nat.div_eq_of_eq_mul_left h.bot_lt (finrank_mul_finrank ..).symm
+  rw [← finrank_mul_finrank F K A]
+  exact Nat.euclideanDiv_mul_right_cancel _ h
 
 theorem Module.finrank_div_finrank_cancel_left (h : Module.finrank F K ≠ 0) :
     Nat.euclideanDiv (Module.finrank F A) (Module.finrank F K) h = Module.finrank K A := by
-  rw [Nat.euclideanDiv_eq_core]
-  exact Nat.div_eq_of_eq_mul_right h.bot_lt (finrank_mul_finrank ..).symm
+  rw [← finrank_mul_finrank F K A]
+  exact Nat.euclideanDiv_mul_left_cancel _ h
 
 theorem Module.finrank_div_finrank_cancel_right_of_nontrivial [Nontrivial A] [Module.Finite K A] :
     Nat.euclideanDiv (Module.finrank F A) (Module.finrank K A)

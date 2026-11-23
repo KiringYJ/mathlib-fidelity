@@ -53,9 +53,7 @@ theorem sq_eq_one_of_sq_le_three {x : ℤ} (h1 : x ^ 2 ≤ 3) (h2 : x ≠ 0) : x
   sq_eq_one_of_sq_lt_four (lt_of_le_of_lt h1 (lt_add_one (3 : ℤ))) h2
 
 theorem units_pow_eq_pow_mod_two (u : ℤˣ) (n : ℕ) : u ^ n = u ^ (n % 2) := by
-  conv =>
-    lhs
-    rw [← Nat.mod_add_div n 2]
-    rw [pow_add, pow_mul, units_sq, one_pow, mul_one]
+  conv_lhs => rw [← Nat.euclideanDiv_mul_add_mod n 2 (by decide)]
+  rw [pow_add, pow_mul, units_sq, one_pow, one_mul]
 
 end Int

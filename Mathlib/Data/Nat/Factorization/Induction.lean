@@ -38,16 +38,15 @@ def recOnPrimePow {motive : ℕ → Sort*} (zero : motive 0) (one : motive 1)
       haveI htp : 0 < t :=
         hp.factorization_pos_of_dvd (k + 1).succ_ne_zero ((k + 2).minFac_dvd (succ_succ_ne_one k))
       have hlt : (k + 2).ordCompl p < k + 2 := by
-        rw [ordCompl, Nat.euclideanDiv_eq_core]
-        apply Nat.div_lt_self (Nat.succ_pos _)
+        rw [ordCompl]
+        apply Nat.euclideanDiv_lt_self (Nat.succ_pos _)
         exact Nat.one_lt_pow htp.ne' hp.one_lt
       have hpt : p ^ t ∣ k + 2 := ordProj_dvd _ _
-      have he : p ^ t * (k + 2).ordCompl p = k + 2 := by
-        rw [ordCompl, Nat.euclideanDiv_eq_core]
-        exact Nat.mul_div_cancel' hpt
+      have he : p ^ t * (k + 2).ordCompl p = k + 2 :=
+        Nat.mul_euclideanDiv_cancel (ordProj_pos _ _).ne' hpt
       have hcop : ¬p ∣ (k + 2).ordCompl p := by
         change ¬p ∣ Nat.euclideanDiv (k + 2) (p ^ t) (pow_ne_zero _ hp.ne_zero)
-        rw [Nat.euclideanDiv_eq_core, Nat.dvd_div_iff_mul_dvd hpt, ← Nat.pow_succ]
+        rw [Nat.dvd_euclideanDiv_iff_mul_dvd _ hpt, ← Nat.pow_succ]
         exact pow_succ_factorization_not_dvd (Nat.succ_ne_zero _) hp
       exact he ▸ prime_pow_mul _ p t hp hcop htp (hk _ hlt)
 

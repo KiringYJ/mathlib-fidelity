@@ -338,22 +338,24 @@ def finProdFinEquiv : Fin m × Fin n ≃ Fin (m * n) where
         _ = (x.1.1 + 1) * n := Eq.symm <| Nat.succ_mul _ _
         _ ≤ m * n := Nat.mul_le_mul_right _ x.1.2
         ⟩
-  invFun x := (x.divNat, x.modNat)
+  invFun x := (x.euclideanDivNat, x.modNat)
   left_inv := fun ⟨x, y⟩ =>
     have H : 0 < n := Nat.pos_of_ne_zero fun H => Nat.not_lt_zero y.1 <| H ▸ y.2
     Prod.ext
-      (Fin.eq_of_val_eq <| by
-        simpa only [Fin.divNat, Nat.euclideanDiv_eq_core] using
-          Nat.euclideanDiv_eq_of_remainder H.ne' (Nat.add_comm y.val (n * x.val)) y.is_lt)
+      (Fin.eq_of_val_eq <|
+        Nat.euclideanDiv_eq_of_remainder H.ne' (Nat.add_comm y.val (n * x.val)) y.is_lt)
       (Fin.eq_of_val_eq <|
         calc
           (y.1 + n * x.1) % n = y.1 % n := Nat.add_mul_mod_self_left _ _ _
           _ = y.1 := Nat.mod_eq_of_lt y.2)
-  right_inv _ := Fin.eq_of_val_eq <| Nat.mod_add_div _ _
+  right_inv x := Fin.eq_of_val_eq <| by
+    have hn : n ≠ 0 := fun h => by simpa [h] using x.isLt
+    change x.val % n + n * Nat.euclideanDiv x.val n hn = x.val
+    rw [Nat.add_comm, Nat.euclideanDiv_mul_add_mod]
 
 /-- The equivalence sending an input to its Euclidean quotient and remainder for nonzero `n`.
 This is like `finProdFinEquiv.symm` but with `m` infinite.
-See `Nat.div_mod_unique` for a similar propositional statement. -/
+See `Nat.euclideanDiv_eq_of_remainder` for quotient uniqueness. -/
 @[simps]
 def Nat.divModEquiv (n : ℕ) [NeZero n] : ℕ ≃ ℕ × Fin n where
   toFun a := (Nat.euclideanDiv a n (NeZero.ne n), Fin.ofNat n a)
@@ -367,7 +369,7 @@ def Nat.divModEquiv (n : ℕ) [NeZero n] : ℕ ≃ ℕ × Fin n where
       (congrArg (· + p.2.val) (Nat.mul_comm p.1 n)) p.2.is_lt
 
 /-- The equivalence sending an input to its Euclidean quotient and remainder for nonzero `n`.
-See `Int.ediv_emod_unique` for a similar propositional statement. -/
+See `Int.euclideanDiv_eq_of_remainder` for quotient uniqueness. -/
 @[simps]
 def Int.divModEquiv (n : ℕ) [NeZero n] : ℤ ≃ ℤ × Fin n where
   -- TODO: could cast from int directly if we import `Data.ZMod.Defs`, though there are few lemmas
@@ -376,16 +378,16 @@ def Int.divModEquiv (n : ℕ) [NeZero n] : ℤ ≃ ℤ × Fin n where
     Fin.ofNat n (a.natMod n))
   invFun p := p.1 * n + ↑p.2
   left_inv a := by
-    simp_rw [Int.euclideanDiv_eq_core, Fin.val_ofNat, natCast_mod, natMod,
-      toNat_of_nonneg (emod_nonneg _ <| natCast_eq_zero.not.2 (NeZero.ne n)), emod_emod,
-      ediv_mul_add_emod]
+    have hn : (n : ℤ) ≠ 0 := Int.ofNat_ne_zero.mpr (NeZero.ne n)
+    simp_rw [Fin.val_ofNat, natCast_mod, natMod, toNat_of_nonneg (emod_nonneg _ hn), emod_emod]
+    simpa only [Int.mul_comm] using Int.euclideanDiv_mul_add_mod a n hn
   right_inv := fun ⟨q, r, hrn⟩ => by
     simp only [Prod.mk_inj, Fin.ext_iff]
     obtain ⟨h1, h2⟩ := Int.natCast_nonneg r, Int.ofNat_lt.2 hrn
-    rw [Int.euclideanDiv_eq_core, Int.add_comm,
-      add_mul_ediv_right _ _ (natCast_eq_zero.not.2 (NeZero.ne n)),
-      ediv_eq_zero_of_lt h1 h2, natMod, add_mul_emod_self_right, emod_eq_of_lt h1 h2, toNat_natCast]
-    exact ⟨q.zero_add, Fin.val_cast_of_lt hrn⟩
+    refine ⟨Int.euclideanDiv_eq_of_remainder (Int.ofNat_ne_zero.mpr (NeZero.ne n))
+      (by rw [Int.mul_comm q]) h1 (by simpa using h2), ?_⟩
+    rw [natMod, Int.add_comm (q * n), add_mul_emod_self_right, emod_eq_of_lt h1 h2, toNat_natCast]
+    exact Fin.val_cast_of_lt hrn
 
 /-- Promote a `Fin n` into a larger `Fin m`, as a subtype where the underlying
 values are retained.

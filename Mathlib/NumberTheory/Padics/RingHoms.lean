@@ -243,7 +243,9 @@ lemma norm_natCast_zmodRepr_eq_iff {x : ℤ_[p]} :
 
 lemma zmodRepr_natCast (n : ℕ) :
     zmodRepr (n : ℤ_[p]) = n % p := by
-  nth_rw 1 [← Nat.mod_add_div n p]
+  have hn := Nat.euclideanDiv_mul_add_mod n p (Fact.out : Nat.Prime p).ne_zero
+  rw [Nat.add_comm] at hn
+  nth_rw 1 [← hn]
   apply zmodRepr_unique
   · exact Nat.mod_lt _ (Nat.Prime.pos Fact.out)
   · simp [maximalIdeal_eq_span_p, Ideal.mem_span_singleton]

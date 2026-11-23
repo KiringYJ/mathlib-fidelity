@@ -91,17 +91,21 @@ lemma two_mul_ne_two_mul_add_one : 2 * n ≠ 2 * m + 1 :=
 /-! ### `div` -/
 
 lemma le_div_two_iff_mul_two_le {n m : ℕ} : m ≤ Nat.euclideanDiv n 2 ↔ (m : ℤ) * 2 ≤ n := by
-  rw [Nat.euclideanDiv_eq_core, Nat.le_div_iff_mul_le Nat.zero_lt_two, ← Int.ofNat_le,
-    Int.natCast_mul, Int.ofNat_two]
+  rw [Nat.le_euclideanDiv_iff_mul_le (by decide : (2 : Nat) ≠ 0), ← Int.ofNat_le,
+    Int.natCast_mul, Int.ofNat_two, Int.mul_comm 2]
 
 /-- A version of `Nat.div_lt_self` using successors, rather than additional hypotheses. -/
 lemma div_lt_self' (a b : ℕ) : Nat.euclideanDiv (a + 1) (b + 2) < a + 1 := by
-  rw [Nat.euclideanDiv_eq_core]
-  exact Nat.div_lt_self (Nat.succ_pos _) (Nat.succ_lt_succ (Nat.succ_pos _))
+  apply Nat.lt_of_not_ge
+  intro h
+  have hquot := (Nat.le_euclideanDiv_iff_mul_le (by omega : b + 2 ≠ 0)).mp h
+  have hmul := Nat.mul_le_mul_right (a + 1) (show 2 ≤ b + 2 by omega)
+  omega
 
 lemma two_mul_odd_div_two (hn : n % 2 = 1) : 2 * Nat.euclideanDiv n 2 = n - 1 := by
-  rw [Nat.euclideanDiv_eq_core]
-  lia
+  have h := Nat.euclideanDiv_mul_add_mod n 2 (by decide)
+  rw [hn] at h
+  omega
 
 /-! ### `pow` -/
 

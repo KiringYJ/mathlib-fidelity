@@ -171,7 +171,7 @@ lemma pow_eq_pow_mod (m : ℕ) (ha : a ^ n = 1) : a ^ m = a ^ (m % n) := by
   · simp [hn]
   calc
     a ^ m = a ^ (m % n + n * Nat.euclideanDiv m n hn) := by
-      rw [Nat.euclideanDiv_eq_core, Nat.mod_add_div]
+      rw [Nat.add_comm, Nat.euclideanDiv_mul_add_mod]
     _ = a ^ (m % n) := by simp [pow_add, pow_mul, ha]
 
 @[to_additive] lemma pow_mul_pow_eq_one : ∀ n, a * b = 1 → a ^ n * b ^ n = 1
@@ -953,7 +953,7 @@ theorem zpow_eq_zpow_emod {x : G} (m : ℤ) {n : ℤ} (h : x ^ n = 1) :
   · simp [hn]
   calc
     x ^ m = x ^ (m % n + n * Int.euclideanDiv m n hn) := by
-      rw [Int.euclideanDiv_eq_core, Int.emod_add_mul_ediv]
+      rw [Int.add_comm, Int.euclideanDiv_mul_add_mod]
     _ = x ^ (m % n) := by simp [zpow_add, zpow_mul, h]
 
 theorem zpow_eq_zpow_emod' {x : G} (m : ℤ) {n : ℕ} (h : x ^ n = 1) :

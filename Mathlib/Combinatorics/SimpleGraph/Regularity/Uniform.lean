@@ -358,7 +358,7 @@ lemma IsEquipartition.card_interedges_sparsePairs_le' (hP : P.IsEquipartition)
     _ ≤ (#P.parts * (q) + #P.parts) ^ 2 := ?_
     _ ≤ _ := by
       gcongr
-      simpa only [q, Nat.euclideanDiv_eq_core] using Nat.mul_div_le #A #P.parts
+      exact (Nat.le_euclideanDiv_iff_mul_le hk).1 le_rfl
   · simp only [Prod.forall, and_imp, mem_offDiag, sq]
     rintro U V hU hV -
     exact_mod_cast Nat.mul_le_mul (hP.card_part_le_average_add_one hU)
@@ -375,20 +375,19 @@ lemma IsEquipartition.card_interedges_sparsePairs_le (hP : P.IsEquipartition) (h
 
 private lemma aux {i j : ℕ} (hj : 0 < j) :
     j * (j - 1) * (Nat.euclideanDiv i j hj.ne' + 1) ^ 2 < (i + j) ^ 2 := by
-  rw [Nat.euclideanDiv_eq_core]
   have : j * (j - 1) < j ^ 2 := by
     rw [sq]; exact Nat.mul_lt_mul_of_pos_left (Nat.sub_lt hj zero_lt_one) hj
   apply (Nat.mul_lt_mul_of_pos_right this <| pow_pos Nat.succ_pos' _).trans_le
   rw [← mul_pow, Nat.mul_succ]
   gcongr
-  apply Nat.mul_div_le
+  exact (Nat.le_euclideanDiv_iff_mul_le hj.ne').1 le_rfl
 
 lemma IsEquipartition.card_biUnion_offDiag_le' {hPUnit : IsUnit (#P.parts : 𝕜)}
     (hP : P.IsEquipartition) :
     (#(P.parts.biUnion offDiag) : 𝕜) ≤ (#A : 𝕜) * (#A + #P.parts) / (#P.parts : 𝕜) := by
   let q := Nat.euclideanDiv #A #P.parts (Nat.cast_ne_zero.mp hPUnit.ne_zero)
-  have hq : #P.parts * q ≤ #A := by
-    simpa only [q, Nat.euclideanDiv_eq_core] using Nat.mul_div_le #A #P.parts
+  have hq : #P.parts * q ≤ #A :=
+    (Nat.le_euclideanDiv_iff_mul_le (Nat.cast_ne_zero.mp hPUnit.ne_zero)).1 le_rfl
   calc
     _ ≤ (#P.parts : 𝕜) * ((q : 𝕜) * ↑(q + 1)) :=
         mod_cast card_biUnion_le_card_mul _ _ _ fun U hU ↦ ?_

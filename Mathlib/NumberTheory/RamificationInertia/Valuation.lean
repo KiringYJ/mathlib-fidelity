@@ -113,8 +113,11 @@ theorem uniformContinuous_algebraMap_liesOver :
     WithVal.algebraMap_left_apply, WithVal.algebraMap_right_apply, ← valuation_liesOver L v,
     ← log_lt_log (by simp_all) (by simp [EmbeddingLike.map_eq_zero_iff (f := σwV)]), log_pow,
     nsmul_eq_mul, mul_comm]
-  rw [Int.euclideanDiv_eq_core] at hx
-  exact Int.mul_lt_of_lt_ediv he hx
+  simp only [log_exp] at hx
+  apply (Int.mul_lt_mul_of_pos_right hx he).trans_le
+  change Int.euclideanDiv m.log (e : ℤ) he.ne' * (e : ℤ) ≤ m.log
+  rw [Int.mul_comm]
+  exact (Int.le_euclideanDiv_iff_mul_le he).mp le_rfl
 
 end AKLB
 

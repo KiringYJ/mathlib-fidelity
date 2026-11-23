@@ -88,9 +88,8 @@ private theorem eps_pos {ε : ℝ} {n : ℕ} (h : 100 ≤ (4 : ℝ) ^ n * ε ^ 5
 
 set_option backward.privateInPublic true in
 private theorem m_pos [Nonempty α] (hPα : #P.parts * 16 ^ #P.parts ≤ card α) : 0 < m := by
-  rw [chunkSize, Nat.euclideanDiv_eq_core]
-  exact Nat.div_pos (hPα.trans' <| by unfold stepBound; gcongr; simp) <|
-    stepBound_pos (P.parts_nonempty <| univ_nonempty.ne_empty).card_pos
+  exact Nat.euclideanDiv_pos (stepBound_pos (P.parts_nonempty univ_nonempty.ne_empty).card_pos).ne'
+    (hPα.trans' <| by unfold stepBound; gcongr; simp)
 
 /-- Local extension for the `positivity` tactic: A few facts that are needed many times for the
 proof of Szemerédi's regularity lemma. -/
@@ -125,9 +124,8 @@ theorem hundred_div_ε_pow_five_le_m [Nonempty α] (hPα : #P.parts * 16 ^ #P.pa
     Checked.div 100 (ε ^ 5) (pow_pos (eps_pos hPε) 5).ne'.isUnit ≤ m :=
   ((div_le_iff₀ (pow_pos (eps_pos hPε) 5)).2 hPε).trans <| by
     norm_cast
-    rwa [chunkSize, Nat.euclideanDiv_eq_core,
-      Nat.le_div_iff_mul_le (stepBound_pos (P.parts_nonempty univ_nonempty.ne_empty).card_pos),
-      stepBound, mul_left_comm, ← mul_pow]
+    rwa [chunkSize, Nat.le_euclideanDiv_iff_mul_le,
+      mul_comm (stepBound _), stepBound, mul_left_comm, ← mul_pow]
 
 theorem hundred_le_m [Nonempty α] (hPα : #P.parts * 16 ^ #P.parts ≤ card α)
     (hPε : 100 ≤ (4 : ℝ) ^ #P.parts * ε ^ 5) (hε : ε ≤ 1) : 100 ≤ m :=
@@ -140,7 +138,7 @@ private theorem chunkSize_mul_add_mod (hparts : P.parts.Nonempty) :
       Nat.euclideanDiv (card α) #P.parts hparts.card_pos.ne' := by
   have hsize : m = Nat.euclideanDiv (Nat.euclideanDiv (card α) #P.parts hparts.card_pos.ne')
       (4 ^ #P.parts) (by positivity) := by
-    simp only [chunkSize, Nat.euclideanDiv_eq_core, stepBound, Nat.div_div_eq_div_mul]
+    exact (Nat.euclideanDiv_euclideanDiv (card α) hparts.card_pos.ne' (by positivity)).symm
   rw [hsize, mul_comm]
   exact Nat.euclideanDiv_mul_add_mod _ _ (by positivity)
 

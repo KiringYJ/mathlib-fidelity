@@ -51,7 +51,7 @@ theorem primeFactorsList_one : primeFactorsList 1 = [] := by rw [primeFactorsLis
 
 @[simp]
 theorem primeFactorsList_two : primeFactorsList 2 = [2] := by
-  simp [primeFactorsList, Nat.euclideanDiv_eq_core]
+  simp [primeFactorsList]
 
 theorem prime_of_mem_primeFactorsList {n : ℕ} : ∀ {p : ℕ}, p ∈ primeFactorsList n → Prime p := by
   match n with
@@ -77,19 +77,21 @@ theorem prod_primeFactorsList : ∀ {n}, n ≠ 0 → List.prod (primeFactorsList
     let q := Nat.euclideanDiv (k + 2) m (Nat.ne_of_gt (minFac_pos _ (by omega)))
     have : q < k + 2 := factors_lemma
     show (primeFactorsList (k + 2)).prod = (k + 2) by
-      have h₁ : q ≠ 0 := by
-        rw [show q = _ from Nat.euclideanDiv_eq_core _ _ _]
-        exact Nat.ne_of_gt (Nat.div_pos (minFac_le (by omega)) (minFac_pos _ (by omega)))
+      have hm : m ≠ 0 := Nat.ne_of_gt (minFac_pos _ (by omega))
+      have h₁ : q ≠ 0 := Nat.ne_of_gt <| (le_euclideanDiv_iff_mul_le hm).mpr
+        (by simpa only [Nat.mul_one] using minFac_le (n := k + 2) (by omega))
       rw [primeFactorsList, List.prod_cons, prod_primeFactorsList h₁]
-      simpa only [q, m, Nat.euclideanDiv_eq_core] using
-        Nat.mul_div_cancel' (minFac_dvd (k + 2) (by omega))
+      simpa only [q, m, Nat.mod_eq_zero_of_dvd (minFac_dvd (k + 2) (by omega)), Nat.add_zero]
+        using euclideanDiv_mul_add_mod (k + 2) m hm
 
 theorem primeFactorsList_prime {p : ℕ} (hp : Nat.Prime p) : p.primeFactorsList = [p] := by
   have : p = p - 2 + 2 := Nat.eq_add_of_sub_eq hp.two_le rfl
   rw [this, primeFactorsList]
   simp only [Eq.symm this]
   have : Nat.minFac p = p := hp.minFac_eq
-  simp only [this, Nat.euclideanDiv_eq_core, primeFactorsList, Nat.div_self (Nat.Prime.pos hp)]
+  have hq : euclideanDiv p p hp.ne_zero = 1 :=
+    euclideanDiv_eq_of_remainder (r := 0) hp.ne_zero (by simp) hp.pos
+  simp only [this, hq, primeFactorsList]
 
 theorem isChain_cons_primeFactorsList {n : ℕ} :
     ∀ {a}, (∀ p, Prime p → p ∣ n → a ≤ p) → List.IsChain (· ≤ ·) (a :: primeFactorsList n) := by
@@ -105,8 +107,10 @@ theorem isChain_cons_primeFactorsList {n : ℕ} :
       refine List.IsChain.cons_cons
         ((le_minFac (by omega)).2 h) (isChain_cons_primeFactorsList ?_)
       intro p pp d
-      rw [Nat.euclideanDiv_eq_core] at d
-      exact minFac_le_of_dvd pp.two_le (d.trans <| div_dvd_of_dvd <| minFac_dvd (k + 2) (by omega))
+      have heq : m * q = k + 2 := by
+        simpa only [q, m, Nat.mod_eq_zero_of_dvd (minFac_dvd (k + 2) (by omega)), Nat.add_zero]
+          using euclideanDiv_mul_add_mod (k + 2) m (Nat.ne_of_gt (minFac_pos _ (by omega)))
+      exact minFac_le_of_dvd pp.two_le (d.trans ⟨m, heq.symm.trans (Nat.mul_comm m q)⟩)
 
 theorem isChain_two_cons_primeFactorsList (n) : List.IsChain (· ≤ ·) (2 :: primeFactorsList n) :=
   isChain_cons_primeFactorsList fun _ pp _ => pp.two_le

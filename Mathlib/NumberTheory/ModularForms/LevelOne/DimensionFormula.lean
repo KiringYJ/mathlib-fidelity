@@ -261,7 +261,8 @@ theorem levelOne_weight_two_rank_zero : Module.rank ℂ (ModularForm 𝒮ℒ 2) 
 
 private theorem quotient_weight_sub_twelve {k : ℕ} (hk : 12 ≤ k) :
     Nat.euclideanDiv k 12 = Nat.euclideanDiv (k - 12) 12 + 1 := by
-  simpa only [Nat.euclideanDiv_eq_core] using Nat.div_eq_sub_div (by decide : 0 < 12) hk
+  conv_lhs => rw [show k = k - 12 + 12 * 1 by omega]
+  exact Nat.euclideanDiv_add_mul _ _ (by decide)
 
 /-- The dimension formula for `𝒮ℒ` modular forms of even weight. -/
 theorem dimension_level_one (k : ℕ) (hk2 : Even k) :
@@ -272,14 +273,16 @@ theorem dimension_level_one (k : ℕ) (hk2 : Even k) :
   rcases this with hk | hk | hk
   · -- `k < 3`: direct case-by-case check
     interval_cases k
-    · simpa [Nat.euclideanDiv_eq_core] using! levelOne_weight_zero_rank_one
+    · simpa using! levelOne_weight_zero_rank_one
     · grind
-    · simpa [Nat.ModEq, Nat.euclideanDiv_eq_core] using levelOne_weight_two_rank_zero
+    · simpa [Nat.ModEq, Nat.euclideanDiv_eq_zero_of_lt (by decide : 12 ≠ 0)
+        (by decide : 2 < 12)] using levelOne_weight_two_rank_zero
   · -- `3 ≤ k < 12`: rank decomposition + the weight `k - 12` space is zero
     rw [rank_eq_one_add_rank_cuspForm hk.1 hk2, CuspForm.discriminantEquiv.rank_eq,
       levelOne_neg_weight_rank_zero (by lia)]
     have : k ∈ (Finset.Icc 3 11).filter Even := by grind
-    fin_cases this <;> simp [Nat.ModEq, Nat.euclideanDiv_eq_core]
+    have hq := Nat.euclideanDiv_eq_zero_of_lt (by decide : 12 ≠ 0) hk.2
+    fin_cases this <;> simp [Nat.ModEq, hq]
   · -- `12 ≤ k`: rank decomposition + induction hypothesis at weight `k - 12`
     rw [rank_eq_one_add_rank_cuspForm (by lia) hk2, CuspForm.discriminantEquiv.rank_eq,
       show ((k : ℤ) - 12 : ℤ) = ((k - 12 : ℕ) : ℤ) by lia,

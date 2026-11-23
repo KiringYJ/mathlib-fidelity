@@ -103,8 +103,11 @@ protected lemma minOrder {n : ℕ} (hn : n ≠ 0) (hn₁ : n ≠ 1) : minOrder (
     exact not_dvd_of_pos_of_lt hq₀ hqn
   refine ((minOrder_le_natCard (zmultiples_eq_bot.not.2 hx) <| toFinite _).trans ?_).antisymm <|
     le_minOrder_iff_forall_addSubgroup.2 fun s hs _ ↦ ?_
-  · rw [Nat.card_zmultiples, ZMod.addOrderOf_coe _ hn, Nat.euclideanDiv_eq_core,
-      gcd_eq_right hqd, Nat.div_eq_of_eq_mul_left hq₀ hq]
+  · have hquot : Nat.euclideanDiv n q hq₀.ne' = n.minFac :=
+      Nat.euclideanDiv_eq_of_remainder (r := 0) hq₀.ne'
+        (by simpa [Nat.mul_comm] using hq) hq₀
+    simp only [Nat.card_zmultiples, ZMod.addOrderOf_coe _ hn, gcd_eq_right hqd, hquot,
+      le_refl]
   · have : Nontrivial s := s.bot_or_nontrivial.resolve_left hs
     exact WithTop.coe_le_coe.2 <| minFac_le_of_dvd Finite.one_lt_card <|
       (card_addSubgroup_dvd_card _).trans n.card_zmod.dvd

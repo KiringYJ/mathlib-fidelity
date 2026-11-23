@@ -113,8 +113,12 @@ lemma gammaSet_div_gcd_to_gammaSet10_bijection (r : ℕ) [NeZero r] :
     exact finGcdMap_div _ hx.2
   · intro x hx v hv hv2
     ext i
-    exact (Int.ediv_left_inj (gammaSet_div_gcd hx i) (gammaSet_div_gcd hv i)).mp
-      (by simpa only [divIntMap, Int.euclideanDiv_eq_core] using congr_fun hv2 i)
+    have he := congrArg (fun y : ℤ ↦ (r : ℤ) * y) (congr_fun hv2 i)
+    simpa only [divIntMap,
+      show (r : ℤ) * Int.euclideanDiv (x i) r _ = x i from
+        Int.mul_exactQuotient _ _ (gammaSet_div_gcd hx i) _,
+      show (r : ℤ) * Int.euclideanDiv (v i) r _ = v i from
+        Int.mul_exactQuotient _ _ (gammaSet_div_gcd hv i) _] using he
   · intro x hx
     use r • x
     simp only [nsmul_eq_mul]
@@ -122,13 +126,13 @@ lemma gammaSet_div_gcd_to_gammaSet10_bijection (r : ℕ) [NeZero r] :
     · rw [mem_gammaSet_one, Int.isCoprime_iff_gcd_eq_one] at hx
       exact ⟨Subsingleton.eq_zero _, by simp [Int.gcd_mul_left, hx]⟩
     · ext i
-      simp_all [Int.euclideanDiv_eq_core, NeZero.ne r]
+      change Int.euclideanDiv ((r : ℤ) * x i) r _ = x i
+      exact (Int.exactQuotient_eq_iff (Int.dvd_mul_right _ _) (NeZero.ne (r : ℤ))).2 rfl
 
 lemma gammaSet_eq_gcd_mul_divIntMap {r : ℕ} [NeZero r] {v : Fin 2 → ℤ} (hv : v ∈ gammaSet 1 r 0) :
     v = r • (divIntMap r v) := by
   ext i
-  simpa only [Pi.smul_apply, nsmul_eq_mul, divIntMap, Int.euclideanDiv_eq_core] using
-    (Int.mul_ediv_cancel' (gammaSet_div_gcd hv i)).symm
+  exact (Int.mul_exactQuotient _ _ (gammaSet_div_gcd hv i) (NeZero.ne (r : ℤ))).symm
 
 /-- The equivalence between `gammaSet 1 r 0` and `gammaSet 1 1 0` for non-zero `r`. -/
 def gammaSetDivGcdEquiv (r : ℕ) [NeZero r] : gammaSet 1 r 0 ≃ gammaSet 1 1 0 :=
@@ -160,8 +164,7 @@ lemma vecMulSL_gcd {v : Fin 2 → ℤ} (hab : finGcdMap v = r) (A : SL(2, ℤ)) 
     finGcdMap (v ᵥ* A.1) = r := by
   have hvr : v = r • divIntMap r v := by
     ext i
-    simp only [Pi.smul_apply, nsmul_eq_mul, divIntMap, Int.euclideanDiv_eq_core]
-    refine Eq.symm (Int.mul_ediv_cancel' ?_)
+    refine Eq.symm (Int.mul_exactQuotient _ _ ?_ (NeZero.ne (r : ℤ)))
     fin_cases i <;> simp [← hab, Int.gcd_dvd_left, Int.gcd_dvd_right]
   rw [hvr, smul_vecMul]
   simpa using finGcdMap_smul r (Int.isCoprime_iff_gcd_eq_one.mp ((finGcdMap_div v hab).vecMulSL A))

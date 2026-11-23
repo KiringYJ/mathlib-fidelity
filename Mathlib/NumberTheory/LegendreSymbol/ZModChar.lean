@@ -76,18 +76,24 @@ theorem χ₄_nat_eq_if_mod_four (n : ℕ) :
 
 /-- Alternative description of `χ₄ n` for odd `n : ℕ` in terms of powers of `-1` -/
 theorem χ₄_eq_neg_one_pow {n : ℕ} (hn : n % 2 = 1) : χ₄ n = (-1) ^ n.euclideanDiv 2 := by
-  rw [Nat.euclideanDiv_eq_core, χ₄_nat_eq_if_mod_four]
+  rw [χ₄_nat_eq_if_mod_four]
   simp only [hn, Nat.one_ne_zero, ite_false]
-  nth_rewrite 3 [← Nat.div_add_mod n 4]
-  nth_rewrite 3 [show 4 = 2 * 2 by lia]
-  rw [mul_assoc, add_comm, Nat.add_mul_div_left _ _ zero_lt_two, pow_add, pow_mul,
-    neg_one_sq, one_pow, mul_one]
-  have help : ∀ m : ℕ, m < 4 → m % 2 = 1 →
-      ite (m = 1) (1 : ℤ) (-1) = (-1) ^ m.euclideanDiv 2 := by
-    simp only [Nat.euclideanDiv_eq_core]
+  have hhalf : n.euclideanDiv 2 = (n % 4).euclideanDiv 2 + 2 * n.euclideanDiv 4 := by
+    conv_lhs => rw [← Nat.euclideanDiv_mul_add_mod n 4 (by decide), Nat.add_comm,
+      show 4 * n.euclideanDiv 4 = 2 * (2 * n.euclideanDiv 4) by omega]
+    exact Nat.euclideanDiv_add_mul _ _ (by decide)
+  rw [hhalf, pow_add, pow_mul (-1 : ℤ) 2, neg_one_sq, one_pow, mul_one]
+  have hr : n % 4 = 1 ∨ n % 4 = 3 := by
+    have hmod := (Nat.mod_mod_of_dvd n (by decide : 2 ∣ 4)).trans hn
+    have hlt := Nat.mod_lt n (by decide : 0 < 4)
+    omega
+  rcases hr with h | h
+  · rw [h, Nat.euclideanDiv_eq_zero_of_lt (by decide : 2 ≠ 0) Nat.one_lt_two]
     decide
-  simpa only [Nat.euclideanDiv_eq_core] using
-    help _ (Nat.mod_lt n (by lia)) ((Nat.mod_mod_of_dvd n (by lia : 2 ∣ 4)).trans hn)
+  · have hq : Nat.euclideanDiv 3 2 = 1 :=
+      Nat.euclideanDiv_eq_of_remainder (r := 1) (by decide) (by decide) (by decide)
+    rw [h, hq]
+    decide
 
 /-- If `n % 4 = 1`, then `χ₄ n = 1`. -/
 theorem χ₄_nat_one_mod_four {n : ℕ} (hn : n % 4 = 1) : χ₄ n = 1 := by

@@ -13,6 +13,8 @@ import Mathlib.Data.Num.Basic
 import Mathlib.SetTheory.Ordinal.Arithmetic
 
 #guard Nat.euclideanDiv 7 3 = 2
+
+example : Nat.euclideanDiv 17 5 (hb := by decide) = 3 := rfl
 #guard Int.euclideanDiv (-7) 3 = -3
 #guard Int.euclideanDiv (-7) (-3) = 3
 
@@ -28,6 +30,27 @@ example (a b : Int) (h : b ∣ a) (hb : b ≠ 0) : b * Int.exactQuotient a b h h
 example (a b q : Int) (h : b ∣ a) (hb : b ≠ 0) (hq : b * q = a) :
     Int.exactQuotient a b h hb = q :=
   (Int.exactQuotient_eq_iff h hb).2 hq
+
+example (a b c : Nat) (hb : b ≠ 0) (hc : c ≠ 0) :
+    Nat.euclideanDiv a (b * c) = Nat.euclideanDiv a (b * c) (Nat.mul_ne_zero hb hc) := rfl
+
+example (a b c d : Int) (hb : b ≠ 0) (hc : c < 0) (hd : d ≠ 0) (h : b * c * d ∣ a) :
+    Int.exactQuotient a (b * c * d) h =
+      Int.exactQuotient a (b * c * d) h
+        (Int.mul_ne_zero (Int.mul_ne_zero hb (Int.ne_of_lt hc)) hd) :=
+  rfl
+
+/--
+error: could not synthesize default value for parameter 'hb' using tactics
+---
+error: a nonzero divisor proof is required
+a b c : ℤ
+hb : b ≠ 0
+hc : c ≠ 0
+⊢ b + c ≠ 0
+-/
+#guard_msgs in
+example (a b c : Int) (hb : b ≠ 0) (hc : c ≠ 0) : Int := Int.euclideanDiv a (b + c)
 
 /--
 error: could not synthesize default value for parameter 'hb' using tactics
@@ -63,6 +86,42 @@ is false
 -/
 #guard_msgs in
 example : Int := Int.exactQuotient 7 3 (by decide)
+
+section NativeQuotientPrinting
+
+variable (a b : Nat) (hb : b ≠ 0)
+
+/-- info: a.euclideanDiv b hb : ℕ -/
+#guard_msgs in
+#check Nat.euclideanDiv a b
+
+/-- info: HDiv.hDiv a b : ℕ -/
+#guard_msgs in
+#check @HDiv.hDiv Nat Nat Nat (@instHDiv Nat Nat.instDiv) a b
+
+end NativeQuotientPrinting
+
+section IntegerQuotientPrinting
+
+variable (a b : Int) (hb : b ≠ 0) (hd : b ∣ a)
+
+/-- info: a.euclideanDiv b hb : ℤ -/
+#guard_msgs in
+#check Int.euclideanDiv a b
+
+/-- info: a.exactQuotient b hd hb : ℤ -/
+#guard_msgs in
+#check Int.exactQuotient a b hd
+
+/-- info: HDiv.hDiv a b : ℤ -/
+#guard_msgs in
+#check @HDiv.hDiv Int Int Int (@instHDiv Int Int.instDiv) a b
+
+/-- info: ↑a / ↑b : ℚ -/
+#guard_msgs in
+#check (a : Rat) / (b : Rat)
+
+end IntegerQuotientPrinting
 
 section DivisionNotation
 
@@ -279,6 +338,24 @@ def delayedNativeDivision := fun a b => (a / b, (a : Nat), (b : Nat))
 example (b : Int) : Bool := true / b
 
 end LocalNativeInstances
+
+section NativeAliases
+
+private def NaturalAlias : Type := Nat
+private abbrev IntegerAlias : Type := Int
+
+local instance : Div NaturalAlias := ⟨fun a _ => a⟩
+local instance : Div IntegerAlias := ⟨fun a _ => a⟩
+
+/-- error: division notation is unavailable for Nat or Int operands -/
+#guard_msgs in
+example (a b : NaturalAlias) : NaturalAlias := a / b
+
+/-- error: division notation is unavailable for Nat or Int operands -/
+#guard_msgs in
+example (a b : IntegerAlias) : IntegerAlias := a / b
+
+end NativeAliases
 
 section DelayedOperandType
 

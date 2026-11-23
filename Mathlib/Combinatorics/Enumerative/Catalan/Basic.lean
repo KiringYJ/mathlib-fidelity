@@ -105,10 +105,11 @@ private theorem gosper_catalan_sub_eq_central_binom_div (n : ℕ) : gosperCatala
 
 theorem catalan_eq_centralBinom_div (n : ℕ) :
     catalan n = Nat.euclideanDiv n.centralBinom (n + 1) := by
-  rw [Nat.euclideanDiv_eq_core]
   suffices (catalan n : ℚ) = (Nat.centralBinom n : ℚ) / ((n : ℚ) + 1) by
     rw [eq_div_iff] at this
-    exact (Nat.div_eq_of_eq_mul_left n.succ_pos (mod_cast this.symm)).symm
+    have h : n.centralBinom = catalan n * (n + 1) := by exact_mod_cast this.symm
+    exact (Nat.euclideanDiv_eq_of_remainder (r := 0) (Nat.succ_ne_zero n)
+      (by simpa [Nat.mul_comm] using h) n.succ_pos).symm
   induction n using Nat.caseStrongRecOn with
   | zero => simp
   | ind d hd =>
@@ -129,12 +130,16 @@ theorem catalan_eq_centralBinom_div (n : ℕ) :
         rw [gosper_catalan_sub_eq_central_binom_div d]
         norm_cast
 
-theorem succ_mul_catalan_eq_centralBinom (n : ℕ) : (n + 1) * catalan n = n.centralBinom :=
-  (Nat.eq_mul_of_div_eq_right n.succ_dvd_centralBinom (by
-    simpa only [Nat.euclideanDiv_eq_core] using (catalan_eq_centralBinom_div n).symm)).symm
+theorem succ_mul_catalan_eq_centralBinom (n : ℕ) : (n + 1) * catalan n = n.centralBinom := by
+  rw [catalan_eq_centralBinom_div,
+    Nat.mul_euclideanDiv_cancel (Nat.succ_ne_zero n) n.succ_dvd_centralBinom]
 
 theorem catalan_two : catalan 2 = 2 := by
-  norm_num [catalan_eq_centralBinom_div, Nat.euclideanDiv_eq_core, Nat.centralBinom, Nat.choose]
+  rw [catalan_eq_centralBinom_div]
+  refine Nat.euclideanDiv_eq_of_remainder (r := 0) (by decide) ?_ (by decide)
+  norm_num [Nat.centralBinom, Nat.choose]
 
 theorem catalan_three : catalan 3 = 5 := by
-  norm_num [catalan_eq_centralBinom_div, Nat.euclideanDiv_eq_core, Nat.centralBinom, Nat.choose]
+  rw [catalan_eq_centralBinom_div]
+  refine Nat.euclideanDiv_eq_of_remainder (r := 0) (by decide) ?_ (by decide)
+  norm_num [Nat.centralBinom, Nat.choose]

@@ -147,7 +147,6 @@ public import Mathlib.Tactic.FunProp.ToBatteries
 public import Mathlib.Tactic.FunProp.Types
 public import Mathlib.Tactic.GCongr
 public import Mathlib.Tactic.GCongr.Core
-public import Mathlib.Tactic.GCongr.CoreAttrs
 public import Mathlib.Tactic.GCongr.ForwardAttr
 public import Mathlib.Tactic.GRewrite
 public import Mathlib.Tactic.GRewrite.Core

@@ -320,10 +320,9 @@ variable {ι : Type*} {s : Finset ι} {f : ι → ℕ} {n : ℕ}
 
 protected lemma sum_div (hn : n ≠ 0) (hf : ∀ i ∈ s, n ∣ f i) :
     Nat.euclideanDiv (∑ i ∈ s, f i) n hn = ∑ i ∈ s, Nat.euclideanDiv (f i) n hn := by
-  simp only [Nat.euclideanDiv_eq_core]
-  rw [Nat.div_eq_iff_eq_mul_left (Nat.pos_of_ne_zero hn) (dvd_sum hf), sum_mul]
-  refine sum_congr rfl fun s hs ↦ ?_
-  rw [Nat.div_mul_cancel (hf _ hs)]
+  refine Nat.euclideanDiv_eq_of_remainder (r := 0) hn ?_ (Nat.pos_of_ne_zero hn)
+  rw [Nat.add_zero, mul_sum]
+  exact (sum_congr rfl fun i hi ↦ Nat.mul_euclideanDiv_cancel hn (hf i hi)).symm
 
 @[simp, norm_cast]
 lemma cast_list_sum [AddMonoidWithOne R] (s : List ℕ) : (↑s.sum : R) = (s.map (↑)).sum :=
@@ -359,10 +358,10 @@ variable {ι : Type*} {s : Finset ι} {f : ι → ℤ} {n : ℤ}
 
 protected lemma sum_div (hn : n ≠ 0) (hf : ∀ i ∈ s, n ∣ f i) :
     Int.euclideanDiv (∑ i ∈ s, f i) n hn = ∑ i ∈ s, Int.euclideanDiv (f i) n hn := by
-  simp only [Int.euclideanDiv_eq_core]
-  rw [Int.ediv_eq_iff_eq_mul_left hn (dvd_sum hf), sum_mul]
-  refine sum_congr rfl fun s hs ↦ ?_
-  rw [Int.ediv_mul_cancel (hf _ hs)]
+  refine Int.euclideanDiv_eq_of_remainder (r := 0) hn ?_ (by decide) ?_
+  · rw [Int.add_zero, mul_sum]
+    exact (sum_congr rfl fun i hi ↦ Int.mul_exactQuotient (f i) n (hf i hi) hn).symm
+  · exact Int.natCast_pos.mpr (Int.natAbs_pos.mpr hn)
 
 @[simp, norm_cast]
 lemma cast_list_sum [AddGroupWithOne R] (s : List ℤ) : (↑s.sum : R) = (s.map (↑)).sum :=

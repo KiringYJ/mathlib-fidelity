@@ -343,8 +343,8 @@ lemma Monic.irreducible_iff_natDegree (hp : p.Monic) :
 lemma Monic.irreducible_iff_natDegree' (hp : p.Monic) : Irreducible p ↔ p ≠ 1 ∧
     ∀ f g : R[X], f.Monic → g.Monic → f * g = p →
       g.natDegree ∉ Ioc 0 (Nat.euclideanDiv p.natDegree 2) := by
-  simp_rw [hp.irreducible_iff_natDegree, mem_Ioc, Nat.euclideanDiv_eq_core,
-    Nat.le_div_iff_mul_le zero_lt_two, mul_two]
+  simp_rw [hp.irreducible_iff_natDegree, mem_Ioc,
+    Nat.le_euclideanDiv_iff_mul_le (by decide : (2 : ℕ) ≠ 0), two_mul]
   apply and_congr_right'
   constructor <;> intro h f g hf hg he <;> subst he
   · rw [hf.natDegree_mul hg, add_le_add_iff_right]
@@ -371,7 +371,7 @@ lemma Monic.not_irreducible_iff_exists_add_mul_eq_coeff (hm : p.Monic) (hnd : p.
     ¬Irreducible p ↔ ∃ c₁ c₂, p.coeff 0 = c₁ * c₂ ∧ p.coeff 1 = c₁ + c₂ := by
   cases subsingleton_or_nontrivial R
   · simp [natDegree_of_subsingleton] at hnd
-  rw [hm.irreducible_iff_natDegree', and_iff_right, hnd, Nat.euclideanDiv_eq_core]
+  rw [hm.irreducible_iff_natDegree', and_iff_right, hnd, Nat.euclideanDiv_self]
   · push Not
     constructor
     · rintro ⟨a, b, ha, hb, rfl, hdb⟩

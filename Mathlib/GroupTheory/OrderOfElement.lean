@@ -392,23 +392,16 @@ all prime factors `p` of `n`, then `x` has order `n` in `G`. -/]
 theorem orderOf_eq_of_pow_and_pow_div_prime (hn : 0 < n) (hx : x ^ n = 1)
     (hd : ∀ (p : ℕ) (hp : p.Prime), p ∣ n → x ^ Nat.euclideanDiv n p hp.ne_zero ≠ 1) :
     orderOf x = n := by
-  -- Let `a` be `n/(orderOf x)`, and show `a = 1`
   obtain ⟨a, ha⟩ := exists_eq_mul_right_of_dvd (orderOf_dvd_of_pow_eq_one hx)
   suffices a = 1 by simp [this, ha]
-  -- Assume `a` is not one...
   by_contra h
-  have a_min_fac_dvd_p_sub_one : a.minFac ∣ n := by
-    obtain ⟨b, hb⟩ : ∃ b : ℕ, a = b * a.minFac := exists_eq_mul_left_of_dvd (a.minFac_dvd h)
-    rw [hb, ← mul_assoc] at ha
-    exact Dvd.intro_left (orderOf x * b) ha.symm
-  -- Use the minimum prime factor of `a` as `p`.
-  refine hd a.minFac (Nat.minFac_prime h) a_min_fac_dvd_p_sub_one ?_
-  simp only [Nat.euclideanDiv_eq_core]
-  rw [← orderOf_dvd_iff_pow_eq_one, Nat.dvd_div_iff_mul_dvd a_min_fac_dvd_p_sub_one, ha, mul_comm,
-    Nat.mul_dvd_mul_iff_left (IsOfFinOrder.orderOf_pos _)]
-  · exact Nat.minFac_dvd a h
-  · rw [isOfFinOrder_iff_pow_eq_one]
-    exact Exists.intro n (id ⟨hn, hx⟩)
+  have ho := (isOfFinOrder_iff_pow_eq_one.mpr ⟨n, hn, hx⟩).orderOf_pos
+  have hdvd : a.minFac * orderOf x ∣ n := by
+    simpa only [ha, Nat.mul_comm a.minFac, Nat.mul_dvd_mul_iff_left ho] using Nat.minFac_dvd a h
+  have hp := Nat.minFac_prime h
+  have hpdvd : a.minFac ∣ n := (dvd_mul_right _ _).trans hdvd
+  exact hd _ hp hpdvd (orderOf_dvd_iff_pow_eq_one.mp
+    ((Nat.dvd_euclideanDiv_iff_mul_dvd hp.ne_zero hpdvd).mpr hdvd))
 
 @[to_additive]
 theorem orderOf_eq_orderOf_iff {H : Type*} [Monoid H] {y : H} :
@@ -468,9 +461,8 @@ protected lemma IsOfFinOrder.orderOf_pow (n : ℕ) (h : IsOfFinOrder x) :
     orderOf (x ^ n) =
       Nat.euclideanDiv (orderOf x) ((orderOf x).gcd n)
         (Nat.gcd_ne_zero_left h.orderOf_pos.ne') := by
-  simpa only [Nat.euclideanDiv_eq_core, h.orderOf_eq_minimalPeriod,
-    (h.pow (n := n)).orderOf_eq_minimalPeriod, mul_left_iterate] using
-    minimalPeriod_iterate_eq_div_gcd h n
+  simpa only [h.orderOf_eq_minimalPeriod, (h.pow (n := n)).orderOf_eq_minimalPeriod,
+    mul_left_iterate] using minimalPeriod_iterate_eq_div_gcd h n
 
 @[to_additive]
 theorem orderOf_pow' (h : n ≠ 0) :
@@ -491,17 +483,21 @@ lemma orderOf_pow_of_dvd {x : G} {n : ℕ} (hn : n ≠ 0) (dvd : n ∣ orderOf x
 @[to_additive]
 lemma orderOf_pow_orderOf_div {x : G} {n : ℕ} (hx : orderOf x ≠ 0) (hn : n ∣ orderOf x) :
     orderOf (x ^ Nat.euclideanDiv (orderOf x) n (ne_zero_of_dvd_ne_zero hx hn)) = n := by
-  have hd : Nat.euclideanDiv (orderOf x) n (ne_zero_of_dvd_ne_zero hx hn) ∣ orderOf x := by
-    simpa only [Nat.euclideanDiv_eq_core] using Nat.div_dvd_of_dvd hn
-  rw [orderOf_pow_of_dvd (ne_zero_of_dvd_ne_zero hx hd) hd]
-  simpa only [Nat.euclideanDiv_eq_core] using Nat.div_div_self hn hx
+  obtain ⟨q, hq⟩ := hn
+  have hd : q ∣ orderOf x := ⟨n, hq.trans (Nat.mul_comm _ _)⟩
+  have hq₀ := ne_zero_of_dvd_ne_zero hx hd
+  have he : Nat.euclideanDiv (orderOf x) n (ne_zero_of_dvd_ne_zero hx ⟨q, hq⟩) = q := by
+    simp only [hq, Nat.euclideanDiv_mul_left_cancel]
+  rw [he, orderOf_pow_of_dvd hq₀ hd]
+  simp only [hq, Nat.euclideanDiv_mul_right_cancel]
 
 variable (n)
 
 @[to_additive]
 lemma Nat.Coprime.orderOf_pow (h : (orderOf y).Coprime m) : orderOf (y ^ m) = orderOf y := by
   by_cases hg : IsOfFinOrder y
-  · simp only [hg.orderOf_pow y m, Nat.euclideanDiv_eq_core, h.gcd_eq_one, Nat.div_one]
+  · simpa only [hg.orderOf_pow y m, h.gcd_eq_one, Nat.one_mul] using
+      Nat.euclideanDiv_mul_left_cancel (orderOf y) Nat.one_ne_zero
   · rw [m.coprime_zero_left.1 (orderOf_eq_zero hg ▸ h), pow_one]
 
 @[to_additive]
@@ -583,9 +579,9 @@ theorem orderOf_mul_eq_right_of_forall_prime_mul_dvd (h : Commute x y) (hy : IsO
   apply orderOf_eq_of_pow_and_pow_div_prime hoy <;> simp only [Ne, ← orderOf_dvd_iff_pow_eq_one]
   · exact h.orderOf_mul_dvd_lcm.trans (Nat.lcm_dvd hxy dvd_rfl)
   refine fun p hp hpy hd => hp.ne_one ?_
-  rw [← Nat.dvd_one, ← mul_dvd_mul_iff_right hoy.ne', one_mul, ← dvd_div_iff_mul_dvd hpy]
-  refine (orderOf_dvd_lcm_mul h).trans (Nat.lcm_dvd ((dvd_div_iff_mul_dvd hpy).2 ?_)
-    (by simpa only [Nat.euclideanDiv_eq_core] using hd))
+  have hquot (d : ℕ) := Nat.dvd_euclideanDiv_iff_mul_dvd (k := d) hp.ne_zero hpy
+  rw [← Nat.dvd_one, ← mul_dvd_mul_iff_right hoy.ne', one_mul, ← hquot]
+  refine (orderOf_dvd_lcm_mul h).trans (Nat.lcm_dvd ((hquot _).2 ?_) hd)
   by_cases h : p ∣ orderOf x
   exacts [hdvd p hp h, (hp.coprime_iff_not_dvd.2 h).mul_dvd_of_dvd_of_dvd hpy hxy]
 
@@ -1559,11 +1555,12 @@ lemma charP_of_ne_zero (hn : card R = p) (hR : ∀ i < p, (i : R) = 0 → i = 0)
     have H : (p : R) = 0 := by rw [← hn, Nat.cast_card_eq_zero]
     constructor
     · intro h
-      rw [← Nat.mod_add_div n p, Nat.cast_add, Nat.cast_mul, H, zero_mul, add_zero] at h
-      rw [Nat.dvd_iff_mod_eq_zero]
-      apply hR _ (Nat.mod_lt _ _) h
-      rw [← hn, Fintype.card_pos_iff]
-      exact ⟨0⟩
+      have hp : 0 < p := by
+        rw [← hn, Fintype.card_pos_iff]
+        exact ⟨0⟩
+      have hrec := (Nat.add_comm ..).trans (Nat.euclideanDiv_mul_add_mod n p hp.ne')
+      rw [← hrec, Nat.cast_add, Nat.cast_mul, H, zero_mul, add_zero] at h
+      exact Nat.dvd_of_mod_eq_zero (hR _ (Nat.mod_lt _ hp) h)
     · rintro ⟨n, rfl⟩
       rw [Nat.cast_mul, H, zero_mul]
 

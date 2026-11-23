@@ -57,15 +57,12 @@ theorem length_digits (b n : ℕ) (hb : 1 < b) (hn : n ≠ 0) :
   by_cases h : Nat.euclideanDiv n b = 0
   · have hnb : n < b := by
       by_contra! h'
-      rw [Nat.euclideanDiv_eq_core] at h
-      exact (Nat.div_pos h' (by omega)).ne' h
+      exact (Nat.euclideanDiv_pos (by omega) h').ne' h
     simp [h, Nat.log_of_lt hb hn hnb]
-  · have : Nat.euclideanDiv n b < n := by
-      rw [Nat.euclideanDiv_eq_core]
-      exact div_lt_self (Nat.pos_of_ne_zero hn) hb
+  · have : Nat.euclideanDiv n b < n := Nat.euclideanDiv_lt_self (Nat.pos_of_ne_zero hn) hb
     have hbn : b ≤ n := by
       by_contra! h'
-      exact h (by rw [Nat.euclideanDiv_eq_core]; exact div_eq_of_lt h')
+      exact h (Nat.euclideanDiv_eq_zero_of_lt (by omega) h')
     rw [IH _ this h, log_div_base hb hbn, tsub_add_cancel_of_le]
     exact Nat.succ_le_of_lt (log_pos hb hbn)
 
@@ -98,10 +95,8 @@ theorem getLast_digit_ne_zero (b : ℕ) {m : ℕ} (hm : m ≠ 0) :
   · simpa only [digits_of_lt (b + 2) n hn hnb]
   · rw [digits_getLast n (le_add_left 2 b)]
     refine IH _ ?_ ?_
-    · rw [Nat.euclideanDiv_eq_core]
-      exact Nat.div_lt_self hn.bot_lt (one_lt_succ_succ b)
-    rw [← pos_iff_ne_zero, Nat.euclideanDiv_eq_core]
-    exact Nat.div_pos hnb (zero_lt_succ (succ b))
+    · exact Nat.euclideanDiv_lt_self hn.bot_lt (one_lt_succ_succ b)
+    exact (Nat.euclideanDiv_pos (Nat.succ_ne_zero _) hnb).ne'
 
 theorem digits_append_digits {b m n : ℕ} (hb : 0 < b) :
     digits b n ++ digits b m = digits b (n + b ^ (digits b n).length * m) := by
@@ -218,15 +213,12 @@ theorem digits_two_eq_bits (n : ℕ) : digits 2 n = n.bits.map fun b => cond b 1
   simp only [Bool.cond_eq_ite]
   induction n using Nat.binaryRecFromOne with
   | zero => simp
-  | one => simp [Nat.euclideanDiv_eq_core]
+  | one => simp [Nat.euclideanDiv_eq_zero_of_lt (by decide : (2 : ℕ) ≠ 0)
+      (by decide : (1 : ℕ) < 2)]
   | bit b n h ih =>
-    rw [bits_append_bit _ _ fun hn => absurd hn h]
-    cases b
-    · rw [digits_def' one_lt_two]
-      · simpa [Nat.bit]
-      · simpa [Nat.bit, pos_iff_ne_zero]
-    · simpa [Nat.bit, add_comm, digits_add 2 one_lt_two 1 n,
-        Nat.euclideanDiv_eq_core, Nat.add_mul_div_left]
+    rw [bits_append_bit _ _ fun hn => absurd hn h,
+      digits_def' one_lt_two (Nat.pos_of_ne_zero (bit_ne_zero _ h)), bit_mod_two, bit_div_two, ih]
+    cases b <;> rfl
 
 /-! ### Modular Arithmetic -/
 
@@ -316,19 +308,17 @@ theorem getD_digits (n i : ℕ) {b : ℕ} (h : 2 ≤ b) :
     (digits b n).getD i 0 =
       Nat.euclideanDiv n (b ^ i) (pow_ne_zero _ (zero_lt_of_lt h).ne') % b := by
   obtain ⟨b, rfl⟩ := Nat.exists_eq_add_of_le' h
-  rw [Nat.euclideanDiv_eq_core]
-  clear h
   rw [List.getD_eq_getElem?_getD]
   induction n using Nat.caseStrongRecOn generalizing i with
   | zero => simp
   | ind n IH =>
     rcases i with _ | i
-    · rw [← List.head?_eq_getElem?, ← default_eq_zero, ← List.head!_eq_head?_getD,
-        head!_digits (by grind)]
+    · rw [← List.head?_eq_getElem?]
+      change ((b + 2).digits n.succ).head?.getD default = _
+      rw [← List.head!_eq_head?_getD, head!_digits (by grind)]
       simp
     · have ih := IH _ (le_of_lt_succ (div_lt_self' n b)) i
-      simp only [Nat.euclideanDiv_eq_core] at ih
-      simp [Nat.euclideanDiv_eq_core, ih, pow_succ', Nat.div_div_eq_div_mul]
+      simp [ih, pow_succ', Nat.euclideanDiv_euclideanDiv]
 
 /-! ### Bijection -/
 
@@ -525,15 +515,14 @@ theorem sum_fixedLengthDigits_sum {b : ℕ} (hb : 1 < b) (l : ℕ) :
   | zero => simp
   | succ l hr =>
       by_cases hl : l = 0
-      · simp [hl, fixedLengthDigits_one, Finset.sum_range_id, choose_two_right,
-          Nat.euclideanDiv_eq_core]
+      · simp [hl, fixedLengthDigits_one, Finset.sum_range_id, choose_two_right]
       rw [fixedLengthDigits_succ_eq_disjiUnion, Finset.sum_disjiUnion]
       simp only [consFixedLengthDigits, cons.injEq, true_and, implies_true, Set.injOn_of_eq_iff_eq,
         Finset.sum_image, sum_cons]
       rw [Finset.sum_comm]
       simp_rw [Finset.sum_add_distrib, Finset.sum_const, Finset.sum_nsmul, Finset.sum_range_id, hr,
         nsmul_eq_mul, Finset.card_range, add_tsub_cancel_right, cast_id, card_fixedLengthDigits,
-        choose_two_right, Nat.euclideanDiv_eq_core]
+        choose_two_right]
       rw [show b ^ l = b * b ^ (l - 1) by rw [← Nat.pow_succ', Nat.sub_one, Nat.succ_pred hl]]
       ring
 

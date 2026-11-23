@@ -47,9 +47,23 @@ public inductive SourceOwnership
 public structure ProofUse where
   /-- The name of the retired operator reached from the proof. -/
   root : Name
+  /-- The declaration whose proof or signature supplied this use, or anonymous for a bare term. -/
+  sourceDeclaration : Name
   /-- The source ownership associated with this proof dependency. -/
   ownership : SourceOwnership
   deriving BEq, DecidableEq, Inhabited, Repr
+
+/-- Syntactic reachability in a fixed environment and proof coverage scope. -/
+public structure DependencyCache where
+  /-- Constants with a path to a retired root. -/
+  reachable : NameSet := {}
+  /-- Constants whose transitive dependencies were checked without finding a path. -/
+  unreachable : NameSet := {}
+  /-- Direct edges already read in the semantic search. -/
+  dependencies : NameMap (Array Name) := {}
+  /-- Dependencies already inspected by the package's proof-source report. -/
+  proofSourcesChecked : NameSet := {}
+  deriving Inhabited
 
 /-- Semantic operator dependencies found in one declaration. -/
 public structure AuditResult where
@@ -66,10 +80,16 @@ public structure AuditResult where
   incompleteReason : Option String := none
   /-- Callees already visited during the proof-dependency traversal. -/
   visitedConstants : NameSet := {}
-  /-- Constants certified to have no path to a retired operator under the current coverage rules. -/
-  graphAbsent : NameSet := {}
-  /-- Declarations scheduled for their own proof checks in this audit scope. -/
+  /-- Cached graph search results, used only to decide which expressions to inspect. -/
+  dependencyCache : DependencyCache := {}
+  /-- Theorems whose signatures and bodies are checked separately in this audit. -/
   coveredProofs : NameSet := {}
+  /-- Definitions whose mathematical signatures and bodies are checked elsewhere in this audit. -/
+  coveredDefinitions : NameSet := {}
+  /-- Whether proof dependencies contribute to a shared package report. -/
+  shareProofSources : Bool := false
+  /-- Proof bodies deferred by the semantic search and visited by the proof-source report. -/
+  deferredProofs : NameSet := {}
   /-- Constant names reached by the scan whose declarations were unavailable. -/
   unavailableConstants : NameSet := {}
   deriving Inhabited
@@ -78,13 +98,15 @@ public structure AuditResult where
 public def AuditResult.hasActionableFinding (result : AuditResult) : Bool :=
   result.incomplete || !result.statementRoots.isEmpty || !result.dataRoots.isEmpty
 
-/-- Core rational operations whose invalid-domain behavior is retired by the inverse migration. -/
+/-- Core operators whose unrestricted mathematical semantics have been retired. -/
 public def forbiddenRoots : Array Name := #[
   ``Rat.inv,
   ``Rat.div,
   ``Rat.zpow,
   ``mkRat,
-  ``Rat.divInt
+  ``Rat.divInt,
+  ``Nat.div,
+  ``Int.ediv
 ]
 
 /--
@@ -92,7 +114,49 @@ Verified semantic boundaries that must not be unfolded while normalizing operato
 
 The list is intentionally narrow.  In particular, generic `Inv.inv` is absent because inversion of
 groups and units is lawful; projection reduction determines whether a concrete use selects a
-retired rational inverse.
+retired rational inverse. `Rat.le_floor_iff` and `Rat.ceil_le_iff` specify floor and ceiling.
+Their native quotient uses the positive denominator carried by `Rat`. `Nat.lcm` is
+characterized on *all* inputs by `Nat.lcm_dvd_iff`
+and divisibility antisymmetry, including at `(0, 0)`. Its core implementation uses division
+by the gcd. `Nat.eq_sqrt'` characterizes the integer square root on every input, including
+`Nat.sqrt_zero`. `Nat.bitwise` recurses on low bits until an input is zero, when it either
+returns the other input or clears its remaining bits. `Nat.testBit_bitwise` gives the pointwise
+specification for zero-preserving Boolean functions. `Nat.testBit_shiftRight` specifies right
+shift. Both implementations halve with divisor `2`.
+`Nat.log2` gives the binary length minus one with natural subtraction, as follows from
+`Nat.log2_eq_iff`, `Nat.log2_zero`, `Nat.lt_size`, and `Nat.size_le`. It halves with divisor `2`.
+`Nat.repr` renders decimal numerals using the fixed base `10`.
+`List.mergeSort` preserves the input permutation and is stable by
+`List.mergeSort_perm` and `List.mergeSort_zipIdx`. `List.pairwise_mergeSort` specifies sortedness
+with a total transitive comparator. Its recursive split always halves a length with divisor `2`.
+`Array.binSearchAux` narrows a nonempty inclusive interval using its midpoint.
+`Array.qsort` swaps and partitions elements within the selected interval by the comparator.
+The only quotient in either algorithm selects an index by halving the sum of bounds.
+`String.utf8EncodeChar_eq_utf8EncodeCharFast` specifies the UTF-8 byte calculation by bit operations.
+`Char.quoteCore` escapes control characters by rendering their two hexadecimal digits,
+using the fixed radix `16` when the code point is at most `31` or equals `127`.
+`Int.trailingZeros_zero` gives the zero convention. `Int.two_pow_trailingZeros_dvd` and
+`Int.shiftRight_trailingZeros_mod_two` specify the extracted power of two on nonzero inputs.
+The auxiliary loop halves only even integers, using divisor `2`.
+The standard generator's seed conversion `mkStdGen` divides by `2147483562`.
+Its state update `stdNext` uses fixed divisors `53668` and `52774`.
+`randNat` samples between its ordered endpoints using a positive generator-range size
+`genHi - genLo + 1`. Its remainder also has a positive modulus `hi' - lo' + 1`.
+The hash-table bucket calculation chooses the greatest `k` with `3 * k ≤ 4 * capacity`.
+`Lean.PersistentArray.tooBig` is the addressable-size threshold in groups of eight,
+and `Lean.Core.throwMaxHeartbeat` displays the budget in thousands of heartbeats.
+The floating model's `ExtendedMantissa.shiftRightOne` shifts a bit into the rounding position
+and combines the previous residual bits. `UnpackedFloat.div` handles zero and nonfinite
+arguments explicitly. Only its finite branch divides the mantissas, whose denominator is nonzero.
+`UnpackedFloat.sqrtCore` halves signed exponents with fixed divisor `2` before the mantissa square
+root and rounding-accuracy calculation.
+`WellFounded.Nat.fix_eq` specifies the fixpoint, and
+`WellFounded.Nat.fix.go_congr` proves independence of the internal fuel. The fixpoint's motive,
+measure, recursive body, and input are still audited. `Nat.euclideanDiv_mul_add_mod` and
+`Nat.euclideanDiv_eq_of_remainder` characterize the guarded natural quotient. The maximum-power
+decomposition is specified by `Nat.maxPowDvdDiv_spec` and `Nat.maxPowDvdDiv_of_pow_mul_eq`.
+These fork definitions' bodies are checked at their own declarations. The guarded worker
+`Nat.div.go` and native remainders require no exemption.
 -/
 public def lawfulBoundaries : Array Name := #[
   ``Rat.normalize,
@@ -101,7 +165,33 @@ public def lawfulBoundaries : Array Name := #[
   ``Rat.sub,
   ``Rat.neg,
   ``Rat.mul,
-  ``Rat.pow
+  ``Rat.pow,
+  ``Rat.floor,
+  ``Rat.ceil,
+  ``Nat.lcm,
+  ``Nat.sqrt,
+  ``Nat.log2,
+  ``Nat.bitwise,
+  ``Nat.shiftRight,
+  ``Nat.repr,
+  ``List.mergeSort,
+  ``Array.binSearchAux,
+  ``Array.qsort,
+  ``String.utf8EncodeChar,
+  ``Char.quoteCore,
+  `Int.trailingZeros,
+  `mkStdGen,
+  `stdNext,
+  `randNat,
+  mkPrivateNameCore `Std.Data.DHashMap.Internal.Defs `Std.DHashMap.Internal.numBucketsForCapacity,
+  `Lean.PersistentArray.tooBig,
+  `Lean.Core.throwMaxHeartbeat,
+  `Float.Model.UnpackedFloat.ExtendedMantissa.shiftRightOne,
+  `Float.Model.UnpackedFloat.div,
+  `Float.Model.UnpackedFloat.sqrtCore,
+  ``WellFounded.Nat.fix,
+  `Nat.euclideanDiv,
+  `Nat.maxPowDvdDiv
 ]
 
 private def pushNew {α : Type u} [BEq α] (xs : Array α) (x : α) : Array α :=
@@ -121,13 +211,13 @@ private def moduleOwnership (env : Environment) (declName : Name) : SourceOwners
       else
         .external
 
-private def addRoot (kind : DependencyKind) (root : Name) (ownership : SourceOwnership) :
-    StateT AuditResult MetaM Unit :=
+private def addRoot (kind : DependencyKind) (root sourceDeclaration : Name)
+    (ownership : SourceOwnership) : StateT AuditResult MetaM Unit :=
   modify fun result => match kind with
     | .statement => { result with statementRoots := pushNew result.statementRoots root }
     | .data => { result with dataRoots := pushNew result.dataRoots root }
     | .proof =>
-        { result with proofUses := pushNew result.proofUses { root, ownership } }
+        { result with proofUses := pushNew result.proofUses { root, sourceDeclaration, ownership } }
 
 private def isPredicateType (type : Expr) : MetaM Bool :=
   forallTelescope type fun _ body => do
@@ -139,10 +229,222 @@ private def isPredicateType (type : Expr) : MetaM Bool :=
 private def isProofType (type : Expr) : MetaM Bool := do
   return (← whnf (← inferType type)).consumeMData == .sort .zero
 
+private def elaborationCallbacks : Array Name := #[
+  `Lean.Elab.Tactic.Tactic, `Lean.Elab.Term.TermElab, `Lean.Elab.Command.CommandElab,
+  `Lean.Elab.Command.Linter, `Lean.Elab.ConfigEval.EvalConfigItem, `Lean.Elab.ConfigEval.EvalExpr,
+  `Lean.Elab.ConfigEval.EvalTerm, ``Lean.Macro, `Lean.PrettyPrinter.Delaborator.Delab,
+  `Lean.PrettyPrinter.Parenthesizer, `Lean.PrettyPrinter.Formatter, `Lean.Meta.Simp.Simproc,
+  `Lean.Meta.Simp.Methods, `Lean.Parser.Parser, `Lean.Parser.ParserFn, `Lean.Elab.DerivingHandler,
+  `Aesop.RuleTac, `Lean.Server.RpcProcedure, `Mathlib.TacticAnalysis.Config,
+  `Mathlib.Tactic.Linarith.Preprocessor, `Mathlib.Tactic.Linarith.GlobalBranchingPreprocessor]
+
+private def elaborationEffects : Array Name := #[
+  ``Lean.Elab.Tactic.TacticM, ``Lean.Elab.Term.TermElabM, ``Lean.Elab.Command.CommandElabM,
+  ``Lean.Core.CoreM, ``Lean.Meta.MetaM, ``Lean.PrettyPrinter.Delaborator.DelabM,
+  `Lean.PrettyPrinter.ParenthesizerM, `Lean.PrettyPrinter.FormatterM, `Lean.Meta.Simp.SimpM,
+  `Lean.Server.RequestM, `Mathlib.Tactic.AtomM, `Mathlib.Tactic.AtomM.RecurseM]
+
+private def elaborationStateTypes : Array Name := #[
+  ``Syntax, ``TSyntax, ``Expr, ``Level, ``MVarId, ``FVarId, ``Name, ``MessageData,
+  ``Lean.Meta.Simp.Result, `Lean.Meta.Simp.Stats, `Lean.Meta.SimpExtension,
+  `Lean.Meta.Simp.SimprocExtension,
+  `Lean.LocalContext, `Lean.Meta.Grind.Extension,
+  `Qq.Quoted, `Lean.Environment, `Lean.AttributeImpl, `Lean.TagAttribute, `Lean.ParametricAttribute,
+  `Lean.Syntax.Term, `Lean.Syntax.Ident, `Lean.Syntax.Range, `Lean.NameSet, `Std.Format,
+  `Lean.Exception, `IO.Error, `Lean.Server.RequestError, `ProofWidgets.Html,
+  `Mathlib.Tactic.AtomM.Context, `Mathlib.Tactic.AtomM.Recurse.Context,
+  `Mathlib.Tactic.Linarith.LinarithConfig, `Mathlib.Tactic.Order.AtomicFact,
+  `Mathlib.Tactic.CancelDenoms.CancelResult,
+  mkPrivateNameCore `Mathlib.Tactic.FieldSimp `Mathlib.Tactic.FieldSimp.Factors]
+
+/-- Recognize elaboration state in containers and internal records. A product or record must
+carry elaboration state in every field. Atom actions also carry indices of their stored expressions. -/
+private def hasElaborationPayload (env : Environment) (origin : Option ModuleIdx)
+    (allowPrivateRecords atomIndices : Bool) (payload : Expr) : Nat → Bool
+  | 0 => false
+  | fuel + 1 => Id.run do
+    let payload := payload.consumeMData.headBeta.getForallBody.consumeMData
+    let hasState (field : Expr) :=
+      hasElaborationPayload env origin allowPrivateRecords atomIndices field fuel
+    if let .letE _ _ value body _ := payload then
+      return hasState (body.instantiate1 value)
+    let some name := payload.getAppFn.constName? | return false
+    if elaborationStateTypes.contains name || name == ``Unit || name == ``PUnit then return true
+    let args := payload.getAppArgs
+    if #[``Option, ``Array, ``List, ``IO.Ref, ``Lean.Option, `Lean.Server.RequestTask].contains name ||
+        elaborationEffects.contains name then
+      return args.size == 1 && hasState payload.appArg!
+    if name == `Mathlib.Tactic.ClickSuggestions.Result ||
+        name == `Mathlib.Tactic.ClickSuggestions.SectionState then
+      return args.size == 1 && (payload.appArg!.isBVar || hasState payload.appArg!)
+    if name == `Std.HashMap then
+      let #[key, value, _, _] := args | return false
+      return (hasState key || (atomIndices && key.isConstOf ``Nat)) && hasState value
+    if #[``Prod, ``PProd, ``Except].contains name then
+      let #[left, right] := args | return false
+      if name == ``Prod && left.isConstOf ``Name && right.isConstOf ``String then return true
+      return (hasState left || (name == ``Prod && atomIndices && left.isConstOf ``Nat)) && hasState right
+    if #[``Sigma, ``PSigma].contains name then
+      let #[first, .lam _ _ second _] := args | return false
+      return hasState first && hasState second
+    if #[`Mathlib.Tactic.Ring.Common.ExSum, `Mathlib.Tactic.Ring.Common.RingCompute].contains name then
+      return args[2]?.any fun base => base.isAppOf `Mathlib.Tactic.Algebra.BaseType
+    unless allowPrivateRecords && payload.isConst && isPrivateName name &&
+        env.getModuleIdxFor? name == origin do
+      return false
+    let some (.inductInfo info) := env.find? name | return false
+    unless !info.isRec && info.numParams == 0 && info.numIndices == 0 do return false
+    let mut hasField := false
+    for ctor in info.ctors do
+      let some (.ctorInfo ctorInfo) := env.find? ctor | return false
+      let mut fields := ctorInfo.type
+      for _ in [:ctorInfo.numFields] do
+        let .forallE _ domain body _ := fields.consumeMData | return false
+        unless hasState domain do return false
+        fields := body
+        hasField := true
+    return hasField
+
+/-- Match the result after instantiating aliases. An alias may change its apparent result type or
+introduce an additional result field, as `StateT` does. -/
+private def elaborationActionResult? (env : Environment) (isMeta : Bool) (type : Expr) :
+    Nat → Option Expr
+  | 0 => none
+  | fuel + 1 => do
+    let result := type.getForallBody.consumeMData
+    let .const name levels := result.getAppFn | none
+    let args := result.getAppArgs
+    if args.size == 1 &&
+        (elaborationEffects.contains name || (isMeta && #[``IO, ``BaseIO].contains name)) then
+      return result.appArg!
+    if isMeta && name == ``EIO && args.size == 2 &&
+        args[0]!.getAppFn.constName?.any elaborationStateTypes.contains then
+      return result.appArg!
+    let some (.defnInfo info) := env.find? name | none
+    if info.hints.isAbbrev || #[``ReaderT, ``StateT, ``ExceptT, ``OptionT].contains name then
+      let unfolded := (info.value.instantiateLevelParamsNoCache info.levelParams levels).beta args
+      elaborationActionResult? env isMeta unfolded fuel
+    else none
+
+private def hasMetaMCapabilities (type result : Expr) : Bool := Id.run do
+  let .bvar index := result.getAppFn | return false
+  unless result.isApp do return false
+  let hasExpr := type.getUsedConstants.contains ``Expr
+  let isDiagnostic := result.appArg!.isConstOf ``Unit &&
+    type.getUsedConstants.any elaborationStateTypes.contains
+  unless (hasExpr && result.appArg!.isBVar) || isDiagnostic do return false
+  let mut domains := #[]
+  let mut remaining := type
+  while let .forallE _ domain body _ := remaining.consumeMData do
+    domains := domains.push domain
+    remaining := body
+  let monadBinder := domains.size - (index + 1)
+  let mut lifts := false
+  let mut controls := false
+  let mut liftsCore := false
+  for i in [monadBinder + 1:domains.size] do
+    let domain := domains[i]!
+    let #[src, dest] := domain.getAppArgs | continue
+    if dest == mkBVar (i - monadBinder - 1) then
+      if src.isConstOf ``Lean.Meta.MetaM then
+        lifts := lifts || domain.isAppOf ``MonadLiftT
+        controls := controls || domain.isAppOf ``MonadControlT
+      if src.isConstOf ``Lean.Core.CoreM then
+        liftsCore := liftsCore || domain.isAppOf ``MonadLiftT
+  return (hasExpr && result.appArg!.isBVar && lifts && controls) ||
+    (isDiagnostic && liftsCore)
+
+/-- Recognize compiler callbacks and meta code that returns elaboration or presentation state. -/
+private def isElaborationImplementation (env : Environment) (declName : Name) (type : Expr) :
+    Bool := Id.run do
+  let result := type.getForallBody.consumeMData
+  let head := result.getAppFn.constName?.getD .anonymous
+  if elaborationCallbacks.contains head || isIOUnitInitFn env declName then return true
+  if result.isAppOfArity ``List 1 &&
+      result.appArg!.getAppFn.constName?.any elaborationCallbacks.contains then return true
+  if hasMetaMCapabilities type result then return true
+  -- The compiler emits partial recursive implementations with the owner's type and fresh
+  -- modifiers. Recover meta phase only for that generated implementation and its exact owner.
+  let isMeta := isMarkedMeta env declName ||
+    (env.isAutoDecl declName && (env.find? declName).any (·.isPartial) &&
+      (Compiler.isUnsafeRecName? declName).any fun owner =>
+        isMarkedMeta env owner && (env.find? owner).any (·.type == type))
+  let actionResult := elaborationActionResult? env isMeta result 8
+  let effect := actionResult.isSome
+  let payload := actionResult.getD result
+  -- `derive` returns the scale from `findCancelFactor` together with its proof term.
+  -- The factor computation is also audited at `findCancelFactor`'s own declaration.
+  if isMeta && declName == `Mathlib.Tactic.CancelDenoms.derive && effect &&
+      payload.isAppOfArity ``Prod 2 && payload.appFn!.appArg!.isConstOf ``Nat &&
+      payload.appArg!.isConstOf ``Expr then return true
+  if effect && payload.isConstOf ``Unit then return true
+  if (effect || isMeta) && payload.isConstOf ``Bool &&
+      type.getUsedConstants.any elaborationStateTypes.contains
+    then return true
+  if isMeta && effect && payload.isBVar && type.getUsedConstants.any elaborationStateTypes.contains
+    then return true
+  let atomIndices := head == `Mathlib.Tactic.AtomM || head == `Mathlib.Tactic.AtomM.RecurseM
+  return (effect || isMeta) &&
+    hasElaborationPayload env (env.getModuleIdxFor? declName) (isMeta && effect) atomIndices payload 8
+
+private def isElaborationEquation (env : Environment) (declName : Name) : Bool :=
+  env.isAutoDecl declName && (env.find? declName.getPrefix).any fun parent =>
+    isElaborationImplementation env parent.name parent.type
+
+/-- Equations generated from a verified toolchain implementation expose the implementation
+to proofs. The mathematical operation itself has its own independent specification. -/
+private def isToolchainBoundaryEquation (declName : Name) : MetaM Bool := do
+  let env ← getEnv
+  let isBoundary (name : Name) :=
+    lawfulBoundaries.contains name && moduleOwnership env name == .officialToolchain
+  if let some owner ← isEqnThm? declName then return isBoundary owner
+  -- Imported equations can predate the reverse lookup in the current environment.
+  let some (owner, suffix) := declFromEqLikeName env declName | return false
+  unless isBoundary owner do return false
+  let origin := (env.getModuleIdxFor? declName).map fun index => env.header.moduleNames[index]!
+  if isPrivateName declName then
+    -- A legacy import exposes definition bodies, even when a module importer generated a
+    -- private equation. Compare the canonical private name and the existing toolchain equation.
+    let some origin := origin | return false
+    let canonical := Name.str owner suffix
+    unless declName == mkPrivateNameCore origin canonical do return false
+    unless suffix == unfoldThmSuffix || isEqnReservedNameSuffix suffix do return false
+    let some (.thmInfo info) := env.find? declName | return false
+    let matchesReference (name : Name) := match env.find? name with
+      | some (.thmInfo reference) =>
+        moduleOwnership env name == .officialToolchain &&
+          info.levelParams == reference.levelParams && info.type == reference.type
+      | _ => false
+    return matchesReference canonical || env.header.moduleNames.any fun moduleName =>
+      matchesReference (mkPrivateNameCore moduleName canonical)
+  let equationEnv := env.setMainModule (origin.getD env.mainModule)
+  unless mkEqLikeNameFor equationEnv owner suffix == declName do
+    return false
+  withEnv equationEnv do
+    if suffix == unfoldThmSuffix && equationEnv.contains declName then
+      return (← getUnfoldEqnFor? owner) == some declName
+    unless isEqnReservedNameSuffix suffix &&
+        equationEnv.contains (mkEqLikeNameFor equationEnv owner eqn1ThmSuffix) do return false
+    let equations ← withoutModifyingEnv <| getEqnsFor? owner
+    return equations.any (·.contains declName)
+
 private def isTheorem (env : Environment) (name : Name) : Bool :=
   env.find? name |>.any fun
     | .thmInfo _ => true
     | _ => false
+
+/-- Recognize declarations with a proposition as their codomain using their kernel types.
+An unknown codomain still requires type inference at the use site. -/
+private def isKnownProof (env : Environment) (info : ConstantInfo) : Bool := Id.run do
+  if let .thmInfo _ := info then return true
+  let result := info.type.getForallBody.consumeMData
+  let some head := result.getAppFn.constName? | return false
+  let some family := env.find? head | return false
+  let mut type := family.type
+  for _ in [:result.getAppNumArgs] do
+    let .forallE _ _ body _ := type.consumeMData | return false
+    type := body
+  return type.consumeMData == .sort .zero
 
 private def reduceProjectionCore? (expr : Expr) : MetaM (Option Expr) := do
   let .const name _ := expr.getAppFn | return none
@@ -155,96 +457,300 @@ private def reduceProjectionCore? (expr : Expr) : MetaM (Option Expr) := do
   let some selected := fields[index]? | return none
   return some selected
 
-private def expressionConstants (expr : Expr) : NameSet :=
-  expr.getUsedConstantsAsSet
+/-- Distribute a stuck projection over the alternatives of a conditional structure. Keep the
+condition and its decision procedure, since changing the selected branch may change the result. -/
+private def conditionalProjection? (fn : Expr) (args : Array Expr) (index : Nat) (choice : Expr) :
+    MetaM (Option (Array Expr)) := do
+  unless choice.isAppOfArity ``ite 5 || choice.isAppOfArity ``dite 5 do return none
+  let project (branch : Expr) := mkAppN fn <| args.set! index branch
+  let #[_, condition, decision, yes, no] := choice.getAppArgs | return none
+  if choice.isAppOf ``ite then return some #[condition, decision, project yes, project no]
+  let projectBranch (branch : Expr) (hypothesis : Expr) :=
+    withLocalDeclD `h hypothesis fun h => mkLambdaFVars #[h] (project (mkApp branch h))
+  return some #[condition, decision, ← projectBranch yes condition,
+    ← projectBranch no (mkNot condition)]
+
+private def canExposeOperatorData (config : Config) (info : ConstantInfo) : CoreM Bool := do
+  if forbiddenRoots.contains info.name || lawfulBoundaries.contains info.name ||
+      info.name == ``ite || info.name == ``dite then return false
+  canUnfoldDefault config info
+
+/-- Expose a constructor or conditional without evaluating a choice before auditing it. -/
+private def exposeProjectionPayload (payload : Expr) : MetaM Expr := do
+  let stop (expr : Expr) := expr.isAppOf ``ite || expr.isAppOf ``dite ||
+    expr.getAppFn.constName?.any fun name =>
+      forbiddenRoots.contains name || lawfulBoundaries.contains name
+  let env ← getEnv
+  let head := payload.getAppFn
+  let payload ← if !stop payload then
+    if let some (.opaqueInfo info) := head.constName?.bind env.find? then
+      let value ← instantiateValueLevelParams (.opaqueInfo info) head.constLevels!
+        (allowOpaque := true)
+      pure <| mkAppN value payload.getAppArgs
+    else pure payload
+  else pure payload
+  withOptions (fun opts => smartUnfolding.set opts false) <|
+    withConfig (fun config => { config with iota := false }) <|
+      withCanUnfoldPred canExposeOperatorData <|
+        withTransparency .all <| whnfHeadPred payload fun expr => pure (!stop expr)
+
+private def expressionConstants (env : Environment) (expr : Expr) : NameSet :=
+  let constants := expr.getUsedConstantsAsSet
+  if (expr.find? (·.isProj)).isNone then constants else runST fun world => do
+    let names ← (ST.mkRef constants : ST world (ST.Ref world NameSet))
+    expr.forEach (m := ST world) (ω := world) fun
+      | .proj typeName index _ => do
+        -- The field's own type can carry dependencies through a kernel projection.
+        let projection := do
+          let info ← getStructureInfo? env typeName
+          let field ← info.fieldNames[index]?
+          getProjFnForField? env typeName field
+        names.modify fun names =>
+          match projection, env.find? typeName with
+          | some field, _ => names.insert field
+          | none, some (.inductInfo info) => info.ctors.foldl (·.insert ·) names
+          | none, _ => names
+      | _ => pure ()
+    names.get
+
+private def declarationTypesAndRules (info : ConstantInfo) : List Expr :=
+  info.type :: match info with
+    | .recInfo recursor => recursor.rules.map (·.rhs)
+    | _ => []
+
+private def constantDependencies (env : Environment) (info : ConstantInfo)
+    (includeValue := true) : Array Name := Id.run do
+  let mut expressions := declarationTypesAndRules info
+  let checkValue : Bool := match info with
+    | .thmInfo _ =>
+      let owner := moduleOwnership env info.name
+      owner == .project || owner == .generatedProject
+    | _ => true
+  if includeValue && checkValue then
+    if let some value := info.value? (allowOpaque := true) then
+      expressions := expressions ++ [value]
+  let mut names := #[]
+  for expr in expressions do
+    for name in expressionConstants env expr do names := names.push name
+  return names
+
+private def semanticEdges (env : Environment) (name : Name) :
+    StateT AuditResult MetaM (Option (Array Name)) := do
+  let state ← get
+  if let some edges := state.dependencyCache.dependencies.find? name then return some edges
+  let some info := env.find? name | return none
+  -- An imported proof's type is still examined. Its value contributes proof-source edges.
+  let deferred := state.shareProofSources && isKnownProof env info
+  let edges := constantDependencies env info (includeValue := !deferred)
+  set { state with
+    dependencyCache := { state.dependencyCache with
+      dependencies := state.dependencyCache.dependencies.insert name edges }
+    deferredProofs := if deferred then state.deferredProofs.insert name else state.deferredProofs }
+  return some edges
 
 private def expressionMayReachForbidden (expr : Expr) : StateT AuditResult MetaM Bool := do
   let env ← getEnv
-  let mut pending := #[]
-  for name in expressionConstants expr do pending := pending.push name
+  let state ← get
+  let reachable := state.dependencyCache.reachable
+  let unreachable := state.dependencyCache.unreachable
+  let reaches := fun name => forbiddenRoots.contains name || reachable.contains name
+  let boundary := fun name =>
+    lawfulBoundaries.contains name || elaborationCallbacks.contains name ||
+      elaborationEffects.contains name || unreachable.contains name ||
+      state.coveredProofs.contains name || state.coveredDefinitions.contains name
+  let names := expressionConstants env expr
+  let mut pending : Array (Name × Name) := #[]
+  for name in names do
+    if reaches name then return true
+    unless boundary name do pending := pending.push (name, .anonymous)
   let mut seen : NameSet := {}
-  let mut budget := 100000
+  let mut parents : NameMap (List Name) := {}
+  let mut sources : Array Name := #[]
+  let mut processed := 0
   let mut complete : Bool := true
-  while let some name := pending.back? do
+  while let some (name, parent) := pending.back? do
     pending := pending.pop
-    if forbiddenRoots.contains name then return true
-    if lawfulBoundaries.contains name || seen.contains name || (← get).graphAbsent.contains name then
+    let live := reaches name
+    if !live && boundary name then
+      continue
+    unless parent.isAnonymous do
+      parents := parents.insert name (parent :: (parents.find? name).getD [])
+    if seen.contains name then continue
+    seen := seen.insert name
+    if live then
+      sources := sources.push name
+      continue
+    processed := processed + 1
+    if processed % 1024 == 0 then
+      Core.checkSystem "operator fidelity dependency search"
+    let some edges ← semanticEdges env name | do
+      complete := false
+      modify fun result => { result with
+        incomplete := true
+        unavailableConstants := result.unavailableConstants.insert name }
+      continue
+    for dependency in edges do pending := pending.push (dependency, name)
+  -- Propagate reachability backward through this search's edges. Exploring each unknown
+  -- node's outgoing edges makes the negative results valid even in cyclic components.
+  let found := !sources.isEmpty
+  let mut live : NameSet := {}
+  while let some name := sources.back? do
+    sources := sources.pop
+    if live.contains name then continue
+    live := live.insert name
+    for parent in (parents.find? name).getD [] do sources := sources.push parent
+  let mut absent := unreachable
+  if complete then
+    for name in seen do
+      unless live.contains name do absent := absent.insert name
+  modify fun result => { result with dependencyCache := {
+    result.dependencyCache with reachable := reachable ++ live, unreachable := absent } }
+  return found
+
+private def rootFree (expressions : Array Expr) : StateT AuditResult MetaM Bool := do
+  let state ← get
+  if state.incomplete then return false
+  let check := expressions.anyM fun e =>
+    if e.hasMVar then pure true else expressionMayReachForbidden e
+  let (mayReach, updated) ← liftM <| check.run state
+  if updated.incomplete then return false
+  set updated
+  return !mayReach
+
+/-- Record proof dependencies conservatively by following the constants in the expression.
+Mathematical statements and data, including emitted declarations, undergo the semantic audit. -/
+private def auditProofNames (source : Name) (names : NameSet) (shareSources : Bool) :
+    StateT AuditResult MetaM Unit := do
+  let env ← getEnv
+  let state ← get
+  let mut pending := #[]
+  for name in names do pending := pending.push (name, source)
+  -- The package report is a union of sources. A declaration-indexed query starts with a
+  -- fresh visitation set so it can attribute a shared dependency to each caller.
+  let mut checked := if shareSources then state.dependencyCache.proofSourcesChecked else {}
+  let mut complete := true
+  let mut budget := 100000
+  while let some (name, origin) := pending.back? do
+    pending := pending.pop
+    if forbiddenRoots.contains name then
+      addRoot .proof name origin (moduleOwnership env origin)
+      continue
+    if checked.contains name || lawfulBoundaries.contains name || state.coveredProofs.contains name then
       continue
     if budget == 0 then
       modify fun result => { result with
         incomplete := true
-        incompleteReason := result.incompleteReason <|> some "constant budget exhausted" }
-      return false
+        incompleteReason := result.incompleteReason <|> some "proof dependency budget exhausted" }
+      return
+    if budget % 1024 == 0 then
+      Core.checkSystem "operator fidelity proof dependencies"
     budget := budget - 1
-    seen := seen.insert name
+    checked := checked.insert name
     let some info := env.find? name | do
       complete := false
       modify fun result => { result with
         incomplete := true
         unavailableConstants := result.unavailableConstants.insert name }
       continue
-    for dependency in expressionConstants info.type do pending := pending.push dependency
-    let covered := (← get).coveredProofs.contains name
-    let checkValue : Bool := match info with
-      | .thmInfo _ =>
-        let owner := moduleOwnership env name
-        !covered && (owner == .project || owner == .generatedProject)
-      | _ => true
-    if checkValue then
-      if let some value := info.value? (allowOpaque := true) then
-        for dependency in expressionConstants value do pending := pending.push dependency
-  if complete then
-    let mut absent := (← get).graphAbsent
-    for name in seen do absent := absent.insert name
-    modify fun result => { result with graphAbsent := absent }
-  return false
+    let cached := if state.shareProofSources && isKnownProof env info then none
+      else state.dependencyCache.dependencies.find? name
+    let edges := match cached with
+      | some edges => edges
+      | none => constantDependencies env info
+    for dependency in edges do pending := pending.push (dependency, name)
+  if complete && shareSources then
+    modify fun result => { result with
+      dependencyCache := { result.dependencyCache with proofSourcesChecked := checked } }
 
-private partial def auditExpr (ownership : SourceOwnership) (kind : DependencyKind)
-    (expr : Expr) (fuel : Nat := 128) : StateT AuditResult MetaM Unit := do
-  let expr := expr.consumeMData
-  -- A free variable can stand for a local let value with additional dependencies.
-  if !expr.hasFVar && !expr.hasMVar then
+private def auditProofDependencies (source : Name) (expr : Expr) (shareSources : Bool) :
+    StateT AuditResult MetaM Unit := do
+  auditProofNames source (expressionConstants (← getEnv) expr) shareSources
+
+private partial def auditExpr (sourceDeclaration : Name) (ownership : SourceOwnership)
+    (kind : DependencyKind) (expr : Expr) (fuel : Nat := 128) (proofOnly := false) :
+    StateT AuditResult MetaM Unit := do
+  let expr := (← instantiateMVars expr).consumeMData
+  -- Binder types and local let values are audited where they are introduced.
+  if !expr.hasMVar then
     unless ← expressionMayReachForbidden expr do return
   if fuel == 0 then
     modify fun result => { result with
       incomplete := true
       incompleteReason := result.incompleteReason <|> some "expression depth exhausted" }
     return
-  let kind ← if kind == .data then
-      try
-        if ← liftM <| isProof expr then
-          auditExpr ownership .proof (← liftM <| inferType expr) (fuel - 1)
-          pure .proof
-        else
-          pure kind
-      catch _ => pure kind
-    else
-      pure kind
+  -- The declared type and supplied arguments already give the proof dependencies of a
+  -- known proof application. This also covers proof-valued instances stored as definitions.
+  if (← get).shareProofSources && !expr.hasMVar then
+    let env ← getEnv
+    let proofHead := expr.getAppFn.constName?.any fun name =>
+      (env.find? name).any (isKnownProof env)
+    if kind == .proof || proofHead then
+      auditProofDependencies sourceDeclaration expr true
+      return
+  let proofType? ← if kind == .proof then pure none else
+    try
+      if ← liftM <| isProof expr then some <$> liftM (inferType expr) else pure none
+    catch ex =>
+      if ex.isInterrupt then throw ex
+      modify fun result => { result with
+        incomplete := true
+        incompleteReason := result.incompleteReason <|> some "failed to classify a proof subterm" }
+      pure none
+  let kind ← match proofType? with
+    | some type =>
+        auditExpr sourceDeclaration ownership .proof type (fuel - 1)
+        pure .proof
+    | none => pure kind
+  let proofOnly := proofOnly && kind != .proof
   let typeKind := if kind == .proof then DependencyKind.proof else .statement
   match expr with
+  | .mvar _ =>
+      modify fun result => { result with
+        incomplete := true
+        incompleteReason := result.incompleteReason <|> some "unassigned metavariable" }
   | .forallE name domain body binderInfo =>
-      auditExpr ownership typeKind domain (fuel - 1)
+      auditExpr sourceDeclaration ownership typeKind domain (fuel - 1) proofOnly
       let state ← get
       let (_, state) ← liftM <| withLocalDecl name binderInfo domain fun localVar =>
-        (auditExpr ownership kind (body.instantiate1 localVar) (fuel - 1)).run state
+        let body := body.instantiate1 localVar
+        (auditExpr sourceDeclaration ownership kind body (fuel - 1) proofOnly).run state
       set state
   | .lam name domain body binderInfo =>
-      auditExpr ownership typeKind domain (fuel - 1)
+      auditExpr sourceDeclaration ownership typeKind domain (fuel - 1) proofOnly
       let state ← get
       let (_, state) ← liftM <| withLocalDecl name binderInfo domain fun localVar =>
-        (auditExpr ownership kind (body.instantiate1 localVar) (fuel - 1)).run state
+        let body := body.instantiate1 localVar
+        (auditExpr sourceDeclaration ownership kind body (fuel - 1) proofOnly).run state
       set state
   | .letE name type value body nonDep =>
-      auditExpr ownership typeKind type (fuel - 1)
-      auditExpr ownership kind value (fuel - 1)
+      auditExpr sourceDeclaration ownership typeKind type (fuel - 1) proofOnly
+      auditExpr sourceDeclaration ownership kind value (fuel - 1) proofOnly
       let state ← get
       let (_, state) ← liftM <| withLetDecl name type value (nondep := nonDep) fun localVar =>
-        (auditExpr ownership kind (body.instantiate1 localVar) (fuel - 1)).run state
+        let body := body.instantiate1 localVar
+        (auditExpr sourceDeclaration ownership kind body (fuel - 1) proofOnly).run state
       set state
   | _ =>
       let function := expr.getAppFn
       let arguments := expr.getAppArgs
+      if proofOnly then
+        -- Inspect proofs in the original syntax of discarded fields without evaluating their data.
+        for argument in arguments do
+          auditExpr sourceDeclaration ownership kind argument (fuel - 1) true
+        match function with
+        | .proj _ _ payload => auditExpr sourceDeclaration ownership kind payload (fuel - 1) true
+        | _ =>
+          if function != expr then
+            auditExpr sourceDeclaration ownership kind function (fuel - 1) true
+        return
       let env ← getEnv
+      -- Kernel projections and named projections select the same field.
+      if let .proj structureName idx payload := function then
+        let field? := (getStructureInfo? env structureName).bind fun info => info.fieldNames[idx]?
+        if let some field := field? then
+          let projected ← liftM <| mkProjection payload field
+          auditExpr sourceDeclaration ownership kind (mkAppN projected arguments) (fuel - 1)
+          return
       let projectionInfo? := function.constName?.bind env.getProjectionFnInfo?
       let visibleArguments := match projectionInfo? with
         | none => arguments
@@ -253,21 +759,34 @@ private partial def auditExpr (ownership : SourceOwnership) (kind : DependencyKi
             -- only the selected field, while later arguments remain genuine inputs to that field.
             arguments.extract 0 info.numParams ++
               arguments.extract (info.numParams + 1) arguments.size
+      -- A projection out of a proof can be audited by examining that proof and its type.
+      if kind == .proof then
+        if let some info := projectionInfo? then
+          if let some payload := arguments[info.numParams]? then
+            if ← liftM <| isProof payload then
+              auditExpr sourceDeclaration ownership .proof (← liftM <| inferType payload) (fuel - 1)
+              auditExpr sourceDeclaration ownership .proof payload (fuel - 1)
+              for argument in visibleArguments do
+                auditExpr sourceDeclaration ownership .proof argument (fuel - 1)
+              return
       if let some name := function.constName? then
         if forbiddenRoots.contains name then
-          addRoot kind name ownership
+          addRoot kind name sourceDeclaration ownership
           for argument in visibleArguments do
-            auditExpr ownership kind argument (fuel - 1)
+            auditExpr sourceDeclaration ownership kind argument (fuel - 1)
           return
-        if lawfulBoundaries.contains name then
+        if lawfulBoundaries.contains name || elaborationCallbacks.contains name ||
+            elaborationEffects.contains name || (kind != .proof && projectionInfo?.isNone &&
+            (← get).coveredDefinitions.contains name) then
           for argument in visibleArguments do
-            auditExpr ownership kind argument (fuel - 1)
+            auditExpr sourceDeclaration ownership kind argument (fuel - 1)
           return
         -- Projection heads must first reduce against the selected instance.  Treating `Inv.inv`
         -- itself as an ordinary proof callee would skip that reduction and hide `Rat.inv`.
         if projectionInfo?.isNone && (kind == .proof || isTheorem env name) then
           let state ← get
-          let seen := state.visitedConstants.contains name || state.graphAbsent.contains name
+          let seen := state.visitedConstants.contains name || state.coveredProofs.contains name ||
+            state.dependencyCache.unreachable.contains name
           unless seen do
             modify fun result =>
               { result with visitedConstants := result.visitedConstants.insert name }
@@ -275,87 +794,124 @@ private partial def auditExpr (ownership : SourceOwnership) (kind : DependencyKi
             if let some info := env.find? name then
               let calleeOwnership := moduleOwnership env name
               if ← expressionMayReachForbidden info.type then
-                auditExpr calleeOwnership .proof info.type (fuel - 1)
-              let covered := isTheorem env name && (← get).coveredProofs.contains name
-              if !covered &&
-                  (calleeOwnership == .project || calleeOwnership == .generatedProject) then
+                auditExpr name calleeOwnership .proof info.type (fuel - 1)
+              let projectOwned := calleeOwnership == .project || calleeOwnership == .generatedProject
+              if projectOwned || !(← liftM <| isProofType info.type) then
                 if let some value := info.value? (allowOpaque := true) then
                   if ← expressionMayReachForbidden value then
-                    auditExpr calleeOwnership .proof value (fuel - 1)
+                    auditExpr name calleeOwnership .proof value (fuel - 1)
           for argument in visibleArguments do
-            auditExpr ownership kind argument (fuel - 1)
+            auditExpr sourceDeclaration ownership kind argument (fuel - 1)
           return
       -- Inspect arguments before reduction: beta/iota reduction may erase proof arguments whose
       -- dependencies still belong in the ownership report.
       for argument in visibleArguments do
-        auditExpr ownership kind argument (fuel - 1)
+        auditExpr sourceDeclaration ownership kind argument (fuel - 1)
+      if let some info := projectionInfo? then
+        if let some payload := arguments[info.numParams]? then
+          -- Proof arguments contribute audit evidence even if the producer or projection
+          -- discards them. The selected-field audit handles the data fields.
+          for argument in payload.getAppArgs do
+            auditExpr sourceDeclaration ownership kind argument (fuel - 1) (proofOnly := true)
       -- The arguments above account for dependencies passed to a root-free constant.
       if projectionInfo?.isNone && function.isConst then
         unless ← expressionMayReachForbidden function do return
-      let normalized ← try
-          liftM <| (match projectionInfo? with
+      if kind != .proof then
+        if let some info := projectionInfo? then
+          if let some payload := arguments[info.numParams]? then
+            -- Selection can expose a dependency in the receiver or projected field's type.
+            if let some declaration := function.constName?.bind env.find? then
+              if ← rootFree #[payload, declaration.type] then return
+      let (normalized, projectionPayload?) ← try
+          match projectionInfo? with
             | some info => do
                 match arguments[info.numParams]? with
-                | none => pure expr
+                | none => pure (expr, none)
                 | some structureArg =>
-                  let unfoldedStructure ← (do
-                    let structureFn := structureArg.getAppFn
-                    if let some structureName := structureFn.constName? then
-                      if let some structureInfo := env.find? structureName then
-                        if structureInfo.hasValue (allowOpaque := true) then do
-                          let value ← instantiateValueLevelParams structureInfo
-                            structureFn.constLevels! (allowOpaque := true)
-                          pure <| mkAppN value structureArg.getAppArgs
-                        else
-                          withTransparency .instances <| whnf structureArg
-                      else
-                        pure structureArg
-                    else
-                      withTransparency .instances <| whnf structureArg : MetaM Expr)
+                  let structureValue ← liftM <| exposeProjectionPayload structureArg
                   let projectionCore := mkAppN function <|
-                    (arguments.extract 0 info.numParams).push unfoldedStructure
-                  match ← reduceProjectionCore? projectionCore with
-                  | some selected =>
-                      pure <| mkAppN selected <|
-                        arguments.extract (info.numParams + 1) arguments.size
-                  | none => pure expr
+                    (arguments.extract 0 info.numParams).push structureValue
+                  let selected? ← liftM <| reduceProjectionCore? projectionCore
+                  let selected := selected?.map fun field =>
+                    mkAppN field (arguments.extract (info.numParams + 1) arguments.size)
+                  pure (selected.getD expr, some structureValue)
             | none =>
                 if let some name := function.constName? then
                   if let some info := env.find? name then
                     if info.hasValue (allowOpaque := true) then do
-                      let value ← instantiateValueLevelParams info function.constLevels!
+                      let value ← liftM <| instantiateValueLevelParams info function.constLevels!
                         (allowOpaque := true)
-                      pure <| mkAppN value arguments
+                      pure (mkAppN value arguments, none)
                     else
-                      pure expr
+                      pure (expr, none)
                   else
-                    pure expr
-                else
-                  withTransparency .reducible <| whnf expr : MetaM Expr)
-        catch _ =>
+                    pure (expr, none)
+                else if function.isLambda then
+                  pure (function.beta arguments, none)
+                else do
+                  let value ← liftM <| withCanUnfoldPred canExposeOperatorData <|
+                    withTransparency .reducible <| whnf expr
+                  pure (value, none)
+        catch ex =>
+          if ex.isInterrupt then throw ex
           modify fun result => { result with
             incomplete := true
             incompleteReason := result.incompleteReason <|> some "operator reduction failed" }
-          pure expr
+          pure (expr, none)
       if normalized != expr then
-        auditExpr ownership kind normalized (fuel - 1)
+        auditExpr sourceDeclaration ownership kind normalized (fuel - 1)
       else
+        if let some info := projectionInfo? then
+          if let some payload := arguments[info.numParams]? then
+            let exposed := projectionPayload?.getD payload
+            let parts? ← liftM <| conditionalProjection? function arguments info.numParams exposed
+            if let some parts := parts? then
+              for part in parts do
+                auditExpr sourceDeclaration ownership kind part (fuel - 1)
+            else if kind == .proof then
+              -- The unresolved bundle is an input to a proof. Its dependencies are
+              -- proof uses even if a data field would require reduction to select.
+              auditExpr sourceDeclaration ownership .proof payload (fuel - 1)
+            else if ← expressionMayReachForbidden exposed then
+              modify fun result => { result with
+                incomplete := true
+                incompleteReason := result.incompleteReason <|>
+                  some s!"cannot select a field of the argument to {function.constName!}" }
+            return
         match expr with
-        | .app .. => auditExpr ownership kind function (fuel - 1)
-        | .proj _ _ payload => auditExpr ownership kind payload (fuel - 1)
-        | .mdata _ body => auditExpr ownership kind body (fuel - 1)
+        | .app .. => auditExpr sourceDeclaration ownership kind function (fuel - 1)
+        | .proj _ _ payload => auditExpr sourceDeclaration ownership kind payload (fuel - 1)
+        | .mdata _ body => auditExpr sourceDeclaration ownership kind body (fuel - 1)
         | _ => pure ()
 
-private def auditDeclarationWith (declName : Name) (graphAbsent coveredProofs : NameSet) :
+private def auditDeclarationWith (declName : Name) (dependencyCache : DependencyCache)
+    (coveredProofs : NameSet) (shareProofSources := false) (coveredDefinitions : NameSet := {}) :
     MetaM AuditResult := do
   let env ← getEnv
-  let some info := env.find? declName | return { graphAbsent, coveredProofs, incomplete := true }
+  let some info := env.find? declName | return { dependencyCache, coveredProofs, incomplete := true }
   let ownership := moduleOwnership env declName
   let fuel := 512
+  let elaboration := isElaborationImplementation env declName info.type
+  let implementationEquation ← if isTheorem env declName then
+      if isElaborationEquation env declName then pure true else isToolchainBoundaryEquation declName
+    else pure false
+  -- A callback's defaults are elaboration code. Its parameter and result types are still checked.
+  let signature := if elaboration then info.type.replace fun e =>
+      if e.isAppOfArity ``optParam 2 || e.isAppOfArity ``autoParam 2 then some e.appFn!.appArg!
+      else none
+    else info.type
   let action : StateT AuditResult MetaM Unit := do
-    if ← expressionMayReachForbidden info.type then
-      auditExpr ownership .statement info.type fuel
+    unless implementationEquation do
+      auditExpr declName ownership .statement signature fuel
+    -- Proof dependencies in a signature include the proof arguments and binder types that
+    -- can be erased while reducing that signature to its mathematical statement.
+    if implementationEquation || coveredProofs.contains declName || signature != info.type then
+      auditProofDependencies declName info.type shareProofSources
     if let some value := info.value? (allowOpaque := true) then
+      if elaboration || (shareProofSources && isKnownProof env info) then
+        auditProofDependencies declName value shareProofSources
+        return
+      unless ← expressionMayReachForbidden value do return
       let valueKind ← if ← liftM <| isProofType info.type then
           pure .proof
         else
@@ -364,20 +920,21 @@ private def auditDeclarationWith (declName : Name) (graphAbsent coveredProofs : 
           | .defnInfo _ | .opaqueInfo _ =>
               if ← liftM <| isPredicateType info.type then pure .statement else pure .data
           | _ => pure .data
-      if ← expressionMayReachForbidden value then
-        auditExpr ownership valueKind value fuel
-  return (← action.run { graphAbsent, coveredProofs }).2
+      auditExpr declName ownership valueKind value fuel
+  let (_, result) ← action.run { dependencyCache, coveredProofs, coveredDefinitions, shareProofSources }
+  if result.deferredProofs.isEmpty then return result
+  return (← (auditProofNames declName result.deferredProofs true).run result).2
 
 /-- Audit one declaration for semantic and proof dependencies on retired operators. -/
 public def auditDeclaration (declName : Name) : MetaM AuditResult :=
   auditDeclarationWith declName {} {}
 
 /-- Audit a standalone elaborated expression. Primarily useful for regression tests and tooling. -/
-public def auditExpression (expr : Expr) (kind := DependencyKind.data) : MetaM AuditResult :=
-  let action : StateT AuditResult MetaM Unit := do
-    if ← expressionMayReachForbidden expr then
-      auditExpr .project kind expr
-  return (← action.run {}).2
+public def auditExpression (expr : Expr) (kind := DependencyKind.data) : MetaM AuditResult := do
+  -- A standalone query can refer to lets introduced by its caller.
+  let lets ← (← getLCtx).getFVarIds.filterM fun id => return (← id.getDecl).isLet
+  let expr ← mkLetFVars (lets.map mkFVar) expr (generalizeNondepLet := false)
+  return (← (auditExpr .anonymous .project kind expr).run {}).2
 
 private def rootsMessage (label : String) (roots : Array Name) : MessageData :=
   m!"{label}: {", ".intercalate (roots.map toString).toList}"
@@ -415,7 +972,7 @@ public def operatorFidelityProof : Batteries.Tactic.Lint.Linter where
     if result.proofUses.isEmpty then
       return none
     let lines := result.proofUses.map fun use =>
-      m!"{.ofConstName use.root} ({repr use.ownership})"
+      m!"{.ofConstName use.root} from {.ofConstName use.sourceDeclaration} ({repr use.ownership})"
     return MessageData.joinSep lines.toList Format.line
 
 /-- A proof dependency together with the declaration that contains it. -/
@@ -424,57 +981,78 @@ public structure DeclarationProofUse extends ProofUse where
   declaration : Name
   deriving BEq, DecidableEq, Inhabited, Repr
 
--- A package audit visits the selected theorem bodies at their own declarations.
-private def coverProofs (declarations : Array Name) : NameSet :=
-  declarations.foldl (init := {}) fun names name => names.insert name
+-- A package audit checks selected theorem signatures and bodies at their own declarations.
+-- Calls still contribute their actual arguments, including proofs supplied at the use site.
+private def coverProofs (env : Environment) (declarations : Array Name) : NameSet :=
+  declarations.foldl (init := {}) fun names name =>
+    if (env.find? name).any (isKnownProof env) then names.insert name else names
 
-private def collectProofAudit (declarations : Array Name) (coveredProofs : NameSet := {}) :
+private def coverDefinitions (env : Environment) (declarations : Array Name) : NameSet :=
+  declarations.foldl (init := {}) fun names name =>
+    match env.find? name with
+    | some info =>
+      if !isMarkedMeta env name && !isKnownProof env info && info.hasValue (allowOpaque := true) &&
+          !isElaborationImplementation env name info.type then names.insert name
+      else names
+    | none => names
+
+private def collectProofAudit (declarations : Array Name) (coveredProofs : NameSet := {})
+    (shareProofSources := false) :
     MetaM (Array DeclarationProofUse × Bool) := do
   let mut uses := #[]
   let mut incomplete := false
-  let mut graphAbsent : NameSet := {}
+  let mut dependencyCache : DependencyCache := {}
   for declaration in declarations do
-    let result ← auditDeclarationWith declaration graphAbsent coveredProofs
-    graphAbsent := result.graphAbsent
+    let result ← withFreshCache <|
+      auditDeclarationWith declaration dependencyCache coveredProofs shareProofSources
+    dependencyCache := result.dependencyCache
     incomplete := incomplete || result.incomplete
     for use in result.proofUses do
-      uses := uses.push { declaration, root := use.root, ownership := use.ownership }
+      uses := uses.push { use with declaration }
   return (uses, incomplete)
 
-/-- Collect the proof-only findings for a set of declarations without turning them into errors. -/
+/-- Collect proof-only findings. Incomplete traversal prevents returning a complete report. -/
 public def collectProofUses (declarations : Array Name) : MetaM (Array DeclarationProofUse) := do
-  return (← collectProofAudit declarations).1
+  let (uses, incomplete) ← collectProofAudit declarations
+  if incomplete then throwError "Proof dependency report is incomplete."
+  return uses
 
 private def logProofUses (uses : Array DeclarationProofUse) (incomplete : Bool) :
     CommandElabM Unit := do
   unless uses.isEmpty do
     let lines := uses.map fun use =>
-      m!"{.ofConstName use.declaration}: {.ofConstName use.root} ({repr use.ownership})"
+      m!"{.ofConstName use.declaration}: {.ofConstName use.root} from \
+        {.ofConstName use.sourceDeclaration} ({repr use.ownership})"
     logInfo <| MessageData.joinSep lines.toList Format.line
   if !incomplete && uses.isEmpty then
     logInfo "No proof dependencies on retired operators were found."
 
 private def reportProofUses (declarations : Array Name) (coveredProofs : NameSet := {}) :
     CommandElabM Unit := do
-  let (uses, incomplete) ← liftTermElabM <| collectProofAudit declarations coveredProofs
+  let (uses, incomplete) ← liftTermElabM <| collectProofAudit declarations coveredProofs true
   logProofUses uses incomplete
   if incomplete then
     throwError "Proof dependency report is incomplete."
 
-private def enforceSemanticAudit (declarations : Array Name) (reportProofs : Bool := false) :
-    CommandElabM Unit := do
+private structure ScopeAuditReport where
+  failures : Array MessageData
+  uses : Array DeclarationProofUse
+  incomplete : Bool
+
+private def auditBlock (declarations : Array Name) (coveredProofs coveredDefinitions : NameSet)
+    (reportProofs : Bool) : MetaM ScopeAuditReport := do
   let mut failures : Array MessageData := #[]
   let mut uses : Array DeclarationProofUse := #[]
   let mut incomplete := false
-  let mut graphAbsent : NameSet := {}
-  let coveredProofs := coverProofs declarations
+  let mut dependencyCache : DependencyCache := {}
   for declaration in declarations do
-    let result ← liftTermElabM <| auditDeclarationWith declaration graphAbsent coveredProofs
-    graphAbsent := result.graphAbsent
+    let result ← withFreshCache <|
+      auditDeclarationWith declaration dependencyCache coveredProofs true coveredDefinitions
+    dependencyCache := result.dependencyCache
     if reportProofs then
       incomplete := incomplete || result.incomplete
       for use in result.proofUses do
-        uses := uses.push { declaration, root := use.root, ownership := use.ownership }
+        uses := uses.push { use with declaration }
     if result.hasActionableFinding then
       let mut parts : Array MessageData := #[m!"{.ofConstName declaration}"]
       if result.incomplete then
@@ -492,8 +1070,31 @@ private def enforceSemanticAudit (declarations : Array Name) (reportProofs : Boo
       unless result.dataRoots.isEmpty do
         parts := parts.push (rootsMessage "data" result.dataRoots)
       failures := failures.push <| MessageData.joinSep parts.toList ": "
+  return { failures, uses, incomplete }
+
+private def enforceSemanticAudit (declarations : Array Name) (reportProofs : Bool := false) :
+    CommandElabM Unit := do
+  let env ← getEnv
+  let coveredProofs := coverProofs env declarations
+  let coveredDefinitions := coverDefinitions env declarations
+  -- Each block gets its own Meta state and dependency cache. All blocks share the
+  -- full coverage sets so that auditing a definition never depends on partition order.
+  let reports ← if declarations.size < 2048 then
+      let result ← liftTermElabM <| auditBlock declarations coveredProofs coveredDefinitions reportProofs
+      pure #[result]
+    else do
+      let blockSize := Nat.shiftRight (declarations.size + 7) 3
+      let tasks ← (Array.range 8).mapM fun index => do
+        let start := index * blockSize
+        let declarations := declarations.extract start (start + blockSize)
+        let run ← Command.wrapAsync (fun () =>
+          liftTermElabM <| auditBlock declarations coveredProofs coveredDefinitions reportProofs)
+            (← read).cancelTk?
+        EIO.asTask (run ())
+      tasks.mapM fun task => MonadExcept.ofExcept task.get
   if reportProofs then
-    logProofUses uses incomplete
+    logProofUses (reports.flatMap (·.uses)) (reports.any (·.incomplete))
+  let failures := reports.flatMap (·.failures)
   unless failures.isEmpty do
     throwError m!"Operator-fidelity semantic audit failed:{Format.line}
       {MessageData.joinSep failures.toList Format.line}"
@@ -520,10 +1121,11 @@ private def getScopeDeclarations (project : Name) : CoreM (Array Name) :=
 
 elab_rules : command
   | `(#operator_fidelity_proofs) => do
-      reportProofUses (← liftCoreM Batteries.Tactic.Lint.getDeclsInCurrModule)
+      let declarations ← liftCoreM Batteries.Tactic.Lint.getDeclsInCurrModule
+      reportProofUses declarations (coverProofs (← getEnv) declarations)
   | `(#operator_fidelity_proofs in $project) => do
       let declarations ← liftCoreM <| getScopeDeclarations project.getId.eraseMacroScopes
-      reportProofUses declarations (coverProofs declarations)
+      reportProofUses declarations (coverProofs (← getEnv) declarations)
   | `(#operator_fidelity in $project) => do
       let declarations ← liftCoreM <| getScopeDeclarations project.getId.eraseMacroScopes
       enforceSemanticAudit declarations

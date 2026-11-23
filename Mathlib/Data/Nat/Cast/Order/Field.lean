@@ -34,8 +34,7 @@ theorem cast_div_le {m n : ℕ} {hn : IsUnit (n : α)} :
     (Nat.euclideanDiv m n (Nat.cast_ne_zero.mp hn.ne_zero) : α) ≤
       Checked.div (m : α) (n : α) hn := by
   rw [le_div_iff₀ ((Nat.cast_nonneg n).lt_of_ne' hn.ne_zero), ← Nat.cast_mul, @Nat.cast_le]
-  rw [Nat.euclideanDiv_eq_core]
-  exact Nat.div_mul_le_self m _
+  exact Nat.euclideanDiv_mul_le_self m n (Nat.cast_ne_zero.mp hn.ne_zero)
 
 theorem inv_pos_of_nat {n : ℕ} : 0 < ((n : α) + 1)⁻¹ :=
   inv_pos.2 <| add_pos_of_nonneg_of_pos n.cast_nonneg zero_lt_one

@@ -218,8 +218,8 @@ theorem exponent : Monoid.exponent (DihedralGroup n) = lcm n 2 := by
     rintro (m | m)
     · rw [← orderOf_dvd_iff_pow_eq_one, orderOf_r]
       refine Nat.dvd_trans ⟨Nat.gcd n m.val, ?_⟩ (dvd_lcm_left n 2)
-      simpa only [Nat.euclideanDiv_eq_core] using
-        (Nat.div_mul_cancel (Nat.gcd_dvd_left n m.val)).symm
+      simpa only [Nat.mul_comm] using
+        (Nat.mul_euclideanDiv_cancel _ (Nat.gcd_dvd_left n m.val)).symm
     · rw [← orderOf_dvd_iff_pow_eq_one, orderOf_sr]
       exact dvd_lcm_right n 2
   · apply lcm_dvd
@@ -300,8 +300,16 @@ lemma card_commute_odd (hn : Odd n) :
 
 lemma card_conjClasses_odd (hn : Odd n) :
     Nat.card (ConjClasses (DihedralGroup n)) = Nat.euclideanDiv (n + 3) 2 := by
-  rw [Nat.euclideanDiv_eq_core, ← Nat.mul_div_mul_left _ 2 hn.pos, ← card_commute_odd hn, mul_comm,
-    card_comm_eq_card_conjClasses_mul_card, nat_card, Nat.mul_div_left _ (mul_pos two_pos hn.pos)]
+  have hdiv : 2 ∣ n + 3 := (hn.add_odd (by decide : Odd (3 : ℕ))).two_dvd
+  have hrec := Nat.mul_euclideanDiv_cancel (by decide : (2 : ℕ) ≠ 0) hdiv
+  apply Nat.eq_of_mul_eq_mul_right (Nat.mul_pos Nat.zero_lt_two hn.pos)
+  calc
+    _ = Nat.card { p : DihedralGroup n × DihedralGroup n // Commute p.1 p.2 } := by
+      rw [card_comm_eq_card_conjClasses_mul_card, nat_card]
+    _ = n * (n + 3) := card_commute_odd hn
+    _ = _ := by
+      conv_lhs => rw [← hrec]
+      ac_rfl
 
 /-- If $n$ is odd and $n \ne 1$, then the Dihedral group of order $2n$ has trivial center. -/
 theorem center_eq_bot_of_odd_ne_one (hodd : Odd n) (hne1 : n ≠ 1) :
@@ -353,7 +361,7 @@ theorem center_eq_closure_of_even_ne_two (heven : Even n) (hn2 : n ≠ 2) :
 
 theorem center_eq_bot_of_zero : Subgroup.center (DihedralGroup 0) = ⊥ := by
   rw [center_eq_closure_of_even_ne_two (by decide) (by decide)]
-  simp only [Nat.euclideanDiv_eq_core, Nat.zero_div, CharP.cast_eq_zero, r_zero,
+  simp only [Nat.euclideanDiv_zero, CharP.cast_eq_zero, r_zero,
     Subgroup.zpowers_one_eq_bot]
 
 end DihedralGroup

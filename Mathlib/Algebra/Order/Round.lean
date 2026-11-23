@@ -52,22 +52,26 @@ def round (x : α) : ℤ :=
 
 TODO: decide if we want to use this as a definition. It may be slightly faster over `ℚ`. -/
 theorem round_eq_div (x : α) : round x = Int.euclideanDiv (⌊2 * x⌋ + 1) 2 := by
-  rw [Int.euclideanDiv_eq_core, ← floor_add_fract x, round, fract_intCast_add, fract_fract,
-    floor_intCast_add, mul_add,
-    ← Int.cast_ofNat, ← Int.cast_mul, floor_intCast_add, ceil_intCast_add, add_assoc,
-    Int.mul_add_ediv_left _ _ two_ne_zero, Int.cast_ofNat]
-  split_ifs with h <;> congr 1
-  · rw [Int.floor_eq_zero_iff.mpr, Int.floor_eq_zero_iff.mpr]
-    · simp
-    · simp [h]
-    · suffices fract x < 1 by simpa
-      refine lt_of_le_of_lt ?_ h
-      apply le_mul_of_one_le_left <;> simp
-  · have H : ⌊2 * fract x⌋ = 1 := by simpa [floor_eq_iff, ← two_mul, fract_lt_one] using h
-    suffices 0 < fract x by simp [this, H, ceil_eq_iff, (fract_lt_one _).le]
-    contrapose! h
-    grw [h]
-    simp
+  rw [← floor_add_fract x, round, fract_intCast_add, fract_fract, floor_intCast_add, mul_add,
+    ← Int.cast_ofNat, ← Int.cast_mul, floor_intCast_add, ceil_intCast_add, Int.cast_ofNat]
+  split_ifs with h
+  · have hf : ⌊fract x⌋ = 0 := Int.floor_eq_zero_iff.mpr ⟨fract_nonneg x, fract_lt_one x⟩
+    have hz : ⌊2 * fract x⌋ = 0 :=
+      Int.floor_eq_zero_iff.mpr ⟨mul_nonneg two_pos.le (fract_nonneg x), h⟩
+    rw [hf, hz]
+    symm
+    exact Int.euclideanDiv_eq_of_remainder (r := 1) two_ne_zero
+      (by omega) (by decide) (by decide)
+  · have hz : ⌊2 * fract x⌋ = 1 := by simpa [floor_eq_iff, ← two_mul, fract_lt_one] using h
+    have hf : 0 < fract x := by
+      contrapose! h
+      grw [h]
+      simp
+    have hc : ⌈fract x⌉ = 1 := by simp [ceil_eq_iff, hf, (fract_lt_one x).le]
+    rw [hc, hz]
+    symm
+    exact Int.euclideanDiv_eq_of_remainder (r := 0) two_ne_zero
+      (by omega) (by decide) (by decide)
 
 @[simp]
 theorem round_zero : round (0 : α) = 0 := by simp [round]
@@ -92,8 +96,10 @@ theorem round_eq_half_ceil_two_mul {x : α} (hx : 2 * fract x ≠ 1) :
   · rw [← hm, ceil_intCast]
     rcases m.even_or_odd with ⟨m, rfl⟩ | ⟨m, rfl⟩
     · obtain rfl : m = x := mul_left_cancel₀ two_ne_zero <| by simp [← hm, ← two_mul]
-      rw [round_intCast, Int.euclideanDiv_eq_core, ← two_mul,
-        Int.mul_ediv_cancel_left _ two_ne_zero]
+      rw [round_intCast, ← two_mul]
+      symm
+      exact Int.euclideanDiv_eq_of_remainder (r := 0) two_ne_zero
+        (by simp) (by decide) (by decide)
     · refine absurd ?_ hx
       exact (mul_fract_eq_one_iff_exists_int one_lt_two).mpr ⟨m, mod_cast hm.symm⟩
   · rw [round_eq_div, (ceil_eq_floor_add_one_iff_notMem _).mpr hx']
@@ -178,7 +184,7 @@ variable [Field α] [LinearOrder α] [IsStrictOrderedRing α] [FloorRing α]
 
 theorem round_eq (x : α) : round x = ⌊x + (1 : α) / 2⌋ := by
   rw [← cast_mul_floor_div_cancel_of_pos two_pos, round_eq_div]
-  simp [mul_add, Int.euclideanDiv_eq_core]
+  simp [mul_add]
 
 theorem round_eq_iff {x : α} {n : ℤ} :
     round x = n ↔ x ∈ Ico (n - (1 : α) / 2 : α) (n + (1 : α) / 2) := by

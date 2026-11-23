@@ -479,33 +479,33 @@ theorem prod_alternatingWord_eq_mul_pow (i i' : B) (m : ℕ) :
     π (alternatingWord i i' m) =
       (if Even m then 1 else s i') * (s i * s i') ^ Nat.euclideanDiv m 2 := by
   induction m with
-  | zero => simp [alternatingWord, Nat.euclideanDiv_eq_core]
+  | zero => simp [alternatingWord]
   | succ m ih =>
     rw [alternatingWord_succ', wordProd_cons, ih]
     by_cases hm : Even m
     · have h₁ : ¬ Even (m + 1) := by simp [hm, parity_simps]
       have h₂ : Nat.euclideanDiv (m + 1) 2 = Nat.euclideanDiv m 2 := by
-        simp only [Nat.euclideanDiv_eq_core]
-        exact Nat.succ_div_of_not_dvd (by rwa [← even_iff_two_dvd])
+        rw [Nat.euclideanDiv_succ m (by decide : (2 : ℕ) ≠ 0),
+          ite_eq_right (fun h ↦ h₁ (even_iff_two_dvd.mpr h)), Nat.add_zero]
       simp [hm, h₁, h₂]
     · have h₁ : Even (m + 1) := by simp [hm, parity_simps]
       have h₂ : Nat.euclideanDiv (m + 1) 2 = Nat.euclideanDiv m 2 + 1 := by
-        simpa only [Nat.euclideanDiv_eq_core] using Nat.succ_div_of_dvd h₁.two_dvd
+        rw [Nat.euclideanDiv_succ m (by decide : (2 : ℕ) ≠ 0), ite_eq_left h₁.two_dvd]
       simp [hm, h₁, h₂, ← pow_succ', ← mul_assoc]
 
 theorem prod_alternatingWord_eq_prod_alternatingWord_sub (i i' : B) (m : ℕ) (hm : m ≤ M i i' * 2) :
     π (alternatingWord i i' m) = π (alternatingWord i' i (M i i' * 2 - m)) := by
-  simp_rw [prod_alternatingWord_eq_mul_pow, Nat.euclideanDiv_eq_core, ← Int.even_coe_nat]
+  simp_rw [prod_alternatingWord_eq_mul_pow, ← Int.even_coe_nat]
   /- Rewrite everything in terms of an integer m' which is equal to m.
   The resulting equation holds for all integers m'. -/
-  simp_rw [← zpow_natCast, Int.natCast_ediv, Int.ofNat_sub hm]
+  simp_rw [← zpow_natCast, Int.natCast_euclideanDiv, Int.ofNat_sub hm]
   generalize (m : ℤ) = m'
   clear hm
   push_cast
   rcases Int.even_or_odd' m' with ⟨k, rfl | rfl⟩
   · rw [ite_eq_left (by use k; ring), ite_eq_left (by use -k + (M i i'); ring), mul_comm 2 k,
       ← sub_mul]
-    repeat rw [Int.mul_ediv_cancel _ (by simp)]
+    repeat rw [Int.euclideanDiv_mul_right_cancel]
     rw [zpow_sub, zpow_natCast, simple_mul_simple_pow' cs i i', ← inv_zpow]
     simp
   · have : ¬Even (2 * k + 1) := Int.not_even_iff_odd.2 ⟨k, rfl⟩
@@ -513,10 +513,14 @@ theorem prod_alternatingWord_eq_prod_alternatingWord_sub (i i' : B) (m : ℕ) (h
     have : ¬Even (↑(M i i') * 2 - (2 * k + 1)) :=
       Int.not_even_iff_odd.2 ⟨↑(M i i') - k - 1, by ring⟩
     rw [ite_eq_right this]
-    rw [(by ring : ↑(M i i') * 2 - (2 * k + 1) = -1 + (-k + ↑(M i i')) * 2),
-      (by ring : 2 * k + 1 = 1 + k * 2)]
-    repeat rw [Int.add_mul_ediv_right _ _ (by simp)]
-    simp [zpow_add, simple_mul_simple_pow', ← inv_zpow, ← mul_assoc]
+    rw [(by ring : ↑(M i i') * 2 - (2 * k + 1) = -1 + 2 * (-k + ↑(M i i'))),
+      (by ring : 2 * k + 1 = 1 + 2 * k)]
+    repeat rw [Int.euclideanDiv_add_mul]
+    have hneg : Int.euclideanDiv (-1) 2 = -1 :=
+      Int.euclideanDiv_eq_of_remainder (r := 1) (by decide) (by decide) (by decide) (by decide)
+    have hpos : Int.euclideanDiv 1 2 = 0 :=
+      Int.euclideanDiv_eq_of_remainder (r := 1) (by decide) (by decide) (by decide) (by decide)
+    simp [hneg, hpos, zpow_add, simple_mul_simple_pow', ← inv_zpow, ← mul_assoc]
 
 /-- The two words of length `M i i'` that alternate between `i` and `i'` have the same product.
 This is known as the "braid relation" or "Artin-Tits relation". -/

@@ -52,8 +52,7 @@ theorem factorial_eq_neg_one_pow_mul_half_factorial_sq {p : ℕ} (hp : Odd p) :
     ((p - 1)! : ZMod p) =
       (-1) ^ Nat.euclideanDiv (p - 1) 2 * ((Nat.euclideanDiv (p - 1) 2)! : ZMod p) ^ 2 := by
   have hhalf : 2 * Nat.euclideanDiv (p - 1) 2 = p - 1 := by
-    rw [Nat.euclideanDiv_eq_core]
-    apply Nat.mul_div_cancel'
+    apply Nat.mul_euclideanDiv_cancel (by decide : 2 ≠ 0)
     obtain ⟨k, rfl⟩ := hp
     simp
   rw [pow_two, ← Nat.factorial_mul_descFactorial (show Nat.euclideanDiv (p - 1) 2 ≤ p - 1 by lia),
@@ -97,11 +96,12 @@ of `-1` in `ZMod p`. -/
 theorem half_factorial_sq_eq_neg_one (hp : p % 4 ≠ 3) :
     ((Nat.euclideanDiv (p - 1) 2)! : ZMod p) ^ 2 = -1 := by
   rcases (Fact.out (p := p.Prime)).eq_two_or_odd' with rfl | hodd
-  · rw [Nat.euclideanDiv_eq_core]
+  · rw [Nat.euclideanDiv_eq_zero_of_lt (by decide : 2 ≠ 0) (by decide : 2 - 1 < 2)]
     decide +revert
   have hp_mod_two : p % 2 = 1 := Nat.odd_iff.mp hodd
-  have hm : Even (Nat.euclideanDiv (p - 1) 2) :=
-    Nat.even_iff.mpr (by rw [Nat.euclideanDiv_eq_core]; lia)
+  have hd : 2 ∣ p - 1 := (Nat.Odd.sub_odd hodd odd_one).two_dvd
+  have hq := Nat.mul_euclideanDiv_cancel (by decide : 2 ≠ 0) hd
+  have hm : Even (Nat.euclideanDiv (p - 1) 2) := Nat.even_iff.mpr (by omega)
   rw [← wilsons_lemma p, factorial_eq_neg_one_pow_mul_half_factorial_sq hodd,
     hm.neg_one_pow, one_mul]
 

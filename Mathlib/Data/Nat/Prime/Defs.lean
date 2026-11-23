@@ -117,7 +117,9 @@ theorem prime_def_lt' {p : ℕ} : Prime p ↔ 2 ≤ p ∧ ∀ m, 2 ≤ m → m <
       forall_congr' fun m =>
         ⟨fun h m2 l d => not_lt_of_ge m2 ((h l d).symm ▸ by decide), fun h l d => by
           rcases m with (_ | _ | m)
-          · omega
+          · obtain ⟨k, hk⟩ := d
+            rw [Nat.zero_mul] at hk
+            exact (Nat.not_succ_le_zero 1 (hk ▸ p2)).elim
           · rfl
           · exact (h (le_add_left 2 m) l).elim d⟩
 
@@ -363,11 +365,11 @@ theorem minFac_le_div {n : ℕ} (hn : 1 < n) (np : ¬Prime n) :
     rw [mul_one] at h1
     exact absurd (by rw [h1]; exact minFac_prime (by omega)) np
   | ⟨x + 2, hx⟩ => by
-    rw [Nat.euclideanDiv_eq_core]
-    conv_rhs =>
-      congr
-      rw [hx]
-    rw [Nat.mul_div_cancel_left _ (minFac_pos n (by omega))]
+    have hb := Nat.ne_of_gt (minFac_pos n (by omega))
+    have hq : euclideanDiv n (minFac n) hb = x + 2 :=
+      euclideanDiv_eq_of_remainder (r := 0) hb (by simpa only [Nat.add_zero] using hx)
+        (Nat.pos_of_ne_zero hb)
+    rw [hq]
     exact minFac_le_of_dvd (le_add_left 2 x) ⟨minFac n, by rwa [mul_comm]⟩
 
 /-- The square of the smallest prime factor of a composite number `n` is at most `n`.
@@ -378,7 +380,9 @@ theorem minFac_sq_le_self {n : ℕ} (hn : 1 < n) (h : ¬Prime n) : minFac n ^ 2 
   calc
     minFac n ^ 2 = minFac n * minFac n := sq (minFac n)
     _ ≤ Nat.euclideanDiv n (minFac n) hd * minFac n := Nat.mul_le_mul_right (minFac n) t
-    _ ≤ n := by rw [Nat.euclideanDiv_eq_core]; exact div_mul_le_self n (minFac n)
+    _ ≤ n := by
+      rw [Nat.mul_comm]
+      exact (le_euclideanDiv_iff_mul_le hd).mp le_rfl
 
 @[simp]
 theorem minFac_eq_two_iff {n : ℕ} {hn : n ≠ 1} : minFac n hn = 2 ↔ 2 ∣ n := by
@@ -391,8 +395,13 @@ theorem minFac_eq_two_iff {n : ℕ} {hn : n ≠ 1} : minFac n hn = 2 ↔ 2 ∣ n
 
 theorem factors_lemma {k} :
     Nat.euclideanDiv (k + 2) (minFac (k + 2)) (Nat.ne_of_gt (minFac_pos _ (by omega))) < k + 2 := by
-  rw [Nat.euclideanDiv_eq_core]
-  exact div_lt_self (Nat.zero_lt_succ _) (minFac_prime (by omega)).one_lt
+  apply lt_of_not_ge
+  intro h
+  have hb := Nat.ne_of_gt (minFac_pos (k + 2) (by omega))
+  have hlt := Nat.mul_lt_mul_of_pos_right (minFac_prime (n := k + 2) (by omega)).one_lt
+    (Nat.zero_lt_succ (k + 1))
+  rw [Nat.one_mul] at hlt
+  exact (not_le_of_gt hlt) ((le_euclideanDiv_iff_mul_le hb).mp h)
 
 end MinFac
 

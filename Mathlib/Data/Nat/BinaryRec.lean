@@ -31,13 +31,22 @@ def bit (b : Bool) (n : Nat) : Nat :=
   cond b (2 * n + 1) (2 * n)
 
 theorem shiftRight_one (n) : n >>> 1 = Nat.euclideanDiv n 2 := by
-  rw [Nat.euclideanDiv_eq_core]
-  rfl
+  symm
+  refine Nat.euclideanDiv_eq_of_remainder (r := n % 2) (by decide) ?_
+    (Nat.mod_lt n (by decide))
+  apply Nat.eq_of_testBit_eq
+  intro j
+  change n.testBit j = (2 ^ (1 : Nat) * (n >>> 1) + n % 2).testBit j
+  rw [Nat.testBit_two_pow_mul_add _ (show n % 2 < 2 ^ 1 from Nat.mod_lt n (by decide))]
+  cases j with
+  | zero => simp
+  | succ j => simp [Nat.add_comm 1]
 
 @[simp]
 theorem bit_decide_mod_two_eq_one_shiftRight_one (n : Nat) : bit (n % 2 = 1) (n >>> 1) = n := by
-  simp only [bit, shiftRight_one, Nat.euclideanDiv_eq_core]
-  cases mod_two_eq_zero_or_one n with | _ h => simpa [h] using Nat.div_add_mod n 2
+  simp only [bit, shiftRight_one]
+  cases mod_two_eq_zero_or_one n with
+  | _ h => simpa [h] using Nat.euclideanDiv_mul_add_mod n 2 (by decide)
 
 theorem bit_testBit_zero_shiftRight_one (n : Nat) : bit (n.testBit 0) (n >>> 1) = n := by
   simp
@@ -132,9 +141,7 @@ theorem bit_val (b n) : bit b n = 2 * n + b.toNat := by
 
 @[simp]
 theorem bit_div_two (b n) : Nat.euclideanDiv (bit b n) 2 = n := by
-  rw [Nat.euclideanDiv_eq_core, bit_val, Nat.add_comm, add_mul_div_left, div_eq_of_lt, Nat.zero_add]
-  · cases b <;> decide
-  · decide
+  exact Nat.euclideanDiv_eq_of_remainder (by decide) (bit_val b n) (by cases b <;> decide)
 
 @[simp]
 theorem bit_mod_two (b n) : bit b n % 2 = b.toNat := by

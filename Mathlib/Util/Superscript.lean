@@ -113,11 +113,12 @@ termination_by hi - lo
 decreasing_by
   all_goals
     have hlo : lo ≤ Nat.euclideanDiv (lo + hi) 2 := by
-      rw [Nat.euclideanDiv_eq_core]
-      exact (Nat.le_div_iff_mul_le (by decide)).2 (by omega)
+      exact (Nat.le_euclideanDiv_iff_mul_le (by decide)).2 (by omega)
     have hhi : Nat.euclideanDiv (lo + hi) 2 < hi := by
-      rw [Nat.euclideanDiv_eq_core]
-      exact (Nat.div_lt_iff_lt_mul (by decide)).2 (by omega)
+      apply Nat.lt_of_not_ge
+      intro h
+      have hmul := (Nat.le_euclideanDiv_iff_mul_le (by decide : (2 : Nat) ≠ 0)).1 h
+      omega
     omega
 
 /-- The core function for super/subscript parsing. It consists of three stages:

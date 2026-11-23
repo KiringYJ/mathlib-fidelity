@@ -282,9 +282,8 @@ theorem decode_ge_two (n) (h : 2 ≤ n) : (decode n : Option Bool) = none := by
     change (decodeSum n).bind _ = none
     rw [this]
     rfl
-  have : 1 ≤ Nat.euclideanDiv n 2 := by
-    rw [Nat.euclideanDiv_eq_core, Nat.le_div_iff_mul_le]
-    exacts [h, by decide]
+  have : 1 ≤ Nat.euclideanDiv n 2 :=
+    (Nat.le_euclideanDiv_iff_mul_le (by decide)).2 (by simpa using h)
   obtain ⟨m, e⟩ := exists_eq_succ_of_ne_zero (_root_.ne_of_gt this)
   simp only [decodeSum, div2_val]; cases bodd n <;> simp [e]
 

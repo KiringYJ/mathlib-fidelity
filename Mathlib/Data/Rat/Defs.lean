@@ -173,8 +173,8 @@ section Casts
 
 theorem coe_int_num_of_den_eq_one {q : ℚ} (hq : q.den = 1) : (q.num : ℚ) = q := by
   have h := Rat.normalize_self q
-  simpa only [hq, Rat.normalize_eq, Nat.gcd_one_right, Int.natCast_one, Int.ediv_one, Nat.div_one,
-    Rat.mk_den_one] using h
+  rw [Rat.normalize_eq_mk' _ _ _ (by simp [hq])] at h
+  simpa only [hq, Rat.mk_den_one] using h
 
 lemma eq_num_of_isInt {q : ℚ} (h : q.isInt) : q = q.num := by
   rw [Rat.isInt, Nat.beq_eq_true_eq] at h

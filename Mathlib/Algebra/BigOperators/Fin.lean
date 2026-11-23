@@ -598,15 +598,21 @@ def finFunctionFinEquiv {m n : ℕ} : (Fin n → Fin m) ≃ Fin (m ^ n) :=
         Nat.mod_lt _ (Nat.pos_of_ne_zero hm)⟩)
     fun a => by
       dsimp
-      simp only [Nat.euclideanDiv_eq_core]
       induction n with
       | zero => subsingleton [(finCongr <| pow_zero _).subsingleton]
       | succ n ih =>
+        have hm : m ≠ 0 := fun h ↦ by simpa [h] using a.is_lt
+        have ha : Nat.euclideanDiv a.val m hm < m ^ n := by
+          apply Nat.lt_of_not_ge
+          intro h
+          exact (Nat.not_le_of_lt (a.is_lt.trans_eq (pow_succ' _ _))) <|
+            (Nat.le_euclideanDiv_iff_mul_le hm).1 h
         simp_rw [Fin.forall_iff, Fin.ext_iff] at ih
         ext
-        simp_rw [Fin.sum_univ_succ, Fin.val_zero, Fin.val_succ, pow_zero, Nat.div_one,
-          mul_one, pow_succ', ← Nat.div_div_eq_div_mul, mul_left_comm _ m, ← mul_sum]
-        rw [ih _ (Nat.div_lt_of_lt_mul (a.is_lt.trans_eq (pow_succ' _ _))), Nat.mod_add_div]
+        simp_rw [Fin.sum_univ_succ, Fin.val_zero, Fin.val_succ, pow_zero, Nat.euclideanDiv_one,
+          mul_one, pow_succ', ← Nat.euclideanDiv_euclideanDiv _ hm (pow_ne_zero _ hm),
+          mul_left_comm _ m, ← mul_sum]
+        rw [ih _ ha, Nat.add_comm, Nat.euclideanDiv_mul_add_mod]
 
 theorem finFunctionFinEquiv_apply {m n : ℕ} (f : Fin n → Fin m) :
     (finFunctionFinEquiv f : ℕ) = ∑ i : Fin n, ↑(f i) * m ^ (i : ℕ) :=
@@ -644,7 +650,7 @@ def finPiFinEquiv {m : ℕ} {n : Fin m → ℕ} : (∀ i : Fin m, Fin (n i)) ≃
         (Finset.prod_ne_zero_iff.mpr fun _ _ ↦ hn _) % n b,
         Nat.mod_lt _ (Nat.pos_of_ne_zero (hn b))⟩)
     (by
-      intro a; revert a; simp only [Nat.euclideanDiv_eq_core]
+      intro a; revert a
       refine Fin.consInduction ?_ ?_ n
       · intro a
         have : Subsingleton (Fin (∏ i : Fin 0, i.elim0)) :=
@@ -660,12 +666,23 @@ def finPiFinEquiv {m : ℕ} {n : Fin m → ℕ} : (∀ i : Fin m, Fin (n i)) ≃
             (fun j => (Fin.cons x xs : _ → ℕ) (Fin.castLE (Nat.succ_le_succ (Fin.is_lt _).le) j))
             fun j => rfl
         simp_rw [this]
-        clear this
-        simp_rw [Fin.val_zero, Fintype.prod_empty, Nat.div_one, mul_one, Fin.cons_zero,
-          Fin.prod_univ_succ, Fin.castLE_zero, Fin.cons_zero, ← Nat.div_div_eq_div_mul,
-          mul_left_comm (_ % _ : ℕ), ← mul_sum]
-        convert! Nat.mod_add_div _ _
-        exact ih _ (Nat.div_lt_of_lt_mul <| a.is_lt.trans_eq (Fin.prod_univ_succ _)))
+        have hx : x ≠ 0 := fun h ↦ by simpa [Fin.prod_univ_succ, h] using a.is_lt
+        have hquot (b : ℕ) (hb : x * b ≠ 0) :
+            Nat.euclideanDiv a.val (x * b) hb =
+              Nat.euclideanDiv (Nat.euclideanDiv a.val x hx) b (by
+                intro h
+                exact hb (by simp [h])) :=
+          (Nat.euclideanDiv_euclideanDiv a.val hx _).symm
+        have ha : Nat.euclideanDiv a.val x hx < ∏ i, xs i := by
+          apply Nat.lt_of_not_ge
+          intro h
+          exact (Nat.not_le_of_lt (a.is_lt.trans_eq (Fin.prod_univ_succ _))) <|
+            (Nat.le_euclideanDiv_iff_mul_le hx).1 h
+        simp_rw [Fin.val_zero, Fintype.prod_empty, Nat.euclideanDiv_one, mul_one, Fin.cons_zero,
+          Fin.prod_univ_succ, Fin.castLE_zero, Fin.cons_zero,
+          hquot, mul_left_comm (_ % _ : ℕ), ← mul_sum]
+        convert! (Nat.add_comm ..).trans (Nat.euclideanDiv_mul_add_mod a.val x hx)
+        exact ih _ ha)
 
 theorem finPiFinEquiv_apply {m : ℕ} {n : Fin m → ℕ} (f : ∀ i : Fin m, Fin (n i)) :
     (finPiFinEquiv f : ℕ) = ∑ i, f i * ∏ j, n (Fin.castLE i.is_lt.le j) := rfl

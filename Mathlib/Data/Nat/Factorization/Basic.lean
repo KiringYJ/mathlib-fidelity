@@ -89,36 +89,42 @@ theorem factorizationEquiv_inv_apply {f : ℕ →₀ ℕ} (hf : ∀ p ∈ f.supp
   factorizationEquiv_symm_apply_coe ⟨f, hf⟩
 
 theorem ordCompl_of_not_prime (n p : ℕ) (hp : ¬p.Prime) : n.ordCompl p = n := by
-  simp [ordCompl, Nat.euclideanDiv_eq_core, ordProj_of_not_prime n p hp]
+  exact Nat.euclideanDiv_eq_of_remainder (r := 0) (ordProj_pos n p).ne'
+    (by simp [ordProj_of_not_prime n p hp]) (ordProj_pos n p)
+
+theorem ordProj_mul_ordCompl_eq_self (n p : ℕ) : n.ordProj p * n.ordCompl p = n :=
+  Nat.mul_euclideanDiv_cancel (ordProj_pos n p).ne' (ordProj_dvd n p)
 
 theorem ordCompl_dvd (n p : ℕ) : n.ordCompl p ∣ n := by
-  simpa only [ordCompl, Nat.euclideanDiv_eq_core] using div_dvd_of_dvd (ordProj_dvd n p)
+  exact ⟨n.ordProj p, by rw [Nat.mul_comm, ordProj_mul_ordCompl_eq_self]⟩
 
 theorem ordProj_le {n : ℕ} (p : ℕ) (hn : n ≠ 0) : n.ordProj p ≤ n :=
   le_of_dvd hn.bot_lt (Nat.ordProj_dvd n p)
 
 theorem ordCompl_pos {n : ℕ} (p : ℕ) (hn : n ≠ 0) : 0 < n.ordCompl p := by
-  if pp : p.Prime then
-    simpa only [ordCompl, Nat.euclideanDiv_eq_core] using
-      Nat.div_pos (ordProj_le p hn) (ordProj_pos n p)
-  else
-    simpa [ordCompl_of_not_prime n p pp] using hn.bot_lt
+  exact (Nat.le_euclideanDiv_iff_mul_le (k := 1) (ordProj_pos n p).ne').mpr
+    (by simpa only [Nat.mul_one] using ordProj_le p hn)
 
 theorem ordCompl_le (n p : ℕ) : n.ordCompl p ≤ n := by
-  simpa only [ordCompl, Nat.euclideanDiv_eq_core] using Nat.div_le_self n (n.ordProj p)
+  calc
+    n.ordCompl p = 1 * n.ordCompl p := (Nat.one_mul _).symm
+    _ ≤ n.ordProj p * n.ordCompl p := Nat.mul_le_mul_right _ (ordProj_pos n p)
+    _ = n := ordProj_mul_ordCompl_eq_self n p
 
-theorem ordProj_mul_ordCompl_eq_self (n p : ℕ) : n.ordProj p * n.ordCompl p = n := by
-  simpa only [ordCompl, Nat.euclideanDiv_eq_core] using Nat.mul_div_cancel' (ordProj_dvd n p)
+private theorem ordCompl_zero (p : ℕ) : (0 : ℕ).ordCompl p = 0 :=
+  Nat.le_antisymm (ordCompl_le 0 p) (Nat.zero_le _)
 
 theorem ordProj_mul {a b : ℕ} (p : ℕ) (ha : a ≠ 0) (hb : b ≠ 0) :
     (a * b).ordProj p = a.ordProj p * b.ordProj p := by
   simp [ordProj, factorization_mul ha hb, pow_add]
 
 theorem ordCompl_mul (a b p : ℕ) : (a * b).ordCompl p = a.ordCompl p * b.ordCompl p := by
-  if ha : a = 0 then simp [ha, ordCompl, Nat.euclideanDiv_eq_core] else
-  if hb : b = 0 then simp [hb, ordCompl, Nat.euclideanDiv_eq_core] else
-  simp only [ordCompl, Nat.euclideanDiv_eq_core, ordProj_mul p ha hb]
-  rw [div_mul_div_comm (ordProj_dvd a p) (ordProj_dvd b p)]
+  if ha : a = 0 then simp [ha, ordCompl_zero] else
+  if hb : b = 0 then simp [hb, ordCompl_zero] else
+  refine Nat.euclideanDiv_eq_of_remainder (r := 0) (ordProj_pos (a * b) p).ne' ?_
+    (ordProj_pos (a * b) p)
+  rw [Nat.add_zero, ordProj_mul p ha hb, mul_mul_mul_comm, ordProj_mul_ordCompl_eq_self,
+    ordProj_mul_ordCompl_eq_self]
 
 /-! ### Factorization and divisibility -/
 
@@ -186,13 +192,11 @@ theorem exists_factorization_lt_of_lt {a b : ℕ} (ha : a ≠ 0) (hab : a < b) :
 @[simp]
 theorem factorization_div {d n : ℕ} (h : d ∣ n) (hd : d ≠ 0 := by checked_native_nonzero) :
     (Nat.euclideanDiv n d hd).factorization = n.factorization - d.factorization := by
-  simp only [Nat.euclideanDiv_eq_core]
-  rcases eq_or_ne n 0 with (rfl | hn); · simp [tsub_eq_zero_of_le]
-  apply add_left_injective d.factorization
-  simp only
-  rw [tsub_add_cancel_of_le <| (Nat.factorization_le_iff_dvd hd hn).mpr h, ←
-    Nat.factorization_mul (Nat.div_pos (Nat.le_of_dvd hn.bot_lt h) hd.bot_lt).ne' hd,
-    Nat.div_mul_cancel h]
+  obtain ⟨m, rfl⟩ := h
+  rw [Nat.euclideanDiv_mul_left_cancel]
+  rcases eq_or_ne m 0 with (rfl | hm)
+  · simp [tsub_eq_zero_of_le]
+  · rw [Nat.factorization_mul hd hm, add_tsub_cancel_left]
 
 theorem dvd_ordProj_of_dvd {n p : ℕ} (hn : n ≠ 0) (pp : p.Prime) (h : p ∣ n) : p ∣ n.ordProj p :=
   dvd_pow_self p (Prime.factorization_pos_of_dvd pp hn h).ne'
@@ -207,7 +211,7 @@ theorem coprime_ordCompl {n p : ℕ} (hp : Prime p) (hn : n ≠ 0) : Coprime p (
 
 theorem factorization_ordCompl (n p : ℕ) :
     (n.ordCompl p).factorization = n.factorization.erase p := by
-  if hn : n = 0 then simp [hn, ordCompl, Nat.euclideanDiv_eq_core] else
+  if hn : n = 0 then simp [hn, ordCompl_zero] else
   if pp : p.Prime then ?_ else
     simp [pp, ordCompl_of_not_prime n p pp]
   ext q
@@ -240,9 +244,9 @@ theorem ordCompl_eq_self_iff_zero_or_not_dvd (n : ℕ) {p : ℕ} (hp : Prime p) 
       rw [← h]
       exact not_dvd_ordCompl hp n_zero
   · rintro (n_eq_zero | not_dvd)
-    · simp [n_eq_zero, ordCompl, Nat.euclideanDiv_eq_core]
-    · simp [ordCompl, Nat.euclideanDiv_eq_core, ordProj,
-        Nat.factorization_eq_zero_of_not_dvd not_dvd]
+    · simp [n_eq_zero, ordCompl_zero]
+    · simpa [ordProj, Nat.factorization_eq_zero_of_not_dvd not_dvd] using
+        ordProj_mul_ordCompl_eq_self n p
 
 theorem ordCompl_pow_mul_of_not_dvd {m : ℕ} (k : ℕ) {p : ℕ} (hp : p.Prime) (hm : ¬p ∣ m) :
     (p ^ k * m).ordCompl p = m := by
@@ -256,8 +260,7 @@ theorem ordCompl_pow_mul_eq_self_iff (k m : ℕ) {p : ℕ} (hp : p.Prime) :
 theorem ordCompl_div_pow_of_dvd (k : ℕ) {x p : ℕ} (hp : p.Prime) (hx : p ^ k ∣ x) :
     (Nat.euclideanDiv x (p ^ k) (pow_ne_zero _ hp.ne_zero)).ordCompl p = x.ordCompl p := by
   obtain ⟨m, rfl⟩ := hx
-  rw [Nat.euclideanDiv_eq_core, Nat.mul_div_cancel_left m (pow_pos hp.pos k),
-    ← ordCompl_self_pow_mul m k hp]
+  rw [Nat.euclideanDiv_mul_left_cancel, ordCompl_self_pow_mul m k hp]
 
 theorem ordCompl_div_of_dvd {x : ℕ} {p : ℕ} (hp : p.Prime) (hx : p ∣ x) :
     (Nat.euclideanDiv x p hp.ne_zero).ordCompl p = x.ordCompl p := by
@@ -266,7 +269,7 @@ theorem ordCompl_div_of_dvd {x : ℕ} {p : ℕ} (hp : p.Prime) (hx : p ∣ x) :
 -- `n.ordCompl p` is the largest divisor of `n` not divisible by `p`.
 theorem dvd_ordCompl_of_dvd_not_dvd {p d n : ℕ} (hdn : d ∣ n) (hpd : ¬p ∣ d) :
     d ∣ n.ordCompl p := by
-  if hn0 : n = 0 then simp [hn0, ordCompl, Nat.euclideanDiv_eq_core] else
+  if hn0 : n = 0 then simp [hn0, ordCompl_zero] else
   if hd0 : d = 0 then simp [hd0] at hpd else
   rw [← factorization_le_iff_dvd hd0 (ordCompl_pos p hn0).ne', factorization_ordCompl]
   intro q
@@ -293,13 +296,17 @@ theorem exists_eq_two_pow_mul_odd {n : ℕ} (hn : n ≠ 0) :
 theorem dvd_iff_div_factorization_eq_tsub {d n : ℕ} (hd : d ≠ 0) (hdn : d ≤ n) :
     d ∣ n ↔ (Nat.euclideanDiv n d hd).factorization = n.factorization - d.factorization := by
   refine ⟨fun h ↦ factorization_div h hd, ?_⟩
-  simp only [Nat.euclideanDiv_eq_core]
-  rcases eq_or_lt_of_le hdn with (rfl | hd_lt_n); · simp
-  have h1 := (Nat.div_pos hdn (Nat.pos_of_ne_zero hd)).ne'
+  have h1 : Nat.euclideanDiv n d hd ≠ 0 := Nat.ne_of_gt <|
+    (Nat.le_euclideanDiv_iff_mul_le (k := 1) hd).mpr (by simpa only [Nat.mul_one] using hdn)
   intro h
-  rw [dvd_iff_le_div_mul n d]
-  by_contra h2
-  obtain ⟨p, hp⟩ := exists_factorization_lt_of_lt (mul_ne_zero h1 hd) (not_le.mp h2)
+  by_contra hnd
+  have hlt : Nat.euclideanDiv n d hd * d < n := by
+    rw [Nat.mul_comm]
+    calc
+      _ < d * Nat.euclideanDiv n d hd + n % d :=
+        Nat.lt_add_of_pos_right (Nat.pos_of_ne_zero (Nat.dvd_iff_mod_eq_zero.not.mp hnd))
+      _ = n := Nat.euclideanDiv_mul_add_mod n d hd
+  obtain ⟨p, hp⟩ := exists_factorization_lt_of_lt (mul_ne_zero h1 hd) hlt
   rwa [factorization_mul h1 hd, add_apply, ← lt_tsub_iff_right, h, tsub_apply,
     lt_self_iff_false] at hp
 
@@ -315,7 +322,7 @@ theorem ordCompl_dvd_ordCompl_of_dvd {a b : ℕ} (hab : a ∣ b) (p : ℕ) :
   rcases em' p.Prime with (pp | pp)
   · simp [ordCompl_of_not_prime _ _ pp, hab]
   rcases eq_or_ne b 0 with (rfl | hb0)
-  · simp [ordCompl, Nat.euclideanDiv_eq_core]
+  · simp [ordCompl_zero]
   rcases eq_or_ne a 0 with (rfl | ha0)
   · cases hb0 (zero_dvd_iff.1 hab)
   have ha := (ordCompl_pos p ha0).ne'
@@ -337,9 +344,14 @@ theorem ordCompl_dvd_ordCompl_iff_dvd (a b : ℕ) :
   rw [prime_dvd_prime_iff_eq pa pb]
   by_contra hab
   apply pa.ne_one
-  rw [← Nat.dvd_one, ← Nat.mul_dvd_mul_iff_left hb0.bot_lt, mul_one]
-  simpa [ordCompl, Nat.euclideanDiv_eq_core, ordProj, Prime.factorization_self pb,
-    Prime.factorization pa, hab] using h b
+  rw [← Nat.dvd_one]
+  have hbb : b.ordProj b = b := by simp [ordProj, Prime.factorization_self pb]
+  have hba : b.ordCompl b = 1 := by
+    apply Nat.eq_of_mul_eq_mul_left pb.pos
+    simpa only [hbb, Nat.mul_one] using ordProj_mul_ordCompl_eq_self b b
+  have hab' : a.ordCompl b = a := by
+    simpa [ordProj, Prime.factorization pa, hab] using ordProj_mul_ordCompl_eq_self a b
+  simpa only [hba, hab'] using h b
 
 theorem dvd_iff_prime_pow_dvd_dvd (n d : ℕ) :
     d ∣ n ↔ ∀ p k : ℕ, Prime p → p ^ k ∣ d → p ^ k ∣ n := by
@@ -540,32 +552,27 @@ theorem exists_dvd_pow_iff {n k : ℕ} (hn : n ≠ 0) (hk : k ≠ 0) :
 See `Nat.card_multiples'` for an alternative spelling of the statement. -/
 theorem card_multiples (n p : ℕ) (hp : p ≠ 0 := by checked_native_nonzero) :
     #{e ∈ range n | p ∣ e + 1} = Nat.euclideanDiv n p hp := by
-  simp only [Nat.euclideanDiv_eq_core]
   induction n with
   | zero => simp
   | succ n hn =>
-    simp [Nat.succ_div, add_ite, add_zero, Finset.range_add_one, filter_insert, apply_ite card,
+    simp [euclideanDiv_succ, add_ite, add_zero, Finset.range_add_one, filter_insert, apply_ite card,
       card_insert_of_notMem, hn]
 
 /-- Exactly `n / p` naturals in `(0, n]` are multiples of `p`. -/
 theorem Ioc_filter_dvd_card_eq_div (n p : ℕ) (hp : p ≠ 0 := by checked_native_nonzero) :
     #{x ∈ Ioc 0 n | p ∣ x} = Nat.euclideanDiv n p hp := by
-  simp only [Nat.euclideanDiv_eq_core]
-  induction n <;> simp [Nat.succ_div, add_ite, ← insert_Ioc_right_eq_Ioc_add_one, filter_insert,
-    apply_ite card, *]
+  induction n <;> simp [euclideanDiv_succ, add_ite,
+    ← insert_Ioc_right_eq_Ioc_add_one, filter_insert, apply_ite card, *]
 
 /-- There are exactly `⌊N/n⌋` positive multiples of `n` that are `≤ N`.
 See `Nat.card_multiples` for a "shifted-by-one" version. -/
 lemma card_multiples' (N n : ℕ) (hn : n ≠ 0 := by checked_native_nonzero) :
     #{k ∈ range N.succ | k ≠ 0 ∧ n ∣ k} = Nat.euclideanDiv N n hn := by
-  simp only [Nat.euclideanDiv_eq_core]
   induction N with
   | zero => simp [Finset.filter_false_of_mem]
   | succ N ih =>
-    rw [Finset.range_add_one, Finset.filter_insert]
-    by_cases h : n ∣ N.succ
-    · simp [h, succ_div_of_dvd, ih]
-    · simp [h, succ_div_of_not_dvd, ih]
+    rw [Finset.range_add_one, Finset.filter_insert, euclideanDiv_succ]
+    by_cases h : n ∣ N.succ <;> simp [h, ih]
 
 theorem exists_eq_pow_of_exponent_coprime_of_pow_eq_pow
     {a b m n : ℕ} (hmn : m.Coprime n) (h : a ^ m = b ^ n) :
@@ -580,20 +587,20 @@ theorem exists_eq_pow_of_exponent_coprime_of_pow_eq_pow
   · use b
     simp_all
   let factors :=
-    a.factorization.mapRange (fun k ↦ Nat.euclideanDiv k n hn0) (by simp [Nat.euclideanDiv_eq_core])
+    a.factorization.mapRange (fun k ↦ Nat.euclideanDiv k n hn0) (Nat.euclideanDiv_zero n hn0)
   set c := factors.prod (· ^ ·) with hc
   use c
   suffices ha : a = c ^ n by
     refine ⟨ha, ?_⟩
     apply Nat.pow_left_injective hn0
     simp [← h, ha, Nat.pow_right_comm]
-  apply eq_of_factorization_eq ha0 (by simp [c, factors, Nat.euclideanDiv_eq_core])
+  apply eq_of_factorization_eq ha0 (by simp [c, factors])
   intro p
   have foo (p) (hp : p ∈ factors.support) : Prime p :=
     prime_of_mem_primeFactors (Finsupp.support_mapRange hp)
   rw [factorization_pow, hc, prod_pow_factorization_eq_self foo]
   suffices n ∣ a.factorization p by
-    simp [factors, Nat.euclideanDiv_eq_core, Nat.mul_div_cancel' this]
+    simp [factors, Nat.mul_euclideanDiv_cancel hn0 this]
   refine hmn.symm.dvd_of_dvd_mul_left ⟨b.factorization p, ?_⟩
   simpa using congr(factorization $h p)
 
@@ -606,24 +613,17 @@ theorem exists_eq_pow_of_pow_eq_pow
   have hg : gcd m n ≠ 0 := hmn.elim gcd_ne_zero_left gcd_ne_zero_right
   let m' := Nat.euclideanDiv m (gcd m n) hg
   let n' := Nat.euclideanDiv n (gcd m n) hg
+  have hm : g * m' = m := Nat.mul_euclideanDiv_cancel hg (gcd_dvd_left m n)
+  have hn : g * n' = n := Nat.mul_euclideanDiv_cancel hg (gcd_dvd_right m n)
   have coprime : m'.Coprime n' := by
-    simp only [m', n', Nat.euclideanDiv_eq_core]
-    rcases hmn with hm | hn
-    · exact gcd_div_gcd_div_gcd_of_pos_left (zero_lt_of_ne_zero hm)
-    · exact gcd_div_gcd_div_gcd_of_pos_right (zero_lt_of_ne_zero hn)
+    change gcd m' n' = 1
+    apply Nat.eq_of_mul_eq_mul_left (Nat.pos_of_ne_zero hg)
+    rw [← Nat.gcd_mul_left, hm, hn, Nat.mul_one]
   have pow_eq : a ^ m' = b ^ n' := by
-    conv_lhs at h => rw [show m = m' * g from by
-      simpa only [m', g, Nat.euclideanDiv_eq_core] using
-        (Nat.div_mul_cancel (gcd_dvd_left m n)).symm]
-    conv_rhs at h => rw [show n = n' * g from by
-      simpa only [n', g, Nat.euclideanDiv_eq_core] using
-        (Nat.div_mul_cancel (gcd_dvd_right m n)).symm]
+    conv_lhs at h => rw [← hm, Nat.mul_comm g m']
+    conv_rhs at h => rw [← hn, Nat.mul_comm g n']
     rw [pow_mul, pow_mul] at h
-    have : g ≠ 0 := by
-      rcases hmn with hm | hn
-      · exact gcd_ne_zero_left hm
-      · exact gcd_ne_zero_right hn
-    exact Nat.pow_left_injective this h
+    exact Nat.pow_left_injective hg h
   exact exists_eq_pow_of_exponent_coprime_of_pow_eq_pow coprime pow_eq
 
 end Nat

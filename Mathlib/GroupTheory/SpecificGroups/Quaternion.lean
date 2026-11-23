@@ -261,8 +261,9 @@ theorem exponent : Monoid.exponent (QuaternionGroup n) = 2 * lcm n 2 := by
     rintro (m | m)
     · rw [← orderOf_dvd_iff_pow_eq_one, orderOf_a]
       refine Nat.dvd_trans ⟨Nat.gcd (2 * n) m.val, ?_⟩ (dvd_lcm_left (2 * n) 4)
-      simpa only [Nat.euclideanDiv_eq_core] using
-        (Nat.div_mul_cancel (Nat.gcd_dvd_left (2 * n) m.val)).symm
+      have hden := (Nat.gcd_pos_of_pos_left m.val (Nat.mul_pos Nat.zero_lt_two hn.pos)).ne'
+      simpa only [Nat.mul_comm] using
+        (Nat.mul_euclideanDiv_cancel hden (Nat.gcd_dvd_left (2 * n) m.val)).symm
     · rw [← orderOf_dvd_iff_pow_eq_one, orderOf_xa]
       exact dvd_lcm_right (2 * n) 4
   · apply lcm_dvd

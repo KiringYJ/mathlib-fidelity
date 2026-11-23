@@ -148,7 +148,11 @@ theorem left_of_comp {g : α → α} (hco : Commute f g) (hfg : IsPeriodicPt (f 
   exact hfg.left_of_comp hg
 
 theorem iterate_mod_apply (h : IsPeriodicPt f n x) (m : ℕ) : f^[m % n] x = f^[m] x := by
-  conv_rhs => rw [← Nat.mod_add_div m n, iterate_add_apply, (h.mul_const _).eq]
+  by_cases hn : n = 0
+  · simp [hn]
+  have hsplit := Nat.euclideanDiv_mul_add_mod m n hn
+  rw [add_comm] at hsplit
+  conv_rhs => rw [← hsplit, iterate_add_apply, (h.mul_const _).eq]
 
 protected theorem mod (hm : IsPeriodicPt f m x) (hn : IsPeriodicPt f n x) :
     IsPeriodicPt f (m % n) x :=
@@ -223,8 +227,8 @@ theorem isPeriodicPt_of_mem_periodicPts_of_isPeriodicPt_iterate (hx : x ∈ peri
     convert! (hm.apply_iterate ((q + 1) * r - n)).eq <;>
       rw [← iterate_add_apply, Nat.sub_add_cancel this, iterate_mul, (hr'.iterate _).eq]
   change n ≤ (Nat.euclideanDiv n r hr.ne' + 1) * r
-  rw [Nat.euclideanDiv_eq_core, Nat.add_mul, one_mul]
-  exact (Nat.lt_div_mul_add hr).le
+  rw [Nat.mul_comm]
+  exact ((Nat.euclideanDiv_lt_iff_lt_mul hr.ne').mp (Nat.lt_succ_self _)).le
 
 variable (f)
 
@@ -416,17 +420,28 @@ theorem minimalPeriod_iterate_eq_div_gcd (hx : x ∈ periodicPts f) (n : ℕ) :
     minimalPeriod f^[n] x (mem_periodicPts_iterate hx n) =
       Nat.euclideanDiv (minimalPeriod f x) (Nat.gcd (minimalPeriod f x) n)
         (Nat.ne_of_gt (Nat.gcd_pos_of_pos_left n (minimalPeriod_pos hx))) := by
-  have h : 0 < gcd (minimalPeriod f x) n := gcd_pos_of_pos_left n (minimalPeriod_pos hx)
-  rw [Nat.euclideanDiv_eq_core]
+  let m := minimalPeriod f x
+  let d := gcd m n
+  have hd : 0 < d := gcd_pos_of_pos_left n (minimalPeriod_pos hx)
+  let q := Nat.euclideanDiv m d hd.ne'
+  let k := Nat.euclideanDiv n d hd.ne'
+  have hq : d * q = m := Nat.mul_euclideanDiv_cancel hd.ne' (gcd_dvd_left m n)
+  have hk : d * k = n := Nat.mul_euclideanDiv_cancel hd.ne' (gcd_dvd_right m n)
+  change minimalPeriod f^[n] x _ = q
   apply Nat.dvd_antisymm
   · apply IsPeriodicPt.minimalPeriod_dvd _ (mem_periodicPts_iterate hx n)
-    rw [IsPeriodicPt, IsFixedPt, ← iterate_mul, ← Nat.mul_div_assoc _ (gcd_dvd_left _ _),
-      mul_comm, Nat.mul_div_assoc _ (gcd_dvd_right _ _), mul_comm, iterate_mul]
-    exact (isPeriodicPt_minimalPeriod f x hx).iterate _
-  · apply Coprime.dvd_of_dvd_mul_right (coprime_div_gcd_div_gcd h)
-    apply Nat.dvd_of_mul_dvd_mul_right h
-    rw [Nat.div_mul_cancel (gcd_dvd_left _ _), mul_assoc, Nat.div_mul_cancel (gcd_dvd_right _ _),
-      mul_comm]
+    have hmul : n * q = m * k := by
+      rw [← hk, ← hq]
+      ac_rfl
+    rw [IsPeriodicPt, IsFixedPt, ← iterate_mul, hmul, mul_comm m k, iterate_mul]
+    exact ((isPeriodicPt_minimalPeriod f x hx).iterate k).eq
+  · have hcop : q.Coprime k := by
+      change gcd q k = 1
+      apply Nat.eq_of_mul_eq_mul_left hd
+      rw [← Nat.gcd_mul_left, hq, hk, Nat.mul_one]
+    apply hcop.dvd_of_dvd_mul_right
+    apply Nat.dvd_of_mul_dvd_mul_right hd
+    rw [mul_comm q d, hq, mul_right_comm, mul_assoc, hk, mul_comm]
     apply IsPeriodicPt.minimalPeriod_dvd _ hx
     rw [IsPeriodicPt, IsFixedPt, iterate_mul]
     exact isPeriodicPt_minimalPeriod _ _ _
@@ -644,13 +659,21 @@ theorem zpow_smul_eq_iff_period_dvd {j : ℤ} {g : G} {a : α} :
 @[to_additive (attr := simp)]
 theorem pow_mod_period_smul (n : ℕ) {m : M} {a : α} :
     m ^ (n % period m a) • a = m ^ n • a := by
-  conv_rhs => rw [← Nat.mod_add_div n (period m a), pow_add, mul_smul,
+  by_cases h : period m a = 0
+  · simp [h]
+  have hsplit := Nat.euclideanDiv_mul_add_mod n (period m a) h
+  rw [add_comm] at hsplit
+  conv_rhs => rw [← hsplit, pow_add, mul_smul,
     pow_smul_eq_iff_period_dvd.mpr (dvd_mul_right _ _)]
 
 @[to_additive (attr := simp)]
 theorem zpow_mod_period_smul (j : ℤ) {g : G} {a : α} :
     g ^ (j % (period g a : ℤ)) • a = g ^ j • a := by
-  conv_rhs => rw [← Int.emod_add_mul_ediv j (period g a), zpow_add, mul_smul,
+  by_cases h : (period g a : ℤ) = 0
+  · simp [h]
+  have hsplit := Int.euclideanDiv_mul_add_mod j (period g a) h
+  rw [add_comm] at hsplit
+  conv_rhs => rw [← hsplit, zpow_add, mul_smul,
     zpow_smul_eq_iff_period_dvd.mpr (dvd_mul_right _ _)]
 
 @[to_additive (attr := simp)]

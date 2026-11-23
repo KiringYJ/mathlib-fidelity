@@ -109,12 +109,14 @@ theorem equitableOn_iff_le_le_add_one :
     simp_rw [← h]
     apply hb
   symm
-  rw [Nat.euclideanDiv_eq_core]
-  refine
-    Nat.div_eq_of_lt_le (le_trans (by simp [mul_comm]) (sum_le_sum fun a ha => (hb a ha).1))
-      ((sum_lt_sum (fun a ha => (hb a ha).2) ⟨_, hx₁, (hb _ hx₁).2.lt_of_ne hx₂⟩).trans_le ?_)
-  rw [mul_comm, sum_const_nat]
-  exact fun _ _ => rfl
+  apply Nat.le_antisymm
+  · apply Nat.le_of_lt_succ ((Nat.euclideanDiv_lt_iff_lt_mul hs.card_pos.ne').2 ?_)
+    calc
+      (∑ i ∈ s, f i) < ∑ _i ∈ s, (b + 1) :=
+        sum_lt_sum (fun a ha => (hb a ha).2) ⟨_, hx₁, (hb _ hx₁).2.lt_of_ne hx₂⟩
+      _ = s.card * (b + 1) := by simp
+  · exact (Nat.le_euclideanDiv_iff_mul_le hs.card_pos.ne').2
+      (le_trans (by simp [mul_comm]) (sum_le_sum fun a ha => (hb a ha).1))
 
 theorem EquitableOn.le (h : EquitableOn (s : Set α) f) (ha : a ∈ s) :
     Nat.euclideanDiv (∑ i ∈ s, f i) s.card (card_ne_zero_of_mem ha) ≤ f a :=

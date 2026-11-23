@@ -147,11 +147,10 @@ theorem centralBinom_factorization_small (n : ℕ) (n_large : 2 < n)
       p ^ (centralBinom n).factorization p := by
   refine (Eq.trans ?_ n.prod_pow_factorization_centralBinom).symm
   apply Finset.prod_subset
-  · simp only [Nat.euclideanDiv_eq_core]
-    grw [Nat.div_le_self]
+  · grw [Nat.euclideanDiv_le_self _ _ (by decide : 3 ≠ 0)]
   intro x hx h2x
   rw [Finset.mem_range, Nat.lt_succ_iff] at hx h2x
-  rw [Nat.euclideanDiv_eq_core, not_le, div_lt_iff_lt_mul three_pos, mul_comm x] at h2x
+  rw [not_le, Nat.euclideanDiv_lt_iff_lt_mul (by decide : 3 ≠ 0)] at h2x
   obtain h | h : ¬ x.Prime ∨ x ≤ n := by simpa [imp_iff_not_or, hx.not_gt] using no_prime x
   · rw [factorization_eq_zero_of_not_prime n.centralBinom h, Nat.pow_zero]
   · rw [factorization_centralBinom_of_two_mul_self_lt_three_mul n_large h h2x, Nat.pow_zero]

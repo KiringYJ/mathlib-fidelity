@@ -17,6 +17,8 @@ SOURCE_ROOTS = ("Mathlib", "Archive", "Counterexamples", "Wanted", "MathlibTest"
 SELECTED = re.compile(
     r"(?<![A-Za-z0-9_])Rat\.(?:inv|div|zpow|divInt)(?![A-Za-z0-9_])"
     r"|(?<![A-Za-z0-9_.])mkRat(?![A-Za-z0-9_])"
+    r"|(?<![A-Za-z0-9_])Nat\.(?:div|divExact|instDiv)(?![A-Za-z0-9_])"
+    r"|(?<![A-Za-z0-9_])Int\.(?:ediv|tdiv|fdiv|bdiv|divExact|instDiv)(?![A-Za-z0-9_])"
 )
 
 

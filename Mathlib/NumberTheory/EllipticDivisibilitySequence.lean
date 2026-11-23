@@ -113,21 +113,38 @@ where
     | .ofNat n => (Nat.euclideanDiv n 2 : ℤ)
     | .negSucc n => -(Nat.euclideanDiv (n + 1) 2 : ℤ)
 
-private theorem half_eq_tdiv (n : ℤ) : atom.half n = n.tdiv 2 := by
-  cases n <;> simp only [atom.half, Nat.euclideanDiv_eq_core, Int.tdiv] <;> rfl
+private theorem half_zero : atom.half 0 = 0 := by
+  change (Nat.euclideanDiv 0 2 : ℤ) = 0
+  rw [Nat.euclideanDiv_eq_of_remainder (q := 0) (r := 0) two_ne_zero (by decide) (by decide)]
+  rfl
 
-private theorem atom_eq_tdiv (a b : ℤ) :
-    atom W a b = W ((a + b).tdiv 2) * W ((a - b).tdiv 2) := by
-  simp only [atom, half_eq_tdiv]
+private theorem half_neg (n : ℤ) : atom.half (-n) = -atom.half n := by
+  rcases n with (_ | n) | n
+  · change atom.half 0 = -atom.half 0
+    simp only [half_zero, Int.neg_zero]
+  · rfl
+  · exact (Int.neg_neg _).symm
+
+private theorem half_two_mul (n : ℤ) : atom.half (2 * n) = n := by
+  have hnat (m : ℕ) : atom.half (2 * (m : ℤ)) = m := by
+    change atom.half ((↑(2 : ℕ) : ℤ) * (m : ℤ)) = m
+    rw [← Int.natCast_mul]
+    change (Nat.euclideanDiv (2 * m) 2 : ℤ) = m
+    rw [Nat.euclideanDiv_mul_left_cancel m two_ne_zero]
+  rcases n with m | m
+  · exact hnat m
+  · rw [Int.negSucc_eq, mul_neg, half_neg]
+    change -atom.half (2 * ((m + 1 : ℕ) : ℤ)) = -((m + 1 : ℕ) : ℤ)
+    rw [hnat]
 
 @[simp]
 lemma atom_same (a : ℤ) : atom W a a = W a * W 0 := by
-  rw [atom_eq_tdiv, ← two_mul, Int.mul_tdiv_cancel_left _ two_ne_zero, sub_self, Int.zero_tdiv]
+  rw [atom, ← two_mul, half_two_mul, sub_self, half_zero]
 
 variable {W} in
 @[simp]
 lemma neg_atom (neg : W.Odd) (a b : ℤ) : -atom W a b = atom W b a := by
-  rw [atom_eq_tdiv, atom_eq_tdiv, add_comm, ← neg_sub a, Int.neg_tdiv, neg, mul_neg]
+  rw [atom, atom, add_comm, ← neg_sub a, half_neg, neg, mul_neg]
 
 variable {W} in
 lemma atom_mul_atom (neg : W.Odd) (a b c d : ℤ) :
@@ -137,13 +154,13 @@ lemma atom_mul_atom (neg : W.Odd) (a b c d : ℤ) :
 variable {W} in
 @[simp]
 lemma atom_neg_left (neg : W.Odd) (a b : ℤ) : atom W (-a) b = atom W a b := by
-  rw [atom_eq_tdiv, atom_eq_tdiv, neg_add_eq_sub, ← neg_sub a, ← neg_add',
-    Int.neg_tdiv, neg, Int.neg_tdiv, neg,
+  rw [atom, atom, neg_add_eq_sub, ← neg_sub a, ← neg_add',
+    half_neg, neg, half_neg, neg,
     neg_mul_neg, mul_comm]
 
 @[simp]
 lemma atom_neg_right (a b : ℤ) : atom W a (-b) = atom W a b := by
-  simp_rw [atom_eq_tdiv, ← sub_eq_add_neg, sub_neg_eq_add, mul_comm]
+  simp_rw [atom, ← sub_eq_add_neg, sub_neg_eq_add, mul_comm]
 
 variable {W} in
 @[simp]
@@ -155,15 +172,16 @@ lemma atom_abs_right (a b : ℤ) : atom W a |b| = atom W a b := by
   rcases abs_choice b with h | h <;> simp only [h, atom_neg_right]
 
 lemma atom_even (a b : ℤ) : atom W (2 * a) (2 * b) = W (a + b) * W (a - b) := by
-  simp_rw [atom_eq_tdiv, ← mul_add, ← mul_sub, Int.mul_tdiv_cancel_left _ two_ne_zero]
+  simp_rw [atom, ← mul_add, ← mul_sub, half_two_mul]
 
 lemma atom_odd (a b : ℤ) : atom W (2 * a + 1) (2 * b + 1) = W (a + b + 1) * W (a - b) := by
-  simp_rw [atom_eq_tdiv, add_add_add_comm _ (1 : ℤ), ← two_mul, ← mul_add, add_sub_add_comm,
+  simp_rw [atom, add_add_add_comm _ (1 : ℤ), ← two_mul, ← mul_add, add_sub_add_comm,
     sub_self,
-    add_zero, ← mul_sub, Int.mul_tdiv_cancel_left _ two_ne_zero]
+    add_zero, ← mul_sub, half_two_mul]
 
 lemma map_atom (a b : ℤ) : f (atom W a b) = atom (f ∘ W) a b := by
-  simp_rw [atom_eq_tdiv, map_mul, Function.comp]
+  unfold atom
+  exact map_mul f _ _
 
 /-- The elliptic relator `ERₐ(a, b, c, d)` obtained by a change of variables in `ER(p, q, r, s)`
 (see `IsEllipticNet.rel_eq` and `IsEllipticNet.atomRel_eq`). Note that this is defined in terms of
@@ -268,20 +286,24 @@ lemma atomRel_avg_sub {a b c d : ℤ} (parity : [a, b, c, d].Pairwise (· % 2 = 
       rw [show a + b + c + d = (a - b) + (c - d) + 2 * (b + d) by ring1]
       exact Int.dvd_add (Int.dvd_add hab hcd) (Int.dvd_mul_right ..))
     atomRel W (m - d) (m - c) (m - b) (m - a) = atomRel W a b c d := by
-  dsimp only
-  simp only [Int.exactQuotient, Int.euclideanDiv_eq_core]
-  simp_rw [add_assoc <| a + b, atomRel, atom_eq_tdiv, sub_add_sub_comm, ← two_mul]
-  repeat rw [Int.mul_ediv_cancel'] <;> grind
+  intro m
+  have hm : 2 * m = a + b + c + d := Int.mul_exactQuotient ..
+  simp only [atomRel, atom]
+  grind
 
 /-- The even elliptic relator `ERₐ(2 * m + 2, 2 * m - 2, 2, 0)` for all `m ∈ ℤ`. -/
 lemma atomRel_even (m : ℤ) : atomRel W (2 * m + 2) (2 * m - 2) 2 0 = W (2 * m) * W 2 * W 1 ^ 2 -
     W (m - 1) ^ 2 * W m * W (m + 2) + W (m - 2) * W m * W (m + 1) ^ 2 := by
-  grind only [atomRel, atom_eq_tdiv]
+  calc
+    _ = atomRel W (2 * (m + 1)) (2 * (m - 1)) (2 * 1) (2 * 0) := by congr 1 <;> omega
+    _ = _ := by simp only [atomRel, atom_even]; grind
 
 /-- The odd elliptic relator `ERₐ(2 * m + 2, 2 * m, 2, 0)` for all `m ∈ ℤ`. -/
 lemma atomRel_odd (m : ℤ) : atomRel W (2 * m + 2) (2 * m) 2 0 =
     W (2 * m + 1) * W 1 ^ 3 - W (m + 2) * W m ^ 3 + W (m - 1) * W (m + 1) ^ 3 := by
-  grind only [atomRel, atom_eq_tdiv]
+  calc
+    _ = atomRel W (2 * (m + 1)) (2 * m) (2 * 1) (2 * 0) := by congr 1; omega
+    _ = _ := by simp only [atomRel, atom_even]; grind
 
 lemma map_atomRel (a b c d : ℤ) : f (atomRel W a b c d) = atomRel (f ∘ W) a b c d := by
   simp_rw [atomRel, map_add, map_sub, map_mul, map_atom]
@@ -292,9 +314,9 @@ def rel (p q r s : ℤ) : R :=
     W (q + r + s) * W (q - r) * W (p + s) * W p
 
 lemma rel_eq (p q r s : ℤ) : rel W p q r s = atomRel W (2 * p + s) (2 * q + s) (2 * r + s) s := by
-  simp_rw [rel, atomRel, atom_eq_tdiv, add_add_add_comm _ s, add_assoc _ s, ← two_mul, ← mul_add,
+  simp_rw [rel, atomRel, atom, add_add_add_comm _ s, add_assoc _ s, ← two_mul, ← mul_add,
     add_sub_add_comm, add_sub_assoc, sub_self, add_zero, ← mul_sub,
-    Int.mul_tdiv_cancel_left _ two_ne_zero, mul_comm <| _ * W p, mul_assoc]
+    half_two_mul, mul_comm <| _ * W p, mul_assoc]
 
 lemma atomRel_two_mul (a b c d : ℤ) :
     atomRel W (2 * a) (2 * b) (2 * c) (2 * d) = rel W (a - d) (b - d) (c - d) (2 * d) := by
@@ -311,8 +333,9 @@ lemma atomRel_eq {a b c d : ℤ} (parity : [a, b, c, d].Pairwise (· % 2 = · % 
       (Int.exactQuotient (c - d) 2 (Int.dvd_of_emod_eq_zero <|
         Int.emod_eq_emod_iff_emod_sub_eq_zero.mp <| parity.rel_getElem_of_lt
           (i := 2) (j := 3) (by simp) (by simp) (by decide))) d := by
-  simp only [Int.exactQuotient, Int.euclideanDiv_eq_core]
-  grind [rel_eq]
+  have h (a : ℤ) (hdiv : 2 ∣ a - d) :
+      2 * Int.exactQuotient (a - d) 2 hdiv = a - d := Int.mul_exactQuotient ..
+  simp only [rel_eq, h, sub_add_cancel]
 
 variable {W} in
 @[simp]
@@ -418,15 +441,17 @@ def preNormEDS' : ℕ → R
   | 3 => c
   | 4 => d
   | (n + 5) => let m := Nat.euclideanDiv n 2
-    have hm : m ≤ n := by simpa only [m, Nat.euclideanDiv_eq_core] using Nat.div_le_self n 2
+    have hm : m ≤ n := by
+      have h := Nat.euclideanDiv_mul_add_mod n 2 two_ne_zero
+      omega
     if hn : Even n then
       preNormEDS' (m + 4) * preNormEDS' (m + 2) ^ 3 * (if Even m then b else 1) -
         preNormEDS' (m + 1) * preNormEDS' (m + 3) ^ 3 * (if Even m then 1 else b)
     else
       have : m + 5 < n + 5 := by
         have hpos : 0 < n := Nat.pos_of_ne_zero (by rintro rfl; exact hn ⟨0, rfl⟩)
-        simpa only [m, Nat.euclideanDiv_eq_core] using
-          Nat.add_lt_add_right (Nat.div_lt_self hpos (by decide : 1 < 2)) 5
+        have h := Nat.euclideanDiv_mul_add_mod n 2 two_ne_zero
+        omega
       preNormEDS' (m + 2) ^ 2 * preNormEDS' (m + 3) * preNormEDS' (m + 5) -
         preNormEDS' (m + 1) * preNormEDS' (m + 3) * preNormEDS' (m + 4) ^ 2
 decreasing_by all_goals omega
@@ -456,7 +481,9 @@ lemma preNormEDS'_even (m : ℕ) : preNormEDS' b c d (2 * (m + 3)) =
       preNormEDS' b c d (m + 1) * preNormEDS' b c d (m + 3) * preNormEDS' b c d (m + 4) ^ 2 := by
   rw [show 2 * (m + 3) = 2 * m + 1 + 5 by rfl, preNormEDS',
     dite_eq_right m.not_even_two_mul_add_one]
-  simp [Nat.euclideanDiv_eq_core, Nat.mul_add_div two_pos]
+  have h : Nat.euclideanDiv (2 * m + 1) 2 = m :=
+    Nat.euclideanDiv_eq_of_remainder (r := 1) two_ne_zero rfl (by decide)
+  simp only [h]
 
 lemma preNormEDS'_odd (m : ℕ) : preNormEDS' b c d (2 * (m + 2) + 1) =
     preNormEDS' b c d (m + 4) * preNormEDS' b c d (m + 2) ^ 3 * (if Even m then b else 1) -
@@ -698,12 +725,13 @@ def complEDS' : ℕ → R
   | 1 => 1
   | (n + 2) => let m := Nat.euclideanDiv n 2 + 1
     have hm : m ≤ n + 1 := by
-      simpa only [m, Nat.euclideanDiv_eq_core] using Nat.succ_le_succ (Nat.div_le_self n 2)
+      have h := Nat.euclideanDiv_mul_add_mod n 2 two_ne_zero
+      omega
     if hn : Even n then complEDS' m * complEDS₂ b c d (m * k) else
       have : m + 1 < n + 2 := by
         have hpos : 0 < n := Nat.pos_of_ne_zero (by rintro rfl; exact hn ⟨0, rfl⟩)
-        simpa only [m, Nat.euclideanDiv_eq_core] using
-          Nat.add_lt_add_right (Nat.div_lt_self hpos (by decide : 1 < 2)) 2
+        have h := Nat.euclideanDiv_mul_add_mod n 2 two_ne_zero
+        omega
       complEDS' m ^ 2 * normEDS b c d ((m + 1) * k + 1) * normEDS b c d ((m + 1) * k - 1) -
         complEDS' (m + 1) ^ 2 * normEDS b c d (m * k + 1) * normEDS b c d (m * k - 1)
 decreasing_by all_goals omega
@@ -727,7 +755,9 @@ lemma complEDS'_odd (m : ℕ) : complEDS' b c d k (2 * (m + 1) + 1) =
       complEDS' b c d k (m + 2) ^ 2
           * normEDS b c d ((m + 1) * k + 1) * normEDS b c d ((m + 1) * k - 1) := by
   rw [show 2 * (m + 1) + 1 = 2 * m + 3 by rfl, complEDS', dite_eq_right m.not_even_two_mul_add_one]
-  simp [Nat.euclideanDiv_eq_core, Nat.mul_add_div two_pos, add_assoc]
+  have h : Nat.euclideanDiv (2 * m + 1) 2 = m :=
+    Nat.euclideanDiv_eq_of_remainder (r := 1) two_ne_zero rfl (by decide)
+  simp only [h, Nat.cast_succ, add_assoc, Nat.reduceAdd, Int.reduceAdd]
 
 /-- The complement sequence `Wᶜ : ℤ × ℤ → R` for a normalised EDS `W : ℤ → R` that witnesses
 `W(k) ∣ W(n * k)`. In other words, `W(k) * Wᶜ(k, n) = W(n * k)` for all `k, n ∈ ℤ`.

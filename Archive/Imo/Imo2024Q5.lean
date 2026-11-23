@@ -623,6 +623,12 @@ def path0 (hN : 2 ≤ N) : Path N := Path.ofFn (fn0 N) (by lia) (by simp [fn0])
     intro i hi
     split_ifs <;> simp [Adjacent, Nat.dist] at * <;> lia)
 
+private lemma half_bounds (i : ℕ) :
+    2 * i.euclideanDiv 2 ≤ i ∧ i < 2 * i.euclideanDiv 2 + 2 := by
+  have h := Nat.euclideanDiv_mul_add_mod i 2 (by decide)
+  have hmod := Nat.mod_lt i (by decide : 0 < 2)
+  omega
+
 /-- The second attempt in a winning strategy, as a function, if the monster in the second row
 is not at an edge: pass to the left of that monster then along its column. -/
 def fn1OfNotEdge {c₁ : Fin (N + 1)} (hc₁ : c₁ ≠ 0) : Fin (N + 3) → Cell N :=
@@ -662,17 +668,20 @@ is at the left edge: zigzag across the board so that, if we encounter a monster,
 path we know will not encounter a monster. -/
 def fn1OfEdge0 (N : ℕ) : Fin (2 * N + 1) → Cell N :=
   fun i ↦ if h : (i : ℕ) = 2 * N then (⟨N + 1, by lia⟩, ⟨N, by lia⟩) else
-    (⟨Nat.euclideanDiv (i.val + 1) 2, by rw [Nat.euclideanDiv_eq_core]; lia⟩,
-      ⟨i.val.euclideanDiv 2 + 1, by rw [Nat.euclideanDiv_eq_core]; lia⟩)
+    (⟨Nat.euclideanDiv (i.val + 1) 2, by have := half_bounds (i.val + 1); lia⟩,
+      ⟨i.val.euclideanDiv 2 + 1, by have := half_bounds i.val; lia⟩)
 
 /-- The second attempt in a winning strategy, as a `Path`, if the monster in the second row
 is at the left edge. -/
 def path1OfEdge0 (hN : 2 ≤ N) : Path N := Path.ofFn (fn1OfEdge0 N) (by lia)
-    (by simp only [fn1OfEdge0, Nat.euclideanDiv_eq_core]; split_ifs <;> simp; lia)
+    (by simp [fn1OfEdge0, Nat.euclideanDiv_eq_zero_of_lt (by decide) (by decide : 1 < 2)]; lia)
     (by simp [fn1OfEdge0])
     (by
-      simp only [fn1OfEdge0, Nat.euclideanDiv_eq_core]
+      simp only [fn1OfEdge0]
       intro i hi
+      have := half_bounds i
+      have := half_bounds (i + 1)
+      have := half_bounds (i + 1 + 1)
       split_ifs <;> simp [Adjacent, Nat.dist] at * <;> lia)
 
 /-- The second attempt in a winning strategy, as a `Path`, if the monster in the second row
@@ -685,8 +694,8 @@ the monster was encountered, move to the following row one place earlier, procee
 edge and then along that column. -/
 def fn2OfEdge0 {r : Fin (N + 2)} (hr : (r : ℕ) ≤ N) : Fin (N + 2 * r - 1) → Cell N :=
   fun i ↦ if h₁ : (i : ℕ) + 2 < 2 * (r : ℕ) then
-    (⟨Nat.euclideanDiv (i.val + 1) 2, by rw [Nat.euclideanDiv_eq_core]; lia⟩,
-      ⟨i.val.euclideanDiv 2 + 1, by rw [Nat.euclideanDiv_eq_core]; lia⟩) else
+    (⟨Nat.euclideanDiv (i.val + 1) 2, by have := half_bounds (i.val + 1); lia⟩,
+      ⟨i.val.euclideanDiv 2 + 1, by have := half_bounds i.val; lia⟩) else
     if h₂ : (i : ℕ) + 2 < 3 * (r : ℕ) then (r, ⟨3 * (r : ℕ) - 3 - (i : ℕ), by lia⟩) else
     (⟨i + 3 - 2 * r, by lia⟩, 0)
 
@@ -699,11 +708,19 @@ lemma fn2OfEdge0_apply_eq_fn1OfEdge0_apply_of_lt {r : Fin (N + 2)} (hr : (r : �
 is at the left edge and the second (zigzag) attempt encountered a monster. -/
 def path2OfEdge0 (hN : 2 ≤ N) {r : Fin (N + 2)} (hr2 : 2 ≤ (r : ℕ)) (hrN : (r : ℕ) ≤ N) : Path N :=
   Path.ofFn (fn2OfEdge0 hrN) (by lia)
-    (by simp only [fn2OfEdge0, Nat.euclideanDiv_eq_core]; split_ifs <;> simp <;> lia)
-    (by simp only [fn2OfEdge0, Nat.euclideanDiv_eq_core]; split_ifs <;> simp <;> lia)
     (by
-      simp only [fn2OfEdge0, Nat.euclideanDiv_eq_core]
+      simp only [fn2OfEdge0]
+      split_ifs <;> simp [Nat.euclideanDiv_eq_zero_of_lt (by decide) (by decide : 1 < 2)] <;> lia)
+    (by
+      simp only [fn2OfEdge0]
+      have := half_bounds (N + 2 * (r : ℕ) - 1 - 1 + 1)
+      split_ifs <;> simp at * <;> lia)
+    (by
+      simp only [fn2OfEdge0]
       intro i hi
+      have := half_bounds i
+      have := half_bounds (i + 1)
+      have := half_bounds (i + 1 + 1)
       split_ifs <;> simp [Adjacent, Nat.dist] at * <;> lia)
 
 /-- The third attempt in a winning strategy, as a `Path`, if the monster in the second row
@@ -894,7 +911,7 @@ lemma path2OfEdge0_firstMonster_eq_none_of_path1OfEdge0_firstMonster_eq_some (hN
   have hi : (x.1 : ℕ) = Nat.euclideanDiv (i.val + 1) 2 := by
     rw [fn1OfEdge0] at hix
     split_ifs at hix <;> simp [Prod.ext_iff, Fin.ext_iff] at hix <;> lia
-  rw [Nat.euclideanDiv_eq_core] at hi
+  have := half_bounds (i.val + 1)
   have hi' : (i : ℕ) ≠ 2 * N := by
     intro h
     rw [← hix, fn1OfEdge0, dite_eq_left h] at hx
@@ -914,7 +931,8 @@ lemma path2OfEdge0_firstMonster_eq_none_of_path1OfEdge0_firstMonster_eq_some (hN
         lia
       rw [MonsterData.mk_mem_monsterCells_iff_of_le hx1 hxN]
       rw [MonsterData.mem_monsterCells_iff_of_le hx1 hxN] at hx
-      simp_rw [hx, ← hix, fn1OfEdge0, Nat.euclideanDiv_eq_core]
+      simp_rw [hx, ← hix, fn1OfEdge0]
+      have := half_bounds i.val
       split_ifs <;> simp <;> lia
     · rw [MonsterData.mk_mem_monsterCells_iff]
       simp only [not_exists]
@@ -944,14 +962,14 @@ lemma winningStrategy_play_one_eq_none_or_play_two_eq_none_of_edge_zero (hN : 2 
     rcases i with ⟨i, hi⟩
     have hi : 3 ≤ i := by
       by_contra hi
-      interval_cases i <;> simp only [fn1OfEdge0, Nat.euclideanDiv_eq_core] at hm <;>
+      interval_cases i <;> simp only [fn1OfEdge0] at hm <;>
         split_ifs at hm with h
       · simp at h
         lia
-      · simp_rw [zero_add] at hm
+      · norm_num at hm
         exact m.notMem_monsterCells_of_fst_eq_zero rfl hm
       · simp [eqComm] at h
-      · dsimp only [Nat.reduceAdd, Nat.reduceDiv, Fin.mk_one] at hm
+      · norm_num at hm
         have h1N : 1 ≤ N := by lia
         rw [m.mk_mem_monsterCells_iff_of_le (le_refl _) h1N] at hm
         rw [row1, hm, Fin.ext_iff] at hc₁0
@@ -963,7 +981,8 @@ lemma winningStrategy_play_one_eq_none_or_play_two_eq_none_of_edge_zero (hN : 2 
         rw [m.mk_mem_monsterCells_iff_of_le (le_refl _) h1N] at hm
         rw [row1, hm] at hc₁0
         simp at hc₁0
-    simp only [fn1OfEdge0, Nat.euclideanDiv_eq_core]
+    simp only [fn1OfEdge0]
+    have := half_bounds (i + 1)
     split_ifs <;> simp <;> lia
   rw [path2, ite_eq_left hc₁0, path2OfEdge0Def, dite_eq_left hx2N]
   exact path2OfEdge0_firstMonster_eq_none_of_path1OfEdge0_firstMonster_eq_some hN hx2N.1

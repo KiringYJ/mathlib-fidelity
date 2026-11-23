@@ -90,14 +90,36 @@ theorem egirth_top (h : 3 ≤ ENat.card α) : egirth (⊤ : SimpleGraph α) = 3 
 open Walk in
 lemma egirth_le_two_mul_ediam_add_one (h : ¬ G.IsAcyclic) : G.egirth ≤ 2 * G.ediam + 1 := by
   obtain ⟨u, w, hw, hwl⟩ := exists_egirth_eq_length.mpr h
-  have hr := (w.take (w.length / 2)).reachable
+  let q := Nat.euclideanDiv w.length 2 two_ne_zero
+  have hrec : 2 * q + w.length % 2 = w.length :=
+    Nat.euclideanDiv_mul_add_mod w.length 2 two_ne_zero
+  have hrem : w.length % 2 < 2 := Nat.mod_lt _ (by decide)
+  have hq : q < w.length := by
+    have := hw.three_le_length
+    omega
+  have hr := (w.take q).reachable
   obtain ⟨p, hp, hplen⟩ := hr.exists_path_of_dist
-  have half_g_le_dist : w.length / 2 ≤ G.dist u (w.getVert (w.length / 2)) hr := by
+  have htake : (w.take q).length = q := by rw [take_length, inf_eq_left.mpr hq.le]
+  have hdist : q ≤ G.dist u (w.getVert q) hr := by
     by_contra! hlt
-    have := hp.exists_isCycle_length_le_add_of_ne (hw.isPath_take (by lia)) (by grind [take_length])
-    grind [ENat.natCast_le_natCast, take_length, IsCycle.egirth_le_length]
-  have h2 : (w.length : ℕ∞) ≤ 2 * (w.length / 2 :) + 1 := by norm_cast; lia
-  grw [hwl, h2, half_g_le_dist, hr.coe_dist_eq_edist, edist_le_ediam]
+    have hne : p ≠ w.take q := by
+      intro he
+      have hlength := congrArg Walk.length he
+      omega
+    obtain ⟨_, _, _, c, hc, hcl⟩ := hp.exists_isCycle_length_le_add_of_ne (hw.isPath_take hq) hne
+    have hmin : w.length ≤ c.length := by
+      apply ENat.natCast_le_natCast.mp
+      rw [← hwl]
+      exact hc.egirth_le_length
+    omega
+  have hbound : (w.length : ℕ∞) ≤ 2 * (q : ℕ∞) + 1 := by
+    have : w.length ≤ 2 * q + 1 := by omega
+    exact_mod_cast this
+  have hdiam : (q : ℕ∞) ≤ G.ediam := calc
+    (q : ℕ∞) ≤ (G.dist u (w.getVert q) hr : ℕ∞) := ENat.natCast_le_natCast.mpr hdist
+    _ = G.edist u (w.getVert q) := hr.coe_dist_eq_edist
+    _ ≤ G.ediam := edist_le_ediam
+  grw [hwl, hbound, hdiam]
 
 @[gcongr only]
 lemma IsContained.egirth_le (h : G ⊑ G') : G'.egirth ≤ G.egirth := by

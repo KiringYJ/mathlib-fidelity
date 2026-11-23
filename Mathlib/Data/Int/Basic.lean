@@ -86,6 +86,8 @@ lemma natAbs_le_of_dvd_ne_zero (hmn : m ∣ n) (hn : n ≠ 0) : natAbs m ≤ nat
   not_lt.mp (mt (eq_zero_of_dvd_of_natAbs_lt_natAbs hmn) hn)
 
 theorem gcd_emod (m n : ℤ) : (m % n).gcd n = m.gcd n := by
-  conv_rhs => rw [← m.emod_add_mul_ediv n, gcd_add_mul_left_left]
+  by_cases hn : n = 0
+  · simp [hn]
+  conv_rhs => rw [← Int.euclideanDiv_mul_add_mod m n hn, Int.add_comm, gcd_add_mul_left_left]
 
 end Int

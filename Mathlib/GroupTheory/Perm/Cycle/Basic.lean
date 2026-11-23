@@ -540,10 +540,13 @@ theorem IsCycle.pow_iff [Finite β] {f : Perm β} (hf : IsCycle f) {n : ℕ} :
         refine h.ne_one ?_
         simp [pow_mul, pow_orderOf_eq_one]
       have : orderOf (f ^ n) = orderOf f := by rw [h.orderOf, hr, hf.orderOf]
-      rw [orderOf_pow, Nat.euclideanDiv_eq_core, Nat.div_eq_self] at this
-      rcases this with h | _
-      · exact absurd h (orderOf_pos _).ne'
-      · rwa [Nat.coprime_iff_gcd_eq_one, Nat.gcd_comm]
+      rw [orderOf_pow] at this
+      have hmul := Nat.mul_euclideanDiv_cancel (Nat.gcd_pos_of_pos_left n (orderOf_pos f)).ne'
+        (Nat.gcd_dvd_left (orderOf f) n)
+      rw [this] at hmul
+      rw [Nat.coprime_iff_gcd_eq_one, Nat.gcd_comm]
+      apply Nat.eq_of_mul_eq_mul_right (orderOf_pos f)
+      simpa only [Nat.one_mul] using hmul
     · intro h
       obtain ⟨m, hm⟩ := exists_pow_eq_self_of_coprime h
       have hf' : IsCycle ((f ^ n) ^ m) := by rwa [hm]

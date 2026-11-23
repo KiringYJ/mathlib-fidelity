@@ -131,10 +131,12 @@ theorem OxfordInvariants.Week3P1 (n : ℕ) (a : ℕ → ℕ) (a_pos : ∀ i ≤ 
               (a n * (b : α) - a 0) / (a (n + 1) : α) := by
           have hle : r ≤ q * b := by
             change Nat.euclideanDiv (a n * b - a 0) (a (n + 1)) hden ≤ q * b
-            rw [Nat.euclideanDiv_eq_core]
-            apply Nat.div_le_of_le_mul
-            rw [← mul_assoc, hq, add_mul]
-            exact tsub_le_self.trans (Nat.le_add_right _ _)
+            have hbnd : a n * b - a 0 ≤ a (n + 1) * (q * b) := by
+              rw [← mul_assoc, hq, add_mul]
+              exact tsub_le_self.trans (Nat.le_add_right _ _)
+            apply Nat.le_of_lt_succ ((Nat.euclideanDiv_lt_iff_lt_mul hden).2 ?_)
+            rw [Nat.mul_succ]
+            exact hbnd.trans_lt (Nat.lt_add_of_pos_right (Nat.pos_of_ne_zero hden))
           rw [Nat.cast_sub hle, Nat.cast_mul]
           dsimp only [q, r]
           rw [Nat.cast_div hdiv hmid, Nat.cast_div han hmid,

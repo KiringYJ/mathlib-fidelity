@@ -257,9 +257,19 @@ variable {R : Type*} [Ring R] [LinearOrder R] [IsStrictOrderedRing R] [FloorRing
 
 theorem mul_cast_floor_div_cancel_of_pos {n : ℤ} (hn : 0 < n) (a : R) :
     Int.euclideanDiv ⌊a * n⌋ n hn.ne' = ⌊a⌋ := by
-  refine eq_of_forall_le_iff fun m ↦ ?_
-  rw [Int.euclideanDiv_eq_core, Int.le_ediv_iff_mul_le hn, le_floor, le_floor, cast_mul,
-    mul_le_mul_iff_of_pos_right (cast_pos.mpr hn)]
+  have hn' : (0 : R) < (n : R) := cast_pos.mpr hn
+  have hlo : ⌊a⌋ * n ≤ ⌊a * n⌋ := by
+    rw [le_floor, cast_mul]
+    exact mul_le_mul_of_nonneg_right (floor_le a) hn'.le
+  have hhi : ⌊a * n⌋ < (⌊a⌋ + 1) * n := by
+    rw [floor_lt, cast_mul, cast_add, cast_one]
+    exact mul_lt_mul_of_pos_right (lt_floor_add_one a) hn'
+  rw [Int.mul_comm] at hlo
+  rw [Int.add_mul, Int.one_mul, Int.mul_comm ⌊a⌋ n] at hhi
+  refine Int.euclideanDiv_eq_of_remainder (r := ⌊a * n⌋ - n * ⌊a⌋) hn.ne'
+    (by omega) (by omega) ?_
+  rw [Int.natAbs_of_nonneg hn.le]
+  omega
 
 theorem mul_natCast_floor_div_cancel {n : ℕ} (hn : n ≠ 0) (a : R) :
     Int.euclideanDiv ⌊a * n⌋ (n : ℤ) (Int.ofNat_ne_zero.2 hn) = ⌊a⌋ := by
@@ -561,7 +571,7 @@ theorem fract_div_natCast_eq_div_natCast_mod {m n : ℕ} {hn : IsUnit (n : k)} :
   · simpa only [div_lt_one hn', Nat.cast_lt] using m.mod_lt (Nat.cast_pos.mp hn')
   · rw [sub_eq_iff_eq_add', ← mul_right_inj' hn'.ne', mul_div_cancel₀, mul_add, mul_div_cancel₀]
     norm_cast
-    rw [Nat.euclideanDiv_eq_core, ← Nat.cast_add, Nat.mod_add_div m n]
+    rw [← Nat.cast_add, Nat.add_comm (m % n), Nat.euclideanDiv_mul_add_mod]
 
 theorem fract_div_intCast_eq_div_intCast_mod {m : ℤ} {n : ℕ} {hn : IsUnit (n : k)} :
     fract ((m : k) / (n : k)) = ((m % n : ℤ) : k) / (n : k) := by

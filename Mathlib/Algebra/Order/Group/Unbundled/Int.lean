@@ -108,20 +108,42 @@ theorem emod_lt_abs (a : ℤ) {b : ℤ} (H : b ≠ 0) : a % b < |b| := by
 /-! ### Properties of the Euclidean quotient and remainder -/
 
 theorem abs_ediv_le_abs (a b : ℤ) (hb : b ≠ 0) : |Int.euclideanDiv a b hb| ≤ |a| := by
-  simp only [Int.euclideanDiv_eq_core, abs_eq_natAbs]
-  exact ofNat_le_ofNat_of_le (Int.natAbs_ediv_le_natAbs a b)
+  let q := Int.euclideanDiv a b hb
+  have hrec : b * q + a % b = a := Int.euclideanDiv_mul_add_mod a b hb
+  have hr₀ := Int.emod_nonneg a hb
+  have hr := emod_lt_abs a hb
+  change |q| ≤ |a|
+  refine Int.le_of_not_gt fun h ↦ ?_
+  have hab : |a| + 1 ≤ |q| := by omega
+  have habs : |b * q| = |b| * |q| := by
+    simp only [abs_eq_natAbs, Int.natAbs_mul, Int.natCast_mul]
+  have hmul := Int.mul_le_mul_of_nonneg_left hab (abs_nonneg b)
+  rw [Int.mul_add, Int.mul_one, ← habs] at hmul
+  have hprod : |a| ≤ |b| * |a| := by
+    simpa only [Int.one_mul] using Int.mul_le_mul_of_nonneg_right (one_le_abs hb) (abs_nonneg a)
+  have hsub : |b * q| ≤ |a| + a % b := by
+    calc
+      |b * q| = |a - a % b| := congrArg abs (by omega)
+      _ ≤ |a| + a % b := by
+        simpa only [sub_eq_add_neg, abs_neg, abs_of_nonneg hr₀] using abs_add_le a (-(a % b))
+  omega
 
 theorem abs_sign_of_ne_zero {z : ℤ} (hz : z ≠ 0) : |z.sign| = 1 := by
   rw [abs_eq_natAbs, natAbs_sign_of_ne_zero hz, Int.ofNat_one]
 
 protected theorem sign_eq_ediv_abs' (a : ℤ) (ha : a ≠ 0) :
     sign a = Int.euclideanDiv a |a| (mt abs_eq_zero.1 ha) := by
-  rw [Int.euclideanDiv_eq_core]
-  exact (Int.ediv_eq_of_eq_mul_left (mt abs_eq_zero.1 ha) (sign_mul_abs _).symm).symm
+  have hb : |a| ≠ 0 := mt abs_eq_zero.1 ha
+  symm
+  refine Int.euclideanDiv_eq_of_remainder (r := 0) hb ?_ (by decide) ?_
+  · simpa only [Int.add_zero, Int.mul_comm] using (sign_mul_abs a).symm
+  · exact Int.natCast_pos.mpr (Int.natAbs_pos.mpr hb)
 
 protected theorem sign_eq_abs_ediv (a : ℤ) (ha : a ≠ 0) : sign a = Int.euclideanDiv |a| a ha := by
-  rw [Int.euclideanDiv_eq_core]
-  exact (Int.ediv_eq_of_eq_mul_left ha (sign_mul_self_eq_abs _).symm).symm
+  symm
+  refine Int.euclideanDiv_eq_of_remainder (r := 0) ha ?_ (by decide) ?_
+  · simpa only [Int.add_zero, Int.mul_comm] using (sign_mul_self_eq_abs a).symm
+  · exact Int.natCast_pos.mpr (Int.natAbs_pos.mpr ha)
 
 end Int
 

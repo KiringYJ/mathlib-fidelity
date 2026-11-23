@@ -5,7 +5,8 @@ Authors: Mario Carneiro, Heather Macbeth, Jovan Gerbscheid, Yury Kudryashov
 -/
 module
 
-public import Mathlib.Tactic.GCongr.CoreAttrs
+public import Mathlib.Lean.Elab.NativeDivision
+public import Mathlib.Tactic.GCongr.Core
 public import Mathlib.Tactic.Hint
 
 /-! # Setup for the `gcongr` tactic
@@ -14,6 +15,20 @@ The core implementation of the `gcongr` ("generalized congruence") tactic is in 
 `Tactic.GCongr.Core`. -/
 
 public section
+
+/-- Natural quotients are monotone in the dividend and antitone in the nonzero divisor. -/
+@[gcongr] theorem Nat.euclideanDiv_le_euclideanDiv {a b c d : Nat} {hb : b ≠ 0} {hd : d ≠ 0}
+    (hac : a ≤ c) (hdb : d ≤ b) : Nat.euclideanDiv a b hb ≤ Nat.euclideanDiv c d hd := by
+  apply (Nat.le_euclideanDiv_iff_mul_le hd).2
+  calc
+    d * Nat.euclideanDiv a b hb ≤ b * Nat.euclideanDiv a b hb := Nat.mul_le_mul_right _ hdb
+    _ ≤ a := (Nat.le_euclideanDiv_iff_mul_le hb).1 (Nat.le_refl _)
+    _ ≤ c := hac
+
+/-- Taking natural quotients by the same nonzero divisor preserves order. -/
+@[gcongr] theorem Nat.euclideanDiv_le_euclideanDiv_right {a b c : Nat} {hc : c ≠ 0} (hab : a ≤ b) :
+    Nat.euclideanDiv a c hc ≤ Nat.euclideanDiv b c hc :=
+  Nat.euclideanDiv_le_euclideanDiv hab (Nat.le_refl _)
 
 namespace Mathlib.Tactic.GCongr
 

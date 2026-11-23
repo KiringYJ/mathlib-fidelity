@@ -44,8 +44,8 @@ lemma grahamConjecture_of_squarefree {n : ℕ} (f : ℕ → ℕ) (hf' : ∀ k < 
     Nat.gcd_ne_zero_left (hf' i hi).ne_zero
   have hf'' (i : ℕ) (hi : i < n) (j : ℕ) :
       Squarefree ((f i).euclideanDiv ((f i).gcd (f j)) (hf₀ i hi j)) := by
-    rw [Nat.euclideanDiv_eq_core]
-    exact (hf' i hi).squarefree_of_dvd (div_dvd_of_dvd (gcd_dvd_left _ _))
+    have hq := Nat.mul_euclideanDiv_cancel (hf₀ i hi j) (gcd_dvd_left (f i) (f j))
+    exact (hf' i hi).squarefree_of_dvd ⟨_, hq.symm.trans (Nat.mul_comm _ _)⟩
   refine lt_irrefl n ?_
   calc
     n = #𝒜 := ?_
@@ -58,9 +58,9 @@ lemma grahamConjecture_of_squarefree {n : ℕ} (f : ℕ → ℕ) (hf' : ∀ k < 
   · simp only [𝒜, forall_mem_diffs, forall_mem_image, mem_Ioo, mem_Iio, Set.MapsTo, mem_coe]
     rintro i hi j hj
     rw [← primeFactors_div_gcd (hf' _ hi) (hf' _ hj).ne_zero,
-      prod_primeFactors_of_squarefree (hf'' _ hi _), Nat.euclideanDiv_eq_core]
-    exact ⟨Nat.div_pos (gcd_le_left _ (hf' _ hi).ne_zero.bot_lt) <|
-      Nat.gcd_pos_of_pos_left _ (hf' _ hi).ne_zero.bot_lt, Nat.div_lt_of_lt_mul <| this _ hi _ hj⟩
+      prod_primeFactors_of_squarefree (hf'' _ hi _)]
+    refine ⟨Nat.euclideanDiv_pos _ (gcd_le_left _ (hf' _ hi).ne_zero.bot_lt), ?_⟩
+    exact (Nat.euclideanDiv_lt_iff_lt_mul _).2 (this _ hi _ hj)
   · simp only [𝒜, Set.InjOn, mem_coe, forall_mem_diffs, forall_mem_image, mem_Iio]
     rintro a ha b hb c hc d hd
     rw [← primeFactors_div_gcd (hf' _ ha) (hf' _ hb).ne_zero, ← primeFactors_div_gcd

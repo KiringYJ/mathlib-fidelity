@@ -206,142 +206,177 @@ alias natAbs_sq := natAbs_pow_two
 theorem sign_mul_self_eq_natAbs (a : Int) : sign a * a = natAbs a :=
   sign_mul_self a
 
-/-! ### `/` -/
+/-! ### Euclidean quotient and remainder -/
 
 lemma natCast_div (m n : ℕ) (hn : n ≠ 0) :
     (Nat.euclideanDiv m n hn : ℤ) = Int.euclideanDiv m n (Int.ofNat_ne_zero.2 hn) := by
-  simpa only [Nat.euclideanDiv_eq_core, Int.euclideanDiv_eq_core] using natCast_ediv m n
+  cases n with
+  | zero => exact (hn rfl).elim
+  | succ n => rfl
 
 lemma ediv_of_neg_of_pos {a b : ℤ} (Ha : a < 0) (Hb : 0 < b) :
     Int.euclideanDiv a b (Int.ne_of_gt Hb) =
       -(Int.euclideanDiv (-a - 1) b (Int.ne_of_gt Hb) + 1) := by
-  simp only [Int.euclideanDiv_eq_core]
   match a, b, eq_negSucc_of_lt_zero Ha, eq_succ_of_zero_lt Hb with
   | _, _, ⟨m, rfl⟩, ⟨n, rfl⟩ =>
     rw [show (- -[m+1] : ℤ) = (m + 1 : ℤ) by rfl]; rw [Int.add_sub_cancel]; rfl
-
-/-! ### mod -/
 
 @[simp, norm_cast] lemma natCast_mod (m n : ℕ) : (↑(m % n) : ℤ) = ↑m % ↑n := rfl
 
 lemma div_le_iff_of_dvd_of_pos (hb : 0 < b) (hba : b ∣ a) :
     Int.euclideanDiv a b (Int.ne_of_gt hb) ≤ c ↔ a ≤ b * c := by
-  simpa only [Int.euclideanDiv_eq_core] using ediv_le_iff_of_dvd_of_pos hb hba
+  simpa only [Int.mul_exactQuotient] using!
+    (Int.mul_le_mul_left (b := Int.exactQuotient a b hba (Int.ne_of_gt hb)) (c := c) hb).symm
 
 lemma div_le_iff_of_dvd_of_neg (hb : b < 0) (hba : b ∣ a) :
     Int.euclideanDiv a b (Int.ne_of_lt hb) ≤ c ↔ b * c ≤ a := by
-  simpa only [Int.euclideanDiv_eq_core] using ediv_le_iff_of_dvd_of_neg hb hba
+  simpa only [Int.mul_exactQuotient] using!
+    (Int.mul_le_mul_left_of_neg (b := c) (c := Int.exactQuotient a b hba (Int.ne_of_lt hb)) hb).symm
 
 lemma div_lt_iff_of_dvd_of_pos (hb : 0 < b) (hba : b ∣ a) :
     Int.euclideanDiv a b (Int.ne_of_gt hb) < c ↔ a < b * c := by
-  simpa only [Int.euclideanDiv_eq_core] using ediv_lt_iff_of_dvd_of_pos hb hba
+  simpa only [Int.mul_exactQuotient] using!
+    (Int.mul_lt_mul_left (b := Int.exactQuotient a b hba (Int.ne_of_gt hb)) (c := c) hb).symm
 
 lemma div_lt_iff_of_dvd_of_neg (hb : b < 0) (hba : b ∣ a) :
     Int.euclideanDiv a b (Int.ne_of_lt hb) < c ↔ b * c < a := by
-  simpa only [Int.euclideanDiv_eq_core] using ediv_lt_iff_of_dvd_of_neg hb hba
+  simpa only [Int.mul_exactQuotient] using!
+    (Int.mul_lt_mul_left_of_neg (b := c) (c := Int.exactQuotient a b hba (Int.ne_of_lt hb)) hb).symm
 
 lemma le_div_iff_of_dvd_of_pos (hc : 0 < c) (hcb : c ∣ b) :
     a ≤ Int.euclideanDiv b c (Int.ne_of_gt hc) ↔ c * a ≤ b := by
-  simpa only [Int.euclideanDiv_eq_core] using le_ediv_iff_of_dvd_of_pos hc hcb
+  simpa only [Int.mul_exactQuotient] using!
+    (Int.mul_le_mul_left (b := a) (c := Int.exactQuotient b c hcb (Int.ne_of_gt hc)) hc).symm
 
 lemma le_div_iff_of_dvd_of_neg (hc : c < 0) (hcb : c ∣ b) :
     a ≤ Int.euclideanDiv b c (Int.ne_of_lt hc) ↔ b ≤ c * a := by
-  simpa only [Int.euclideanDiv_eq_core] using le_ediv_iff_of_dvd_of_neg hc hcb
+  simpa only [Int.mul_exactQuotient] using!
+    (Int.mul_le_mul_left_of_neg (b := Int.exactQuotient b c hcb (Int.ne_of_lt hc)) (c := a) hc).symm
 
 lemma lt_div_iff_of_dvd_of_pos (hc : 0 < c) (hcb : c ∣ b) :
     a < Int.euclideanDiv b c (Int.ne_of_gt hc) ↔ c * a < b := by
-  simpa only [Int.euclideanDiv_eq_core] using lt_ediv_iff_of_dvd_of_pos hc hcb
+  simpa only [Int.mul_exactQuotient] using!
+    (Int.mul_lt_mul_left (b := a) (c := Int.exactQuotient b c hcb (Int.ne_of_gt hc)) hc).symm
 
 lemma lt_div_iff_of_dvd_of_neg (hc : c < 0) (hcb : c ∣ b) :
     a < Int.euclideanDiv b c (Int.ne_of_lt hc) ↔ b < c * a := by
-  simpa only [Int.euclideanDiv_eq_core] using lt_ediv_iff_of_dvd_of_neg hc hcb
+  simpa only [Int.mul_exactQuotient] using!
+    (Int.mul_lt_mul_left_of_neg (b := Int.exactQuotient b c hcb (Int.ne_of_lt hc)) (c := a) hc).symm
 
 lemma div_le_div_iff_of_dvd_of_pos_of_pos (hb : 0 < b) (hd : 0 < d) (hba : b ∣ a)
     (hdc : d ∣ c) :
     Int.euclideanDiv a b (Int.ne_of_gt hb) ≤ Int.euclideanDiv c d (Int.ne_of_gt hd) ↔
       d * a ≤ c * b := by
-  simpa only [Int.euclideanDiv_eq_core] using ediv_le_ediv_iff_of_dvd_of_pos_of_pos hb hd hba hdc
+  simpa only [Int.mul_assoc, Int.mul_left_comm d b, Int.mul_exactQuotient, Int.mul_comm b c] using!
+    (Int.mul_le_mul_left (b := Int.exactQuotient a b hba (Int.ne_of_gt hb))
+      (c := Int.exactQuotient c d hdc (Int.ne_of_gt hd)) (Int.mul_pos hd hb)).symm
 
 lemma div_le_div_iff_of_dvd_of_pos_of_neg (hb : 0 < b) (hd : d < 0) (hba : b ∣ a) (hdc : d ∣ c) :
     Int.euclideanDiv a b (Int.ne_of_gt hb) ≤ Int.euclideanDiv c d (Int.ne_of_lt hd) ↔
       c * b ≤ d * a := by
-  simpa only [Int.euclideanDiv_eq_core] using ediv_le_ediv_iff_of_dvd_of_pos_of_neg hb hd hba hdc
+  simpa only [Int.mul_assoc, Int.mul_left_comm d b, Int.mul_exactQuotient, Int.mul_comm b c] using!
+    (Int.mul_le_mul_left_of_neg (b := Int.exactQuotient c d hdc (Int.ne_of_lt hd))
+      (c := Int.exactQuotient a b hba (Int.ne_of_gt hb)) (Int.mul_neg_of_neg_of_pos hd hb)).symm
 
 lemma div_le_div_iff_of_dvd_of_neg_of_pos (hb : b < 0) (hd : 0 < d) (hba : b ∣ a) (hdc : d ∣ c) :
     Int.euclideanDiv a b (Int.ne_of_lt hb) ≤ Int.euclideanDiv c d (Int.ne_of_gt hd) ↔
       c * b ≤ d * a := by
-  simpa only [Int.euclideanDiv_eq_core] using ediv_le_ediv_iff_of_dvd_of_neg_of_pos hb hd hba hdc
+  simpa only [Int.mul_assoc, Int.mul_left_comm d b, Int.mul_exactQuotient, Int.mul_comm b c] using!
+    (Int.mul_le_mul_left_of_neg (b := Int.exactQuotient c d hdc (Int.ne_of_gt hd))
+      (c := Int.exactQuotient a b hba (Int.ne_of_lt hb)) (Int.mul_neg_of_pos_of_neg hd hb)).symm
 
 lemma div_le_div_iff_of_dvd_of_neg_of_neg (hb : b < 0) (hd : d < 0) (hba : b ∣ a) (hdc : d ∣ c) :
     Int.euclideanDiv a b (Int.ne_of_lt hb) ≤ Int.euclideanDiv c d (Int.ne_of_lt hd) ↔
       d * a ≤ c * b := by
-  simpa only [Int.euclideanDiv_eq_core] using ediv_le_ediv_iff_of_dvd_of_neg_of_neg hb hd hba hdc
+  simpa only [Int.mul_assoc, Int.mul_left_comm d b, Int.mul_exactQuotient, Int.mul_comm b c] using!
+    (Int.mul_le_mul_left (b := Int.exactQuotient a b hba (Int.ne_of_lt hb))
+      (c := Int.exactQuotient c d hdc (Int.ne_of_lt hd)) (Int.mul_pos_of_neg_of_neg hd hb)).symm
 
 lemma div_lt_div_iff_of_dvd_of_pos (hb : 0 < b) (hd : 0 < d) (hba : b ∣ a) (hdc : d ∣ c) :
     Int.euclideanDiv a b (Int.ne_of_gt hb) < Int.euclideanDiv c d (Int.ne_of_gt hd) ↔
       d * a < c * b := by
-  simpa only [Int.euclideanDiv_eq_core] using ediv_lt_ediv_iff_of_dvd_of_pos hb hd hba hdc
+  simpa only [Int.mul_assoc, Int.mul_left_comm d b, Int.mul_exactQuotient, Int.mul_comm b c] using!
+    (Int.mul_lt_mul_left (b := Int.exactQuotient a b hba (Int.ne_of_gt hb))
+      (c := Int.exactQuotient c d hdc (Int.ne_of_gt hd)) (Int.mul_pos hd hb)).symm
 
 lemma div_lt_div_iff_of_dvd_of_pos_of_neg (hb : 0 < b) (hd : d < 0) (hba : b ∣ a) (hdc : d ∣ c) :
     Int.euclideanDiv a b (Int.ne_of_gt hb) < Int.euclideanDiv c d (Int.ne_of_lt hd) ↔
       c * b < d * a := by
-  simpa only [Int.euclideanDiv_eq_core] using ediv_lt_ediv_iff_of_dvd_of_pos_of_neg hb hd hba hdc
+  simpa only [Int.mul_assoc, Int.mul_left_comm d b, Int.mul_exactQuotient, Int.mul_comm b c] using!
+    (Int.mul_lt_mul_left_of_neg (b := Int.exactQuotient c d hdc (Int.ne_of_lt hd))
+      (c := Int.exactQuotient a b hba (Int.ne_of_gt hb)) (Int.mul_neg_of_neg_of_pos hd hb)).symm
 
 lemma div_lt_div_iff_of_dvd_of_neg_of_pos (hb : b < 0) (hd : 0 < d) (hba : b ∣ a) (hdc : d ∣ c) :
     Int.euclideanDiv a b (Int.ne_of_lt hb) < Int.euclideanDiv c d (Int.ne_of_gt hd) ↔
       c * b < d * a := by
-  simpa only [Int.euclideanDiv_eq_core] using ediv_lt_ediv_iff_of_dvd_of_neg_of_pos hb hd hba hdc
+  simpa only [Int.mul_assoc, Int.mul_left_comm d b, Int.mul_exactQuotient, Int.mul_comm b c] using!
+    (Int.mul_lt_mul_left_of_neg (b := Int.exactQuotient c d hdc (Int.ne_of_gt hd))
+      (c := Int.exactQuotient a b hba (Int.ne_of_lt hb)) (Int.mul_neg_of_pos_of_neg hd hb)).symm
 
 lemma div_lt_div_iff_of_dvd_of_neg_of_neg (hb : b < 0) (hd : d < 0) (hba : b ∣ a) (hdc : d ∣ c) :
     Int.euclideanDiv a b (Int.ne_of_lt hb) < Int.euclideanDiv c d (Int.ne_of_lt hd) ↔
       d * a < c * b := by
-  simpa only [Int.euclideanDiv_eq_core] using ediv_lt_ediv_iff_of_dvd_of_neg_of_neg hb hd hba hdc
-
-/-! ### properties of `/` and `%` -/
+  simpa only [Int.mul_assoc, Int.mul_left_comm d b, Int.mul_exactQuotient, Int.mul_comm b c] using!
+    (Int.mul_lt_mul_left (b := Int.exactQuotient a b hba (Int.ne_of_lt hb))
+      (c := Int.exactQuotient c d hdc (Int.ne_of_lt hd)) (Int.mul_pos_of_neg_of_neg hd hb)).symm
 
 lemma emod_two_eq_zero_or_one (n : ℤ) : n % 2 = 0 ∨ n % 2 = 1 :=
   emod_two_eq n
 
 /-! ### dvd -/
 
-lemma dvd_mul_of_div_dvd (hb : b ≠ 0) (h : b ∣ a) (hdiv : Int.euclideanDiv a b hb ∣ c) :
-    a ∣ b * c :=
-  dvd_mul_of_ediv_dvd h (by simpa only [Int.euclideanDiv_eq_core] using hdiv)
-
 lemma div_dvd_iff_dvd_mul (h : b ∣ a) (hb : b ≠ 0) :
     Int.euclideanDiv a b hb ∣ c ↔ a ∣ b * c := by
-  simpa only [Int.euclideanDiv_eq_core] using ediv_dvd_iff_dvd_mul (c := c) h hb
+  change Int.exactQuotient a b h hb ∣ c ↔ _
+  rw [← Int.mul_dvd_mul_iff_left hb, Int.mul_exactQuotient]
 
-lemma mul_dvd_of_dvd_div (hc : c ≠ 0) (hcb : c ∣ b) (h : a ∣ Int.euclideanDiv b c hc) : c * a ∣ b :=
-  mul_dvd_of_dvd_ediv hcb (by simpa only [Int.euclideanDiv_eq_core] using h)
-
-lemma dvd_div_of_mul_dvd (ha : a ≠ 0) (h : a * b ∣ c) :
-    b ∣ Int.euclideanDiv c a ha := by
-  simpa only [Int.euclideanDiv_eq_core] using dvd_ediv_of_mul_dvd h
+lemma dvd_mul_of_div_dvd (hb : b ≠ 0) (h : b ∣ a) (hdiv : Int.euclideanDiv a b hb ∣ c) :
+    a ∣ b * c :=
+  (div_dvd_iff_dvd_mul h hb).mp hdiv
 
 lemma dvd_div_iff_mul_dvd (hc : c ≠ 0) (hbc : c ∣ b) :
     a ∣ Int.euclideanDiv b c hc ↔ c * a ∣ b := by
-  simpa only [Int.euclideanDiv_eq_core] using dvd_ediv_iff_mul_dvd (a := a) hbc
+  change a ∣ Int.exactQuotient b c hbc hc ↔ _
+  rw [← Int.mul_dvd_mul_iff_left hc, Int.mul_exactQuotient]
+
+lemma mul_dvd_of_dvd_div (hc : c ≠ 0) (hcb : c ∣ b) (h : a ∣ Int.euclideanDiv b c hc) : c * a ∣ b :=
+  (dvd_div_iff_mul_dvd hc hcb).mp h
+
+lemma dvd_div_of_mul_dvd (ha : a ≠ 0) (h : a * b ∣ c) :
+    b ∣ Int.euclideanDiv c a ha :=
+  (dvd_div_iff_mul_dvd ha (Int.dvd_trans (Int.dvd_mul_right _ _) h)).mpr h
 
 /-- If `n > 0` then `m` is not divisible by `n` iff it is between `n * k` and `n * (k + 1)`
   for some `k`. -/
 lemma exists_lt_and_lt_iff_not_dvd (m : ℤ) (hn : 0 < n) :
-    (∃ k, n * k < m ∧ m < n * (k + 1)) ↔ ¬n ∣ m :=
-  (not_dvd_iff_lt_mul_succ m hn).symm
+    (∃ k, n * k < m ∧ m < n * (k + 1)) ↔ ¬n ∣ m := by
+  constructor
+  · rintro ⟨k, hlt, hgt⟩ ⟨j, rfl⟩
+    rw [Int.mul_lt_mul_left hn] at hlt hgt
+    omega
+  · intro hd
+    refine ⟨Int.euclideanDiv m n (Int.ne_of_gt hn), ?_⟩
+    have he := Int.euclideanDiv_mul_add_mod m n (Int.ne_of_gt hn)
+    have hne := mt Int.dvd_iff_emod_eq_zero.mpr hd
+    have hr₀ := Int.emod_nonneg m (Int.ne_of_gt hn)
+    have hr : m % n < n := by
+      simpa [Int.natAbs_of_nonneg (Int.le_of_lt hn)] using Int.emod_lt m (Int.ne_of_gt hn)
+    rw [Int.mul_add, Int.mul_one]
+    omega
 
 lemma eq_mul_div_of_mul_eq_mul_of_dvd_left (hb : b ≠ 0) (hbc : b ∣ c) (h : b * a = c * d) :
     a = Int.euclideanDiv c b hb * d := by
-  rw [Int.euclideanDiv_eq_core]
-  obtain ⟨k, rfl⟩ := hbc
-  rw [Int.mul_ediv_cancel_left _ hb]
-  rwa [Int.mul_assoc, Int.mul_eq_mul_left_iff hb] at h
+  change a = Int.exactQuotient c b hbc hb * d
+  apply Int.eq_of_mul_eq_mul_left hb
+  rw [← Int.mul_assoc, Int.mul_exactQuotient]
+  exact h
 
 lemma ofNat_add_negSucc_of_ge {m n : ℕ} (h : n.succ ≤ m) :
     ofNat m + -[n+1] = ofNat (m - n.succ) := by
   rw [negSucc_eq, ofNat_eq_natCast, ofNat_eq_natCast, ← Int.natCast_one, ← Int.natCast_add,
     ← Int.sub_eq_add_neg, ← Int.natCast_sub h]
 
-/-! #### `/` and ordering -/
+/-! ### Divisibility and ordering -/
 
 lemma le_iff_pos_of_dvd (ha : 0 < a) (hab : a ∣ b) : a ≤ b ↔ 0 < b :=
   ⟨Int.lt_of_lt_of_le ha, (Int.le_of_dvd · hab)⟩

@@ -155,7 +155,7 @@ theorem totient_div_of_dvd {n d : ℕ} (hnd : d ∣ n) (hd : d ≠ 0 := by check
     φ (Nat.euclideanDiv n d hd) = #{k ∈ range n | n.gcd k = d} := by
   have hd0 := Nat.pos_of_ne_zero hd
   rcases hnd with ⟨x, rfl⟩
-  rw [Nat.euclideanDiv_eq_core, Nat.mul_div_cancel_left x hd0]
+  rw [Nat.euclideanDiv_mul_left_cancel x hd]
   apply Finset.card_bij fun k _ => d * k
   · simp only [mem_filter, mem_range, and_imp, Coprime]
     refine fun a ha1 ha2 => ⟨by gcongr, ?_⟩
@@ -323,10 +323,16 @@ theorem totient_eq_div_primeFactors_mul (n : ℕ) :
     φ n =
       Nat.euclideanDiv n (∏ p ∈ n.primeFactors, p) (prod_pos fun _ ↦ pos_of_mem_primeFactors).ne' *
       ∏ p ∈ n.primeFactors, (p - 1) := by
-  rw [Nat.euclideanDiv_eq_core]
-  rw [← mul_div_left n.totient, totient_mul_prod_primeFactors, mul_comm,
-    Nat.mul_div_assoc _ (prod_primeFactors_dvd n), mul_comm]
-  exact prod_pos (fun p => pos_of_mem_primeFactors)
+  let d := ∏ p ∈ n.primeFactors, p
+  have hd : d ≠ 0 := (prod_pos fun _ ↦ pos_of_mem_primeFactors).ne'
+  change φ n = Nat.euclideanDiv n d hd * _
+  have hmod : n % d = 0 := Nat.mod_eq_zero_of_dvd (prod_primeFactors_dvd n)
+  have hdiv : d * Nat.euclideanDiv n d hd = n := by
+    simpa only [hmod, Nat.add_zero] using Nat.euclideanDiv_mul_add_mod n d hd
+  apply mul_left_cancel₀ hd
+  rw [← mul_assoc, hdiv]
+  dsimp only [d]
+  rw [mul_comm, totient_mul_prod_primeFactors]
 
 /-- Euler's product formula for the totient function. The product is taken over the set
 `n.primeFactors`, on which the inverses `p⁻¹` are defined. -/
@@ -455,14 +461,20 @@ theorem prime_pow_pow_totient_ediv_prod {p k : ℕ} (hp : p.Prime) (hk : 0 < k) 
   have hq (r : (p ^ k).primeFactors) : r = q := by
     apply Subtype.ext
     simpa only [Nat.primeFactors_prime_pow hk.ne' hp, Finset.mem_singleton] using r.property
-  simp only [Nat.euclideanDiv_eq_core]
-  rw [Finset.prod_eq_single q (fun r _ hr ↦ (hr (hq r)).elim)
-    (fun hnot ↦ (hnot (Finset.mem_attach _ q)).elim)]
-  simp only [q, Nat.totient_prime_pow hp hk, Nat.mul_div_left _ (Nat.sub_pos_of_lt hp.one_lt),
-    ← pow_mul]
-  rw [Nat.pow_div h hp.pos]
-  simp_rw [Nat.sub_mul, one_mul, Nat.mul_sub, mul_one]
-  ring_nf
+  have hquot (hd : p - 1 ≠ 0) :
+      Nat.euclideanDiv (φ (p ^ k)) (p - 1) hd = p ^ (k - 1) :=
+    Nat.euclideanDiv_eq_of_remainder (r := 0) hd
+      (by simp only [Nat.totient_prime_pow hp hk, Nat.add_zero, Nat.mul_comm])
+      (Nat.pos_of_ne_zero hd)
+  simp only [Finset.prod_eq_single q (fun r _ hr ↦ (hr (hq r)).elim)
+      (fun hnot ↦ (hnot (Finset.mem_attach _ q)).elim), q, hquot]
+  apply Nat.euclideanDiv_eq_of_remainder (r := 0) _
+  · simp only [Nat.add_zero, ← pow_mul, ← Nat.pow_add, Nat.totient_prime_pow hp hk]
+    congr 1
+    have he : p ^ (k - 1) * ((p - 1) * k) = k * (p ^ (k - 1) * (p - 1)) := by ac_rfl
+    rw [Nat.mul_sub (p ^ (k - 1)) ((p - 1) * k) 1, Nat.mul_one, he]
+    omega
+  · exact Nat.pow_pos hp.pos
 
 theorem prod_primeFactors_pow_totient_ediv_dvd {n : ℕ} (hn : 0 < n) :
     ∏ p ∈ n.primeFactors.attach, p.val ^ Nat.euclideanDiv (φ n) (p.val - 1)
@@ -472,8 +484,16 @@ theorem prod_primeFactors_pow_totient_ediv_dvd {n : ℕ} (hn : 0 < n) :
   rw [← Nat.pow_dvd_pow_iff (Nat.totient_pos.mpr hn).ne', ← Finset.prod_pow] at this
   rw [← Finset.prod_attach n.primeFactors (fun p ↦ p ^ φ n)] at this
   refine dvd_trans (Finset.prod_dvd_prod_of_dvd _ _ fun p hp ↦ ?_) this
-  rw [Nat.euclideanDiv_eq_core]
-  exact Nat.pow_dvd_pow p.val <| Nat.div_le_self _ _
+  have hb : 0 < p.val - 1 :=
+    Nat.sub_pos_of_lt (prime_of_mem_primeFactors p.property).one_lt
+  let q := Nat.euclideanDiv (φ n) (p.val - 1) hb.ne'
+  have hq : (p.val - 1) * q ≤ φ n :=
+    (Nat.le_euclideanDiv_iff_mul_le hb.ne').mp le_rfl
+  refine Nat.pow_dvd_pow p.val ?_
+  calc
+    q ≤ (p.val - 1) * q :=
+      le_mul_of_one_le_left (Nat.zero_le q) (Nat.succ_le_of_lt hb)
+    _ ≤ φ n := hq
 
 end Nat
 

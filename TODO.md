@@ -4526,7 +4526,7 @@ and uses the official Lean toolchain.
   operator audits, and `git diff --check` passed. The source scan found no references to the
   retired Euclidean quotient surface and no added proof holes or axioms.
 
-- [ ] **Audit native natural and integer quotients.**
+- [x] **Audit native natural and integer quotients.**
   The official Lean definitions `Nat.div` and `Int.ediv` and their native `/` instances
   have values at divisor zero. Use `Nat.euclideanDiv` and `Int.euclideanDiv` with an explicit or
   automatically established nonzero divisor. Use `Int.exactQuotient` for the integer solution
@@ -4542,15 +4542,28 @@ and uses the official Lean toolchain.
   on the retired native quotients. Verify elaboration, delaboration, instance
   inference, and affected callers.
 
-  The scoped semantic and proof audit of the native quotient module and the focused
-  integration targets pass. The full operator-fidelity acceptance gate remains open.
-  The exact 86-declaration `Mathlib.Data.Nat.Factorization.Defs` audit reached an
-  incomplete `PProd.snd` projection in `Nat.prod_factorization_pow_eq_self`, through
-  the proof of `List.bagInter.eq_def`. A scratch `Nat.land` boundary left an independent
-  path through `Nat.hasNotBit` and `Nat.shiftRight` to `Nat.div`. Reproduce with legacy
-  imports of `Mathlib.Data.Nat.Factorization.Defs` and
-  `Mathlib.Tactic.Linter.OperatorFidelity`, followed by
-  `#operator_fidelity with_proofs in Mathlib.Data.Nat.Factorization.Defs`.
+  **Verified 2026-11-23.** The two native quotient bridge macros were removed.
+  Their consumers use checked reconstruction, uniqueness, and quotient bounds, or independent
+  remainder and divisibility arguments. The natural reconstruction follows by remainder induction.
+  `Fin.euclideanDivNat` uses the positivity implied by an index of the finite product.
+  The exposed computation of `Nat.euclideanDiv` also evaluates literal indices in the kernel,
+  including those used in matrix determinant certificates. Remainder at zero has its own tests.
+
+  `OperatorFidelity` follows aliases, class projections, conditional receivers, and generated
+  declaration dependencies. It checks actual arguments even when an operation has an independently
+  verified specification. Compiler callbacks contribute to the proof dependency report, with
+  their signatures and emitted mathematical declarations checked for semantic dependencies.
+  The remaining native quotient proof sources are in official Lean, including `Nat.instDiv`,
+  `Int.instDiv`, numeral reduction, and the toolchain's formatting and certificate code.
+  The goal-local `Int.instDiv` binding supplies the official Omega certificate interface.
+
+  The strict build of `Mathlib MathlibTest Archive Counterexamples Wanted` passed with warnings
+  treated as errors. All five packages completed the semantic audit and proof dependency report.
+  The check of `MathlibTest` audited 563 imports, with the deliberate negative fixture and the
+  already-run Mathlib audit driver handled by their own test targets. `lake test`, `lake lint`,
+  `lake exe lint-style`, `lake exe mk_all --check`, and `git diff --check` passed.
+  The source scan found no retired quotient bridges, native natural quotient reconstruction calls,
+  or added proof holes or axioms.
 
 - [ ] **Expose the exact domain of extended nonnegative division.**
   **Accepted design, pending implementation.** Ordinary `ENNReal` division is the restriction

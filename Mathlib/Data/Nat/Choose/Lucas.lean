@@ -41,7 +41,7 @@ theorem choose_modEq_choose_mod_mul_choose_div :
         (Nat.euclideanDiv k p (NeZero.ne p)) [ZMOD p] := by
   have decompose : ((X : (ZMod p)[X]) + 1) ^ n =
       (X + 1) ^ (n % p) * (X ^ p + 1) ^ (Nat.euclideanDiv n p (NeZero.ne p)) := by
-    simpa [Nat.euclideanDiv_eq_core] using
+    simpa only [one_pow] using
       add_pow_eq_mul_pow_add_pow_div_char (X : (ZMod p)[X]) 1 p _
   simp only [← ZMod.intCast_eq_intCast_iff,
     ← coeff_X_add_one_pow _ n k, ← eq_intCast (Int.castRingHom (ZMod p)), ← coeff_map,
@@ -53,13 +53,17 @@ theorem choose_modEq_choose_mod_mul_choose_div :
   have h_iff : ∀ x ∈ range (n % p + 1) ×ˢ range (Nat.euclideanDiv n p (NeZero.ne p) + 1),
       k = x.1 + p * x.2 ↔ (k % p, Nat.euclideanDiv k p (NeZero.ne p)) = x := by
     intro ⟨x₁, x₂⟩ hx
-    simp only [Prod.mk.injEq, Nat.euclideanDiv_eq_core]
+    simp only [Prod.mk.injEq]
     constructor <;> intro h
     · simp only [mem_product, mem_range] at hx
-      have h' : x₁ < p := lt_of_lt_of_le hx.left <| mod_lt _ Fin.pos'
-      rw [h, add_mul_mod_self_left, add_mul_div_left _ _ Fin.pos', eq_comm (b := x₂)]
-      exact ⟨mod_eq_of_lt h', right_eq_add.mpr (div_eq_of_lt h')⟩
-    · rw [← h.left, ← h.right, mod_add_div]
+      have hx₁ : x₁ < p := lt_of_lt_of_le hx.left <| mod_lt _ Fin.pos'
+      refine ⟨?_, Nat.euclideanDiv_eq_of_remainder (NeZero.ne p)
+        (h.trans (Nat.add_comm _ _)) hx₁⟩
+      rw [h, add_mul_mod_self_left, mod_eq_of_lt hx₁]
+    · calc
+        k = p * Nat.euclideanDiv k p (NeZero.ne p) + k % p :=
+          (Nat.euclideanDiv_mul_add_mod k p (NeZero.ne p)).symm
+        _ = x₁ + p * x₂ := by rw [h.1, h.2, Nat.add_comm]
   simp only [finsetSum_coeff, coeff_mul_natCast, coeff_X_pow, ite_mul, zero_mul, ← cast_mul]
   rw [← sum_product', sum_congr rfl (fun a ha ↦ if_congr (h_iff a ha) rfl rfl), sum_ite_eq]
   split_ifs with h
@@ -84,12 +88,25 @@ theorem choose_modEq_choose_mul_prod_range_choose (a : ℕ) :
         (Nat.euclideanDiv n (p ^ i) (pow_ne_zero _ (NeZero.ne p)) % p)
         (Nat.euclideanDiv k (p ^ i) (pow_ne_zero _ (NeZero.ne p)) % p) [ZMOD p] :=
   match a with
-  | Nat.zero => by simp [Nat.euclideanDiv_eq_core]
+  | Nat.zero => by
+    have hq (m : ℕ) : Nat.euclideanDiv m 1 Nat.one_ne_zero = m := by
+      simpa only [Nat.one_mul] using Nat.euclideanDiv_mul_left_cancel m Nat.one_ne_zero
+    simp [hq, Int.ModEq.refl]
   | Nat.succ a => (choose_modEq_choose_mul_prod_range_choose a).trans <| by
+    have hq (m : ℕ) :
+        Nat.euclideanDiv (Nat.euclideanDiv m (p ^ a) (pow_ne_zero a (NeZero.ne p)))
+            p (NeZero.ne p) =
+          Nat.euclideanDiv m (p ^ (a + 1)) (pow_ne_zero (a + 1) (NeZero.ne p)) := by
+      have hle (j : ℕ) :
+          j ≤ Nat.euclideanDiv
+              (Nat.euclideanDiv m (p ^ a) (pow_ne_zero a (NeZero.ne p))) p (NeZero.ne p) ↔
+            j ≤ Nat.euclideanDiv m (p ^ (a + 1)) (pow_ne_zero (a + 1) (NeZero.ne p)) := by
+        simp only [Nat.le_euclideanDiv_iff_mul_le, pow_succ, Nat.mul_assoc]
+      exact Nat.le_antisymm ((hle _).mp le_rfl) ((hle _).mpr le_rfl)
     rw [prod_range_succ, cast_mul, ← mul_assoc, mul_right_comm]
     gcongr
     apply choose_modEq_choose_mod_mul_choose_div.trans
-    simp_rw [Nat.euclideanDiv_eq_core, pow_succ, Nat.div_div_eq_div_mul, mul_comm, Int.ModEq.refl]
+    simp only [hq, mul_comm, Int.ModEq.refl]
 
 /-- **Lucas's Theorem**: For primes `p`, `choose n k` is congruent to the product of
 `choose (⌊n / p ^ i⌋ % p) (⌊k / p ^ i⌋ % p)` over `i` modulo `p`. -/
@@ -98,8 +115,10 @@ theorem choose_modEq_prod_range_choose {a : ℕ} (ha₁ : n < p ^ a) (ha₂ : k 
         (Nat.euclideanDiv n (p ^ i) (pow_ne_zero _ (NeZero.ne p)) % p)
         (Nat.euclideanDiv k (p ^ i) (pow_ne_zero _ (NeZero.ne p)) % p) [ZMOD p] := by
   apply (choose_modEq_choose_mul_prod_range_choose a).trans
-  simp_rw [Nat.euclideanDiv_eq_core, Nat.div_eq_of_lt ha₁, Nat.div_eq_of_lt ha₂, choose, cast_one,
-    one_mul, cast_prod, Int.ModEq.refl]
+  have hq (m : ℕ) (hm : m < p ^ a) :
+      Nat.euclideanDiv m (p ^ a) (pow_ne_zero a (NeZero.ne p)) = 0 :=
+    Nat.euclideanDiv_eq_of_remainder (pow_ne_zero a (NeZero.ne p)) (r := m) (by simp) hm
+  simp only [hq n ha₁, hq k ha₂, choose_zero_right, cast_one, one_mul, cast_prod, Int.ModEq.refl]
 
 /-- **Lucas's Theorem**: For primes `p`, `choose n k` is congruent to the product of
 `choose (⌊n / p ^ i⌋ % p) (⌊k / p ^ i⌋ % p)` over `i` modulo `p`. -/
@@ -118,7 +137,7 @@ Also see `choose_mul_mul_modEq_choose_nat` for the version with `MOD`. -/
 theorem choose_mul_mul_modEq_choose :
     choose (p * a) (p * b) ≡ choose a b [ZMOD p] := by
   grw [choose_modEq_choose_mod_mul_choose_div]
-  simp [Nat.euclideanDiv_eq_core, NeZero.pos, Int.ModEq.refl]
+  simp [Int.ModEq.refl]
 
 /-- For primes `p`, `choose (p * a) (p * b)` is congruent to `choose a b` modulo `p`.
 Also see `choose_mul_mul_modEq_choose` for the version with `ZMOD`. -/

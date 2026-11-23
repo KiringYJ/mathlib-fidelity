@@ -1197,7 +1197,8 @@ evidence. Use `divp` for a bundled unit denominator in an arbitrary monoid.
 Set `c = a + 1` and `s = (c * a + a) % (c * b + 1)`. For the Euclidean
 decomposition `a = b * q + r`, the bound `q ≤ a` gives `s = c * r + (a - q)`.
 The quotient is `a - s % c`. Lean verifies the reconstruction and the remainder
-bound for `b ≠ 0`. The proof may use the official Euclidean lemmas.
+bound for `b ≠ 0` by induction on the remainder algorithm. Proofs that compare
+with an official Lean quotient use the uniqueness of this reconstruction.
 
 `Ordinal.quotient a b hb` carries `b ≠ 0` and uses the left-divisor
 reconstruction `a = b * q + r`, `r < b`.

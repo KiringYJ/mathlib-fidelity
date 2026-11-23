@@ -580,8 +580,10 @@ theorem iterate_derivative_derivative_mul_X_sq {n : ℕ} (p : R[X]) :
   suffices Nat.euclideanDiv ((n + 1 + 1) * (n + 1)) 2 * 2 = (n + 1 + 1) * (n + 1) by
     simp -implicitDefEqProofs [this, -nsmul_eq_mul, sum_range_succ, Nat.choose_two_right]
     ring
-  rw [Nat.euclideanDiv_eq_core, mul_comm (n + 1 + 1)]
-  exact Nat.div_mul_cancel (Nat.two_dvd_mul_add_one _)
+  have hdvd : 2 ∣ (n + 1 + 1) * (n + 1) := by
+    rw [Nat.mul_comm]
+    exact Nat.two_dvd_mul_add_one _
+  exact (Nat.mul_comm ..).trans (Nat.mul_euclideanDiv_cancel (by decide) hdvd)
 
 theorem derivative_comp (p q : R[X]) :
     derivative (p.comp q) = derivative q * p.derivative.comp q := by

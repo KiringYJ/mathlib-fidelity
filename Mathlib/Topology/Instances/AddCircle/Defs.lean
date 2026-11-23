@@ -593,9 +593,9 @@ variable (p) in
 theorem gcd_mul_addOrderOf_div_eq {n : ℕ} (m : ℕ) (hn : 0 < n) :
     m.gcd n * addOrderOf (↑(↑m / ↑n * p) : AddCircle p) = n := by
   rw [natCast_div_mul_eq_nsmul, IsOfFinAddOrder.addOrderOf_nsmul]
-  · simp only [Nat.euclideanDiv_eq_core, addOrderOf_period_div hn]
-    rw [Nat.gcd_comm, Nat.mul_div_cancel']
-    exact n.gcd_dvd_left m
+  · simp only [addOrderOf_period_div hn]
+    rw [Nat.gcd_comm]
+    exact Nat.mul_euclideanDiv_cancel _ (n.gcd_dvd_left m)
   · rwa [← addOrderOf_pos_iff, addOrderOf_period_div hn]
 
 theorem addOrderOf_div_of_gcd_eq_one {m n : ℕ} (hn : 0 < n) (h : m.gcd n = 1) :

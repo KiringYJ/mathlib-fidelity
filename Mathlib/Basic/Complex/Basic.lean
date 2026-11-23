@@ -615,7 +615,7 @@ lemma I_pow_three : I ^ 3 = -I := by rw [pow_succ, I_sq, neg_one_mul]
 theorem I_pow_four : I ^ 4 = 1 := by rw [(by simp : 4 = 2 * 2), pow_mul, I_sq, neg_one_sq]
 
 lemma I_pow_eq_pow_mod (n : ℕ) : I ^ n = I ^ (n % 4) := by
-  conv_lhs => rw [← Nat.div_add_mod n 4]
+  conv_lhs => rw [← Nat.euclideanDiv_mul_add_mod n 4 (by decide)]
   simp [pow_add, pow_mul, I_pow_four]
 
 open Qq in

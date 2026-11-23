@@ -144,7 +144,7 @@ theorem eulerFunction_eq_tprod {x : R} (hx : ‖x‖ < 1) :
       apply (tendsto_pow_atTop_nhds_zero_of_norm_lt_one hx).comp
       rw [tendsto_atTop_atTop]
       refine fun k ↦ ⟨k, fun n hn ↦ hn.trans ?_⟩
-      rw [Nat.euclideanDiv_eq_core, Nat.le_div_iff_mul_le (by decide)]
+      rw [Nat.le_euclideanDiv_iff_mul_le (by decide)]
       nlinarith
     · exact isBoundedUnder_of ⟨_, fun k ↦ Pentagonal.tsum_pow_mul_prod_bound k hx⟩
 

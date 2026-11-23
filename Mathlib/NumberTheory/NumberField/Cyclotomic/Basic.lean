@@ -689,31 +689,43 @@ private theorem discrDenominator_mul {a b : ℕ} (ha : a ≠ 0) (hb : b ≠ 0) (
       weight (n * m) p = weight n p ^ φ m := by
     have hd : p - 1 ∣ φ n := p.totient_prime (prime_of_mem_primeFactors hp) ▸
       totient_dvd_of_dvd (dvd_of_mem_primeFactors hp)
-    simp only [weight, dite_eq_left (prime_of_mem_primeFactors hp), Nat.euclideanDiv_eq_core,
-      ← pow_mul,
-      Nat.div_mul_right_comm hd, Nat.totient_mul hcop]
+    have hp₁ := Nat.sub_pos_of_lt (prime_of_mem_primeFactors hp).one_lt
+    have hprod := Nat.mul_euclideanDiv_cancel hp₁.ne' hd
+    simp only [weight, dite_eq_left (prime_of_mem_primeFactors hp), ← pow_mul, Nat.totient_mul hcop]
+    congr 1
+    refine Nat.euclideanDiv_eq_of_remainder (r := 0) hp₁.ne' ?_ hp₁
+    rw [Nat.add_zero, ← Nat.mul_assoc, hprod]
   rw [hprod, hprod, hprod, primeFactors_mul ha hb, Finset.prod_union h.disjoint_primeFactors,
     ← Finset.prod_pow, ← Finset.prod_pow]
   exact congrArg₂ (· * ·) (Finset.prod_congr rfl fun p hp ↦ hweight h hp)
     (Finset.prod_congr rfl fun p hp ↦ by rw [mul_comm a b]; exact hweight h.symm hp)
 
 open Nat in
+private theorem discrDenominator_mul_discrMagnitude {a : ℕ} (ha : 0 < a) :
+    discrDenominator a * discrMagnitude a = a ^ φ a :=
+  Nat.mul_euclideanDiv_cancel (discrDenominator_ne_zero a)
+    (prod_primeFactors_pow_totient_ediv_dvd ha)
+
+open Nat in
 private theorem discrMagnitude_mul {a b : ℕ} (ha : 0 < a) (hb : 0 < b) (h : a.Coprime b) :
     discrMagnitude a ^ φ b * discrMagnitude b ^ φ a = discrMagnitude (a * b) := by
-  have da : discrDenominator a ∣ a ^ φ a := prod_primeFactors_pow_totient_ediv_dvd ha
-  have db : discrDenominator b ∣ b ^ φ b := prod_primeFactors_pow_totient_ediv_dvd hb
-  simp only [discrMagnitude, Nat.euclideanDiv_eq_core, Nat.div_pow da, Nat.div_pow db]
-  rw [← Nat.mul_div_mul_comm (pow_dvd_pow_of_dvd da (φ b)) (pow_dvd_pow_of_dvd db (φ a)),
-    discrDenominator_mul ha.ne' hb.ne' h, Nat.totient_mul h, mul_pow, ← pow_mul, ← pow_mul,
-    mul_comm (φ b) (φ a)]
+  symm
+  refine Nat.euclideanDiv_eq_of_remainder (r := 0) _ ?_
+    (Nat.pos_of_ne_zero (discrDenominator_ne_zero (a * b)))
+  calc
+    (a * b) ^ φ (a * b) = (a ^ φ a) ^ φ b * (b ^ φ b) ^ φ a := by
+      rw [Nat.totient_mul h, mul_pow, ← pow_mul, ← pow_mul, Nat.mul_comm (φ b) (φ a)]
+    _ = (discrDenominator a * discrMagnitude a) ^ φ b *
+        (discrDenominator b * discrMagnitude b) ^ φ a := by
+      rw [discrDenominator_mul_discrMagnitude ha, discrDenominator_mul_discrMagnitude hb]
+    _ = _ := by rw [discrDenominator_mul ha.ne' hb.ne' h, Nat.add_zero, mul_pow, mul_pow]; ac_rfl
 
 open Nat in
 private theorem coprime_discrMagnitude {a b : ℕ} (ha : 0 < a) (hb : 0 < b) (h : a.Coprime b) :
     (discrMagnitude a).Coprime (discrMagnitude b) := by
-  simp only [discrMagnitude, Nat.euclideanDiv_eq_core]
-  apply Coprime.coprime_div_left _ (prod_primeFactors_pow_totient_ediv_dvd ha)
-  apply Coprime.coprime_div_right _ (prod_primeFactors_pow_totient_ediv_dvd hb)
-  exact (h.pow_right _).pow_left _
+  apply Nat.Coprime.of_dvd _ _ ((h.pow_right (φ b)).pow_left (φ a))
+  · exact ⟨_, (discrDenominator_mul_discrMagnitude ha).symm.trans (Nat.mul_comm _ _)⟩
+  · exact ⟨_, (discrDenominator_mul_discrMagnitude hb).symm.trans (Nat.mul_comm _ _)⟩
 
 variable (n) [hn : NeZero n]
 
@@ -731,7 +743,6 @@ theorem discr [hK : IsCyclotomicExtension {n} ℚ K] :
         pow_ne_zero _ (prime_of_mem_primeFactors p.property).ne_zero) : ℤ) := by
   have : NumberField K := IsCyclotomicExtension.numberField {n} ℚ K
   rw [← Int.sign_mul_natAbs (NumberField.discr K), sign_discr, nrComplexPlaces_eq_totient_div_two n]
-  simp only [Nat.euclideanDiv_eq_core (φ n) 2]
   congr 1
   apply Int.ofNat_inj.mpr
   change (NumberField.discr K).natAbs = discrMagnitude n
@@ -741,7 +752,7 @@ theorem discr [hK : IsCyclotomicExtension {n} ℚ K] :
     have : Fact (Nat.Prime p) := ⟨hp⟩
     rw [discr_prime_pow p k K]
     cases k with
-    | zero => simp [discrMagnitude, discrDenominator_one, Nat.euclideanDiv_eq_core]
+    | zero => simp [discrMagnitude, discrDenominator_one]
     | succ k =>
       simpa only [Int.reduceNeg, add_tsub_cancel_right, Int.natAbs_mul, Int.natAbs_pow,
         IsUnit.neg_iff, isUnit_one, Int.natAbs_of_isUnit, one_pow, Int.natAbs_natCast, one_mul]

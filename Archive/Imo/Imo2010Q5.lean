@@ -241,7 +241,7 @@ theorem result : Reachable (single 5 (2010 ^ 2010 ^ 2010)) := by
   have hm : m = 2010 := by rfl
   convert! ((quarter_target hm).push (show 3 < 5 by decide)).push (show 4 < 5 by decide)
   simp only [single_eq_same, tsub_self, Fin.reduceAdd, zero_add, single_inj]
-  rw [← mul_assoc, show 2 * 2 = 4 by rfl, mul_comm, Nat.euclideanDiv_eq_core, Nat.div_mul_cancel]
+  rw [← mul_assoc, show 2 * 2 = 4 by rfl, Nat.mul_euclideanDiv_cancel (by decide)]
   trans 2010 ^ 2
   · lia
   · apply pow_dvd_pow

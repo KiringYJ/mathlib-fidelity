@@ -178,14 +178,15 @@ namespace Nat
 instance instFloorDiv : FloorDiv ℕ ℕ where
   floorDiv b a ha := Nat.euclideanDiv b a ha.ne'
   floorDiv_gc a ha x y := by
-    simpa only [Nat.euclideanDiv_eq_core, smul_eq_mul, Nat.mul_comm] using
-      (Nat.le_div_iff_mul_le (x := x) (y := y) ha).symm
+    simpa only [smul_eq_mul, Nat.mul_comm] using
+      (Nat.le_euclideanDiv_iff_mul_le (a := y) (k := x) ha.ne').symm
 
 instance instCeilDiv : CeilDiv ℕ ℕ where
   ceilDiv a b hb := Nat.euclideanDiv (a + b - 1) b hb.ne'
   ceilDiv_gc a ha b c := by
-    simp [Nat.euclideanDiv_eq_core, div_le_iff_le_mul_add_pred ha, add_assoc,
-      tsub_add_cancel_of_le <| succ_le_iff.2 ha]
+    change Nat.euclideanDiv (b + a - 1) a ha.ne' ≤ c ↔ b ≤ a * c
+    rw [← Nat.not_lt, ← Nat.succ_le_iff, Nat.le_euclideanDiv_iff_mul_le ha.ne', Nat.mul_add_one]
+    omega
 
 @[simp] lemma floorDiv_eq_div (a b : ℕ) (hb : 0 < b) : a ⌊/⌋ b = Nat.euclideanDiv a b hb.ne' := rfl
 lemma ceilDiv_eq_add_pred_div (a b : ℕ) (hb : 0 < b) :

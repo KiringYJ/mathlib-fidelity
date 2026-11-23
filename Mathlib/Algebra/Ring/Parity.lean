@@ -313,8 +313,22 @@ lemma odd_pow_iff {e : ℕ} (he : e ≠ 0) : Odd (n ^ e) ↔ Odd n := by grind
 
 lemma even_div (hn : n ≠ 0) :
     Even (Nat.euclideanDiv m n hn) ↔ Nat.euclideanDiv (m % (2 * n)) n hn = 0 := by
-  rw [Nat.euclideanDiv_eq_core m n hn, Nat.euclideanDiv_eq_core _ n hn, even_iff_two_dvd,
-    dvd_iff_mod_eq_zero, ← Nat.mod_mul_right_div_self, mul_comm]
+  let q := Nat.euclideanDiv m n hn
+  let r := m % n
+  let s := q % 2
+  let t := Nat.euclideanDiv q 2
+  have hm : n * q + r = m := Nat.euclideanDiv_mul_add_mod m n hn
+  have hq : 2 * t + s = q := Nat.euclideanDiv_mul_add_mod q 2 (by decide)
+  have hr : r < n := Nat.mod_lt _ (Nat.pos_of_ne_zero hn)
+  have hs : s ≤ 1 := Nat.le_of_lt_succ (Nat.mod_lt _ (by decide))
+  have hns := Nat.mul_le_mul_left n hs
+  rw [Nat.mul_one] at hns
+  have hrepr : m = (2 * n) * t + (n * s + r) := by
+    rw [← hm, ← hq, Nat.mul_add, ← Nat.mul_assoc, Nat.mul_comm n 2, Nat.add_assoc]
+  have hremainder : m % (2 * n) = n * s + r := by
+    rw [hrepr, Nat.mul_add_mod_self_left, Nat.mod_eq_of_lt]
+    omega
+  rw [Nat.euclideanDiv_eq_of_remainder hn hremainder hr, Nat.even_iff]
 
 @[parity_simps] lemma odd_add : Odd (m + n) ↔ (Odd m ↔ Even n) := by grind
 

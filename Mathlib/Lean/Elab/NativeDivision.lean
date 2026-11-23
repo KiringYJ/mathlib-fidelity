@@ -25,22 +25,28 @@ macro_rules
   | `(tactic| checked_native_nonzero) => `(tactic|
       first
       | done
-      | assumption
-      | exact Nat.succ_ne_zero _
-      | decide
-      | omega
+      | · repeat' first
+            | assumption
+            | exact Nat.succ_ne_zero _
+            | decide
+            | apply Nat.mul_ne_zero
+            | apply Int.mul_ne_zero
+            | omega
+          done
       | fail "a nonzero divisor proof is required")
 
 namespace Nat
 
-/-- Recover the quotient from its complement modulo one more than the dividend. -/
-private def euclideanDivFromMod (a b : Nat) (_hb : b ≠ 0) : Nat :=
+/-- The Euclidean quotient of `a` by a nonzero natural number `b`. The quotient is
+computed from its complement modulo one more than the dividend. -/
+@[expose] def euclideanDiv (a b : Nat) (hb : b ≠ 0 := by checked_native_nonzero) : Nat :=
+  have _ := hb
   let c := a + 1
   a - ((c * a + a) % (c * b + 1)) % c
 
-private theorem euclideanDivFromMod_eq (a b q r : Nat) (hq : q ≤ a) (hr : r < b)
+private theorem euclideanDiv_eq_of_mul_add_eq (a b q r : Nat) (hq : q ≤ a) (hr : r < b)
     (he : b * q + r = a) :
-    euclideanDivFromMod a b (Nat.ne_of_gt (Nat.lt_of_le_of_lt (Nat.zero_le r) hr)) = q := by
+    euclideanDiv a b (Nat.ne_of_gt (Nat.lt_of_le_of_lt (Nat.zero_le r) hr)) = q := by
   let c := a + 1
   have hsmall : a - q < c := Nat.lt_succ_of_le (Nat.sub_le ..)
   have hbound : c * r + (a - q) < c * b + 1 := by
@@ -56,16 +62,24 @@ private theorem euclideanDivFromMod_eq (a b q r : Nat) (hq : q ≤ a) (hr : r < 
   rw [← hrepr, Nat.mul_add_mod_self_left, Nat.mod_eq_of_lt hbound, Nat.mul_add_mod_self_left,
     Nat.mod_eq_of_lt hsmall, Nat.sub_sub_self hq]
 
-private def euclideanDivRemainder (a b : Nat) (hb : b ≠ 0) :
-    { qr : Nat × Nat // b * qr.1 + qr.2 = a ∧ qr.2 < b } :=
-  ⟨(euclideanDivFromMod a b hb, a % b),
-    (congrArg (fun q ↦ b * q + a % b) (euclideanDivFromMod_eq a b _ _ (Nat.div_le_self a b)
-      (Nat.mod_lt a (Nat.pos_of_ne_zero hb)) (Nat.div_add_mod a b))).trans (Nat.div_add_mod a b),
-    Nat.mod_lt a (Nat.pos_of_ne_zero hb)⟩
+private theorem exists_mul_add_mod (a b : Nat) (hb : b ≠ 0) :
+    ∃ q ≤ a, b * q + a % b = a := by
+  induction a, b using Nat.mod.inductionOn with
+  | base a b h =>
+    have hab : a < b := Nat.lt_of_not_ge fun hab => h ⟨Nat.pos_of_ne_zero hb, hab⟩
+    exact ⟨0, Nat.zero_le _, by rw [Nat.mul_zero, Nat.zero_add, Nat.mod_eq_of_lt hab]⟩
+  | ind a b h ih =>
+    obtain ⟨q, hq, he⟩ := ih hb
+    have hlt := Nat.sub_lt (Nat.lt_of_lt_of_le h.1 h.2) h.1
+    refine ⟨q + 1, Nat.succ_le_of_lt (Nat.lt_of_le_of_lt hq hlt), ?_⟩
+    rw [Nat.mod_eq_sub_mod h.2, Nat.mul_succ, Nat.add_right_comm, he, Nat.sub_add_cancel h.2]
 
-/-- The Euclidean quotient of `a` by a nonzero natural number `b`. -/
-def euclideanDiv (a b : Nat) (hb : b ≠ 0 := by checked_native_nonzero) : Nat :=
-  (euclideanDivRemainder a b hb).val.1
+/-- A nonzero divisor times its quotient, plus the remainder, recovers the dividend. -/
+theorem euclideanDiv_mul_add_mod (a b : Nat) (hb : b ≠ 0) :
+    b * euclideanDiv a b hb + a % b = a := by
+  have hr := Nat.mod_lt a (Nat.pos_of_ne_zero hb)
+  obtain ⟨q, hq, he⟩ := exists_mul_add_mod a b hb
+  rw [euclideanDiv_eq_of_mul_add_eq a b q (a % b) hq hr he, he]
 
 private theorem euclideanDiv_le_of_remainder_eq {a b q q' r r' : Nat}
     (h : b * q + r = a) (h' : b * q' + r' = a) (hr' : r' < b) : q ≤ q' := by
@@ -78,31 +92,28 @@ private theorem euclideanDiv_le_of_remainder_eq {a b q q' r r' : Nat}
 /-- The reconstruction and remainder bound determine the natural quotient. -/
 theorem euclideanDiv_eq_of_remainder {a b q r : Nat} (hb : b ≠ 0)
     (h : a = b * q + r) (hr : r < b) : euclideanDiv a b hb = q := by
-  let result := euclideanDivRemainder a b hb
-  exact Nat.le_antisymm (euclideanDiv_le_of_remainder_eq result.property.1 h.symm hr)
-    (euclideanDiv_le_of_remainder_eq h.symm result.property.1 result.property.2)
+  have hrec := euclideanDiv_mul_add_mod a b hb
+  exact Nat.le_antisymm (euclideanDiv_le_of_remainder_eq hrec h.symm hr)
+    (euclideanDiv_le_of_remainder_eq h.symm hrec (Nat.mod_lt _ (Nat.pos_of_ne_zero hb)))
 
-end Nat
-
-/-- Prove agreement with Lean's natural quotient for a nonzero divisor.
-The expansion uses the official Euclidean lemmas in the proof that requests it. -/
-macro "Nat.euclideanDiv_eq_core" : term =>
-  `(fun (a b : Nat) (hb : b ≠ 0) =>
-    (show Nat.euclideanDiv a b hb = @HDiv.hDiv Nat Nat Nat (@instHDiv Nat Nat.instDiv) a b from
-      Nat.euclideanDiv_eq_of_remainder hb (Nat.div_add_mod a b).symm
-        (Nat.mod_lt a (Nat.pos_of_ne_zero hb))))
-
-namespace Nat
-
-/-- A nonzero divisor times its quotient, plus the remainder, recovers the dividend. -/
-theorem euclideanDiv_mul_add_mod (a b : Nat) (hb : b ≠ 0) :
-    b * euclideanDiv a b hb + a % b = a := by
-  let qr := euclideanDivRemainder a b hb
-  have hr : qr.val.2 = a % b := by
-    simpa only [Nat.mul_add_mod_self_left, Nat.mod_eq_of_lt qr.property.2]
-      using congrArg (fun x => x % b) qr.property.1
-  change b * qr.val.1 + a % b = a
-  exact hr ▸ qr.property.1
+/-- A natural number is at most the quotient iff multiplying by the divisor
+gives a number at most the dividend. -/
+theorem le_euclideanDiv_iff_mul_le {a b k : Nat} (hb : b ≠ 0) :
+    k ≤ euclideanDiv a b hb ↔ b * k ≤ a := by
+  constructor
+  · intro h
+    calc
+      b * k ≤ b * euclideanDiv a b hb := Nat.mul_le_mul_left _ h
+      _ ≤ b * euclideanDiv a b hb + a % b := Nat.le_add_right _ _
+      _ = a := euclideanDiv_mul_add_mod a b hb
+  · intro h
+    apply Nat.lt_succ_iff.mp
+    apply Nat.lt_of_mul_lt_mul_left
+    calc
+      b * k ≤ a := h
+      _ = b * euclideanDiv a b hb + a % b := (euclideanDiv_mul_add_mod a b hb).symm
+      _ < b * euclideanDiv a b hb + b := Nat.add_lt_add_left (Nat.mod_lt _ (Nat.pos_of_ne_zero hb)) _
+      _ = b * (euclideanDiv a b hb).succ := (Nat.mul_succ _ _).symm
 
 /-- Cancel a nonzero right factor in the Euclidean quotient. -/
 @[simp] theorem euclideanDiv_mul_right_cancel (a : Nat) {b : Nat} (hb : b ≠ 0) :
@@ -113,6 +124,97 @@ theorem euclideanDiv_mul_add_mod (a b : Nat) (hb : b ≠ 0) :
 @[simp] theorem euclideanDiv_mul_left_cancel (a : Nat) {b : Nat} (hb : b ≠ 0) :
     euclideanDiv (b * a) b hb = a :=
   euclideanDiv_eq_of_remainder (r := 0) hb (by simp) (Nat.pos_of_ne_zero hb)
+
+@[simp] theorem euclideanDiv_zero (b : Nat) (hb : b ≠ 0) : euclideanDiv 0 b hb = 0 := by
+  simpa only [Nat.mul_zero] using euclideanDiv_mul_left_cancel 0 hb
+
+@[simp] theorem euclideanDiv_one (a : Nat) : euclideanDiv a 1 Nat.one_ne_zero = a := by
+  simpa only [Nat.one_mul] using euclideanDiv_mul_left_cancel a Nat.one_ne_zero
+
+@[simp] theorem euclideanDiv_self (a : Nat) (ha : a ≠ 0) : euclideanDiv a a ha = 1 := by
+  simpa only [Nat.mul_one] using euclideanDiv_mul_left_cancel 1 ha
+
+theorem euclideanDiv_eq_zero_of_lt {a b : Nat} (hb : b ≠ 0) (h : a < b) :
+    euclideanDiv a b hb = 0 :=
+  euclideanDiv_eq_of_remainder hb (r := a) (by simp) h
+
+theorem euclideanDiv_lt_iff_lt_mul {a b k : Nat} (hb : b ≠ 0) :
+    euclideanDiv a b hb < k ↔ a < b * k := by
+  rw [← Nat.not_le, ← Nat.not_le, le_euclideanDiv_iff_mul_le hb]
+
+theorem euclideanDiv_pos {a b : Nat} (hb : b ≠ 0) (h : b ≤ a) : 0 < euclideanDiv a b hb :=
+  (le_euclideanDiv_iff_mul_le (k := 1) hb).2 (by simpa only [Nat.mul_one] using h)
+
+theorem euclideanDiv_mul_le_self (a b : Nat) (hb : b ≠ 0) : euclideanDiv a b hb * b ≤ a := by
+  rw [Nat.mul_comm]
+  exact (le_euclideanDiv_iff_mul_le hb).1 (Nat.le_refl _)
+
+theorem euclideanDiv_le_self (a b : Nat) (hb : b ≠ 0) : euclideanDiv a b hb ≤ a :=
+  Nat.le_trans (Nat.le_mul_of_pos_right _ (Nat.pos_of_ne_zero hb))
+    (euclideanDiv_mul_le_self a b hb)
+
+theorem euclideanDiv_lt_self {a b : Nat} (ha : 0 < a) (hb : 1 < b) :
+    euclideanDiv a b (Nat.ne_of_gt (Nat.lt_trans Nat.zero_lt_one hb)) < a :=
+  (euclideanDiv_lt_iff_lt_mul _).2 (by
+    simpa only [Nat.one_mul] using Nat.mul_lt_mul_of_pos_right hb ha)
+
+theorem mul_euclideanDiv_cancel {a b : Nat} (hb : b ≠ 0) (h : b ∣ a) :
+    b * euclideanDiv a b hb = a := by
+  obtain ⟨q, rfl⟩ := h
+  rw [euclideanDiv_mul_left_cancel]
+
+theorem dvd_euclideanDiv_iff_mul_dvd {a b k : Nat} (hb : b ≠ 0) (h : b ∣ a) :
+    k ∣ euclideanDiv a b hb ↔ b * k ∣ a := by
+  obtain ⟨q, rfl⟩ := h
+  rw [euclideanDiv_mul_left_cancel, Nat.mul_dvd_mul_iff_left (Nat.pos_of_ne_zero hb)]
+
+theorem euclideanDiv_add_mul (a k : Nat) {b : Nat} (hb : b ≠ 0) :
+    euclideanDiv (a + b * k) b hb = euclideanDiv a b hb + k := by
+  refine euclideanDiv_eq_of_remainder (r := a % b) hb ?_ (Nat.mod_lt _ (Nat.pos_of_ne_zero hb))
+  have h := euclideanDiv_mul_add_mod a b hb
+  rw [Nat.mul_add]
+  omega
+
+theorem euclideanDiv_add (a c : Nat) {b : Nat} (hb : b ≠ 0) :
+    euclideanDiv (a + c) b hb = euclideanDiv a b hb + euclideanDiv c b hb +
+      if b ≤ a % b + c % b then 1 else 0 := by
+  have ha := euclideanDiv_mul_add_mod a b hb
+  have hc := euclideanDiv_mul_add_mod c b hb
+  have hra := Nat.mod_lt a (Nat.pos_of_ne_zero hb)
+  have hrc := Nat.mod_lt c (Nat.pos_of_ne_zero hb)
+  by_cases h : b ≤ a % b + c % b
+  · rw [ite_eq_left h]
+    refine euclideanDiv_eq_of_remainder (r := a % b + c % b - b) hb ?_ (by omega)
+    simp only [Nat.mul_add, Nat.mul_one]
+    omega
+  · rw [ite_eq_right h, Nat.add_zero]
+    refine euclideanDiv_eq_of_remainder (r := a % b + c % b) hb ?_ (Nat.lt_of_not_ge h)
+    rw [Nat.mul_add]
+    omega
+
+theorem euclideanDiv_euclideanDiv (a : Nat) {b c : Nat} (hb : b ≠ 0) (hc : c ≠ 0) :
+    euclideanDiv (euclideanDiv a b hb) c hc = euclideanDiv a (b * c) (Nat.mul_ne_zero hb hc) := by
+  have h (k : Nat) : k ≤ euclideanDiv (euclideanDiv a b hb) c hc ↔
+      k ≤ euclideanDiv a (b * c) (Nat.mul_ne_zero hb hc) := by
+    simp only [le_euclideanDiv_iff_mul_le, Nat.mul_assoc]
+  exact Nat.le_antisymm ((h _).1 (Nat.le_refl _)) ((h _).2 (Nat.le_refl _))
+
+theorem euclideanDiv_succ (a : Nat) {b : Nat} (hb : b ≠ 0) :
+    euclideanDiv (a + 1) b hb = euclideanDiv a b hb + if b ∣ a + 1 then 1 else 0 := by
+  let q := euclideanDiv a b hb
+  have h : a + 1 = b * q + (a % b + 1) := by
+    rw [← Nat.add_assoc, euclideanDiv_mul_add_mod a b hb]
+  have hr : a % b + 1 ≤ b := Nat.mod_lt a (Nat.pos_of_ne_zero hb)
+  rcases Nat.eq_or_lt_of_le hr with hr | hr
+  · have he : a + 1 = b * (q + 1) := by simpa only [hr, Nat.mul_succ] using h
+    rw [ite_eq_left (show b ∣ a + 1 from ⟨q + 1, he⟩)]
+    exact euclideanDiv_eq_of_remainder (r := 0) hb (by simpa only [Nat.add_zero] using he)
+      (Nat.pos_of_ne_zero hb)
+  · have hn : ¬b ∣ a + 1 := by
+      rw [Nat.dvd_iff_mod_eq_zero, h, Nat.mul_add_mod_self_left, Nat.mod_eq_of_lt hr]
+      exact Nat.succ_ne_zero _
+    rw [ite_eq_right hn, Nat.add_zero]
+    exact euclideanDiv_eq_of_remainder hb h hr
 
 end Nat
 
@@ -126,23 +228,6 @@ namespace Int
   | .ofNat m, .negSucc n, _ => -ofNat (Nat.euclideanDiv m n.succ (Nat.succ_ne_zero _))
   | .negSucc m, .ofNat (.succ n), _ => .negSucc (Nat.euclideanDiv m n.succ (Nat.succ_ne_zero _))
   | .negSucc m, .negSucc n, _ => .ofNat (Nat.euclideanDiv m n.succ (Nat.succ_ne_zero _)).succ
-
-end Int
-
-/-- Prove agreement with Lean's integer quotient for a nonzero divisor.
-The signed cases use the agreement theorem for natural quotients. -/
-macro "Int.euclideanDiv_eq_core" : term =>
-  `(fun (a b : Int) (hb : b ≠ 0) =>
-    (show Int.euclideanDiv a b hb = @HDiv.hDiv Int Int Int (@instHDiv Int Int.instDiv) a b from by
-      change Int.euclideanDiv a b hb = Int.ediv a b
-      cases b with
-      | ofNat n =>
-        cases n with
-        | zero => exact (hb rfl).elim
-        | succ n => cases a <;> simp only [Int.euclideanDiv, Int.ediv, Nat.euclideanDiv_eq_core]
-      | negSucc n => cases a <;> simp only [Int.euclideanDiv, Int.ediv, Nat.euclideanDiv_eq_core]))
-
-namespace Int
 
 /-- A nonzero divisor times its quotient, plus the remainder, recovers the dividend. -/
 theorem euclideanDiv_mul_add_mod (a b : Int) (hb : b ≠ 0) :
@@ -169,6 +254,53 @@ theorem euclideanDiv_eq_of_remainder {a b q r : Int} (hb : b ≠ 0)
   have hq := euclideanDiv_mul_add_mod a b hb
   rw [hmod] at hq
   exact Int.eq_of_mul_eq_mul_left hb (by omega)
+
+@[simp] theorem euclideanDiv_mul_left_cancel (a : Int) {b : Int} (hb : b ≠ 0) :
+    euclideanDiv (b * a) b hb = a :=
+  euclideanDiv_eq_of_remainder (r := 0) hb (by simp) (Int.le_refl _) (by
+    simpa only [Int.zero_emod] using Int.emod_lt 0 hb)
+
+@[simp] theorem euclideanDiv_mul_right_cancel (a : Int) {b : Int} (hb : b ≠ 0) :
+    euclideanDiv (a * b) b hb = a := by
+  rw [Int.mul_comm, euclideanDiv_mul_left_cancel]
+
+@[simp] theorem euclideanDiv_zero (b : Int) (hb : b ≠ 0) : euclideanDiv 0 b hb = 0 := by
+  simpa only [Int.mul_zero] using euclideanDiv_mul_left_cancel 0 hb
+
+theorem natCast_euclideanDiv (a b : Nat) (hb : b ≠ 0) :
+    (Nat.euclideanDiv a b hb : Int) = euclideanDiv (a : Int) (b : Int) (fun h => hb (Int.ofNat.inj h)) := by
+  cases b with
+  | zero => exact (hb rfl).elim
+  | succ b => rfl
+
+theorem le_euclideanDiv_iff_mul_le {a b k : Int} (hb : 0 < b) :
+    k ≤ euclideanDiv a b (Int.ne_of_gt hb) ↔ b * k ≤ a := by
+  have hrec := euclideanDiv_mul_add_mod a b (Int.ne_of_gt hb)
+  constructor
+  · intro h
+    have hmul := Int.mul_le_mul_of_nonneg_left h (Int.le_of_lt hb)
+    have hr := Int.emod_nonneg a (Int.ne_of_gt hb)
+    omega
+  · intro h
+    by_cases hk : k ≤ euclideanDiv a b (Int.ne_of_gt hb)
+    · exact hk
+    · have hmul := Int.mul_le_mul_of_nonneg_left
+        (show euclideanDiv a b (Int.ne_of_gt hb) + 1 ≤ k by omega) (Int.le_of_lt hb)
+      rw [Int.mul_add, Int.mul_one] at hmul
+      have hr := Int.emod_lt_of_pos a hb
+      omega
+
+theorem euclideanDiv_lt_iff_lt_mul {a b k : Int} (hb : 0 < b) :
+    euclideanDiv a b (Int.ne_of_gt hb) < k ↔ a < b * k := by
+  rw [← Int.not_le, ← Int.not_le, le_euclideanDiv_iff_mul_le hb]
+
+theorem euclideanDiv_add_mul (a k : Int) {b : Int} (hb : b ≠ 0) :
+    euclideanDiv (a + b * k) b hb = euclideanDiv a b hb + k := by
+  refine euclideanDiv_eq_of_remainder (r := a % b) hb ?_
+    (Int.emod_nonneg _ hb) (Int.emod_lt _ hb)
+  have h := euclideanDiv_mul_add_mod a b hb
+  rw [Int.mul_add]
+  omega
 
 /-- The unique integer `q` with `b * q = a` when `b` is nonzero and divides `a`. -/
 @[expose] def exactQuotient (a b : Int) (_h : b ∣ a)

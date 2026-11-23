@@ -49,7 +49,10 @@ lemma pow_add_mul_totient_mod_eq {x k l n : ℕ} (hn : 1 < n) (h : x.Coprime n) 
 
 lemma pow_totient_mod {x k n : ℕ} (hn : 1 < n) (h : x.Coprime n) :
     x ^ k % n = x ^ (k % φ n) % n := by
-  rw [← div_add_mod' k (φ n), add_comm, pow_add_mul_totient_mod_eq hn h, add_mul_mod_self_right,
+  have hφ := (totient_pos.mpr (zero_lt_one.trans hn)).ne'
+  have hk := Nat.euclideanDiv_mul_add_mod k (φ n) hφ
+  rw [Nat.mul_comm (φ n)] at hk
+  rw [← hk, add_comm, pow_add_mul_totient_mod_eq hn h, add_mul_mod_self_right,
     mod_mod k (φ n)]
 
 end Nat

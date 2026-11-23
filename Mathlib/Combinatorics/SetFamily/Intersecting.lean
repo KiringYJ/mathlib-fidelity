@@ -182,7 +182,7 @@ theorem Intersecting.is_max_iff_card_eq (hs : (s : Set α).Intersecting) :
 theorem Intersecting.exists_card_eq (hs : (s : Set α).Intersecting) :
     ∃ t, s ⊆ t ∧ 2 * #t = Fintype.card α ∧ (t : Set α).Intersecting := by
   have := hs.card_le
-  rw [Nat.mul_comm, ← Nat.le_div_iff_mul_le Nat.two_pos] at this
+  rw [← Nat.le_euclideanDiv_iff_mul_le two_ne_zero] at this
   revert hs
   refine s.strongDownwardInductionOn ?_ this
   rintro s ih _hcard hs
@@ -190,8 +190,7 @@ theorem Intersecting.exists_card_eq (hs : (s : Set α).Intersecting) :
   · exact ⟨s, Subset.rfl, hs.is_max_iff_card_eq.1 h, hs⟩
   obtain ⟨t, ht, hst⟩ := h
   refine (ih ?_ (_root_.ssubset_iff_subset_ne.2 hst) ht).imp fun u => And.imp_left hst.1.trans
-  rw [Nat.le_div_iff_mul_le Nat.two_pos, Nat.mul_comm]
-  exact ht.card_le
+  exact (Nat.le_euclideanDiv_iff_mul_le two_ne_zero).2 ht.card_le
 
 end
 

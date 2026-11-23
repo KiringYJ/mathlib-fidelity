@@ -930,11 +930,12 @@ lemma surjective_of_card_ker_le_div {G M : Type*} [Group G] [Group M] [Finite G]
     (f : G →* M)
     (h : Nat.card f.ker ≤ Nat.euclideanDiv (Nat.card G) (Nat.card M) Nat.card_pos.ne') :
     Function.Surjective f := by
-  rw [Nat.euclideanDiv_eq_core] at h
   refine range_eq_top.1 <| SetLike.ext' <| Set.eq_of_subset_of_ncard_le (Set.subset_univ _) ?_
   rw [Subgroup.coe_top, Set.ncard_univ, ← Nat.card_coe_set_eq, SetLike.coe_sort_coe,
     ← Nat.card_congr (QuotientGroup.quotientKerEquivRange f).toEquiv]
-  exact Nat.le_of_mul_le_mul_left (f.ker.card_mul_index ▸ Nat.mul_le_of_le_div _ _ _ h) Nat.card_pos
+  have hmul := (Nat.le_euclideanDiv_iff_mul_le (Nat.card_pos.ne' : Nat.card M ≠ 0)).1 h
+  rw [Nat.mul_comm] at hmul
+  exact Nat.le_of_mul_le_mul_left (f.ker.card_mul_index ▸ hmul) Nat.card_pos
 
 open Finset
 

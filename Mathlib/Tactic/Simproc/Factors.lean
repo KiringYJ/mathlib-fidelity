@@ -95,7 +95,9 @@ private partial def evalPrimeFactorsListAux
     -- the factor is less than `n`, so we are not done; remove it to get `m`
     let m := n.euclideanDiv b (minFac_pos n hn1).ne'
     have hbm : b * m = n := by
-      simpa only [m, Nat.euclideanDiv_eq_core] using Nat.mul_div_cancel' (minFac_dvd n hn1)
+      have hmod : n % b = 0 := Nat.mod_eq_zero_of_dvd (minFac_dvd n hn1)
+      simpa only [m, hmod, Nat.add_zero] using
+        Nat.euclideanDiv_mul_add_mod n b (minFac_pos n hn1).ne'
     have em : Q(ℕ) := mkRawNatLit m
     have ehm : Q(IsNat (OfNat.ofNat $em) $em) := q(⟨rfl⟩)
     if h_ba_eq : b = a then

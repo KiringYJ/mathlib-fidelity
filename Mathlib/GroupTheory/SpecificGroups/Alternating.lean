@@ -153,7 +153,8 @@ theorem isCyclic_of_card_le_three (hα : Nat.card α ≤ 3) :
   have : 1 < Nat.card α := Finite.one_lt_card
   apply isCyclic_of_card_dvd_prime (p := 3)
   rw [nat_card_alternatingGroup]
-  interval_cases (Nat.card α) <;> simp [Nat.factorial_succ, Nat.euclideanDiv_eq_core]
+  have h₆ : Nat.euclideanDiv 6 2 = 3 := Nat.euclideanDiv_mul_left_cancel 3 (by decide : (2 : ℕ) ≠ 0)
+  interval_cases (Nat.card α) <;> simp [Nat.factorial_succ, h₆]
 
 theorem isMulCommutative_of_card_le_three (hα : Nat.card α ≤ 3) :
     IsMulCommutative (alternatingGroup α) :=

@@ -54,16 +54,18 @@ private theorem not_power_nat_pow {n p q : ℕ} (h_coprime : p.Coprime q) (hq : 
   · simpa [hq.ne'] using h 0
   contrapose! h
   let f := n.factorization.mapRange (fun e ↦ Nat.euclideanDiv e q hq.ne') <| by
-    simp [Nat.euclideanDiv_eq_core]
+    exact Nat.euclideanDiv_eq_of_remainder (r := 0) hq.ne' (by simp) hq
   suffices hf : n.factorization = q • f by
     have hf0 : f 0 = 0 := by simpa [hq.ne'] using congr($hf 0)
     refine ⟨f.prod (· ^ ·), Nat.factorization_inj hn (by simp [hf0]) ?_⟩
     rwa [Nat.factorization_pow, n.factorization_prod_pow_eq_self_of_le_factorization ?_]
     exact hf ▸ le_self_nsmul zero_le (by lia)
   ext z
-  rw [Finsupp.smul_apply, smul_eq_mul, Finsupp.mapRange_apply, Nat.euclideanDiv_eq_core,
-    Nat.mul_div_cancel']
-  simpa using h_coprime.symm.dvd_of_dvd_mul_left ⟨_, by simpa using congr(Nat.factorization $h z)⟩
+  have hd : q ∣ n.factorization z :=
+    h_coprime.symm.dvd_of_dvd_mul_left ⟨_, by simpa using congr(Nat.factorization $h z)⟩
+  rw [Finsupp.smul_apply, smul_eq_mul, Finsupp.mapRange_apply]
+  simpa only [Nat.mod_eq_zero_of_dvd hd, Nat.add_zero] using
+    (Nat.euclideanDiv_mul_add_mod (n.factorization z) q hq.ne').symm
 
 private theorem not_power_nat_of_bounds {n k d : ℕ}
     (h_left : k ^ d < n) (h_right : n < (k + 1) ^ d) {m : ℕ} :

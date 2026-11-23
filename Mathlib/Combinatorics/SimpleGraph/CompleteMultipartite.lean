@@ -249,8 +249,7 @@ def completeEquipartiteGraph.turanGraph :
   invFun v := by
     have hr := (CanonicallyOrderedAdd.mul_pos.mp v.pos).1
     refine (⟨v % r, Nat.mod_lt _ hr⟩, ⟨Nat.euclideanDiv v.val r hr.ne', ?_⟩)
-    rw [Nat.euclideanDiv_eq_core]
-    exact Nat.div_lt_of_lt_mul v.prop
+    exact (Nat.euclideanDiv_lt_iff_lt_mul hr.ne').2 (by simpa only [Nat.mul_comm r t] using v.isLt)
   left_inv v := by
     refine Prod.ext (Fin.ext ?_) (Fin.ext ?_)
     · change (v.2.val * r + v.1.val) % r = v.1.val
@@ -311,8 +310,8 @@ theorem card_edgeFinset_completeEquipartiteGraph :
     rw [degree_completeEquipartiteGraph v]
   rw [sum_const, smul_eq_mul, card_univ, card_prod, Fintype.card_fin, Fintype.card_fin]
   conv_rhs =>
-    rw [← Nat.mul_assoc, Nat.choose_two_right, Nat.euclideanDiv_eq_core,
-      Nat.mul_div_cancel' r.even_mul_pred_self.two_dvd]
+    rw [← Nat.mul_assoc, Nat.choose_two_right,
+      Nat.mul_euclideanDiv_cancel (by decide) r.even_mul_pred_self.two_dvd]
   rw [← mul_assoc, mul_comm r _, mul_assoc t _ _, mul_comm t, mul_assoc _ t, ← pow_two]
 
 variable [Fintype α]

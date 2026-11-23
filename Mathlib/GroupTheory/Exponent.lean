@@ -255,18 +255,16 @@ theorem _root_.Nat.Prime.exists_orderOf_eq_pow_factorization_exponent {p : ℕ} 
   obtain ⟨g, hg⟩ : ∃ g : G, g ^ Nat.euclideanDiv (exponent G) p hp.ne_zero ≠ 1 := by
     suffices key : ¬exponent G ∣ Nat.euclideanDiv (exponent G) p hp.ne_zero by
       rwa [exponent_dvd_iff_forall_pow_eq_one, not_forall] at key
-    simp only [Nat.euclideanDiv_eq_core]
-    exact fun hd =>
-      hp.one_lt.not_ge
-        ((mul_le_iff_le_one_left he).mp <|
-          Nat.le_of_dvd he <| Nat.mul_dvd_of_dvd_div (Nat.dvd_of_mem_primeFactors h) hd)
+    exact fun hd ↦ hp.one_lt.not_ge <| (mul_le_iff_le_one_left he).mp <|
+      Nat.le_of_dvd he <|
+        (Nat.dvd_euclideanDiv_iff_mul_dvd hp.ne_zero (Nat.dvd_of_mem_primeFactors h)).1 hd
   obtain ⟨k, hk : exponent G = p ^ _ * k⟩ := Nat.ordProj_dvd _ _
   obtain ⟨t, ht⟩ := Nat.exists_eq_succ_of_ne_zero (Finsupp.mem_support_iff.mp h)
   refine ⟨g ^ k, ?_⟩
   rw [ht]
   apply orderOf_eq_prime_pow
-  · rwa [Nat.euclideanDiv_eq_core, hk, mul_comm, ht, pow_succ, ← mul_assoc,
-      Nat.mul_div_cancel _ hp.pos, pow_mul] at hg
+  · rwa [hk, mul_comm, ht, pow_succ, ← mul_assoc,
+      Nat.euclideanDiv_mul_right_cancel _ hp.ne_zero, pow_mul] at hg
   · rw [← Nat.succ_eq_add_one, ← ht, ← pow_mul, mul_comm, ← hk]
     exact pow_exponent_eq_one g
 
@@ -479,11 +477,12 @@ theorem exists_orderOf_eq_exponent (hG : ExponentExists G) : ∃ g : G, orderOf 
     rw [this]
     -- Porting note: convert made to_additive complain
     exact Nat.pow_succ_factorization_not_dvd (hG.orderOf_pos <| t ^ p ^ k).ne' hp
+  have hquot := (Nat.mul_comm ..).trans
+    (Nat.mul_euclideanDiv_cancel (pow_ne_zero k hp.ne_zero) hpk)
   rw [(Commute.all _ g).orderOf_mul_eq_mul_orderOf_of_coprime hcoprime, hpk',
-    Nat.euclideanDiv_eq_core, hg, ha, hk, pow_add, pow_add, pow_one, ← mul_assoc, ← mul_assoc,
-    Nat.div_mul_cancel, mul_assoc, lt_mul_iff_one_lt_right <| hG.orderOf_pos t, ← pow_succ]
-  · exact one_lt_pow₀ hp.one_lt a.succ_ne_zero
-  · exact hpk
+    hg, ha, hk, pow_add, pow_add, pow_one, ← mul_assoc, ← mul_assoc,
+    hquot, mul_assoc, lt_mul_iff_one_lt_right <| hG.orderOf_pos t, ← pow_succ]
+  exact one_lt_pow₀ hp.one_lt a.succ_ne_zero
 
 @[to_additive]
 theorem exponent_eq_iSup_orderOf (h : ∀ g : G, 0 < orderOf g) :

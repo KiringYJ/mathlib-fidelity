@@ -35,9 +35,7 @@ theorem Ico_map_valMinAbs_natAbs_eq_Ico_map_id (p : ℕ) [hp : Fact p.Prime] (a 
       (Ico 1 (p.euclideanDiv 2).succ).1.map fun a => a := by
   have he : ∀ {x}, x ∈ Ico 1 (p.euclideanDiv 2).succ → x ≠ 0 ∧ x ≤ p.euclideanDiv 2 := by grind
   have hep : ∀ {x}, x ∈ Ico 1 (p.euclideanDiv 2).succ → x < p := fun hx =>
-    (he hx).2.trans_lt <| by
-      rw [Nat.euclideanDiv_eq_core]
-      exact Nat.div_lt_self hp.1.pos (by decide)
+    (he hx).2.trans_lt (Nat.euclideanDiv_lt_self hp.1.pos (by decide))
   have hpe : ∀ {x}, x ∈ Ico 1 (p.euclideanDiv 2).succ → ¬p ∣ x := fun hx hpx =>
     not_lt_of_ge (le_of_dvd (Nat.pos_of_ne_zero (he hx).1) hpx) (hep hx)
   have hmem : ∀ (x : ℕ) (_ : x ∈ Ico 1 (p.euclideanDiv 2).succ),
@@ -97,8 +95,7 @@ theorem gauss_lemma_aux (p : ℕ) [hp : Fact p.Prime] {a : ℤ} (hap : (a : ZMod
         p.euclideanDiv 2 < (a * x.cast : ZMod p).val} :) :=
   (mul_left_inj' (show ((p.euclideanDiv 2)! : ZMod p) ≠ 0 by
     rw [Ne, CharP.cast_eq_zero_iff (ZMod p) p, hp.1.dvd_factorial, not_le]
-    rw [Nat.euclideanDiv_eq_core]
-    exact Nat.div_lt_self hp.1.pos (by decide))).1 <| by
+    exact Nat.euclideanDiv_lt_self hp.1.pos (by decide))).1 <| by
       simpa using gauss_lemma_aux₁ p hap
 
 /-- **Gauss' lemma**. The Legendre symbol is determined by the number of positive integers up to
@@ -128,7 +125,7 @@ private theorem eisenstein_lemma_aux₁ (p : ℕ) [Fact p.Prime] [hp2 : Fact (p 
     ((∑ x ∈ Ico 1 (p.euclideanDiv 2).succ, a * x : ℕ) : ZMod 2) =
         ((∑ x ∈ Ico 1 (p.euclideanDiv 2).succ,
           (a * x % p + p * Nat.euclideanDiv (a * x) p (NeZero.ne p)) : ℕ) : ZMod 2) := by
-      simp only [Nat.euclideanDiv_eq_core, mod_add_div]
+      simp only [Nat.add_comm (_ % p), Nat.euclideanDiv_mul_add_mod]
     _ = (∑ x ∈ Ico 1 (p.euclideanDiv 2).succ, ((a * x : ℕ) : ZMod p).val : ℕ) +
         (∑ x ∈ Ico 1 (p.euclideanDiv 2).succ, Nat.euclideanDiv (a * x) p (NeZero.ne p) : ℕ) := by
       simp only [val_natCast]
@@ -164,9 +161,10 @@ theorem div_eq_filter_card {a b c : ℕ} (hb0 : 0 < b) (hc : Nat.euclideanDiv a 
     Nat.euclideanDiv a b hb0.ne' = #(Ico 1 (Nat.euclideanDiv a b hb0.ne').succ) := by simp
     _ = #{x ∈ Ico 1 c.succ | x * b ≤ a} :=
       congr_arg _ <| Finset.ext fun x => by
-        have : x * b ≤ a → x ≤ c := fun h =>
-          le_trans (by rwa [Nat.euclideanDiv_eq_core, le_div_iff_mul_le hb0]) hc
-        simp [Nat.euclideanDiv_eq_core, le_div_iff_mul_le hb0]; tauto
+        have hle : x ≤ Nat.euclideanDiv a b hb0.ne' ↔ x * b ≤ a := by
+          rw [Nat.le_euclideanDiv_iff_mul_le hb0.ne', Nat.mul_comm]
+        have : x * b ≤ a → x ≤ c := fun h => (hle.mpr h).trans hc
+        simp [hle]; tauto
 
 /-- The given sum is the number of integer points in the triangle formed by the diagonal of the
   rectangle `(0, p/2) × (0, q/2)`. -/
@@ -180,9 +178,19 @@ private theorem sum_Ico_eq_card_lt {p q : ℕ} (hp0 : p ≠ 0) :
         calc
           Nat.euclideanDiv (x * q) p hp0 ≤ Nat.euclideanDiv (p.euclideanDiv 2 * q) p hp0 := by
             have h := le_of_lt_succ (mem_Ico.mp hx).2
-            simp only [Nat.euclideanDiv_eq_core] at h ⊢
             gcongr
-          _ ≤ _ := by simpa only [Nat.euclideanDiv_eq_core] using Nat.div_mul_div_le_div p q 2
+          _ ≤ _ := by
+            apply Nat.lt_succ_iff.mp
+            rw [Nat.euclideanDiv_lt_iff_lt_mul hp0]
+            apply Nat.lt_of_mul_lt_mul_right (a := 2)
+            have hq := (Nat.euclideanDiv_lt_iff_lt_mul (by decide : 2 ≠ 0)).1
+              (Nat.lt_succ_self (q.euclideanDiv 2))
+            calc
+              (p.euclideanDiv 2 * q) * 2 = (p.euclideanDiv 2 * 2) * q := by ac_rfl
+              _ ≤ p * q := Nat.mul_le_mul_right q (Nat.euclideanDiv_mul_le_self p 2 (by decide))
+              _ < p * (2 * (q.euclideanDiv 2).succ) :=
+                Nat.mul_lt_mul_of_pos_left hq (Nat.pos_of_ne_zero hp0)
+              _ = (p * (q.euclideanDiv 2).succ) * 2 := by ac_rfl
     _ = _ := by simp only [card_eq_sum_ones, sum_filter, sum_product]
 
 /-- Each of the sums in this lemma is the cardinality of the set of integer points in each of the
@@ -206,7 +214,7 @@ theorem sum_mul_div_add_sum_mul_div_eq_mul (p q : ℕ) [hp : Fact p.Prime] (hq0 
       {x ∈ Ico 1 (p.euclideanDiv 2).succ ×ˢ Ico 1 (q.euclideanDiv 2).succ | x.1 * q ≤ x.2 * p} := by
     apply disjoint_filter.2 fun x hx hpq hqp => ?_
     have hxp : x.1 < p := lt_of_le_of_lt (b := p.euclideanDiv 2)
-      (by grind) (by rw [Nat.euclideanDiv_eq_core]; exact Nat.div_lt_self hp.1.pos (by decide))
+      (by grind) (Nat.euclideanDiv_lt_self hp.1.pos (by decide))
     have : (x.1 : ZMod p) = 0 := by
       simpa [hq0] using congr_arg ((↑) : ℕ → ZMod p) (le_antisymm hpq hqp)
     apply_fun ZMod.val at this

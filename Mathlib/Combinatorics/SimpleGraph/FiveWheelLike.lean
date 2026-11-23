@@ -384,7 +384,7 @@ lemma minDegree_le_of_cliqueFree_fiveWheelLikeFree_succ [Fintype α]
   -- `∑ w ∈ s ∩ t, H.degree w ≤ #Xᶜ * (#(s ∩ t) - 1) + #X * #(s ∩ t)`
   have bdX := sum_degree_le_of_le_not_adj xcle (fun _ _ ↦ Nat.zero_le _)
   rw [compl_compl, tsub_zero, add_comm] at bdX
-  rw [Nat.euclideanDiv_eq_core, Nat.le_div_iff_mul_le <| Nat.add_pos_right _ zero_lt_three]
+  rw [Nat.le_euclideanDiv_iff_mul_le (Nat.add_pos_right _ zero_lt_three).ne', Nat.mul_comm]
   have Wc : #W + k = 2 * r + 3 := by grind
   -- The sum of the degree sum over `W` and twice the degree sum over `s ∩ t`
   -- is at least `G.minDegree * (#W + 2 * #(s ∩ t))` which implies the result
@@ -443,11 +443,11 @@ theorem colorable_of_cliqueFree_lt_minDegree [Fintype α] [DecidableRel G.Adj]
     have hD := hw.minDegree_le_of_cliqueFree_fiveWheelLikeFree_succ hmcf.1 <| hm _ <| lt_add_one _
     have : Nat.euclideanDiv ((2 * (r + 1) + k) * ‖α‖) (2 * (r + 1) + k + 3) ≤
         Nat.euclideanDiv ((3 * r + 2) * ‖α‖) (3 * r + 5) := by
-      simp only [Nat.euclideanDiv_eq_core]
-      apply (Nat.le_div_iff_mul_le <| Nat.succ_pos _).2
-              <| (mul_le_mul_iff_right₀ (_ + 2).succ_pos).1 _
+      apply (Nat.le_euclideanDiv_iff_mul_le (by omega)).2
+      rw [Nat.mul_comm (3 * r + 5)]
+      apply (mul_le_mul_iff_right₀ (_ + 2).succ_pos).1
       rw [← mul_assoc, mul_comm (2 * r + 2 + k + 3), mul_comm _ (_ * ‖α‖)]
-      apply (Nat.mul_le_mul_right _ (Nat.div_mul_le_self ..)).trans
+      apply (Nat.mul_le_mul_right _ (Nat.euclideanDiv_mul_le_self _ _ (by omega))).trans
       nlinarith
     exact (hd.trans_le <| minDegree_le_minDegree hle).not_ge <| hD.trans <| this
 

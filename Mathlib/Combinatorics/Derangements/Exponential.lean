@@ -51,5 +51,5 @@ theorem numDerangements_tendsto_inv_e :
   have h_le : k ≤ n := Finset.mem_range_succ_iff.mp hk
   rw [Nat.ascFactorial_eq_div, add_tsub_cancel_of_le h_le]
   field_simp
-  rw [← Nat.cast_mul, Nat.euclideanDiv_eq_core,
-    Nat.div_mul_cancel (Nat.factorial_dvd_factorial h_le)]
+  rw [← Nat.cast_mul, mul_comm (_ : ℕ) (Nat.factorial k),
+    Nat.mul_euclideanDiv_cancel (Nat.factorial_ne_zero _) (Nat.factorial_dvd_factorial h_le)]

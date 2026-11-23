@@ -89,11 +89,11 @@ theorem Eventually.atTop_of_arithmetic {p : ℕ → Prop} {n : ℕ} (hn : n ≠ 
   simp only [eventually_atTop] at hp ⊢
   choose! N hN using hp
   refine ⟨(Finset.range n).sup (n * N ·), fun b hb => ?_⟩
-  rw [← Nat.div_add_mod b n]
   have hlt := Nat.mod_lt b hn.bot_lt
-  refine hN _ hlt _ ?_
-  rw [Nat.le_div_iff_mul_le hn.bot_lt, mul_comm]
-  exact (Finset.le_sup (f := (n * N ·)) (Finset.mem_range.2 hlt)).trans hb
+  have hquotient : N (b % n) ≤ Nat.euclideanDiv b n hn := by
+    rw [Nat.le_euclideanDiv_iff_mul_le hn]
+    exact (Finset.le_sup (f := (n * N ·)) (Finset.mem_range.2 hlt)).trans hb
+  simpa only [Nat.euclideanDiv_mul_add_mod] using hN _ hlt _ hquotient
 
 /-- Given an antitone basis `s : ℕ → Set α` of a filter, extract an antitone subbasis `s ∘ φ`,
 `φ : ℕ → ℕ`, such that `m < n` implies `r (φ m) (φ n)`. This lemma can be used to extract an

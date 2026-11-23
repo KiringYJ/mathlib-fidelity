@@ -135,13 +135,15 @@ lemma «exists» : ∃ p, CharP R p :=
                   Nat.pos_of_ne_zero <| not_of_not_imp <| Nat.find_spec (not_forall.1 H))
                 (not_imp_of_and_not
                   ⟨by
-                    rwa [← Nat.mod_add_div x (Nat.find (not_forall.1 H)), Nat.cast_add,
-                      Nat.cast_mul,
+                    have hp := not_of_not_imp <| Nat.find_spec (not_forall.1 H)
+                    have hrec := (Nat.add_comm ..).trans (Nat.euclideanDiv_mul_add_mod x _ hp)
+                    rwa [← hrec, Nat.cast_add, Nat.cast_mul,
                       of_not_not (not_not_of_not_imp <| Nat.find_spec (not_forall.1 H)),
                       zero_mul, add_zero] at H1,
                     H2⟩)),
           fun H1 => by
-          rw [← Nat.mul_div_cancel' H1, Nat.cast_mul,
+          obtain ⟨k, rfl⟩ := H1
+          rw [Nat.cast_mul,
             of_not_not (not_not_of_not_imp <| Nat.find_spec (not_forall.1 H)),
             zero_mul]⟩⟩⟩
 

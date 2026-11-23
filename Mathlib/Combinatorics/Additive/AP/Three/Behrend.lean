@@ -201,15 +201,14 @@ theorem sum_sq_le_of_mem_box (hx : x ∈ box n d) : ∑ i : Fin n, x i ^ 2 ≤ n
 
 theorem sum_eq : (∑ i : Fin n, d * (2 * d + 1) ^ (i : ℕ)) =
     Nat.euclideanDiv ((2 * d + 1) ^ n - 1) 2 := by
-  rw [Nat.euclideanDiv_eq_core]
-  refine (Nat.div_eq_of_eq_mul_left zero_lt_two ?_).symm
-  rw [← sum_range fun i => d * (2 * d + 1) ^ (i : ℕ), ← mul_sum, mul_right_comm, mul_comm d, ←
-    geom_sum_mul_add, add_tsub_cancel_right, mul_comm]
+  symm
+  refine Nat.euclideanDiv_eq_of_remainder (r := 0) (by decide) ?_ (by decide)
+  rw [add_zero, ← sum_range fun i => d * (2 * d + 1) ^ (i : ℕ), ← mul_sum, ← mul_assoc,
+    mul_comm (2 * d), ← geom_sum_mul_add, add_tsub_cancel_right]
 
 theorem sum_lt : (∑ i : Fin n, d * (2 * d + 1) ^ (i : ℕ)) < (2 * d + 1) ^ n :=
-  sum_eq.trans_lt <| by
-    rw [Nat.euclideanDiv_eq_core]
-    exact (Nat.div_le_self _ 2).trans_lt <| pred_lt (pow_pos (succ_pos _) _).ne'
+  sum_eq.trans_lt <|
+    (Nat.euclideanDiv_le_self _ 2 (by decide)).trans_lt <| pred_lt (pow_pos (succ_pos _) _).ne'
 
 theorem card_sphere_le_rothNumberNat (n d k : ℕ) :
     #(sphere n d k) ≤ rothNumberNat ((2 * d - 1) ^ n) := by

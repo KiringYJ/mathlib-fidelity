@@ -119,8 +119,10 @@ def minSqFacAux : ℕ → ℕ → Option ℕ
           have hk₀ : k ≠ 0 := by rintro rfl; exact hkk (by simpa using hk)
           let n' := Nat.euclideanDiv n k hk₀
           have hle : n' ≤ n := by
-            rw [show n' = _ from Nat.euclideanDiv_eq_core _ _ _]
-            apply div_le_self
+            calc
+              n' = 1 * n' := (Nat.one_mul _).symm
+              _ ≤ k * n' := Nat.mul_le_mul_right _ (Nat.pos_of_ne_zero hk₀)
+              _ = n := Nat.mul_euclideanDiv_cancel hk₀ hk
           have : Nat.sqrt n' - k < Nat.sqrt n + 2 - k := lt_of_le_of_lt (by gcongr) this
           minSqFacAux n' (k + 2)
       else minSqFacAux n (k + 2)
@@ -143,7 +145,8 @@ def MinSqFacProp (n : ℕ) : Option ℕ → Prop
 
 theorem minSqFacProp_div (n) {k} (pk : Prime k) (dk : k ∣ n) (dkk : ¬k * k ∣ n) {o}
     (H : MinSqFacProp (Nat.euclideanDiv n k pk.ne_zero) o) : MinSqFacProp n o := by
-  rw [Nat.euclideanDiv_eq_core] at H
+  have hdiv {x : ℕ} : x ∣ Nat.euclideanDiv n k pk.ne_zero ↔ k * x ∣ n :=
+    dvd_euclideanDiv_iff_mul_dvd pk.ne_zero dk
   have : ∀ p, Prime p → p * p ∣ n → k * (p * p) ∣ n := fun p pp dp =>
     have :=
       (coprime_primes pk pp).2 fun e => by
@@ -152,9 +155,9 @@ theorem minSqFacProp_div (n) {k} (pk : Prime k) (dk : k ∣ n) (dkk : ¬k * k �
     (coprime_mul_iff_right.2 ⟨this, this⟩).mul_dvd_of_dvd_of_dvd dk dp
   rcases o with - | d
   · rw [MinSqFacProp, squarefree_iff_prime_squarefree] at H ⊢
-    exact fun p pp dp => H p pp ((dvd_div_iff_mul_dvd dk).2 (this _ pp dp))
+    exact fun p pp dp => H p pp (hdiv.2 (this _ pp dp))
   · obtain ⟨H1, H2, H3⟩ := H
-    simp only [dvd_div_iff_mul_dvd dk] at H2 H3
+    simp only [hdiv] at H2 H3
     exact ⟨H1, dvd_trans (dvd_mul_left _ _) H2, fun p pp dp => H3 _ pp (this _ pp dp)⟩
 
 theorem minSqFacAux_has_prop {n : ℕ} (k) (n0 : 0 < n) (i) (e : k = 2 * i + 3)
@@ -191,23 +194,24 @@ theorem minSqFacAux_has_prop {n : ℕ} (k) (n0 : 0 < n) (i) (e : k = 2 * i + 3)
   · exact ⟨pk dk, dkk, fun p pp d => ih p pp (dvd_trans ⟨_, rfl⟩ d)⟩
   · apply minSqFacProp_div _ (pk dk) dk dkk
     apply IH
-    · rw [Nat.euclideanDiv_eq_core]; exact div_dvd_of_dvd dk
-    · rw [Nat.euclideanDiv_eq_core, Nat.dvd_div_iff_mul_dvd dk]; exact dkk
+    · exact ⟨k, (Nat.mul_euclideanDiv_cancel (pk dk).ne_zero dk).symm.trans (Nat.mul_comm _ _)⟩
+    · exact mt (dvd_euclideanDiv_iff_mul_dvd (pk dk).ne_zero dk).1 dkk
   · exact IH n (dvd_refl _) dk
 termination_by n.sqrt + 2 - k
 
 theorem minSqFac_has_prop (n : ℕ) : MinSqFacProp n (minSqFac n) := by
   dsimp only [minSqFac]; split_ifs with d2 d4
-  · rw [Nat.euclideanDiv_eq_core] at d4
-    exact ⟨prime_two, (dvd_div_iff_mul_dvd d2).1 d4, fun p pp _ => pp.two_le⟩
+  · exact ⟨prime_two, (dvd_euclideanDiv_iff_mul_dvd two_ne_zero d2).1 d4, fun p pp _ => pp.two_le⟩
   · rcases Nat.eq_zero_or_pos n with rfl | n0
-    · exact (d4 (by simp [Nat.euclideanDiv_eq_core])).elim
-    have hd4 := d4
-    rw [Nat.euclideanDiv_eq_core] at hd4
-    refine minSqFacProp_div _ prime_two d2 (mt (dvd_div_iff_mul_dvd d2).2 hd4) ?_
+    · exact (d4 (by
+        have hq : Nat.euclideanDiv 0 2 = 0 := by
+          simpa only [Nat.mul_zero] using Nat.euclideanDiv_mul_left_cancel 0 (b := 2) two_ne_zero
+        simp only [hq, dvd_zero])).elim
+    refine minSqFacProp_div _ prime_two d2
+      (mt (dvd_euclideanDiv_iff_mul_dvd two_ne_zero d2).2 d4) ?_
     refine minSqFacAux_has_prop 3 ?_ 0 rfl ?_
-    · rw [Nat.euclideanDiv_eq_core]
-      exact Nat.div_pos (le_of_dvd n0 d2) (by decide)
+    · have hq := Nat.mul_euclideanDiv_cancel two_ne_zero d2
+      omega
     refine fun p pp dp => succ_le_of_lt (lt_of_le_of_ne pp.two_le ?_)
     rintro rfl
     contradiction
@@ -348,12 +352,19 @@ theorem squarefree_mul_iff {m n : ℕ} :
 
 lemma coprime_div_gcd_of_squarefree (hm : Squarefree m) (hn : n ≠ 0) :
     Coprime (Nat.euclideanDiv m (gcd m n) (gcd_ne_zero_right hn)) n := by
-  have : Coprime (Nat.euclideanDiv m (gcd m n) (gcd_ne_zero_right hn)) (gcd m n) :=
-    coprime_of_squarefree_mul <| by
-      simpa [Nat.euclideanDiv_eq_core, Nat.div_mul_cancel, gcd_dvd_left]
-  rw [Nat.euclideanDiv_eq_core] at this ⊢
-  simpa [Nat.div_mul_cancel, gcd_dvd_right] using
-    (coprime_div_gcd_div_gcd (m := m) (gcd_ne_zero_right hn).bot_lt).mul_right this
+  let g := gcd m n
+  have hg : g ≠ 0 := gcd_ne_zero_right hn
+  let q := Nat.euclideanDiv m g hg
+  let r := Nat.euclideanDiv n g hg
+  have hq : g * q = m := Nat.mul_euclideanDiv_cancel hg (gcd_dvd_left _ _)
+  have hr : g * r = n := Nat.mul_euclideanDiv_cancel hg (gcd_dvd_right _ _)
+  have hqr : q.Coprime r := by
+    change gcd q r = 1
+    apply Nat.eq_of_mul_eq_mul_left (Nat.pos_of_ne_zero hg)
+    rw [← gcd_mul_left, hq, hr, Nat.mul_one]
+  have hqg : q.Coprime g := (coprime_of_squarefree_mul (hq ▸ hm)).symm
+  change q.Coprime n
+  exact hr ▸ hqg.mul_right hqr
 
 lemma prod_primeFactors_of_squarefree (hn : Squarefree n) : ∏ p ∈ n.primeFactors, p = n := by
   rw [← toFinset_factors, List.prod_toFinset _ hn.nodup_primeFactorsList,
@@ -395,10 +406,14 @@ lemma primeFactors_div_gcd (hm : Squarefree m) (hn : n ≠ 0) :
     primeFactors (Nat.euclideanDiv m (m.gcd n) (gcd_ne_zero_right hn)) =
       primeFactors m \ primeFactors n := by
   ext p
-  have hq := Nat.div_pos (gcd_le_left _ hm.ne_zero.bot_lt) (gcd_ne_zero_right hn).bot_lt
-  rw [Nat.euclideanDiv_eq_core]
-  simp only [mem_primeFactors, ne_eq, Nat.ne_of_gt hq, not_false_eq_true, and_true, not_and,
-    mem_sdiff, hm.ne_zero, hn, dvd_div_iff_mul_dvd (gcd_dvd_left _ _)]
+  have hg := gcd_ne_zero_right (m := m) hn
+  have hq : Nat.euclideanDiv m (m.gcd n) hg ≠ 0 := by
+    intro h
+    have hr := Nat.mul_euclideanDiv_cancel hg (gcd_dvd_left m n)
+    rw [h, Nat.mul_zero] at hr
+    exact hm.ne_zero hr.symm
+  simp only [mem_primeFactors, ne_eq, hq, not_false_eq_true, and_true, not_and,
+    mem_sdiff, hm.ne_zero, hn, dvd_euclideanDiv_iff_mul_dvd hg (gcd_dvd_left _ _)]
   refine ⟨fun hp ↦ ⟨⟨hp.1, dvd_of_mul_left_dvd hp.2⟩, fun _ hpn ↦ hp.1.not_isUnit <| hm _ <|
     (mul_dvd_mul_right (dvd_gcd (dvd_of_mul_left_dvd hp.2) hpn) _).trans hp.2⟩, fun hp ↦
       ⟨hp.1.1, Coprime.mul_dvd_of_dvd_of_dvd ?_ (gcd_dvd_left _ _) hp.1.2⟩⟩
@@ -415,10 +430,10 @@ theorem prod_primeFactors_sdiff_of_squarefree {n : ℕ} (hn : Squarefree n) {t :
     ∏ a ∈ (n.primeFactors \ t), a =
       Nat.euclideanDiv n (∏ a ∈ t, a)
         (Finset.prod_pos fun _ hp ↦ (prime_of_mem_primeFactors (ht hp)).pos).ne' := by
-  rw [Nat.euclideanDiv_eq_core]
-  refine symm <| Nat.div_eq_of_eq_mul_left (Finset.prod_pos
-    fun p hp => (prime_of_mem_primeFactorsList (List.mem_toFinset.mp (ht hp))).pos) ?_
-  rw [Finset.prod_sdiff ht, prod_primeFactors_of_squarefree hn]
+  symm
+  refine Nat.euclideanDiv_eq_of_remainder (r := 0) _ ?_ ?_
+  · rw [Nat.add_zero, Nat.mul_comm, Finset.prod_sdiff ht, prod_primeFactors_of_squarefree hn]
+  · exact Finset.prod_pos fun _ hp ↦ (prime_of_mem_primeFactors (ht hp)).pos
 
 end Nat
 

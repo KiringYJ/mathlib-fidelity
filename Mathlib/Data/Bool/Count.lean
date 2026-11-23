@@ -102,8 +102,9 @@ theorem length_sub_one_le_two_mul_count_bool (hl : IsChain (· ≠ ·) l) (b : B
 
 theorem length_div_two_le_count_bool (hl : IsChain (· ≠ ·) l) (b : Bool) :
     Nat.euclideanDiv (length l) 2 ≤ count b l := by
-  rw [Nat.euclideanDiv_eq_core, Nat.div_le_iff_le_mul_add_pred two_pos, ← tsub_le_iff_right]
-  exact length_sub_one_le_two_mul_count_bool hl b
+  have h := length_sub_one_le_two_mul_count_bool hl b
+  rw [← Nat.lt_succ_iff, Nat.euclideanDiv_lt_iff_lt_mul (by decide : 2 ≠ 0)]
+  omega
 
 theorem two_mul_count_bool_le_length_add_one (hl : IsChain (· ≠ ·) l) (b : Bool) :
     2 * count b l ≤ length l + 1 := by

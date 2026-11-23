@@ -128,8 +128,7 @@ where `a ≠ 0` is `addOrderOf_coe'`. -/
 theorem addOrderOf_coe (a : ℕ) {n : ℕ} (n0 : n ≠ 0) :
     addOrderOf (a : ZMod n) = Nat.euclideanDiv n (n.gcd a) (Nat.gcd_ne_zero_left n0) := by
   rcases a with - | a
-  · simp only [Nat.cast_zero, addOrderOf_zero, Nat.gcd_zero_right,
-      Nat.euclideanDiv_eq_core, Nat.pos_of_ne_zero n0, Nat.div_self]
+  · simp only [Nat.cast_zero, addOrderOf_zero, Nat.gcd_zero_right, Nat.euclideanDiv_self]
   rw [← Nat.smul_one_eq_cast, addOrderOf_nsmul' _ a.succ_ne_zero, ZMod.addOrderOf_one]
 
 /-- This lemma works in the case in which `a ≠ 0`.  The version where
@@ -1047,8 +1046,8 @@ theorem natAbs_min_of_le_div_two (n : ℕ) (x y : ℤ) (he : (x : ZMod n) = y)
   refine le_trans (le_trans ((add_le_add_iff_left _).2 hl) ?_) (Int.natAbs_sub_le _ _)
   rw [add_sub_cancel_right, Int.natAbs_mul, Int.natAbs_natCast]
   refine le_trans ?_ (Nat.le_mul_of_pos_right _ <| Int.natAbs_pos.2 hm)
-  rw [← mul_two, Nat.euclideanDiv_eq_core]
-  apply Nat.div_mul_le_self
+  rw [← mul_two]
+  exact Nat.euclideanDiv_mul_le_self _ _ (by decide)
 
 end ZMod
 
@@ -1262,8 +1261,8 @@ def Nat.residueClassesEquiv (N : ℕ) [NeZero N] : ℕ ≃ ZMod N × ℕ where
     ext1
     · simp only [add_comm p.1.val, cast_add, cast_mul, natCast_self, zero_mul, natCast_val,
         cast_id', id_eq, zero_add]
-    · simp only [add_comm p.1.val, Nat.euclideanDiv_eq_core, mul_add_div (NeZero.pos _),
-        (Nat.div_eq_zero_iff).2 <| .inr p.1.val_lt, add_zero]
+    · change Nat.euclideanDiv (p.1.val + N * p.2) N (NeZero.ne N) = p.2
+      rw [Nat.euclideanDiv_add_mul, Nat.euclideanDiv_eq_zero_of_lt _ p.1.val_lt, Nat.zero_add]
 
 -- there is a faster proof with Module.toAddMonoidEnd
 instance ZMod.instSubsingletonModule (n : ℕ) (M : Type*) [AddCommMonoid M] :

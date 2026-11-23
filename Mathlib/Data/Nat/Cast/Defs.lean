@@ -119,8 +119,7 @@ protected def binCast [Zero R] [One R] [Add R] : ℕ → R
     let half : R := Nat.binCast (Nat.euclideanDiv (n + 1) 2)
     if (n + 1) % 2 = 0 then half + half else half + half + 1
 decreasing_by
-  rw [Nat.euclideanDiv_eq_core]
-  exact Nat.div_lt_self (Nat.succ_pos _) (Nat.le_refl 2)
+  exact Nat.euclideanDiv_lt_self (Nat.succ_pos _) (Nat.le_refl 2)
 
 @[simp]
 theorem binCast_eq [AddMonoidWithOne R] (n : ℕ) :
@@ -130,16 +129,15 @@ theorem binCast_eq [AddMonoidWithOne R] (n : ℕ) :
   | zero => rw [Nat.binCast, Nat.cast_zero]
   | succ k =>
       rw [Nat.binCast]
-      simp only [Nat.euclideanDiv_eq_core]
+      have he := Nat.euclideanDiv_mul_add_mod (k + 1) 2 (by decide)
+      have hlt := Nat.euclideanDiv_lt_self (Nat.succ_pos k) (Nat.le_refl 2)
       by_cases h : (k + 1) % 2 = 0
-      · conv => rhs; rw [← Nat.mod_add_div (k + 1) 2]
-        rw [ite_eq_left h, hk _ <| Nat.div_lt_self (Nat.succ_pos k) (Nat.le_refl 2), ← Nat.cast_add]
-        rw [h, Nat.zero_add, Nat.succ_mul, Nat.one_mul]
-      · conv => rhs; rw [← Nat.mod_add_div (k + 1) 2]
-        rw [ite_eq_right h, hk _ <| Nat.div_lt_self (Nat.succ_pos k) (Nat.le_refl 2),
-          ← Nat.cast_add]
+      · conv => rhs; rw [← he]
+        rw [ite_eq_left h, hk _ hlt, ← Nat.cast_add, h, Nat.add_zero, Nat.succ_mul, Nat.one_mul]
+      · conv => rhs; rw [← he]
+        rw [ite_eq_right h, hk _ hlt, ← Nat.cast_add]
         have h1 := Or.resolve_left (Nat.mod_two_eq_zero_or_one (succ k)) h
-        rw [h1, Nat.add_comm 1, Nat.succ_mul, Nat.one_mul]
+        rw [h1, Nat.succ_mul, Nat.one_mul]
         simp only [Nat.cast_add, Nat.cast_one]
 
 theorem cast_two [NatCast R] : ((2 : ℕ) : R) = (2 : R) := rfl

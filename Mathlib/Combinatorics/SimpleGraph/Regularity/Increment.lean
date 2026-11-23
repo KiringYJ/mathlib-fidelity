@@ -71,9 +71,8 @@ theorem card_increment (hPα : #P.parts * 16 ^ #P.parts ≤ card α) (hPG : ¬P.
     #(increment hP G ε).parts = stepBound #P.parts := by
   have hPα' : stepBound #P.parts ≤ card α := by grw [← hPα, stepBound]; gcongr; simp
   have hparts := nonempty_of_not_uniform hPG
-  have hm : chunkSize P hparts ≠ 0 := by
-    rw [chunkSize, Nat.euclideanDiv_eq_core]
-    exact (Nat.div_pos hPα' (stepBound_pos hparts.card_pos)).ne'
+  have hm : chunkSize P hparts ≠ 0 :=
+    (Nat.euclideanDiv_pos (stepBound_pos hparts.card_pos).ne' hPα').ne'
   rw [increment, card_bind]
   simp [card_chunk hm, stepBound]
 

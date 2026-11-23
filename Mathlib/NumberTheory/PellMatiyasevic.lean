@@ -744,7 +744,9 @@ theorem modEq_of_xn_modEq {i j n} (ipos : 0 < i) (hin : i ≤ n)
         exact dvd_rfl.modEq_zero_nat)
     (eq_of_xn_modEq' a1 ipos hin jl.le <|
       (h.symm.trans <| by
-          rw [← Nat.mod_add_div j (4 * n)]
+          have hj := Nat.euclideanDiv_mul_add_mod j (4 * n) n4.ne'
+          rw [Nat.add_comm] at hj
+          rw [← hj]
           exact this j' _).symm)
 
 end

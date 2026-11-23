@@ -39,14 +39,22 @@ theorem pentagonal_def (k : ℤ) :
 theorem pentagonal_neg (k : ℤ) :
     pentagonal (-k) =
       (Int.exactQuotient (k * (3 * k + 1)) 2 (even_iff_two_dvd.mp (by grind))).toNat := by
-  simp only [pentagonal_def, Int.exactQuotient, Int.euclideanDiv_eq_core]
+  rw [pentagonal_def]
+  congr 1
+  apply Int.eq_of_mul_eq_mul_left (by decide : (2 : ℤ) ≠ 0)
+  rw [Int.mul_exactQuotient, Int.mul_exactQuotient]
   grind
 
 theorem natCast_pentagonal (k : ℤ) :
     (pentagonal k : ℤ) =
       Int.exactQuotient (k * (3 * k - 1)) 2 (even_iff_two_dvd.mp (by grind)) := by
-  simp only [pentagonal_def, Int.exactQuotient, Int.euclideanDiv_eq_core]
-  rcases k with (_ | _) | _ <;> grind
+  rw [pentagonal_def]
+  apply Int.toNat_of_nonneg
+  apply (Int.mul_le_mul_left (by decide : (0 : ℤ) < 2)).mp
+  rw [Int.mul_zero, Int.mul_exactQuotient]
+  obtain hk | hk := le_or_gt k 0
+  · exact Int.mul_nonneg_of_nonpos_of_nonpos hk (by omega)
+  · exact Int.mul_nonneg (Int.le_of_lt hk) (by omega)
 
 theorem two_mul_natCast_pentagonal (k : ℤ) : 2 * (pentagonal k : ℤ) = k * (3 * k - 1) := by
   rw [natCast_pentagonal, Int.mul_exactQuotient]

@@ -341,10 +341,15 @@ theorem tendsto_add_atTop_iff_nat {f : ℕ → α} {l : Filter α} (k : ℕ) :
 
 theorem map_div_atTop_eq_nat (k : ℕ) (hk : 0 < k) :
     map (fun a => Nat.euclideanDiv a k hk.ne') atTop = atTop := by
-  simp only [Nat.euclideanDiv_eq_core]
-  exact map_atTop_eq_of_gc (fun b => k * b + (k - 1)) 1 (fun _ _ h => Nat.div_le_div_right h)
-    (fun a b _ => by rw [Nat.div_le_iff_le_mul_add_pred hk])
-    fun b _ => by rw [Nat.mul_add_div hk, Nat.div_eq_of_lt, Nat.add_zero]; lia
+  refine map_atTop_eq_of_gc (fun b => k * b + (k - 1)) 1 ?_ ?_ ?_
+  · intro a b hab
+    apply (Nat.le_euclideanDiv_iff_mul_le hk.ne').2
+    exact ((Nat.le_euclideanDiv_iff_mul_le hk.ne').1 le_rfl).trans hab
+  · intro a b _
+    rw [← Nat.lt_succ_iff, Nat.euclideanDiv_lt_iff_lt_mul hk.ne', Nat.mul_succ]
+    omega
+  · intro b _
+    exact (Nat.le_euclideanDiv_iff_mul_le hk.ne').2 (Nat.le_add_right _ _)
 
 theorem tendsto_inf_atTop {α β : Type*} [SemilatticeInf α]
     {f g : β → α} (F : Filter β) (hf : Tendsto f F atTop) (hg : Tendsto g F atTop) :

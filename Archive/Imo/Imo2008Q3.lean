@@ -49,9 +49,7 @@ theorem p_lemma (p : ℕ) (hpp : Nat.Prime p) (hp_mod_4_eq_1 : p ≡ 1 [MOD 4]) 
     simp only [m, Int.cast_pow, Int.cast_add, Int.cast_one, ZMod.coe_valMinAbs]
     rw [pow_two, ← hy]; exact neg_add_cancel 1
   have hnat₂ : n ≤ Nat.euclideanDiv p 2 := ZMod.natAbs_valMinAbs_le y
-  have hnat₃ : 2 * n ≤ p := by
-    rw [Nat.euclideanDiv_eq_core] at hnat₂
-    lia
+  have hnat₃ : 2 * n ≤ p := (Nat.le_euclideanDiv_iff_mul_le (by decide)).1 hnat₂
   set k : ℕ := p - 2 * n with hnat₄
   have hnat₅ : p ∣ k ^ 2 + 4 := by
     obtain ⟨x, hx⟩ := hnat₁

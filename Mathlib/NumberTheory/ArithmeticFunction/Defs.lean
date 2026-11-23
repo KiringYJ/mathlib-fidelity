@@ -423,7 +423,7 @@ theorem self_mul_dirichletInverse (f : ArithmeticFunction R) (hf : Invertible (f
     sum_terms n.divisors (fun _ hd ↦ (Nat.pos_of_mem_divisors hd).ne'),
     ← Nat.cons_self_properDivisors hn0, sum_cons]
   rw [show term n = f 1 * dirichletInverseFun f hf n by
-    simp [term, hn0, Nat.euclideanDiv_eq_core, Nat.div_self (Nat.pos_of_ne_zero hn0)],
+    simp [term, hn0],
     dirichletInverseFun_apply_ne _ _ hn0 hn1,
     ← n.properDivisors.attach_eq_univ,
     sum_terms n.properDivisors (fun _ hd ↦ (Nat.pos_of_mem_properDivisors hd).ne')]
@@ -508,7 +508,7 @@ theorem map_div_of_coprime [GroupWithZero R] {f : ArithmeticFunction R}
     (hl : (Nat.euclideanDiv l d (fun h ↦ hd (h ▸ f.map_zero))).Coprime d) :
     f (Nat.euclideanDiv l d (fun h ↦ hd (h ▸ f.map_zero))) = Checked.div (f l) (f d) hd.isUnit := by
   apply (div_eq_of_eq_mul ..).symm
-  rw [← hf.right hl, Nat.euclideanDiv_eq_core, Nat.div_mul_cancel hdl]
+  rw [← hf.right hl, Nat.mul_comm _ d, Nat.mul_euclideanDiv_cancel _ hdl]
 
 @[arith_mult]
 theorem natCast {f : ArithmeticFunction ℕ} [Semiring R] (h : f.IsMultiplicative) :

@@ -80,15 +80,17 @@ theorem num_mul_num_eq_num_mul_gcd (q₁ q₂ : ℚ≥0) :
 theorem mul_num (q₁ q₂ : ℚ≥0) :
     (q₁ * q₂).num = Nat.euclideanDiv (q₁.num * q₂.num) (Nat.gcd (q₁.num * q₂.num) (q₁.den * q₂.den))
       (Nat.gcd_ne_zero_right (mul_ne_zero q₁.den_ne_zero q₂.den_ne_zero)) := by
-  rw [Nat.euclideanDiv_eq_core]
-  exact (Nat.div_eq_of_eq_mul_left (Nat.gcd_pos_of_pos_right _ (Nat.mul_pos q₁.den_pos q₂.den_pos))
-    (num_mul_num_eq_num_mul_gcd q₁ q₂)).symm
+  symm
+  exact Nat.euclideanDiv_eq_of_remainder (r := 0) _
+    (by simpa only [Nat.add_zero, Nat.mul_comm] using num_mul_num_eq_num_mul_gcd q₁ q₂)
+    (Nat.gcd_pos_of_pos_right _ (Nat.mul_pos q₁.den_pos q₂.den_pos))
 
 theorem mul_den (q₁ q₂ : ℚ≥0) :
     (q₁ * q₂).den = Nat.euclideanDiv (q₁.den * q₂.den) (Nat.gcd (q₁.num * q₂.num) (q₁.den * q₂.den))
       (Nat.gcd_ne_zero_right (mul_ne_zero q₁.den_ne_zero q₂.den_ne_zero)) := by
-  rw [Nat.euclideanDiv_eq_core]
-  exact (Nat.div_eq_of_eq_mul_left (Nat.gcd_pos_of_pos_right _ (Nat.mul_pos q₁.den_pos q₂.den_pos))
-    (den_mul_den_eq_den_mul_gcd q₁ q₂)).symm
+  symm
+  exact Nat.euclideanDiv_eq_of_remainder (r := 0) _
+    (by simpa only [Nat.add_zero, Nat.mul_comm] using den_mul_den_eq_den_mul_gcd q₁ q₂)
+    (Nat.gcd_pos_of_pos_right _ (Nat.mul_pos q₁.den_pos q₂.den_pos))
 
 end NNRat

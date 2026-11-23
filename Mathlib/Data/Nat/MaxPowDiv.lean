@@ -39,12 +39,20 @@ def maxPowDvdDiv (p n : ℕ) (hpn : 1 < p ∧ n ≠ 0) : ℕ × ℕ :=
       (0, n)
   termination_by Nat.euclideanDiv n p (Nat.ne_of_gt (Nat.lt_trans Nat.one_pos hp.1))
   decreasing_by
-    simp only [Nat.euclideanDiv_eq_core]
     rw [← Nat.dvd_iff_mod_eq_zero] at hmod
     rcases hmod with ⟨m, rfl⟩
     have hp₀ : 0 < p := Nat.lt_trans Nat.one_pos hp.1
-    rw [Nat.mul_div_mul_left _ _ hp₀, Nat.mul_div_cancel_left _ hp₀]
-    exact Nat.div_lt_self (by grind) hp.1
+    have hpne := Nat.ne_of_gt hp₀
+    rw [Nat.euclideanDiv_mul_left_cancel]
+    have hm : 0 < m := by grind
+    apply Nat.lt_of_not_ge
+    intro h
+    have hmul : (p * p) * m ≤ p * m :=
+      (Nat.le_euclideanDiv_iff_mul_le (Nat.mul_ne_zero hpne hpne)).mp h
+    have hlt : m < p * m := by
+      simpa only [Nat.one_mul] using Nat.mul_lt_mul_of_pos_right hp.1 hm
+    rw [Nat.mul_assoc] at hmul
+    exact Nat.not_le_of_lt (Nat.mul_lt_mul_of_pos_left hlt hp₀) hmul
 
 /-- The quotient of `n` by the largest power of `p` that divides `n`. If `p ≤ 1` or `n = 0`, the quotient is `n`. -/
 def divMaxPow (n p : ℕ) : ℕ :=
@@ -56,9 +64,14 @@ theorem maxPowDvdDiv.go_spec {n p : ℕ} (hnp) :
   | case1 p hp hmod e q heq hqp ih =>
     rw [heq] at ih
     rcases ih with ⟨rfl, hdvd⟩
-    have hp₀ : 0 < p := Nat.lt_trans Nat.one_pos hp.1
-    simp_all [Nat.euclideanDiv_eq_core, ← Nat.dvd_iff_mod_eq_zero, Nat.pow_add', ← Nat.mul_assoc,
-      Nat.div_mul_cancel, Nat.two_mul, Nat.mul_pow]
+    have hp₀ := Nat.ne_of_gt (Nat.lt_trans Nat.one_pos hp.1)
+    have hq : p * Nat.euclideanDiv q p hp₀ = q := by
+      simpa only [hqp, Nat.add_zero] using Nat.euclideanDiv_mul_add_mod q p hp₀
+    have hqp' : ¬p ∣ Nat.euclideanDiv q p hp₀ := by
+      intro h
+      exact hdvd (hq ▸ Nat.mul_dvd_mul_left p h)
+    have hq' : Nat.euclideanDiv q p hp₀ * p = q := (Nat.mul_comm _ _).trans hq
+    simp_all [Nat.pow_add', ← Nat.mul_assoc, Nat.two_mul, Nat.mul_pow]
   | case2 p hp hmod e q heq hqp ih =>
     rw [heq] at ih
     rcases ih with ⟨rfl, hdvd⟩

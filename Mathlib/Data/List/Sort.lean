@@ -71,9 +71,7 @@ theorem insertionSort_nil : [].insertionSort r = [] := .refl _
 example :
     insertionSort (fun m n : ℕ => m.euclideanDiv 10 ≤ n.euclideanDiv 10)
         [5, 27, 221, 95, 17, 43, 7, 2, 98, 567, 23, 12] =
-      [5, 7, 2, 17, 12, 27, 23, 43, 95, 98, 221, 567] := by
-  simp only [Nat.euclideanDiv_eq_core]
-  rfl
+      [5, 7, 2, 17, 12, 27, 23, 43, 95, 98, 221, 567] := by decide
 
 theorem orderedInsert_length (L : List α) (a : α) :
     (L.orderedInsert r a).length = L.length + 1 := by

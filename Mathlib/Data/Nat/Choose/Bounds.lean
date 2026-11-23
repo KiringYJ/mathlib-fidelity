@@ -51,12 +51,12 @@ lemma choose_lt_pow_div (hn : n ≠ 0) (hk : 2 ≤ k) :
   exact descFactorial_lt_pow hn hk
 
 lemma choose_le_descFactorial (n k : ℕ) : n.choose k ≤ n.descFactorial k := by
-  rw [choose_eq_descFactorial_div_factorial, Nat.euclideanDiv_eq_core]
-  exact Nat.div_le_self _ _
+  rw [choose_eq_descFactorial_div_factorial]
+  exact Nat.euclideanDiv_le_self _ _ _
 
 lemma choose_lt_descFactorial (hk : 2 ≤ k) (hkn : k ≤ n) : n.choose k < n.descFactorial k := by
-  rw [choose_eq_descFactorial_div_factorial, Nat.euclideanDiv_eq_core]
-  exact Nat.div_lt_self (by simpa) (by simpa)
+  rw [choose_eq_descFactorial_div_factorial]
+  exact Nat.euclideanDiv_lt_self (by simpa) (by simpa)
 
 lemma choose_le_pow (n k : ℕ) : n.choose k ≤ n ^ k :=
   (choose_le_descFactorial n k).trans (descFactorial_le_pow n k)
@@ -65,8 +65,10 @@ lemma choose_lt_pow (hn : n ≠ 0) (hk : 2 ≤ k) : n.choose k < n ^ k :=
   (choose_le_descFactorial n k).trans_lt (descFactorial_lt_pow hn hk)
 
 theorem choose_add_le_add_one_pow (n k : ℕ) : (n + k).choose k ≤ (n + 1) ^ k := by
-  rw [choose_eq_asc_factorial_div_factorial, Nat.euclideanDiv_eq_core]
-  exact Nat.div_le_of_le_mul (ascFactorial_le_factorial_mul_pow _ _)
+  rw [choose_eq_asc_factorial_div_factorial, ← Nat.lt_succ_iff,
+    Nat.euclideanDiv_lt_iff_lt_mul]
+  exact (ascFactorial_le_factorial_mul_pow _ _).trans_lt
+    (Nat.mul_lt_mul_of_pos_left (Nat.lt_succ_self _) k.factorial_pos)
 
 theorem choose_le_sub_pow (n k : ℕ) : n.choose k ≤ (n + 1 - k) ^ k := by
   rcases le_or_gt k n with h | h

@@ -708,17 +708,15 @@ divisor is everywhere nonzero. -/
 theorem nat_quotient {f g : α → ℕ} (hf : Primrec f) (hg : Primrec g) (h : ∀ a, g a ≠ 0) :
     Primrec fun a => Nat.euclideanDiv (f a) (g a) (h a) := by
   refine of_graph ⟨f, hf, fun a => ?_⟩ ?_
-  · change Nat.euclideanDiv (f a) (g a) (h a) ≤ f a
-    rw [Nat.euclideanDiv_eq_core]
-    exact Nat.div_le_self _ _
+  · exact Nat.euclideanDiv_le_self (f a) (g a) (h a)
   · have graph : PrimrecRel fun a q => q * g a ≤ f a ∧ f a < (q + 1) * g a :=
       .and (nat_le.comp (nat_mul.comp snd (hg.comp fst)) (hf.comp fst))
         (nat_lt.comp (hf.comp fst) (nat_mul.comp (succ.comp snd) (hg.comp fst)))
     refine graph.of_eq ?_
     intro a q
-    rw [Nat.euclideanDiv_eq_core, eq_comm, le_antisymm_iff, ← (@Nat.lt_succ_iff _ q),
-      Nat.le_div_iff_mul_le (Nat.pos_of_ne_zero (h a)),
-      Nat.div_lt_iff_lt_mul (Nat.pos_of_ne_zero (h a))]
+    rw [eq_comm, le_antisymm_iff, ← (@Nat.lt_succ_iff _ q),
+      Nat.le_euclideanDiv_iff_mul_le (h a), Nat.euclideanDiv_lt_iff_lt_mul (h a),
+      Nat.mul_comm (g a) q, Nat.mul_comm (g a) (q + 1)]
 
 theorem nat_mod : Primrec₂ ((· % ·) : ℕ → ℕ → ℕ) := by
   have hstep : Primrec₂ fun n k : ℕ => n - (k + 1) * Nat.euclideanDiv n (k + 1) :=

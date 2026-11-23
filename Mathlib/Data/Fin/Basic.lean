@@ -440,6 +440,15 @@ end Add
 
 section DivMod
 
+/-- The Euclidean quotient by the second factor of the bound. The input ensures that the
+divisor is nonzero and that the quotient is less than the first factor. -/
+def euclideanDivNat (i : Fin (m * n)) : Fin m := by
+  have hn : n ≠ 0 := by
+    intro h
+    simpa [h] using i.isLt
+  exact ⟨Nat.euclideanDiv i.val n hn,
+    (Nat.euclideanDiv_lt_iff_lt_mul hn).mpr (by simpa only [Nat.mul_comm] using i.isLt)⟩
+
 theorem modNat_rev (i : Fin (m * n)) : i.rev.modNat = i.modNat.rev := by
   ext
   have hn : n ≠ 0 := by
@@ -450,8 +459,7 @@ theorem modNat_rev (i : Fin (m * n)) : i.rev.modNat = i.modNat.rev := by
   have H₁ : i % n + 1 ≤ n := i.modNat.is_lt
   have H₂ : q < m := by
     change Nat.euclideanDiv i.val n hn < m
-    rw [Nat.euclideanDiv_eq_core]
-    exact (Nat.div_lt_iff_lt_mul (Nat.pos_of_ne_zero hn)).2 i.is_lt
+    exact (Nat.euclideanDiv_lt_iff_lt_mul hn).2 (by simpa only [Nat.mul_comm] using i.is_lt)
   have hq : q * n + i % n = (i : ℕ) := by
     rw [Nat.mul_comm q n]
     exact Nat.euclideanDiv_mul_add_mod i.val n hn

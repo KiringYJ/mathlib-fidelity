@@ -59,8 +59,7 @@ protected theorem div_right_comm (a b c : ℕ) (hb : b ≠ 0 := by checked_nativ
     (hc : c ≠ 0 := by checked_native_nonzero) :
     Nat.euclideanDiv (Nat.euclideanDiv a b hb) c hc =
       Nat.euclideanDiv (Nat.euclideanDiv a c hc) b hb := by
-  simp only [Nat.euclideanDiv_eq_core]
-  rw [Nat.div_div_eq_div_mul, Nat.mul_comm, ← Nat.div_div_eq_div_mul]
+  simp only [Nat.euclideanDiv_euclideanDiv, Nat.mul_comm b c]
 
 /-!
 ### `pow`
@@ -74,8 +73,8 @@ protected lemma pow_right_injective (ha : 2 ≤ a) : Injective (a ^ ·) := by
 
 protected theorem pow_sub_one {x a : ℕ} (hx : x ≠ 0) (ha : a ≠ 0) :
     x ^ (a - 1) = Nat.euclideanDiv (x ^ a) x hx := by
-  simp only [Nat.euclideanDiv_eq_core]
-  rw [← Nat.pow_div (one_le_iff_ne_zero.mpr ha) (Nat.pos_iff_ne_zero.mpr hx), Nat.pow_one]
+  obtain ⟨a, rfl⟩ := Nat.exists_eq_succ_of_ne_zero ha
+  rw [Nat.succ_sub_one, Nat.pow_succ, Nat.euclideanDiv_mul_right_cancel]
 
 /-!
 ### Recursion and induction principles

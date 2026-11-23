@@ -13,6 +13,7 @@ public import Plausible.Arbitrary
 public import Plausible.Gen
 public import Plausible.Random
 public meta import Plausible.Sampleable
+import Mathlib.Lean.Elab.NativeDivision
 
 /-!
 This module contains `Plausible.Shrinkable` and `Plausible.SampleableExt` instances for mathlib
@@ -27,14 +28,26 @@ open Random Gen
 
 section Shrinkers
 
+/-- Successive halving gives the same candidate order as Plausible's natural shrinker. -/
+private meta def shrinkNat : ℕ → List ℕ
+  | 0 => []
+  | n + 1 =>
+    let half := Nat.euclideanDiv (n + 1) 2
+    half :: shrinkNat half
+termination_by n => n
+decreasing_by exact Nat.euclideanDiv_lt_self (Nat.succ_pos _) Nat.one_lt_two
+
+@[no_expose]
 meta instance Rat.shrinkable : Shrinkable Rat where
   shrink r :=
-    (Shrinkable.shrink r.num).flatMap fun d =>
-      Nat.shrink r.den |>.filterMap fun n =>
+    let numerators := (shrinkNat r.num.natAbs).flatMap fun n => [Int.ofNat n, -Int.ofNat n]
+    numerators.flatMap fun d =>
+      shrinkNat r.den |>.filterMap fun n =>
         if hn : n = 0 then none else some (Rat.normalize d n hn)
 
+@[no_expose]
 meta instance PNat.shrinkable : Shrinkable PNat where
-  shrink m := Nat.shrink m.natPred |>.map Nat.succPNat
+  shrink m := shrinkNat m.natPred |>.map Nat.succPNat
 
 end Shrinkers
 

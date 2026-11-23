@@ -125,21 +125,22 @@ theorem tprod_one_sub_pow_eq_powMulProdOneSubPow (j : ℕ) {x : R} (hx : IsTopol
         ∑' n, powMulProdOneSubPow j n x := by
   induction j with
   | zero =>
+    have hq : Nat.euclideanDiv 4 2 = 2 := Nat.euclideanDiv_mul_left_cancel (b := 2) 2 (by decide)
     simp [tprod_one_sub_pow_eq_powMulProdOneSubPow_zero hsum h, powMulProdOneSubPow,
-      ← sub_eq_add_neg, Nat.euclideanDiv_eq_core]
+      ← sub_eq_add_neg, hq]
   | succ n ih =>
     rw [ih, tsum_powMulProdOneSubPow _ hx hsum h, Finset.sum_range_succ _ (n + 1)]
     have h (n) : Nat.euclideanDiv ((n + 1 + 1) * (3 * (n + 1) + 2)) 2 =
         Nat.euclideanDiv ((n + 1) * (3 * n + 4)) 2 + (2 * n + 3) := by
-      simp only [Nat.euclideanDiv_eq_core]
-      rw [← Nat.add_mul_div_left _ _ (by simp)]
-      ring_nf
+      rw [← Nat.euclideanDiv_add_mul _ _ (by decide)]
+      congr 1
+      ring
     simp_rw [h]
     have h (n) : Nat.euclideanDiv ((n + 1 + 1) * (3 * (n + 1) + 4)) 2 =
         Nat.euclideanDiv ((n + 1) * (3 * n + 4)) 2 + (3 * n + 5) := by
-      simp only [Nat.euclideanDiv_eq_core]
-      rw [← Nat.add_mul_div_left _ _ (by simp)]
-      ring_nf
+      rw [← Nat.euclideanDiv_add_mul _ _ (by decide)]
+      congr 1
+      ring
     simp_rw [h]
     ring_nf
 

@@ -67,13 +67,19 @@ private theorem divisorsAntidiagonalEntry?_eq_some {n d : ℕ} {a b : ℕ} :
   by_cases hd : d = 0
   · subst d; simp [divisorsAntidiagonalEntry?]; grind
   simp only [divisorsAntidiagonalEntry?, dite_eq_right hd, Option.ite_none_right_eq_some,
-    Option.some.injEq,
-    Prod.mk.injEq, Nat.euclideanDiv_eq_core]
+    Option.some.injEq, Prod.mk.injEq]
   constructor
   · rintro ⟨h, rfl, rfl⟩
     exact ⟨rfl, hd, h⟩
   · rintro ⟨rfl, _, rfl⟩
-    simp [Nat.mul_div_cancel_left _ (Nat.pos_of_ne_zero hd)]
+    simp [Nat.euclideanDiv_mul_left_cancel _ hd]
+
+private theorem divisorsAntidiagonalEntry?_eq_none_of_not_dvd {n d : ℕ} (h : ¬d ∣ n) :
+    divisorsAntidiagonalEntry? n d = none := by
+  unfold divisorsAntidiagonalEntry?
+  split
+  · rfl
+  · exact ite_eq_right fun he => h ⟨_, he.symm⟩
 
 theorem divisorsAntidiagonalEntry?_inj (n : ℕ) : ∀ a b p, divisorsAntidiagonalEntry? n a = some p →
     divisorsAntidiagonalEntry? n b = some p → a = b := by
@@ -159,7 +165,9 @@ theorem mem_divisorsAntidiagonal {x : ℕ × ℕ} :
 
 @[simp] lemma divisorsAntidiagonalList_zero : divisorsAntidiagonalList 0 = [] := rfl
 @[simp] lemma divisorsAntidiagonalList_one : divisorsAntidiagonalList 1 = [(1, 1)] := by
-  simp [divisorsAntidiagonalList, List.range', divisorsAntidiagonalEntry?, Nat.euclideanDiv_eq_core]
+  have h : divisorsAntidiagonalEntry? 1 1 = some (1, 1) :=
+    divisorsAntidiagonalEntry?_eq_some.mpr (by decide)
+  simp [divisorsAntidiagonalList, List.range', h]
 
 @[simp]
 lemma toFinset_divisorsAntidiagonalList {n : ℕ} :
@@ -326,18 +334,26 @@ lemma sup_divisors_id (n : ℕ) : n.divisors.sup id = n := by
 lemma one_lt_of_mem_properDivisors {m n : ℕ} (h : m ∈ n.properDivisors) : 1 < n :=
   lt_of_le_of_lt (pos_of_mem_properDivisors h) (mem_properDivisors.1 h).2
 
+private theorem mul_euclideanDiv_of_dvd {a b : ℕ} (hb : b ≠ 0) (hba : b ∣ a) :
+    b * Nat.euclideanDiv a b hb = a := by
+  simpa only [Nat.mod_eq_zero_of_dvd hba, Nat.add_zero] using
+    Nat.euclideanDiv_mul_add_mod a b hb
+
 lemma one_lt_div_of_mem_properDivisors {m n : ℕ} (h : m ∈ n.properDivisors) :
     1 < Nat.euclideanDiv n m (pos_of_mem_properDivisors h).ne' := by
-  rw [Nat.euclideanDiv_eq_core]
-  obtain ⟨h_dvd, h_lt⟩ := mem_properDivisors.mp h
-  rwa [Nat.lt_div_iff_mul_lt' h_dvd, mul_one]
+  obtain ⟨hdvd, hlt⟩ := mem_properDivisors.mp h
+  apply Nat.lt_of_not_ge
+  intro hle
+  have hmul := Nat.mul_le_mul_left m hle
+  rw [mul_euclideanDiv_of_dvd _ hdvd, Nat.mul_one] at hmul
+  exact (Nat.not_le_of_lt hlt) hmul
 
 /-- See also `Nat.mem_properDivisors`. -/
 lemma mem_properDivisors_iff_exists {m n : ℕ} (hn : n ≠ 0) :
     m ∈ n.properDivisors ↔ ∃ k > 1, n = m * k := by
   refine ⟨fun h ↦ ⟨Nat.euclideanDiv n m (pos_of_mem_properDivisors h).ne',
     one_lt_div_of_mem_properDivisors h, ?_⟩, ?_⟩
-  · rw [Nat.euclideanDiv_eq_core]; exact (Nat.mul_div_cancel' (mem_properDivisors.mp h).1).symm
+  · exact (mul_euclideanDiv_of_dvd _ (mem_properDivisors.mp h).1).symm
   · rintro ⟨k, hk, rfl⟩
     rw [mul_ne_zero_iff] at hn
     exact mem_properDivisors.mpr ⟨⟨k, rfl⟩, lt_mul_of_one_lt_right (Nat.pos_of_ne_zero hn.1) hk⟩
@@ -407,15 +423,17 @@ theorem map_div_right_divisors :
   rw [mem_map, mem_divisorsAntidiagonal]
   constructor
   · rintro ⟨x, _, hx⟩
-    obtain ⟨rfl, rfl⟩ := Prod.mk.inj hx
-    exact
-      ⟨by rw [Nat.euclideanDiv_eq_core]; exact Nat.mul_div_cancel' (dvd_of_mem_divisors x.property),
-        ne_zero_of_mem_divisors x.property⟩
+    have hd : x.val = d := congrArg Prod.fst hx
+    have hq : Nat.euclideanDiv n x.val (pos_of_mem_divisors x.property).ne' = q :=
+      congrArg Prod.snd hx
+    refine ⟨?_, ne_zero_of_mem_divisors x.property⟩
+    rw [← hd, ← hq]
+    exact mul_euclideanDiv_of_dvd (pos_of_mem_divisors x.property).ne'
+      (dvd_of_mem_divisors x.property)
   · rintro ⟨rfl, hn⟩
     let x : (d * q).divisors := ⟨d, mem_divisors.mpr ⟨dvd_mul_right d q, hn⟩⟩
     refine ⟨x, Finset.mem_attach _ _, Prod.ext rfl ?_⟩
-    exact (Nat.euclideanDiv_eq_core _ _ _).trans
-      (Nat.mul_div_cancel_left q (pos_of_mem_divisors x.property))
+    exact Nat.euclideanDiv_mul_left_cancel q (pos_of_mem_divisors x.property).ne'
 
 set_option backward.isDefEq.respectTransparency false in
 theorem map_div_left_divisors :
@@ -603,9 +621,18 @@ theorem prod_div_divisors {α : Type*} [CommMonoid α] (n : ℕ) (f : ℕ → α
   · exact prod_congr (image_div_divisors_eq_divisors n) (by simp)
   · intro x _ y _ h
     apply Subtype.ext
-    simp only [Nat.euclideanDiv_eq_core] at h
-    exact (div_eq_iff_eq_of_dvd_dvd (ne_zero_of_mem_divisors x.property)
-      (dvd_of_mem_divisors x.property) (dvd_of_mem_divisors y.property)).mp h
+    change Nat.euclideanDiv n x.val (pos_of_mem_divisors x.property).ne' =
+      Nat.euclideanDiv n y.val (pos_of_mem_divisors y.property).ne' at h
+    have hx := mul_euclideanDiv_of_dvd (pos_of_mem_divisors x.property).ne'
+      (dvd_of_mem_divisors x.property)
+    have hy := mul_euclideanDiv_of_dvd (pos_of_mem_divisors y.property).ne'
+      (dvd_of_mem_divisors y.property)
+    have hq : Nat.euclideanDiv n x.val (pos_of_mem_divisors x.property).ne' ≠ 0 := by
+      intro hzero
+      rw [hzero, Nat.mul_zero] at hx
+      exact ne_zero_of_mem_divisors x.property hx.symm
+    apply Nat.eq_of_mul_eq_mul_right (Nat.pos_of_ne_zero hq)
+    rw [hx, h, hy]
 
 theorem disjoint_divisors_filter_isPrimePow {a b : ℕ} (hab : a.Coprime b) :
     Disjoint (a.divisors.filter IsPrimePow) (b.divisors.filter IsPrimePow) := by
@@ -736,18 +763,19 @@ theorem image_snd_divisorsAntidiag : z.divisorsAntidiag.image Prod.snd = z.divis
 @[simp]
 theorem divisorsAntidiagonal_one :
     Int.divisorsAntidiag 1 = {(1, 1), (-1, -1)} := by
-  have h : Nat.divisorsAntidiagonalList 1 = [(1, 1)] := by
-    simp [Nat.divisorsAntidiagonalList, List.range', Nat.divisorsAntidiagonalEntry?,
-      Nat.euclideanDiv_eq_core]
-  simp only [divisorsAntidiag, ← Nat.toFinset_divisorsAntidiagonalList, h]
+  simp only [divisorsAntidiag, ← Nat.toFinset_divisorsAntidiagonalList,
+    Nat.divisorsAntidiagonalList_one]
   rfl
 
 @[simp]
 theorem divisorsAntidiagonal_two :
     Int.divisorsAntidiag 2 = {(1, 2), (2, 1), (-1, -2), (-2, -1)} := by
   have h : Nat.divisorsAntidiagonalList 2 = [(1, 2), (2, 1)] := by
-    simp [Nat.divisorsAntidiagonalList, List.range', Nat.divisorsAntidiagonalEntry?,
-      Nat.euclideanDiv_eq_core]
+    have h1 : Nat.divisorsAntidiagonalEntry? 2 1 = some (1, 2) :=
+      Nat.divisorsAntidiagonalEntry?_eq_some.mpr (by decide)
+    have h2 : Nat.divisorsAntidiagonalEntry? 2 2 = some (2, 1) :=
+      Nat.divisorsAntidiagonalEntry?_eq_some.mpr (by decide)
+    simp [Nat.divisorsAntidiagonalList, List.range', h1, h2]
   simp only [divisorsAntidiag, ← Nat.toFinset_divisorsAntidiagonalList, h]
   rfl
 
@@ -755,8 +783,13 @@ theorem divisorsAntidiagonal_two :
 theorem divisorsAntidiagonal_three :
     Int.divisorsAntidiag 3 = {(1, 3), (3, 1), (-1, -3), (-3, -1)} := by
   have h : Nat.divisorsAntidiagonalList 3 = [(1, 3), (3, 1)] := by
-    simp [Nat.divisorsAntidiagonalList, List.range', Nat.divisorsAntidiagonalEntry?,
-      Nat.euclideanDiv_eq_core]
+    have h1 : Nat.divisorsAntidiagonalEntry? 3 1 = some (1, 3) :=
+      Nat.divisorsAntidiagonalEntry?_eq_some.mpr (by decide)
+    have h3 : Nat.divisorsAntidiagonalEntry? 3 3 = some (3, 1) :=
+      Nat.divisorsAntidiagonalEntry?_eq_some.mpr (by decide)
+    have h2 : Nat.divisorsAntidiagonalEntry? 3 2 = none :=
+      Nat.divisorsAntidiagonalEntry?_eq_none_of_not_dvd (by decide)
+    simp [Nat.divisorsAntidiagonalList, List.range', h1, h2, h3]
   simp only [divisorsAntidiag, ← Nat.toFinset_divisorsAntidiagonalList, h]
   rfl
 
@@ -764,8 +797,15 @@ theorem divisorsAntidiagonal_three :
 theorem divisorsAntidiagonal_four :
     Int.divisorsAntidiag 4 = {(1, 4), (2, 2), (4, 1), (-1, -4), (-2, -2), (-4, -1)} := by
   have h : Nat.divisorsAntidiagonalList 4 = [(1, 4), (2, 2), (4, 1)] := by
-    simp [Nat.divisorsAntidiagonalList, List.range', Nat.divisorsAntidiagonalEntry?,
-      Nat.euclideanDiv_eq_core]
+    have h1 : Nat.divisorsAntidiagonalEntry? 4 1 = some (1, 4) :=
+      Nat.divisorsAntidiagonalEntry?_eq_some.mpr (by decide)
+    have h2 : Nat.divisorsAntidiagonalEntry? 4 2 = some (2, 2) :=
+      Nat.divisorsAntidiagonalEntry?_eq_some.mpr (by decide)
+    have h4 : Nat.divisorsAntidiagonalEntry? 4 4 = some (4, 1) :=
+      Nat.divisorsAntidiagonalEntry?_eq_some.mpr (by decide)
+    have h3 : Nat.divisorsAntidiagonalEntry? 4 3 = none :=
+      Nat.divisorsAntidiagonalEntry?_eq_none_of_not_dvd (by decide)
+    simp [Nat.divisorsAntidiagonalList, List.range', h1, h2, h3, h4]
   simp only [divisorsAntidiag, ← Nat.toFinset_divisorsAntidiagonalList, h]
   rfl
 

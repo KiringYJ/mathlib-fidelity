@@ -102,7 +102,7 @@ theorem emultiplicity_factorial {p : ℕ} (hp : p.Prime) :
     ∀ {n b : ℕ}, n < p ^ b →
       emultiplicity p n ! =
         (∑ i ∈ Ico 1 b, Nat.euclideanDiv n (p ^ i) (pow_ne_zero i hp.ne_zero) : ℕ)
-  | 0, b, _ => by simp [Ico, Nat.euclideanDiv_eq_core, hp.emultiplicity_one]
+  | 0, b, _ => by simp [Ico, hp.emultiplicity_one]
   | n + 1, b, hb =>
     calc
       emultiplicity p (n + 1)! = emultiplicity p n ! + emultiplicity p (n + 1) := by
@@ -117,9 +117,8 @@ theorem emultiplicity_factorial {p : ℕ} (hp : p.Prime) :
         rw [sum_add_distrib, sum_boole]
         simp
       _ = (∑ i ∈ Ico 1 b, Nat.euclideanDiv (n + 1) (p ^ i) (pow_ne_zero i hp.ne_zero) : ℕ) :=
-        congr_arg _ <| Finset.sum_congr rfl fun _ _ => by
-          simp only [Nat.euclideanDiv_eq_core]
-          exact Nat.succ_div.symm
+        congr_arg _ <| Finset.sum_congr rfl fun i _ =>
+          (Nat.euclideanDiv_succ n (pow_ne_zero i hp.ne_zero)).symm
 
 /-- For a prime number `p`, taking `(p - 1)` times the multiplicity of `p` in `n!` equals `n` minus
 the sum of base `p` digits of `n`. -/

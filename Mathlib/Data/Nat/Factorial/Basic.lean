@@ -260,14 +260,14 @@ theorem ascFactorial_mul_ascFactorial (n l k : ℕ) :
 /-- Avoid in favor of `Nat.factorial_mul_ascFactorial` if you can. ℕ-division isn't worth it. -/
 theorem ascFactorial_eq_div (n k : ℕ) :
     (n + 1).ascFactorial k = Nat.euclideanDiv ((n + k)!) (n !) n.factorial_ne_zero := by
-  rw [Nat.euclideanDiv_eq_core]
-  exact Nat.eq_div_of_mul_eq_right n.factorial_ne_zero (factorial_mul_ascFactorial _ _)
+  conv_rhs => rw [← factorial_mul_ascFactorial n k]
+  rw [Nat.euclideanDiv_mul_left_cancel]
 
 /-- Avoid in favor of `Nat.factorial_mul_ascFactorial'` if you can. ℕ-division isn't worth it. -/
 theorem ascFactorial_eq_div' (n k : ℕ) (h : 0 < n) :
     n.ascFactorial k = Nat.euclideanDiv ((n + k - 1)!) ((n - 1)!) (n - 1).factorial_ne_zero := by
-  rw [Nat.euclideanDiv_eq_core]
-  exact Nat.eq_div_of_mul_eq_right (n - 1).factorial_ne_zero (factorial_mul_ascFactorial' _ _ h)
+  conv_rhs => rw [← factorial_mul_ascFactorial' n k h]
+  rw [Nat.euclideanDiv_mul_left_cancel]
 
 theorem ascFactorial_of_sub {n k : ℕ} :
     (n - k) * (n - k + 1).ascFactorial k = (n - k).ascFactorial (k + 1) := by
@@ -428,10 +428,8 @@ theorem descFactorial_mul_descFactorial {k m n : ℕ} (hkm : k ≤ m) :
 /-- Avoid in favor of `Nat.factorial_mul_descFactorial` if you can. ℕ-division isn't worth it. -/
 theorem descFactorial_eq_div {n k : ℕ} (h : k ≤ n) :
     n.descFactorial k = Nat.euclideanDiv (n !) ((n - k)!) (n - k).factorial_ne_zero := by
-  rw [Nat.euclideanDiv_eq_core]
-  apply Nat.mul_left_cancel (n - k).factorial_pos
-  rw [factorial_mul_descFactorial h]
-  exact (Nat.mul_div_cancel' <| factorial_dvd_factorial <| Nat.sub_le n k).symm
+  conv_rhs => rw [← factorial_mul_descFactorial h]
+  rw [Nat.euclideanDiv_mul_left_cancel]
 
 @[gcongr]
 theorem descFactorial_le (n : ℕ) {k m : ℕ} (h : k ≤ m) :
@@ -536,8 +534,7 @@ def ascFactorialBinary (n k : ℕ) : ℕ :=
 termination_by k
 decreasing_by
   all_goals
-    rw [Nat.euclideanDiv_eq_core]
-    apply Nat.div_lt_of_lt_mul
+    apply (Nat.euclideanDiv_lt_iff_lt_mul (by decide : (2 : ℕ) ≠ 0)).mpr
     omega
 
 @[csimp]

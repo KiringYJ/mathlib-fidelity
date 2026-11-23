@@ -135,10 +135,9 @@ def ofNatCode : ℕ → Code
   | n + 4 =>
     let m := n.div2.div2
     have hm : m < n + 4 := by
-      simp only [m, div2_val, Nat.euclideanDiv_eq_core]
-      exact
-        lt_of_le_of_lt (le_trans (Nat.div_le_self _ _) (Nat.div_le_self _ _))
-          (Nat.succ_le_succ (Nat.le_add_right _ _))
+      simp only [m, div2_val]
+      exact ((Nat.euclideanDiv_le_self _ 2 (by decide)).trans
+        (Nat.euclideanDiv_le_self _ 2 (by decide))).trans_lt (by omega)
     have _m1 : m.unpair.1 < n + 4 := lt_of_le_of_lt m.unpair_left_le hm
     have _m2 : m.unpair.2 < n + 4 := lt_of_le_of_lt m.unpair_right_le hm
     match n.bodd, n.div2.bodd with
@@ -157,10 +156,9 @@ theorem encode_ofNatCode : ∀ n, encodeCode (ofNatCode n) = n
   | n + 4 => by
     let m := n.div2.div2
     have hm : m < n + 4 := by
-      simp only [m, div2_val, Nat.euclideanDiv_eq_core]
-      exact
-        lt_of_le_of_lt (le_trans (Nat.div_le_self _ _) (Nat.div_le_self _ _))
-          (Nat.succ_le_succ (Nat.le_add_right _ _))
+      simp only [m, div2_val]
+      exact ((Nat.euclideanDiv_le_self _ 2 (by decide)).trans
+        (Nat.euclideanDiv_le_self _ 2 (by decide))).trans_lt (by omega)
     have _m1 : m.unpair.1 < n + 4 := lt_of_le_of_lt m.unpair_left_le hm
     have _m2 : m.unpair.2 < n + 4 := lt_of_le_of_lt m.unpair_right_le hm
     have IH := encode_ofNatCode m
@@ -176,7 +174,7 @@ set_option backward.privateInPublic.warn false in
 instance instDenumerable : Denumerable Code :=
   mk'
     ⟨encodeCode, ofNatCode, fun c => by
-        induction c <;> simp [encodeCode, ofNatCode, Nat.div2_val, Nat.euclideanDiv_eq_core, *],
+        induction c <;> simp [encodeCode, ofNatCode, *],
       encode_ofNatCode⟩
 
 theorem encodeCode_eq : encode = encodeCode :=
@@ -321,10 +319,9 @@ theorem primrec_recOn' {α σ}
   change G₁ ((a, (List.range (n + 4)).map fun n => F a (ofNat Code n)), n, m)
     = some (F a (ofNat Code (n + 4)))
   have hm : m < n + 4 := by
-    simp only [m, div2_val, Nat.euclideanDiv_eq_core]
-    exact lt_of_le_of_lt
-      (le_trans (Nat.div_le_self ..) (Nat.div_le_self ..))
-      (Nat.succ_le_succ (Nat.le_add_right ..))
+    simp only [m, div2_val]
+    exact ((Nat.euclideanDiv_le_self _ 2 (by decide)).trans
+      (Nat.euclideanDiv_le_self _ 2 (by decide))).trans_lt (by omega)
   have m1 : m.unpair.1 < n + 4 := lt_of_le_of_lt m.unpair_left_le hm
   have m2 : m.unpair.2 < n + 4 := lt_of_le_of_lt m.unpair_right_le hm
   simp only [List.length_map, List.length_range, getElem?_pos, G₁, m, hm, m1, m2]
@@ -432,10 +429,9 @@ theorem computable_recOn {α σ} [Primcodable α] [Primcodable σ] {c : α → C
   change G₁ ((a, (List.range (n + 4)).map fun n => F a (ofNat Code n)), n, m)
     = some (F a (ofNat Code (n + 4)))
   have hm : m < n + 4 := by
-    simp only [m, div2_val, Nat.euclideanDiv_eq_core]
-    exact lt_of_le_of_lt
-      (le_trans (Nat.div_le_self ..) (Nat.div_le_self ..))
-      (Nat.succ_le_succ (Nat.le_add_right ..))
+    simp only [m, div2_val]
+    exact ((Nat.euclideanDiv_le_self _ 2 (by decide)).trans
+      (Nat.euclideanDiv_le_self _ 2 (by decide))).trans_lt (by omega)
   have m1 : m.unpair.1 < n + 4 := lt_of_le_of_lt m.unpair_left_le hm
   have m2 : m.unpair.2 < n + 4 := lt_of_le_of_lt m.unpair_right_le hm
   simp only [List.length_map, List.length_range, getElem?_pos, G₁, m, hm, m1, m2]

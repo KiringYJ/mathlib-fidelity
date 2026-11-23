@@ -147,8 +147,9 @@ lemma pepin_primality' (n : ℕ)
   apply pepin_primality
   rw [← h]
   congr
-  rw [Nat.euclideanDiv_eq_core, fermatNumber, add_tsub_cancel_right,
-    Nat.pow_div Nat.one_le_two_pow Nat.zero_lt_two]
+  have hpow : 2 ^ (2 ^ n) = 2 * 2 ^ (2 ^ n - 1) := by
+    rw [← pow_succ', Nat.succ_eq_add_one, Nat.sub_add_cancel Nat.one_le_two_pow]
+  rw [fermatNumber, add_tsub_cancel_right, hpow, Nat.euclideanDiv_mul_left_cancel]
 
 
 /-- Prime factors of `a ^ (2 ^ n) + 1` are of form `k * 2 ^ (n + 1) + 1`. -/

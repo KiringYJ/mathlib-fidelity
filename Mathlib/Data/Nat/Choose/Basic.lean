@@ -104,14 +104,26 @@ lemma choose_one_right (n : ℕ) : choose n 1 = n := by induction n <;> simp [*,
 -- The `n + 1`-st triangle number is `n` more than the `n`-th triangle number
 theorem triangle_succ (n : ℕ) :
     Nat.euclideanDiv ((n + 1) * (n + 1 - 1)) 2 = Nat.euclideanDiv (n * (n - 1)) 2 + n := by
-  simp only [Nat.euclideanDiv_eq_core]
-  rw [← add_mul_div_left, Nat.mul_comm 2 n, ← Nat.mul_add, Nat.add_sub_cancel, Nat.mul_comm]
-  cases n <;> rfl; apply zero_lt_succ
+  have hd : (2 : ℕ) ≠ 0 := by decide
+  have h : (n + 1) * (n + 1 - 1) = n * (n - 1) + 2 * n := by
+    cases n with
+    | zero => rfl
+    | succ n =>
+      change (n.succ + 1) * n.succ = n.succ * n + 2 * n.succ
+      rw [Nat.add_mul, Nat.one_mul, Nat.mul_succ]
+      omega
+  refine Nat.euclideanDiv_eq_of_remainder hd ?_ (Nat.mod_lt (n * (n - 1)) Nat.zero_lt_two)
+  conv_lhs => rw [h, ← Nat.euclideanDiv_mul_add_mod (n * (n - 1)) 2 hd]
+  rw [Nat.mul_add]
+  ac_rfl
 
 /-- `choose n 2` is the `n`-th triangle number. -/
 theorem choose_two_right (n : ℕ) : choose n 2 = Nat.euclideanDiv (n * (n - 1)) 2 := by
   induction n with
-  | zero => simp [Nat.euclideanDiv_eq_core]
+  | zero =>
+    change 0 = Nat.euclideanDiv (0 * (0 - 1)) 2
+    symm
+    exact Nat.euclideanDiv_eq_of_remainder (r := 0) (by decide) rfl Nat.zero_lt_two
   | succ n ih =>
     rw [triangle_succ n, choose, ih]
     simp [Nat.add_comm]
@@ -173,14 +185,13 @@ theorem choose_mul {n k s : ℕ} (hsk : s ≤ k) :
 theorem choose_eq_factorial_div_factorial {n k : ℕ} (hk : k ≤ n) :
     choose n k = Nat.euclideanDiv (n !) (k ! * (n - k)!)
       (Nat.ne_of_gt (Nat.mul_pos k.factorial_pos (n - k).factorial_pos)) := by
-  rw [Nat.euclideanDiv_eq_core, ← choose_mul_factorial_mul_factorial hk, Nat.mul_assoc]
-  exact (mul_div_left _ (Nat.mul_pos (factorial_pos _) (factorial_pos _))).symm
+  rw [← choose_mul_factorial_mul_factorial hk, Nat.mul_assoc, Nat.euclideanDiv_mul_right_cancel]
 
 theorem add_choose (i j : ℕ) :
     (i + j).choose j = Nat.euclideanDiv ((i + j)!) (i ! * j !)
       (Nat.ne_of_gt (Nat.mul_pos i.factorial_pos j.factorial_pos)) := by
   rw [choose_eq_factorial_div_factorial (Nat.le_add_left j i), Nat.add_sub_cancel_right]
-  simp only [Nat.euclideanDiv_eq_core, Nat.mul_comm]
+  simp only [Nat.mul_comm]
 
 theorem add_choose_mul_factorial_mul_factorial (i j : ℕ) :
     (i + j).choose j * i ! * j ! = (i + j)! := by
@@ -199,7 +210,7 @@ theorem factorial_mul_factorial_dvd_factorial_add (i j : ℕ) : i ! * j ! ∣ (i
 theorem choose_symm {n k : ℕ} (hk : k ≤ n) : choose n (n - k) = choose n k := by
   rw [choose_eq_factorial_div_factorial hk, choose_eq_factorial_div_factorial (Nat.sub_le _ _),
     Nat.sub_sub_self hk]
-  simp only [Nat.euclideanDiv_eq_core, Nat.mul_comm]
+  simp only [Nat.mul_comm]
 
 theorem choose_symm_of_eq_add {n a b : ℕ} (h : n = a + b) : Nat.choose n a = Nat.choose n b := by
   suffices choose n (n - b) = choose n b by
@@ -283,16 +294,11 @@ theorem factorial_dvd_ascFactorial (n k : ℕ) : k ! ∣ n.ascFactorial k :=
 
 theorem choose_eq_asc_factorial_div_factorial (n k : ℕ) :
     (n + k).choose k = Nat.euclideanDiv ((n + 1).ascFactorial k) (k !) k.factorial_ne_zero := by
-  rw [Nat.euclideanDiv_eq_core]
-  apply Nat.mul_left_cancel k.factorial_pos
-  rw [← ascFactorial_eq_factorial_mul_choose]
-  exact (Nat.mul_div_cancel' <| factorial_dvd_ascFactorial _ _).symm
+  rw [ascFactorial_eq_factorial_mul_choose, Nat.euclideanDiv_mul_left_cancel]
 
 theorem choose_eq_asc_factorial_div_factorial' (n k : ℕ) :
     (n + k - 1).choose k = Nat.euclideanDiv (n.ascFactorial k) (k !) k.factorial_ne_zero := by
-  rw [Nat.euclideanDiv_eq_core]
-  exact Nat.eq_div_of_mul_eq_right k.factorial_ne_zero
-    (ascFactorial_eq_factorial_mul_choose' _ _).symm
+  rw [ascFactorial_eq_factorial_mul_choose', Nat.euclideanDiv_mul_left_cancel]
 
 theorem descFactorial_eq_factorial_mul_choose (n k : ℕ) : n.descFactorial k = k ! * n.choose k := by
   obtain h | h := Nat.lt_or_ge n k
@@ -306,9 +312,7 @@ theorem factorial_dvd_descFactorial (n k : ℕ) : k ! ∣ n.descFactorial k :=
 
 theorem choose_eq_descFactorial_div_factorial (n k : ℕ) :
     n.choose k = Nat.euclideanDiv (n.descFactorial k) (k !) k.factorial_ne_zero := by
-  rw [Nat.euclideanDiv_eq_core]
-  exact Nat.eq_div_of_mul_eq_right k.factorial_ne_zero
-    (descFactorial_eq_factorial_mul_choose _ _).symm
+  rw [descFactorial_eq_factorial_mul_choose, Nat.euclideanDiv_mul_left_cancel]
 
 /-- A faster implementation of `choose`, to be used during bytecode evaluation
 and in compiled code. -/
@@ -324,12 +328,11 @@ def fast_choose n k := Nat.euclideanDiv (Nat.descFactorial n k) (k !) k.factoria
 /-- Show that `Nat.choose` is increasing for small values of the right argument. -/
 theorem choose_le_succ_of_lt_half_left {r n : ℕ} (h : r < Nat.euclideanDiv n 2) :
     choose n r ≤ choose n (r + 1) := by
-  rw [Nat.euclideanDiv_eq_core] at h
-  refine Nat.le_of_mul_le_mul_right ?_ (Nat.sub_pos_of_lt (h.trans_le (n.div_le_self 2)))
+  have hmul : 2 * (r + 1) ≤ n :=
+    (Nat.le_euclideanDiv_iff_mul_le (by decide : (2 : ℕ) ≠ 0)).mp h
+  refine Nat.le_of_mul_le_mul_right ?_ (Nat.sub_pos_of_lt (show r < n by omega))
   rw [← choose_succ_right_eq]
-  apply Nat.mul_le_mul_left
-  rw [← Nat.lt_iff_add_one_le, Nat.lt_sub_iff_add_lt, ← Nat.mul_two]
-  exact lt_of_lt_of_le (Nat.mul_lt_mul_of_pos_right h Nat.zero_lt_two) (n.div_mul_le_self 2)
+  exact Nat.mul_le_mul_left _ (by omega)
 
 /-- Show that for small values of the right argument, the middle value is largest. -/
 private theorem choose_le_middle_of_le_half_left {n r : ℕ} (hr : r ≤ Nat.euclideanDiv n 2) :
@@ -345,8 +348,9 @@ theorem choose_le_middle (r n : ℕ) : choose n r ≤ choose n (Nat.euclideanDiv
     · apply choose_le_middle_of_le_half_left a
     · rw [← choose_symm b]
       apply choose_le_middle_of_le_half_left
-      rw [Nat.euclideanDiv_eq_core] at h ⊢
-      lia
+      have hn : ¬2 * r ≤ n := fun hr ↦
+        Nat.not_le_of_gt h ((Nat.le_euclideanDiv_iff_mul_le (by decide : (2 : ℕ) ≠ 0)).mpr hr)
+      exact (Nat.le_euclideanDiv_iff_mul_le (by decide : (2 : ℕ) ≠ 0)).mpr (by omega)
   · rw [choose_eq_zero_of_lt b]
     apply zero_le
 

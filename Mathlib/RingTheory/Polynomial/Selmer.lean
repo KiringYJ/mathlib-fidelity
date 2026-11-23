@@ -35,7 +35,7 @@ theorem X_pow_sub_X_sub_one_irreducible_aux (z : ℂ) : ¬(z ^ n = z + 1 ∧ z ^
   replace h3 : z ^ 3 = 1 := by
     linear_combination (1 - z - z ^ 2 - z ^ n) * h1 + (z ^ n - 2) * h2
   have key : z ^ n = 1 ∨ z ^ n = z ∨ z ^ n = z ^ 2 := by
-    rw [← Nat.mod_add_div n 3, pow_add, pow_mul, h3, one_pow, mul_one]
+    rw [pow_eq_pow_mod n h3]
     have : n % 3 < 3 := Nat.mod_lt n zero_lt_three
     interval_cases n % 3 <;>
     simp only [pow_zero, pow_one, or_true, true_or]

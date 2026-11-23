@@ -538,7 +538,12 @@ theorem divMod_to_nat_aux {n d : PosNum} {q r : Num} (h₁ : (r : ℕ) + d * ((q
 theorem divMod_to_nat (d n : PosNum) :
     Nat.euclideanDiv (n : ℕ) (d : ℕ) (PosNum.cast_pos _).ne' = (divMod d n).1 ∧
       (n % d : ℕ) = (divMod d n).2 := by
-  rw [Nat.euclideanDiv_eq_core, Nat.div_mod_unique (PosNum.cast_pos _)]
+  suffices h : ((divMod d n).2 + d * (divMod d n).1 : ℕ) = ↑n ∧
+      ((divMod d n).2 : ℕ) < d by
+    refine ⟨Nat.euclideanDiv_eq_of_remainder (PosNum.cast_pos _).ne'
+      (h.1.symm.trans (Nat.add_comm _ _)) h.2, ?_⟩
+    conv_lhs => rw [← h.1]
+    rw [Nat.add_mul_mod_self_left, Nat.mod_eq_of_lt h.2]
   induction n with
   | one =>
     exact divMod_to_nat_aux (by simp) (Nat.mul_le_mul_left 2 (PosNum.cast_pos d : (0 : ℕ) < d))
@@ -577,7 +582,7 @@ namespace Num
 theorem divPos_to_nat (n : Num) (d : PosNum) :
     (n.divPos d : ℕ) = Nat.euclideanDiv (n : ℕ) (d : ℕ) (PosNum.cast_pos _).ne' := by
   cases n with
-  | zero => rw [Nat.euclideanDiv_eq_core]; exact (Nat.zero_div _).symm
+  | zero => exact (Nat.euclideanDiv_zero _ _).symm
   | pos p => exact PosNum.div'_to_nat p d
 
 @[simp, norm_cast]
@@ -615,13 +620,21 @@ theorem gcd_to_nat_aux :
       exact le_of_lt (Nat.mod_lt _ (PosNum.cast_pos _))
     rw [natSize_to_nat, mul_to_nat, Nat.size_le] at h ⊢
     rw [mod_to_nat, mul_comm]
-    rw [pow_succ, ← Nat.mod_add_div b (pos a)] at h
+    rw [pow_succ] at h
+    let d : ℕ := (pos a : Num)
+    have hd : 0 < d := PosNum.cast_pos a
+    have hq : 1 ≤ Nat.euclideanDiv (b : ℕ) d hd.ne' :=
+      (Nat.le_euclideanDiv_iff_mul_le hd.ne').mpr
+        (by simpa only [Nat.mul_one] using le_to_nat.2 ab)
+    have hr : (b : ℕ) % d ≤ d * Nat.euclideanDiv (b : ℕ) d hd.ne' :=
+      (Nat.mod_lt _ hd).le.trans (Nat.le_mul_of_pos_right _ hq)
     refine lt_of_mul_lt_mul_right (lt_of_le_of_lt ?_ h) (Nat.zero_le 2)
-    rw [mul_two, mul_add]
-    gcongr _ + _ * ?_
-    grw [Nat.mod_lt, ← le_to_nat.2 ab]
-    · simp
-    · exact PosNum.cast_pos _
+    calc
+      d * ((b : ℕ) % d) * 2 = d * ((b : ℕ) % d + (b : ℕ) % d) := by
+        rw [Nat.mul_assoc, Nat.mul_two]
+      _ ≤ d * (d * Nat.euclideanDiv (b : ℕ) d hd.ne' + (b : ℕ) % d) :=
+        Nat.mul_le_mul_left _ (Nat.add_le_add_right hr _)
+      _ = d * (b : ℕ) := by rw [Nat.euclideanDiv_mul_add_mod]
 
 @[simp]
 theorem gcd_to_nat : ∀ a b, (gcd a b : ℕ) = Nat.gcd a b := by
@@ -653,34 +666,32 @@ namespace ZNum
 @[simp, norm_cast]
 theorem quotient_to_int (n d : ZNum) (hd : d ≠ 0) :
     (n.quotient d hd : ℤ) = Int.euclideanDiv (n : ℤ) (d : ℤ) (fun h => hd (to_int_inj.mp h)) := by
-  rw [Int.euclideanDiv_eq_core]
   cases d with
   | zero => exact (hd rfl).elim
   | pos d =>
     cases n with
-    | zero => exact (Int.zero_ediv _).symm
+    | zero => exact (Int.euclideanDiv_zero _ _).symm
     | pos n =>
       apply (Num.cast_toZNum _).trans
-      rw [← Num.to_nat_to_int]
-      simp [Nat.euclideanDiv_eq_core]
+      simpa only [← Num.to_nat_to_int, PosNum.div'_to_nat, cast_pos, ← PosNum.to_nat_to_int] using
+        Int.natCast_euclideanDiv (n : ℕ) (d : ℕ) (PosNum.cast_pos d).ne'
     | neg n =>
       change -((Num.divPos n.pred' d).succ' : ℤ) = _
-      rw [cast_neg, cast_pos, n.to_int_eq_succ_pred, d.to_int_eq_succ_pred,
-        ← PosNum.to_nat_to_int, Num.succ'_to_nat, Num.divPos_to_nat, Nat.euclideanDiv_eq_core,
-        d.to_nat_eq_succ_pred]
+      simp only [cast_neg, cast_pos, n.to_int_eq_succ_pred, d.to_int_eq_succ_pred,
+        ← PosNum.to_nat_to_int, Num.succ'_to_nat, Num.divPos_to_nat, d.to_nat_eq_succ_pred]
       rfl
   | neg d =>
     cases n with
-    | zero => exact (Int.zero_ediv _).symm
+    | zero => exact (Int.euclideanDiv_zero _ _).symm
     | pos n =>
       apply (Num.cast_toZNumNeg _).trans
-      rw [← Num.to_nat_to_int]
-      simp [Nat.euclideanDiv_eq_core]
+      simp only [← Num.to_nat_to_int, PosNum.div'_to_nat, cast_pos, cast_neg, d.to_int_eq_succ_pred,
+        ← PosNum.to_nat_to_int, d.to_nat_eq_succ_pred]
+      rfl
     | neg n =>
       change ((Num.divPos n.pred' d).succ' : ℤ) = _
-      rw [cast_neg, cast_neg, n.to_int_eq_succ_pred, d.to_int_eq_succ_pred,
-        ← PosNum.to_nat_to_int, Num.succ'_to_nat, Num.divPos_to_nat, Nat.euclideanDiv_eq_core,
-        d.to_nat_eq_succ_pred]
+      simp only [cast_neg, n.to_int_eq_succ_pred, d.to_int_eq_succ_pred,
+        ← PosNum.to_nat_to_int, Num.succ'_to_nat, Num.divPos_to_nat, d.to_nat_eq_succ_pred]
       rfl
 
 @[simp, norm_cast]

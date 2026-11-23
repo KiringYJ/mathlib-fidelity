@@ -46,12 +46,9 @@ instance instDivisionRing : DivisionRing ℚ := inferInstance
 /-- Reciprocals preserve nonnegativity on their nonzero domain. -/
 protected theorem reciprocal_nonneg {a : ℚ} (ha : 0 ≤ a) (hn : a ≠ 0) :
     0 ≤ Rat.reciprocal a hn := by
-  apply Rat.num_nonneg.mp
-  rw [Rat.reciprocal, Rat.fractionInt, Rat.num_normalize]
-  apply Int.ediv_nonneg
-  · exact Int.mul_nonneg (Int.sign_nonneg_iff.mpr (Rat.num_nonneg.mpr ha))
-      (Int.natCast_nonneg _)
-  · exact Int.natCast_nonneg _
+  rw [Rat.reciprocal, Rat.fractionInt]
+  exact Rat.fraction_nonneg
+    (Int.mul_nonneg (Int.sign_nonneg_iff.mpr (Rat.num_nonneg.mpr ha)) (Int.natCast_nonneg _)) _ _
 
 protected lemma inv_nonneg {a : ℚ} {haUnit : IsUnit a} (ha : 0 ≤ a) : 0 ≤ a⁻¹ := by
   rw [inv_eq_of_mul_eq_one_right₀ (Rat.mul_reciprocal a haUnit.ne_zero)]

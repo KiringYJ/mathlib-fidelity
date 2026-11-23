@@ -114,8 +114,7 @@ theorem center_eq_top [Finite D] (hD : InductionHyp D) : Subring.center D = ⊤ 
   -- We therefore get that `|x| = (q ^ n - 1) / (q ^ d - 1)`, and as `d` is a strict divisor of `n`,
   -- we do have that `Φₙ(q) | (q ^ n - 1) / (q ^ d - 1)`; extending this over the whole sum
   -- gives us the desired contradiction..
-  rw [Set.toFinset_card, ConjClasses.card_carrier, Nat.euclideanDiv_eq_core, ← card_congr
-        (show Zxˣ ≃* _ from unitsCentralizerEquiv _ x).toEquiv, card_units, card_D]
+  rw [Set.toFinset_card, ConjClasses.card_carrier]
   have hZx : Zx ≠ ⊤ := by
     by_contra! hZx
     refine (ConjClasses.mk_bijOn (Dˣ)).mapsTo (Set.subset_center_units ?_) hx
@@ -126,22 +125,31 @@ theorem center_eq_top [Finite D] (hD : InductionHyp D) : Subring.center D = ⊤ 
   have card_Zx : card Zx = q ^ d := Module.card_eq_pow_finrank
   have h1qd : 1 ≤ q ^ d := by rw [← card_Zx]; exact card_pos
   have : IsScalarTower Z Zx D := ⟨fun x y z ↦ mul_assoc _ _ _⟩
-  rw [card_units, card_Zx]
-  push_cast [h1qd, h1qn]
   have hZx_card : 1 < q ^ d := card_Zx ▸ Fintype.one_lt_card
+  have hb : q ^ d - 1 ≠ 0 := (Nat.sub_pos_of_lt hZx_card).ne'
   have hden : (q : ℤ) ^ d - 1 ≠ 0 := sub_ne_zero.mpr (by exact_mod_cast hZx_card.ne')
-  rw [← Int.euclideanDiv_eq_core _ _ hden]
-  apply Int.dvd_div_of_mul_dvd hden
-  have aux : ∀ {k : ℕ}, ((X : ℤ[X]) ^ k - 1).eval ↑q = (q : ℤ) ^ k - 1 := by
-    simp only [eval_X, eval_one, eval_pow, eval_sub, forall_const]
-  rw [← aux, ← aux, ← eval_mul]
-  refine map_dvd (evalRingHom ↑q) (X_pow_sub_one_mul_cyclotomic_dvd_X_pow_sub_one_of_dvd ℤ ?_)
-  refine Nat.mem_properDivisors.mpr ⟨⟨_, (finrank_mul_finrank Z Zx D).symm⟩, ?_⟩
-  rw [← Nat.pow_lt_pow_iff_right hq, ← card_D, ← card_Zx]
-  obtain ⟨b, -, hb⟩ := SetLike.exists_of_lt hZx.lt_top
-  refine card_lt_of_injective_of_notMem _ Subtype.val_injective (?_ : b ∉ _)
-  rintro ⟨b, rfl⟩
-  exact hb b.2
+  have hquot :
+      (Nat.euclideanDiv (q ^ n - 1) (q ^ d - 1) hb : ℤ) =
+        Int.euclideanDiv ((q : ℤ) ^ n - 1) ((q : ℤ) ^ d - 1) hden := by
+    simpa only [Nat.cast_sub h1qn, Nat.cast_sub h1qd, Nat.cast_pow, Nat.cast_one] using
+      Int.natCast_euclideanDiv (q ^ n - 1) (q ^ d - 1) hb
+  simp only [← card_congr (show Zxˣ ≃* _ from unitsCentralizerEquiv _ x).toEquiv,
+    card_units, card_D, card_Zx, hquot]
+  have hprod : ((q : ℤ) ^ d - 1) * Φₙ.eval ↑q ∣ (q : ℤ) ^ n - 1 := by
+    have aux : ∀ {k : ℕ}, ((X : ℤ[X]) ^ k - 1).eval ↑q = (q : ℤ) ^ k - 1 := by
+      simp only [eval_X, eval_one, eval_pow, eval_sub, forall_const]
+    rw [← aux, ← aux, ← eval_mul]
+    refine map_dvd (evalRingHom ↑q) (X_pow_sub_one_mul_cyclotomic_dvd_X_pow_sub_one_of_dvd ℤ ?_)
+    refine Nat.mem_properDivisors.mpr ⟨⟨_, (finrank_mul_finrank Z Zx D).symm⟩, ?_⟩
+    rw [← Nat.pow_lt_pow_iff_right hq, ← card_D, ← card_Zx]
+    obtain ⟨b, -, hb⟩ := SetLike.exists_of_lt hZx.lt_top
+    refine card_lt_of_injective_of_notMem _ Subtype.val_injective (?_ : b ∉ _)
+    rintro ⟨b, rfl⟩
+    exact hb b.2
+  obtain ⟨c, hc⟩ := hprod
+  refine ⟨c, Int.euclideanDiv_eq_of_remainder (r := 0) hden ?_ (by decide) ?_⟩
+  · simpa only [Int.add_zero, Int.mul_assoc] using hc
+  · exact Int.natCast_pos.mpr (Int.natAbs_pos.mpr hden)
 
 end InductionHyp
 

@@ -86,7 +86,7 @@ theorem right_direction {n : ℕ} : ProblemPredicate n → SolutionPredicate n :
   iterate 82
     replace :=
       searchUpTo_step this (by norm_num1; rfl) (by norm_num1; rfl) rfl
-        (by simp +decide [Nat.euclideanDiv_eq_core])
+        (by simp +decide)
   exact searchUpTo_end this
 
 /-
@@ -94,7 +94,7 @@ Now we just need to prove the equivalence, for the precise problem statement.
 -/
 theorem left_direction (n : ℕ) (spn : SolutionPredicate n) : ProblemPredicate n := by
   rcases spn with (rfl | rfl) <;> refine ⟨?_, by decide, ?_⟩ <;>
-    norm_num [Nat.euclideanDiv_eq_core] <;> rfl
+    decide
 
 end Imo1960Q1
 

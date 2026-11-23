@@ -8,6 +8,7 @@ module
 public import Batteries.Data.Fin.Lemmas
 public import Mathlib.Algebra.Module.Pi
 public import Mathlib.Basic.Nontrivial.Basic
+public import Mathlib.Data.Fin.Basic
 public import Mathlib.Tactic.CrossRefAttribute
 public import Mathlib.Tactic.Attr.Core
 
@@ -107,10 +108,13 @@ theorem ofArray_apply {m n : ℕ} (A : Array R) (hA : A.size = m * n) (i : Fin m
 /-- The matrix constructed from the row-major array of `A`'s entries is `A`. -/
 @[simp]
 theorem ofArray_ofFn {m n : ℕ} (A : Matrix (Fin m) (Fin n) R) :
-    ofArray (.ofFn fun k : Fin (m * n) ↦ A k.divNat k.modNat) Array.size_ofFn = A := by
+    ofArray (.ofFn fun k : Fin (m * n) ↦ A k.euclideanDivNat k.modNat) Array.size_ofFn = A := by
   ext i j
-  rw [ofArray_apply, Fin.getElem_fin, Array.getElem_ofFn, Fin.divNat_mkDivMod,
-    Fin.modNat_mkDivMod]
+  rw [ofArray_apply, Fin.getElem_fin, Array.getElem_ofFn, Fin.modNat_mkDivMod]
+  congr 1
+  apply Fin.ext
+  exact Nat.euclideanDiv_eq_of_remainder (r := j.val) ((Nat.zero_le _).trans_lt j.isLt).ne'
+    rfl j.isLt
 
 lemma ofArray_eq_of_getD [Zero R] {m n : ℕ} (A : Array R) (hA : A.size = m * n) :
     ofArray A hA = .of fun i j ↦ A.getD (n * i.val + j.val) 0 := by

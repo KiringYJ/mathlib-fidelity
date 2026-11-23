@@ -49,9 +49,9 @@ theorem sq_add_sq_of_two_mul_sq_add_sq {m x y : ℤ} (h : 2 * m = x ^ 2 + y ^ 2)
     calc
       2 * 2 * m = (x - y) ^ 2 + (x + y) ^ 2 := by rw [mul_assoc, h]; ring
       _ = (2 * (Int.euclideanDiv (x - y) 2)) ^ 2 + (2 * (Int.euclideanDiv (x + y) 2)) ^ 2 := by
-        simp only [Int.euclideanDiv_eq_core]
-        rw [Int.mul_ediv_cancel' _, Int.mul_ediv_cancel' _] <;>
-          simpa [sq, parity_simps, ← even_iff_two_dvd]
+        have recover (n : ℤ) (hn : Even n) : 2 * Int.euclideanDiv n 2 = n :=
+          Int.mul_exactQuotient _ _ hn.two_dvd (by decide)
+        rw [recover, recover] <;> simpa [sq, parity_simps]
       _ = 2 * 2 * ((Int.euclideanDiv (x - y) 2) ^ 2 + (Int.euclideanDiv (x + y) 2) ^ 2) := by
         nlinarith
 
@@ -59,6 +59,12 @@ theorem lt_of_sum_four_squares_eq_mul {a b c d k m : ℕ}
     (h : a ^ 2 + b ^ 2 + c ^ 2 + d ^ 2 = k * m)
     (ha : 2 * a < m) (hb : 2 * b < m) (hc : 2 * c < m) (hd : 2 * d < m) :
     k < m := by nlinarith
+
+private theorem two_mul_euclideanDiv_lt_of_not_dvd {n : ℕ} (hn : ¬2 ∣ n) :
+    2 * Nat.euclideanDiv n 2 < n := by
+  have hrec := Nat.euclideanDiv_mul_add_mod n 2 (by decide)
+  have hrem : n % 2 ≠ 0 := mt Nat.dvd_iff_mod_eq_zero.mpr hn
+  omega
 
 theorem exists_sq_add_sq_add_one_eq_mul (p : ℕ) [hp : Fact p.Prime] :
     ∃ (a b k : ℕ), 0 < k ∧ k < p ∧ a ^ 2 + b ^ 2 + 1 = k * p := by
@@ -75,10 +81,10 @@ theorem exists_sq_add_sq_add_one_eq_mul (p : ℕ) [hp : Fact p.Prime] :
   refine ⟨a, b, k, Nat.cast_pos.1 hk₀, ?_, mod_cast hk⟩
   replace hk : a ^ 2 + b ^ 2 + 1 ^ 2 + 0 ^ 2 = k * p := mod_cast hk
   refine lt_of_sum_four_squares_eq_mul hk ?_ ?_ ?_ ?_
-  · simp only [Nat.euclideanDiv_eq_core] at ha
-    exact (mul_le_mul' le_rfl ha).trans_lt (Nat.mul_div_lt_iff_not_dvd.2 hodd.not_two_dvd_nat)
-  · simp only [Nat.euclideanDiv_eq_core] at hb
-    exact (mul_le_mul' le_rfl hb).trans_lt (Nat.mul_div_lt_iff_not_dvd.2 hodd.not_two_dvd_nat)
+  · exact (Nat.mul_le_mul_left 2 ha).trans_lt
+      (two_mul_euclideanDiv_lt_of_not_dvd hodd.not_two_dvd_nat)
+  · exact (Nat.mul_le_mul_left 2 hb).trans_lt
+      (two_mul_euclideanDiv_lt_of_not_dvd hodd.not_two_dvd_nat)
   · exact lt_of_le_of_ne hp.1.two_le (hodd.ne_two_of_dvd_nat (dvd_refl _)).symm
   · exact hp.1.pos
 
@@ -149,10 +155,8 @@ protected theorem Prime.sum_four_squares {p : ℕ} (hp : p.Prime) :
     obtain ⟨f, hf_lt, hf_mod⟩ :
         ∃ f : ℕ → ℤ, (∀ x, 2 * (f x).natAbs < m) ∧ ∀ x, (f x : ZMod m) = x := by
       refine ⟨fun x ↦ (x : ZMod m).valMinAbs, fun x ↦ ?_, fun x ↦ (x : ZMod m).coe_valMinAbs⟩
-      have hle := (x : ZMod m).natAbs_valMinAbs_le
-      simp only [Nat.euclideanDiv_eq_core] at hle
-      exact (mul_le_mul' le_rfl hle).trans_lt
-        (Nat.mul_div_lt_iff_not_dvd.2 hm)
+      exact (Nat.mul_le_mul_left 2 (x : ZMod m).natAbs_valMinAbs_le).trans_lt
+        (Int.two_mul_euclideanDiv_lt_of_not_dvd hm)
     -- Since `|f x| ^ 2 = (f x) ^ 2 ≡ x ^ 2 [ZMOD m]`, we have
     -- `m ∣ |f a| ^ 2 + |f b| ^ 2 + |f c| ^ 2 + |f d| ^ 2`
     obtain ⟨r, hr⟩ :

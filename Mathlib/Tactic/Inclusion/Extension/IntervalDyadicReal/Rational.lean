@@ -46,20 +46,62 @@ namespace IntervalDyadicReal
 
 open Lean Qq
 
+/-- The rational value of an integer placed on a dyadic grid. -/
+private theorem toRat_ofIntWithPrec_eq_fraction (i p : ℤ) :
+    (Dyadic.ofIntWithPrec i p).toRat =
+      Rat.fraction (i <<< (-p).toNat) (1 <<< p.toNat) (NeZero.ne _) := by
+  have hodd (i p : ℤ) (hi : i % 2 = 1) : (Dyadic.ofOdd i p hi).toRat =
+      Rat.fraction (i <<< (-p).toNat) (1 <<< p.toNat) (NeZero.ne _) := by
+    cases p
+    · simp [Dyadic.toRat, Rat.fraction, Rat.mk_eq_normalize, Int.shiftLeft_eq, Nat.shiftLeft_eq]
+    · simp [Dyadic.toRat, Rat.fraction, Rat.normalize_eq, Int.neg_negSucc, Int.shiftLeft_eq]
+  simp only [Dyadic.ofIntWithPrec]
+  split
+  · simp_all [Rat.fraction]
+  rw [hodd, Rat.fraction, Rat.fraction, Rat.normalize_eq_iff]
+  simp only [Int.natCast_shiftLeft, Int.cast_ofNat_Int, Int.shiftLeft_mul_shiftLeft, Int.mul_one]
+  have : (-(p - i.trailingZeros) : ℤ).toNat + p.toNat =
+      i.trailingZeros + ((-p).toNat + (p - i.trailingZeros).toNat) := by omega
+  rw [this, Int.shiftLeft_add, Int.shiftRight_shiftLeft_cancel]
+  exact Int.two_pow_trailingZeros_dvd ‹_›
+
 /-- Enclose a rational number in a dyadic interval with precision `prec`. -/
 def rat (x : ℚ) (prec : ℕ) : Interval Dyadic :=
-  let lower := x.toDyadic prec
+  let quotient := (x.num <<< prec).euclideanDiv x.den (Int.natCast_ne_zero.mpr x.den_nz)
+  let lower := Dyadic.ofIntWithPrec quotient prec
   let upper := if lower.toRat = x then lower else lower + Dyadic.step prec
   Interval.Icc lower upper
 
 @[inclusion_op interval_dyadic_real]
 theorem ratCast_mem (q : ℚ) (prec : ℕ) : (q : ℝ) ∈ rat q prec := by
+  let k := (q.num <<< prec).euclideanDiv q.den (Int.natCast_ne_zero.mpr q.den_nz)
+  let B := (2 : ℕ) ^ prec
+  have hB : (0 : ℚ) < B := by positivity
+  have hd : (0 : ℤ) < q.den := Int.natCast_pos.mpr (Nat.pos_of_ne_zero q.den_nz)
+  have hdQ : (0 : ℚ) < q.den := by exact_mod_cast hd
+  have hgrid (i : ℤ) : (Dyadic.ofIntWithPrec i prec).toRat = (i : ℚ) / (B : ℚ) := by
+    simp only [toRat_ofIntWithPrec_eq_fraction, Int.toNat_neg_natCast, Int.toNat_natCast,
+      Int.shiftLeft_zero, Nat.shiftLeft_eq, Nat.one_mul, Rat.fraction_eq_div, B]
+  have hscaled : q * (B : ℚ) = ((q.num <<< prec : ℤ) : ℚ) / (q.den : ℚ) := by
+    rw [Int.shiftLeft_eq, Int.cast_mul, Int.cast_pow, Int.cast_ofNat, ← div_mul_eq_mul_div₀,
+      Rat.num_div_den]
+    simp [B]
+  let lower := Dyadic.ofIntWithPrec k prec
+  let upper := if lower.toRat = q then lower else lower + Dyadic.step prec
+  change (q : ℝ) ∈ (Interval.Icc lower upper : Interval Dyadic)
   apply Interval.mem_map_Icc Dyadic.toReal
-  · exact Rat.cast_le.mpr Rat.toRat_toDyadic_le
-  · split_ifs with h
+  · apply Rat.cast_le.mpr
+    dsimp only [lower]
+    rw [hgrid, div_le_iff₀ hB, hscaled, le_div_iff₀ hdQ, mul_comm]
+    exact_mod_cast (Int.le_euclideanDiv_iff_mul_le hd).1 (le_refl k)
+  · dsimp only [upper]
+    split_ifs with h
     · rw [Dyadic.toReal, h]
-    · rw [← Dyadic.ofIntWithPrec_one]
-      exact Rat.cast_lt.mpr Rat.lt_toRat_toDyadic_add |>.le
+    · apply (Rat.cast_lt.mpr ?_).le
+      dsimp only [lower]
+      rw [← Dyadic.ofIntWithPrec_one, Dyadic.toRat_add, hgrid, hgrid, ← add_div,
+        lt_div_iff₀ hB, hscaled, div_lt_iff₀ hdQ, mul_comm]
+      exact_mod_cast (Int.euclideanDiv_lt_iff_lt_mul hd).1 (show k < k + 1 by omega)
 
 private theorem ratCast_mem_of_isRat {q : ℚ} {n : ℤ} {d : ℕ}
     (h : Mathlib.Meta.NormNum.IsRat q n d) (hd : d ≠ 0) (prec : ℕ) :
@@ -107,37 +149,34 @@ theorem natDiv_eq_rat (m : ℕ) {d : ℕ} (prec : ℕ) (hd : 0 < d) :
   have hden' : (q.den : ℤ) ≠ 0 := by exact_mod_cast q.den_nz
   have hquotient : Int.euclideanDiv ((m : ℤ) <<< prec) (d : ℤ) hd' =
       Int.euclideanDiv (q.num <<< prec) (q.den : ℤ) hden' := by
-    simp only [Int.euclideanDiv_eq_core]
-    rw [hm, hden, Int.natCast_mul, Int.mul_comm (q.den : ℤ),
-      ← Int.ediv_ediv_of_nonneg (by simp), ← Int.shiftLeft_mul,
-      Int.mul_ediv_cancel _ (by exact_mod_cast hc)]
+    let a := q.num <<< prec
+    let b : ℤ := q.den
+    let k := a.euclideanDiv b hden'
+    have hb : 0 < b := Int.natCast_pos.mpr (Nat.pos_of_ne_zero q.den_nz)
+    have hc' : (0 : ℤ) < c := Int.natCast_pos.mpr (Nat.pos_of_ne_zero hc)
+    have hrec := Int.euclideanDiv_mul_add_mod a b hden'
+    have hsmall := Int.emod_lt_of_pos a hb
+    have hdabs : ((d : ℤ).natAbs : ℤ) = b * c := by simp [b, hden]
+    change _ = k
+    refine Int.euclideanDiv_eq_of_remainder (r := (a % b) * c) hd' ?_
+      (mul_nonneg (Int.emod_nonneg _ hden') hc'.le) ?_
+    · calc
+        (m : ℤ) <<< prec = a * c := by rw [hm, Int.shiftLeft_mul]
+        _ = (b * k + a % b) * c := congrArg (· * (c : ℤ)) hrec.symm
+        _ = (b * c) * k + (a % b) * c := by ring
+        _ = (d : ℤ) * k + (a % b) * c := by rw [hden, Nat.cast_mul]
+    · rw [hdabs]
+      exact mul_lt_mul_of_pos_right hsmall hc'
   let k := (m <<< prec).euclideanDiv d hd.ne'
   let lower := Dyadic.ofIntWithPrec (k : ℤ) (prec : ℤ)
-  have hlower : q.toDyadic (prec : ℤ) = lower := by
-    change Dyadic.ofIntWithPrec _ (prec : ℤ) = lower
-    simp only [Int.euclideanDiv_eq_core] at hquotient
+  have hlower : Dyadic.ofIntWithPrec (Int.euclideanDiv (q.num <<< prec) (q.den : ℤ) hden')
+      (prec : ℤ) = lower := by
     rw [← hquotient]
-    simp only [lower, k, Nat.euclideanDiv_eq_core, Int.natCast_ediv, Int.natCast_shiftLeft]
-  have hodd (i p : ℤ) (hi : i % 2 = 1) : (Dyadic.ofOdd i p hi).toRat =
-      Rat.fraction (i <<< (-p).toNat) (1 <<< p.toNat) (NeZero.ne _) := by
-    cases p
-    · simp [Dyadic.toRat, Rat.fraction, Rat.mk_eq_normalize, Int.shiftLeft_eq, Nat.shiftLeft_eq]
-    · simp [Dyadic.toRat, Rat.fraction, Rat.normalize_eq, Int.neg_negSucc, Int.shiftLeft_eq]
-  have hdyadic (i p : ℤ) : (Dyadic.ofIntWithPrec i p).toRat =
-      Rat.fraction (i <<< (-p).toNat) (1 <<< p.toNat) (NeZero.ne _) := by
-    simp only [Dyadic.ofIntWithPrec]
-    split
-    · simp_all [Rat.fraction]
-    rw [hodd, Rat.fraction, Rat.fraction, Rat.normalize_eq_iff]
-    simp only [Int.natCast_shiftLeft, Int.cast_ofNat_Int, Int.shiftLeft_mul_shiftLeft, Int.mul_one]
-    have : (-(p - i.trailingZeros) : ℤ).toNat + p.toNat =
-        i.trailingZeros + ((-p).toNat + (p - i.trailingZeros).toNat) := by omega
-    rw [this, Int.shiftLeft_add, Int.shiftRight_shiftLeft_cancel]
-    exact Int.two_pow_trailingZeros_dvd ‹_›
+    simp only [lower, k, Int.natCast_euclideanDiv, Int.natCast_shiftLeft]
   have hexact : lower.toRat = q ↔ k * d = m <<< prec := by
     dsimp only [lower, q]
-    rw [hdyadic, Int.toNat_neg_natCast, Int.toNat_natCast, Int.shiftLeft_zero,
-      Rat.fraction, Rat.fraction, Rat.normalize_eq_iff]
+    rw [toRat_ofIntWithPrec_eq_fraction, Int.toNat_neg_natCast, Int.toNat_natCast,
+      Int.shiftLeft_zero, Rat.fraction, Rat.fraction, Rat.normalize_eq_iff]
     norm_cast
     simp only [Nat.shiftLeft_eq, Nat.one_mul]
   simp only [hq, natDiv, rat, hlower, hexact, lower, k]

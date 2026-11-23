@@ -258,18 +258,19 @@ lemma schnirelmannDensity_setOfPred_mod_eq_one {m : ℕ} {hmUnit : IsUnit (m : �
       {x ∈ Ioc 0 n | x % m = 1} := by
     simp only [subset_iff, mem_image, forall_exists_index, mem_filter, mem_Ioc, mem_Icc, and_imp]
     rintro _ y _ hy' rfl
-    rw [Nat.euclideanDiv_eq_core] at hy'
     have hm : 2 ≤ m := hm.lt_of_le' hm'
     simp only [Nat.mul_add_mod', Nat.mod_eq_of_lt hm, add_pos_iff, or_true, and_true, true_and,
       ← Nat.le_sub_iff_add_le hn, zero_lt_one]
-    exact Nat.mul_le_of_le_div _ _ _ hy'
+    simpa only [Nat.mul_comm] using (Nat.le_euclideanDiv_iff_mul_le hm'.ne').1 hy'
   rw [le_div_iff₀ (Nat.cast_pos.2 hn), mul_comm, ← div_eq_mul_inv₀]
   apply (Nat.cast_le.2 (card_le_card this)).trans'
   rw [card_image_of_injective, Nat.card_Icc, Nat.sub_zero, div_le_iff₀ (Nat.cast_pos.2 hm'),
     ← Nat.cast_mul, Nat.cast_le, add_one_mul (α := ℕ)]
-  · rw [Nat.euclideanDiv_eq_core]
-    have := @Nat.lt_div_mul_add n.pred m hm'
-    rwa [← Nat.succ_le_iff, Nat.succ_pred hn.ne'] at this
+  · have h := (Nat.euclideanDiv_lt_iff_lt_mul hm'.ne').mp
+        (Nat.lt_succ_self (Nat.euclideanDiv (n - 1) m hm'.ne'))
+    rw [Nat.mul_comm, Nat.succ_mul, ← Nat.succ_le_iff, Nat.sub_one,
+      Nat.succ_pred hn.ne'] at h
+    exact h
   intro a b
   simp [hm'.ne']
 

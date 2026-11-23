@@ -83,18 +83,19 @@ lemma mod_two_of_bodd (n : ℕ) : n % 2 = (bodd n).toNat := by
   cases n using bitCasesOn with
   | bit b n => cases b <;> simp
 
-@[simp] lemma div2_zero : div2 0 = 0 := by simp [div2_val, Nat.euclideanDiv_eq_core]
+@[simp] lemma div2_zero : div2 0 = 0 := by simp [div2_val]
 
-lemma div2_one : div2 1 = 0 := by simp [div2_val, Nat.euclideanDiv_eq_core]
+lemma div2_one : div2 1 = 0 := Nat.euclideanDiv_eq_zero_of_lt (by decide) (by decide)
 
-lemma div2_two : div2 2 = 1 := by simp [div2_val, Nat.euclideanDiv_eq_core]
+lemma div2_two : div2 2 = 1 := Nat.euclideanDiv_self 2 (by decide)
 
 @[simp]
 lemma div2_succ (n : ℕ) : div2 (n + 1) = cond (bodd n) (succ (div2 n)) (div2 n) := by
-  cases n using bitCasesOn with
-  | bit b n => cases b <;>
-    simp [bit_val, div2_val, Nat.euclideanDiv_eq_core, Nat.succ_div, Nat.add_assoc,
-      Nat.dvd_add_right (Nat.dvd_mul_right _ _)]
+  have h : 2 ∣ n + 1 ↔ bodd n = true := by
+    rw [Nat.dvd_iff_mod_eq_zero, Nat.add_mod n 1 2, mod_two_of_bodd n]
+    cases bodd n <;> decide
+  rw [div2_val, Nat.euclideanDiv_succ, ← div2_val]
+  cases hn : bodd n <;> simp [h, hn, Nat.succ_eq_add_one]
 
 @[simp, grind =]
 lemma div2_bit (b n) : div2 (bit b n) = n := by
@@ -131,8 +132,7 @@ lemma shiftLeft'_false : ∀ n, shiftLeft' false m n = m <<< n
 @[simp] lemma shiftRight_eq (m n : Nat) : shiftRight m n = m >>> n := rfl
 
 lemma binaryRec_decreasing (h : n ≠ 0) : div2 n < n := by
-  rw [div2_val, Nat.euclideanDiv_eq_core]
-  exact Nat.div_lt_self (Nat.pos_of_ne_zero h) (by decide)
+  exact Nat.euclideanDiv_lt_self (Nat.pos_of_ne_zero h) (by decide)
 
 /-- `size n` : Returns the size of a natural number in
 bits i.e. the length of its binary representation -/

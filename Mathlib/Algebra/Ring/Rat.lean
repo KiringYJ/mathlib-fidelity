@@ -65,8 +65,8 @@ instance semiring : Semiring ℚ := by infer_instance
   simp only [Rat.mul_def, Rat.num_natCast, Rat.den_natCast, Nat.mul_one]
   have h := Rat.normalize_mul_right (n := q.num) (d := 1) (a := q.den)
     (by decide) q.den_nz
-  simpa only [Nat.one_mul, Rat.normalize_eq, Nat.gcd_one_right, Int.natCast_one, Int.ediv_one,
-    Nat.div_one, Rat.mk_den_one] using h
+  simpa only [Nat.one_mul, Rat.normalize_eq_mk' q.num 1 (by decide) (Nat.gcd_one_right _),
+    Rat.mk_den_one] using h
 
 @[simp] lemma den_mul_eq_num (q : ℚ) : q.den * q = q.num := by rw [mul_comm, mul_den_eq_num]
 

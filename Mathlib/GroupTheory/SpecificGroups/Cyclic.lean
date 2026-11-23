@@ -623,7 +623,7 @@ theorem IsCyclic.infinite_of_ne_bot [Group G] [hG : IsCyclic G] {H : Subgroup G}
   obtain ⟨i, rfl⟩ := Subgroup.exists_zpowers_eq_of_zpowers_eq_top hg H
   have hi : i ≠ 0 := fun hi ↦ by simp [hi] at h
   refine infinite_zpowers.mpr ?_
-  rw [← orderOf_eq_zero_iff, orderOf_zpow' _ hi, Nat.euclideanDiv_eq_core, hg₀, Nat.zero_div]
+  simp only [← orderOf_eq_zero_iff, orderOf_zpow' _ hi, hg₀, Nat.euclideanDiv_zero]
 
 @[to_additive]
 instance [Group G] [IsCyclic G] {H : Subgroup G} [h : Nontrivial H] : Infinite H :=
@@ -733,7 +733,7 @@ theorem IsCyclic.card_powMonoidHom_range [CommGroup G] [hG : IsCyclic G] [Finite
         (Nat.gcd_pos_of_pos_left d Nat.card_pos).ne' := by
   obtain ⟨g, h⟩ := isCyclic_iff_exists_zpowers_eq_top.mp hG
   rw [MonoidHom.range_eq_map, ← h, MonoidHom.map_zpowers, Nat.card_zpowers, powMonoidHom_apply]
-  simpa only [Nat.euclideanDiv_eq_core, orderOf_eq_card_of_zpowers_eq_top h] using
+  simpa only [orderOf_eq_card_of_zpowers_eq_top h] using
     orderOf_pow (n := d) g
 
 @[to_additive]
@@ -747,9 +747,8 @@ theorem IsCyclic.index_powMonoidHom_ker [CommGroup G] [IsCyclic G] [Finite G] (d
 theorem IsCyclic.card_powMonoidHom_ker [CommGroup G] [IsCyclic G] [Finite G] (d : ℕ) :
     Nat.card (powMonoidHom d : G →* G).ker = (Nat.card G).gcd d := by
   have h : (powMonoidHom d : G →* G).ker.index ≠ 0 := Subgroup.index_ne_zero_of_finite
-  rw [← mul_left_inj' h, Subgroup.card_mul_index, index_powMonoidHom_ker, Nat.euclideanDiv_eq_core,
-    Nat.mul_div_cancel']
-  exact Nat.gcd_dvd_left (Nat.card G) d
+  rw [← mul_left_inj' h, Subgroup.card_mul_index, index_powMonoidHom_ker]
+  exact (Nat.mul_euclideanDiv_cancel _ (Nat.gcd_dvd_left (Nat.card G) d)).symm
 
 @[to_additive]
 theorem IsCyclic.index_powMonoidHom_range [CommGroup G] [IsCyclic G] [Finite G] (d : ℕ) :
@@ -983,8 +982,21 @@ theorem IsCyclic.subgroup_le_iff_card_dvd [h : Finite H] :
   · have : Finite G := by
       contrapose! h
       infer_instance
-    rw [subgroup_le_iff_index_dvd, H.index_eq_card_div, K.index_eq_card_div,
-      Nat.div_dvd_div_iff_left Nat.card_pos K.card_subgroup_dvd_card H.card_subgroup_dvd_card]
+    rw [subgroup_le_iff_index_dvd]
+    constructor
+    · rintro ⟨c, hc⟩
+      refine ⟨c, Nat.eq_of_mul_eq_mul_right
+        (Nat.pos_of_ne_zero (Subgroup.index_ne_zero_of_finite : K.index ≠ 0)) ?_⟩
+      calc
+        Nat.card K * K.index = Nat.card G := K.card_mul_index
+        _ = Nat.card H * H.index := H.card_mul_index.symm
+        _ = (Nat.card H * c) * K.index := by rw [hc]; ac_rfl
+    · rintro ⟨c, hc⟩
+      refine ⟨c, Nat.eq_of_mul_eq_mul_left (Nat.card_pos (α := H)) ?_⟩
+      calc
+        Nat.card H * H.index = Nat.card G := H.card_mul_index
+        _ = Nat.card K * K.index := K.card_mul_index.symm
+        _ = Nat.card H * (K.index * c) := by rw [hc]; ac_rfl
 
 /-- In a cyclic group, if `H` and `K` are finite then `H = K` iff `Nat.card H = Nat.card K`. -/
 @[to_additive

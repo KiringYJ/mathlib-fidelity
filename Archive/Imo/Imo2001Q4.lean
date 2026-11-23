@@ -68,9 +68,11 @@ lemma sum_range_modEq_sum_of_contra (hS : ¬∃ a b, a ≠ b ∧ (n ! : ℤ) ∣
     constructor <;> intro h
     · lift i to ℕ using h.1; rw [Nat.cast_lt] at h; simp [h.2]
     · obtain ⟨z, lz, rfl⟩ := h; simp [lz]
-  rw [Ico_eq, sum_map, Function.Embedding.coeFn_mk, ← Nat.cast_sum, sum_range_id]
-  simp only [Int.exactQuotient, Int.euclideanDiv_eq_core, Nat.euclideanDiv_eq_core,
-    Int.natCast_ediv, Nat.cast_mul, Nat.cast_ofNat, Nat.cast_pred (Nat.factorial_pos n)]
+  rw [Ico_eq, sum_map, Function.Embedding.coeFn_mk, ← Nat.cast_sum]
+  apply (Int.exactQuotient_eq_iff _ (by decide)).2
+  have hsum := congrArg (Nat.cast : ℕ → ℤ) (sum_range_id_mul_two (n !))
+  simpa only [Nat.cast_mul, Nat.cast_ofNat, Nat.cast_pred (Nat.factorial_pos n), mul_comm]
+    using hsum
 
 /-- The sum over all permutations of `Icc 1 n` of the entry at any fixed position is
 `(n - 1)! * (n * (n + 1) / 2)`. -/
@@ -94,8 +96,10 @@ lemma sum_modEq_zero_of_odd (hn : Odd n) : ∑ a, S c a ≡ 0 [ZMOD n !] := by
   have eqv : ∀ i, c i * ↑(∑ a : Perm (Fin n), ((a i).1 + 1)) =
       c i * ((n - 1)! * Nat.euclideanDiv (n * (n + 1)) 2 : ℕ) := fun i ↦ by
     rw [sum_perm_add_one hn.pos]
-  rw [sum_congr rfl fun i _ ↦ eqv i, ← sum_mul, Nat.euclideanDiv_eq_core,
-    Nat.mul_div_assoc _ (hn.add_odd odd_one).two_dvd, ← mul_assoc, mul_comm _ n,
+  obtain ⟨k, hk⟩ := (hn.add_odd odd_one).two_dvd
+  have hquotient : Nat.euclideanDiv (n * (n + 1)) 2 = n * k := by
+    rw [hk, mul_left_comm n, Nat.euclideanDiv_mul_left_cancel]
+  rw [sum_congr rfl fun i _ ↦ eqv i, ← sum_mul, hquotient, ← mul_assoc, mul_comm _ n,
     Nat.mul_factorial_pred hn.pos.ne', Nat.cast_mul, ← mul_assoc, ← mul_rotate]
   exact (Int.dvd_mul_left ..).modEq_zero_int
 

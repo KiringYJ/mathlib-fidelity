@@ -359,9 +359,7 @@ theorem ext_num_den_iff : p = q ↔ p.num = q.num ∧ p.den = q.den :=
 
 /-- A nonnegative rational fraction with a nonzero denominator. -/
 def divNat (n d : ℕ) (hd : d ≠ 0) : ℚ≥0 :=
-  ⟨Rat.fraction n d hd, Rat.num_nonneg.mp (by
-    rw [Rat.fraction, Rat.num_normalize]
-    exact Int.ediv_nonneg (Int.natCast_nonneg n) (Int.natCast_nonneg _))⟩
+  ⟨Rat.fraction n d hd, Rat.fraction_nonneg (Int.natCast_nonneg n) d hd⟩
 
 variable {n₁ n₂ d₁ d₂ : ℕ}
 

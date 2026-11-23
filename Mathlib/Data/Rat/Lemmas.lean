@@ -36,15 +36,42 @@ theorem num_den_mk {q : ℚ} {n : ℤ} {d : ℕ} (hd : d ≠ 0)
   obtain ⟨c, _, hn, he⟩ := normalize_num_den' n d hd
   exact ⟨c, qdf ▸ hn, qdf ▸ he⟩
 
+private theorem fraction_eq_mul_gcd (n : ℤ) (d : ℕ) (hd : d ≠ 0) :
+    n = (fraction n d hd).num * (n.natAbs.gcd d : ℕ) ∧
+      d = (fraction n d hd).den * n.natAbs.gcd d := by
+  let q := fraction n d hd
+  obtain ⟨c, _, hn, he⟩ := normalize_num_den' n d hd
+  change n = q.num * (c : ℤ) at hn
+  change d = q.den * c at he
+  have hnum : n.natAbs = q.num.natAbs * c := by
+    simpa only [Int.natAbs_mul, Int.natAbs_natCast] using congrArg Int.natAbs hn
+  have hg : n.natAbs.gcd d = c := by
+    rw [hnum, he, Nat.gcd_mul_right, q.reduced.gcd_eq_one, Nat.one_mul]
+  rw [hg]
+  exact ⟨hn, he⟩
+
 theorem add_den_dvd_lcm (q₁ q₂ : ℚ) : (q₁ + q₂).den ∣ q₁.den.lcm q₂.den := by
-  rw [add_def, normalize_eq, Nat.div_dvd_iff_dvd_mul (Nat.gcd_dvd_right _ _)
-    (Nat.gcd_pos_of_pos_right _ (by simp [Nat.pos_iff_ne_zero])), ← Nat.gcd_mul_lcm,
-    mul_dvd_mul_iff_right (Nat.lcm_ne_zero (by simp) (by simp)), Nat.dvd_gcd_iff]
-  refine ⟨?_, dvd_mul_right _ _⟩
-  rw [← Int.natCast_dvd_natCast, Int.dvd_natAbs]
-  apply Int.dvd_add
-    <;> apply dvd_mul_of_dvd_right <;> rw [Int.natCast_dvd_natCast]
-    <;> [exact Nat.gcd_dvd_right _ _; exact Nat.gcd_dvd_left _ _]
+  rw [add_def]
+  let n : ℤ := q₁.num * q₂.den + q₂.num * q₁.den
+  let d := q₁.den * q₂.den
+  let hd : d ≠ 0 := Nat.mul_ne_zero q₁.den_nz q₂.den_nz
+  let g := q₁.den.gcd q₂.den
+  let k := n.natAbs.gcd d
+  change (fraction n d hd).den ∣ q₁.den.lcm q₂.den
+  have hg : g ∣ k := by
+    apply Nat.dvd_gcd
+    · rw [← Int.natCast_dvd_natCast, Int.dvd_natAbs]
+      exact Int.dvd_add
+        (dvd_mul_of_dvd_right (Int.natCast_dvd_natCast.2 (Nat.gcd_dvd_right ..)) _)
+        (dvd_mul_of_dvd_right (Int.natCast_dvd_natCast.2 (Nat.gcd_dvd_left ..)) _)
+    · exact (Nat.gcd_dvd_left ..).trans (dvd_mul_right _ _)
+  obtain ⟨c, hc⟩ := hg
+  refine ⟨c, Nat.eq_of_mul_eq_mul_left (Nat.gcd_pos_of_pos_left q₂.den q₁.pos) ?_⟩
+  calc
+    g * q₁.den.lcm q₂.den = d := Nat.gcd_mul_lcm _ _
+    _ = (fraction n d hd).den * k := (fraction_eq_mul_gcd n d hd).2
+    _ = g * ((fraction n d hd).den * c) := by rw [hc, ← Nat.mul_assoc, Nat.mul_comm _ g,
+      Nat.mul_assoc]
 
 theorem sub_den_dvd_lcm (q₁ q₂ : ℚ) : (q₁ - q₂).den ∣ q₁.den.lcm q₂.den := by
   simpa only [sub_eq_add_neg, neg_den] using add_den_dvd_lcm q₁ (-q₂)
@@ -56,22 +83,33 @@ theorem sub_den_dvd (q₁ q₂ : ℚ) : (q₁ - q₂).den ∣ q₁.den * q₂.de
   (sub_den_dvd_lcm _ _).trans (Nat.lcm_dvd_mul _ _)
 
 theorem mul_den_dvd (q₁ q₂ : ℚ) : (q₁ * q₂).den ∣ q₁.den * q₂.den := by
-  rw [mul_def, normalize_eq]
-  apply Nat.div_dvd_of_dvd
-  apply Nat.gcd_dvd_right
+  rw [mul_def]
+  exact den_dvd ..
+
+private theorem euclideanDiv_mul_of_dvd {a b : ℕ} (h : b ∣ a) (hb : b ≠ 0) :
+    Nat.euclideanDiv a b hb * b = a := by
+  obtain ⟨k, rfl⟩ := h
+  rw [Nat.euclideanDiv_mul_left_cancel k hb, Nat.mul_comm]
 
 theorem mul_num (q₁ q₂ : ℚ) :
     (q₁ * q₂).num = Int.exactQuotient (q₁.num * q₂.num)
       ((q₁.num * q₂.num).natAbs.gcd (q₁.den * q₂.den))
       (Int.ofNat_dvd_left.mpr (Nat.gcd_dvd_left ..))
       (Int.ofNat_ne_zero.mpr (Nat.gcd_pos_of_pos_right _ (Nat.mul_pos q₁.pos q₂.pos)).ne') := by
-  rw [Int.exactQuotient, Int.euclideanDiv_eq_core, mul_def, normalize_eq]
+  symm
+  apply (Int.exactQuotient_eq_iff _ _).2
+  rw [mul_def, Int.mul_comm]
+  exact (fraction_eq_mul_gcd ..).1.symm
 
 theorem mul_den (q₁ q₂ : ℚ) :
     (q₁ * q₂).den = Nat.euclideanDiv (q₁.den * q₂.den)
       ((q₁.num * q₂.num).natAbs.gcd (q₁.den * q₂.den))
       (Nat.gcd_pos_of_pos_right _ (Nat.mul_pos q₁.pos q₂.pos)).ne' := by
-  rw [Nat.euclideanDiv_eq_core, mul_def, normalize_eq]
+  symm
+  apply Nat.euclideanDiv_eq_of_remainder (r := 0) _
+  · rw [mul_def, Nat.add_zero]
+    exact (fraction_eq_mul_gcd ..).2.trans (Nat.mul_comm ..)
+  · exact Nat.gcd_pos_of_pos_right _ (Nat.mul_pos q₁.pos q₂.pos)
 
 @[simp]
 theorem add_intCast_den (q : ℚ) (n : ℤ) : (q + n).den = q.den := by
@@ -111,8 +149,8 @@ theorem natCast_sub_den (n : ℕ) (q : ℚ) : (n - q).den = q.den := mod_cast in
 /-- A version of `Rat.mul_den` without division. -/
 theorem den_mul_den_eq_den_mul_gcd (q₁ q₂ : ℚ) :
     q₁.den * q₂.den = (q₁ * q₂).den * ((q₁.num * q₂.num).natAbs.gcd (q₁.den * q₂.den)) := by
-  rw [mul_den, Nat.euclideanDiv_eq_core]
-  exact ((Nat.dvd_iff_div_mul_eq _ _).mp (Nat.gcd_dvd_right _ _)).symm
+  rw [mul_den]
+  exact (euclideanDiv_mul_of_dvd (Nat.gcd_dvd_right ..) _).symm
 
 /-- A version of `Rat.mul_num` without division. -/
 theorem num_mul_num_eq_num_mul_gcd (q₁ q₂ : ℚ) :
@@ -122,13 +160,14 @@ theorem num_mul_num_eq_num_mul_gcd (q₁ q₂ : ℚ) :
   rw [Int.mul_exactQuotient]
 
 theorem mul_self_num (q : ℚ) : (q * q).num = q.num * q.num := by
-  rw [mul_num, Int.exactQuotient, Int.euclideanDiv_eq_core, Int.natAbs_mul,
-    Nat.Coprime.gcd_eq_one, Int.ofNat_one, Int.ediv_one]
-  exact (q.reduced.mul_right q.reduced).mul_left (q.reduced.mul_right q.reduced)
+  have hg := ((q.reduced.mul_right q.reduced).mul_left (q.reduced.mul_right q.reduced)).gcd_eq_one
+  simpa only [Int.natAbs_mul, hg, Int.ofNat_one, Int.mul_one] using
+    (num_mul_num_eq_num_mul_gcd q q).symm
 
 theorem mul_self_den (q : ℚ) : (q * q).den = q.den * q.den := by
-  rw [Rat.mul_den, Nat.euclideanDiv_eq_core, Int.natAbs_mul, Nat.Coprime.gcd_eq_one, Nat.div_one]
-  exact (q.reduced.mul_right q.reduced).mul_left (q.reduced.mul_right q.reduced)
+  have hg := ((q.reduced.mul_right q.reduced).mul_left (q.reduced.mul_right q.reduced)).gcd_eq_one
+  simpa only [Int.natAbs_mul, hg, Nat.mul_one] using
+    (den_mul_den_eq_den_mul_gcd q q).symm
 
 theorem add_num_den (q r : ℚ) : q + r =
     fraction (q.num * r.den + r.num * q.den) (q.den * r.den)
@@ -252,15 +291,16 @@ theorem div_int_inj {a b c d : ℤ} (hb0 : 0 < b) (hd0 : 0 < d) (h1 : Nat.Coprim
 theorem intCast_div_self (n : ℤ) {hn : IsUnit (n : ℚ)} :
     (Int.exactQuotient n n (dvd_refl n) (intCast_eq_zero_iff.not.mp hn.ne_zero) : ℚ) =
       (n : ℚ) / (n : ℚ) := by
-  rw [Int.exactQuotient, Int.euclideanDiv_eq_core,
-    Int.ediv_self (intCast_eq_zero_iff.not.mp hn.ne_zero), Int.cast_one, div_self]
+  apply (eq_div_iff (hb := hn)).2
+  rw [← Int.cast_mul, Int.mul_comm, Int.mul_exactQuotient]
 
 @[norm_cast]
 theorem natCast_div_self (n : ℕ) {hn : IsUnit (n : ℚ)} :
     (Nat.euclideanDiv n n (Nat.cast_ne_zero.mp hn.ne_zero) : ℚ) =
       (n : ℚ) / (n : ℚ) := by
-  rw [Nat.euclideanDiv_eq_core, Nat.div_self (Nat.pos_of_ne_zero (Nat.cast_ne_zero.mp hn.ne_zero)),
-    Nat.cast_one, div_self]
+  apply (eq_div_iff (hb := hn)).2
+  rw [← Nat.cast_mul]
+  exact congrArg (fun k : ℕ => (k : ℚ)) (euclideanDiv_mul_of_dvd (dvd_refl n) _)
 
 theorem intCast_div (a b : ℤ) {hb : IsUnit (b : ℚ)} (h : b ∣ a) :
     (Int.exactQuotient a b h (intCast_eq_zero_iff.not.mp hb.ne_zero) : ℚ) = (a : ℚ) / (b : ℚ) := by
@@ -270,7 +310,8 @@ theorem intCast_div (a b : ℤ) {hb : IsUnit (b : ℚ)} (h : b ∣ a) :
 theorem natCast_div (a b : ℕ) {hb : IsUnit (b : ℚ)} (h : b ∣ a) :
     (Nat.euclideanDiv a b (Nat.cast_ne_zero.mp hb.ne_zero) : ℚ) = (a : ℚ) / (b : ℚ) := by
   apply (eq_div_iff (hb := hb)).2
-  rw [← Nat.cast_mul, Nat.euclideanDiv_eq_core, Nat.div_mul_cancel h]
+  rw [← Nat.cast_mul]
+  exact congrArg (fun k : ℕ => (k : ℚ)) (euclideanDiv_mul_of_dvd h _)
 
 theorem den_div_intCast_eq_one_iff (m n : ℤ) {hn : IsUnit (n : ℚ)} :
     ((m : ℚ) / (n : ℚ)).den = 1 ↔ n ∣ m := by

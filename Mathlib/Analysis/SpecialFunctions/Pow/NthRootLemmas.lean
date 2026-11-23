@@ -33,7 +33,7 @@ theorem nthRoot_zero_right (h : n ≠ 0) : nthRoot n 0 = 0 := by
 
 @[simp]
 theorem nthRoot_one_right : nthRoot n 1 = 1 := by
-  rcases n with _ | _ | _ <;> simp [nthRoot, nthRoot.go, Nat.euclideanDiv_eq_core, Nat.add_comm 1]
+  rcases n with _ | _ | _ <;> simp [nthRoot, nthRoot.go, Nat.add_comm 1]
 
 private theorem nthRoot.pow_go_le (hle : guess ≤ fuel) (n a : ℕ) :
     go n a fuel guess ^ (n + 2) ≤ a := by
@@ -50,11 +50,9 @@ private theorem nthRoot.pow_go_le (hle : guess ≤ fuel) (n a : ℕ) :
       · exact ih (Nat.le_of_lt_succ (Nat.lt_of_lt_of_le h hle))
       · have hq : g + 1 ≤
             Nat.euclideanDiv a ((g + 1) ^ (n + 1)) (pow_ne_zero _ (Nat.succ_ne_zero _)) := by
-          simp only [Nat.euclideanDiv_eq_core] at h ⊢
-          nlinarith only [Nat.mul_le_of_le_div _ _ _ (not_lt.1 h)]
-        rw [Nat.euclideanDiv_eq_core] at hq
-        rw [Nat.pow_succ, Nat.mul_comm]
-        exact Nat.mul_le_of_le_div _ _ _ hq
+          nlinarith only [(Nat.le_euclideanDiv_iff_mul_le (Nat.succ_ne_zero _)).1 (not_lt.1 h)]
+        rw [Nat.pow_succ]
+        exact (Nat.le_euclideanDiv_iff_mul_le (pow_ne_zero _ (Nat.succ_ne_zero _))).1 hq
 
 /-- `nthRoot n a ^ n ≤ a` unless both `n` and `a` are zeros. -/
 @[simp]
@@ -66,10 +64,9 @@ alias ⟨_, pow_nthRoot_le⟩ := pow_nthRoot_le_iff
 private theorem nthRoot.lt_pow_go_succ_aux0 (hb : b ≠ 0) :
     a ≤ Nat.euclideanDiv (Nat.euclideanDiv (a ^ (n + 1)) (b ^ n) (pow_ne_zero _ hb) + n * b)
       (n + 1) := by
-  simp only [Nat.euclideanDiv_eq_core]
-  rw [Nat.le_div_iff_mul_le (by positivity), Nat.mul_comm,
-    ← Nat.add_mul_div_right _ _ (by positivity),
-    Nat.le_div_iff_mul_le (by positivity)]
+  rw [Nat.le_euclideanDiv_iff_mul_le (Nat.succ_ne_zero _), Nat.mul_comm n b,
+    ← Nat.euclideanDiv_add_mul _ _ (pow_ne_zero _ hb),
+    Nat.le_euclideanDiv_iff_mul_le (pow_ne_zero _ hb)]
   #adaptation_note /-- Prior to nightly-2026-04-06, this was
   ```
   have := (Commute.all (b : ℤ) (a - b)).pow_add_mul_le_add_pow_of_sq_nonneg
@@ -109,7 +106,6 @@ theorem nthRoot.lt_pow_go_succ_aux (hb : b ≠ 0) :
       exact nthRoot.lt_pow_go_succ_aux0 hb
     _ ≤ (Nat.euclideanDiv (Nat.euclideanDiv a (b ^ n) (pow_ne_zero _ hb) + n * b)
       (n + 1) + 1) ^ (n + 1) := by
-      simp only [Nat.euclideanDiv_eq_core]
       gcongr
 
 private theorem nthRoot.lt_pow_go_succ (hlt : a < (guess + 1) ^ (n + 2)) :

@@ -196,8 +196,7 @@ theorem exists_equipartition_card_eq (hn : n ≠ 0) (hs : n ≤ #s) :
     ∃ P : Finpartition s, P.IsEquipartition ∧ #P.parts = n := by
   rw [← pos_iff_ne_zero] at hn
   let q := Nat.euclideanDiv #s n hn.ne'
-  have hq : q ≠ 0 := by
-    simpa only [q, Nat.euclideanDiv_eq_core] using (Nat.div_pos hs hn).ne'
+  have hq : q ≠ 0 := (Nat.euclideanDiv_pos hn.ne' hs).ne'
   have : (n - #s % n) * q + #s % n * (q + 1) = #s := by
     rw [tsub_mul, mul_add, ← add_assoc,
       tsub_add_cancel_of_le (Nat.mul_le_mul_right _ (mod_lt _ hn).le), mul_one]

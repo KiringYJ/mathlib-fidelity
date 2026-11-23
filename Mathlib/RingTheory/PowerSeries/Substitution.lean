@@ -277,7 +277,7 @@ theorem coeff_subst_X_pow {k : ℕ} (hk : k ≠ 0) (f : PowerSeries R) (n : ℕ)
 theorem constantCoeff_subst_X_pow {k : ℕ} (hk : k ≠ 0) (f : PowerSeries R) :
     constantCoeff (subst (X ^ k) f) = algebraMap R S f.constantCoeff := by
   rw [← coeff_zero_eq_constantCoeff, coeff_subst_X_pow hk, ite_eq_left (dvd_zero k),
-    Nat.euclideanDiv_eq_core, Nat.zero_div, coeff_zero_eq_constantCoeff]
+    Nat.euclideanDiv_zero, coeff_zero_eq_constantCoeff]
 
 theorem constantCoeff_subst_of_constantCoeff_zero (ha : a.constantCoeff = 0) (f : PowerSeries R) :
     MvPowerSeries.constantCoeff (subst a f) = algebraMap R S f.constantCoeff := by

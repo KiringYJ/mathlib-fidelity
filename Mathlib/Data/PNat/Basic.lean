@@ -306,10 +306,7 @@ theorem mod_le (m k : ℕ+) : mod m k ≤ m ∧ mod m k ≤ k := by
   change (mod m k : ℕ) ≤ (m : ℕ) ∧ (mod m k : ℕ) ≤ (k : ℕ)
   rw [mod_coe]
   split_ifs with h
-  · have hm : (m : ℕ) > 0 := m.pos
-    rw [← Nat.mod_add_div (m : ℕ) (k : ℕ), h, zero_add] at hm ⊢
-    simp
-    lia
+  · exact ⟨Nat.le_of_dvd m.pos (Nat.dvd_of_mod_eq_zero h), le_rfl⟩
   · exact ⟨Nat.mod_le (m : ℕ) (k : ℕ), (Nat.mod_lt (m : ℕ) k.pos).le⟩
 
 set_option backward.isDefEq.respectTransparency false in

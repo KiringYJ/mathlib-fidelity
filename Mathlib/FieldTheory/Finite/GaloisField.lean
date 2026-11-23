@@ -243,19 +243,15 @@ variable (K K')
 theorem unitsMap_norm_surjective : Function.Surjective (Units.map <| Algebra.norm K (S := K')) :=
   have := Finite.of_injective_finite_range (algebraMap K K').injective
   MonoidHom.surjective_of_card_ker_le_div _ <| by
-    rw [Nat.euclideanDiv_eq_core]
     simp_rw [Nat.card_units]
     classical
     have := Fintype.ofFinite K'ˣ
     convert!
       IsCyclic.card_pow_eq_one_le (α := K'ˣ) <|
-        Nat.div_pos
-            (Nat.sub_le_sub_right (Nat.card_le_card_of_injective _ (algebraMap K K').injective)
-              _) <|
-          Nat.sub_pos_of_lt Finite.one_lt_card
+        Nat.euclideanDiv_pos (Nat.sub_pos_of_lt Finite.one_lt_card).ne'
+          (Nat.sub_le_sub_right (Nat.card_le_card_of_injective _ (algebraMap K K').injective) _)
     rw [← Set.ncard_coe_finset, ← SetLike.coe_sort_coe, Nat.card_coe_set_eq]; congr 1; ext
-    simp [Units.ext_iff, ← (algebraMap K K').injective.eq_iff, algebraMap_norm_eq_pow,
-      Nat.euclideanDiv_eq_core]
+    simp [Units.ext_iff, ← (algebraMap K K').injective.eq_iff, algebraMap_norm_eq_pow]
 
 theorem norm_surjective : Function.Surjective (Algebra.norm K (S := K')) := fun k ↦ by
   obtain rfl | ne := eq_or_ne k 0

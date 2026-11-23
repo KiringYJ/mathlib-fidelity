@@ -302,9 +302,7 @@ sliced off a list of length `n`
 def sliceSizes : ℕ → MLList Id ℕ+
   | n =>
     if h : 0 < n then
-      have : Nat.euclideanDiv n 2 < n := by
-        rw [Nat.euclideanDiv_eq_core]
-        exact Nat.div_lt_self h Nat.one_lt_two
+      have : Nat.euclideanDiv n 2 < n := Nat.euclideanDiv_lt_self h Nat.one_lt_two
       .cons ⟨_, h⟩ (sliceSizes (Nat.euclideanDiv n 2))
     else .nil
 

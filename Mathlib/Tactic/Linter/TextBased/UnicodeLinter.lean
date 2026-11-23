@@ -31,9 +31,15 @@ public def UnicodeVariant.text := '\uFE0E'
 /-- Prints a unicode character's codepoint in hexadecimal with prefix 'U+'.
 E.g., 'a' is "U+0061". -/
 public def Char.printCodepointHex (c : Char) : String :=
-  let digits := Nat.toDigits 16 c.val.toNat
-  -- print at least 4 (could be more) hex characters using leading zeros
-  ("U+".append <| "0000".drop digits.length |>.toString).append <| String.ofList digits
+  let n := c.val.toNat
+  let digit (shift : Nat) := Nat.digitChar ((n >>> shift) &&& 0xf)
+  -- A Unicode scalar uses at most six hexadecimal digits. Always print at least four.
+  let low := [digit 12, digit 8, digit 4, digit 0]
+  let digits :=
+    if n < 0x10000 then low
+    else if n < 0x100000 then digit 16 :: low
+    else digit 20 :: digit 16 :: low
+  "U+" ++ String.ofList digits
 
 /-- Prints all characters in a string in hexadecimal with prefix 'U+'.
 E.g., "ab" is "U+0061;U+0062". -/

@@ -618,8 +618,10 @@ theorem euclideanDiv_dioph {f g : (α → ℕ) → ℕ} (df : DiophFn f) (dg : D
   change v none * g (v ∘ some) ≤ f (v ∘ some) ∧
     f (v ∘ some) < (v none + 1) * g (v ∘ some) ↔
       Nat.euclideanDiv (f (v ∘ some)) (g (v ∘ some)) (hg _) = v none
-  rw [Nat.euclideanDiv_eq_core, Nat.div_eq_iff (Nat.pos_of_ne_zero (hg (v ∘ some))), Nat.succ_mul]
-  grind
+  rw [Nat.mul_comm (v none), Nat.mul_comm (v none + 1),
+    ← Nat.le_euclideanDiv_iff_mul_le (hg (v ∘ some)),
+    ← Nat.euclideanDiv_lt_iff_lt_mul (hg (v ∘ some))]
+  omega
 
 open Pell
 

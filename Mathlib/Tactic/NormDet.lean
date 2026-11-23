@@ -35,12 +35,13 @@ private def normalizeDetFromEntries {u : Level} {α : Q(Type u)} {n : Q(ℕ)} (r
   let arrayExpr : Q(Array $α) := q(List.toArray $xs)
   -- `List.ofFn` is exposed (unlike `Array.ofFn`) and so this reduction can be
   -- checked by the kernel
-  have : (List.ofFn fun k : Fin ($n * $n) ↦ $A k.divNat k.modNat) =Q $xs := ⟨⟩
-  let hlist : Q(List.ofFn (fun k : Fin ($n * $n) ↦ $A k.divNat k.modNat) = $xs) := q(rfl)
+  have : (List.ofFn fun k : Fin ($n * $n) ↦ $A k.euclideanDivNat k.modNat) =Q $xs := ⟨⟩
+  let hlist : Q(List.ofFn (fun k : Fin ($n * $n) ↦ $A k.euclideanDivNat k.modNat) = $xs) :=
+    q(rfl)
   let hArray := q($hlist ▸ List.toArray_ofFn)
   let birdDet := q(BirdDet.birdDet $n $arrayExpr)
   let detEqBirdDet := q($hArray ▸ Matrix.ofArray_ofFn $A ▸ BirdDet.det_eq_birdDet
-    (Array.ofFn fun k : Fin ($n * $n) ↦ $A k.divNat k.modNat) Array.size_ofFn)
+    (Array.ofFn fun k : Fin ($n * $n) ↦ $A k.euclideanDivNat k.modNat) Array.size_ofFn)
   let birdDetNorm ← normalizeBirdDet birdDet
   let detEqBirdDetRes : Simp.Result := ⟨birdDet, some detEqBirdDet, true⟩
   detEqBirdDetRes.mkEqTrans birdDetNorm

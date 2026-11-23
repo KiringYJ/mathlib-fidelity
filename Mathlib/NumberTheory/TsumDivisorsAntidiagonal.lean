@@ -95,6 +95,11 @@ lemma summable_norm_pow_mul_geometric_div_one_sub (k : ℕ) {r : 𝕜} (hr : ‖
   simpa only [inv_one₀] using hden.inv₀
     (h0 := fun n => (one_sub_pow_pnat_ne_zero_of_norm_lt_one hr n).isUnit) (ha := isUnit_one)
 
+private lemma mul_euclideanDiv_of_mem_divisors {n : ℕ} (d : n.divisors) :
+    d.val * Nat.euclideanDiv n d.val (Nat.pos_of_mem_divisors d.property).ne' = n := by
+  simpa only [Nat.mod_eq_zero_of_dvd (Nat.dvd_of_mem_divisors d.property), Nat.add_zero] using
+    Nat.euclideanDiv_mul_add_mod n d.val (Nat.pos_of_mem_divisors d.property).ne'
+
 private lemma summable_divisorsAntidiagonal_aux (k : ℕ) {r : 𝕜} (hr : ‖r‖ < 1) :
     Summable fun c : (n : ℕ+) × {x // x ∈ (n : ℕ).divisorsAntidiagonal} ↦
     (c.2.1.2) ^ k * (r ^ (c.2.1.1 * c.2.1.2)) := by
@@ -111,10 +116,11 @@ private lemma summable_divisorsAntidiagonal_aux (k : ℕ) {r : 𝕜} (hr : ‖r�
           sum_divisorsAntidiagonal ((fun x y ↦ ‖(y : 𝕜)‖ ^ k * _ ^ (x * y)))]
       rw [← (b : ℕ).divisors.sum_attach (fun _ ↦ ‖(b : 𝕜)‖ ^ k * ‖r ^ (b : ℕ)‖)]
       gcongr with i
-      · rw [Nat.euclideanDiv_eq_core]
-        simpa using! le_of_dvd b.2 (div_dvd_of_dvd (dvd_of_mem_divisors i.property))
-      · rw [norm_pow, Nat.euclideanDiv_eq_core,
-          Nat.mul_div_cancel' (dvd_of_mem_divisors i.property)]
+      · have hdiv : Nat.euclideanDiv (b : ℕ) i.val (Nat.pos_of_mem_divisors i.property).ne' ∣
+            (b : ℕ) :=
+          ⟨i.val, (mul_euclideanDiv_of_mem_divisors i).symm.trans (Nat.mul_comm _ _)⟩
+        simpa using! Nat.le_of_dvd b.2 hdiv
+      · rw [norm_pow, mul_euclideanDiv_of_mem_divisors i]
     · simp only [norm_pow, Finset.sum_const, nsmul_eq_mul, ← mul_assoc, add_comm k 1, pow_add,
         pow_one, norm_mul]
       gcongr
@@ -139,7 +145,7 @@ theorem tsum_prod_pow_eq_tsum_sigma (k : ℕ) {r : 𝕜} (hr : ‖r‖ < 1) :
     (n : ℕ).divisorsAntidiagonal.sum_attach fun x : ℕ × ℕ ↦ x.2 ^ k * r ^ (x.1 * x.2),
     sum_divisorsAntidiagonal fun x y ↦ y ^ k * r ^ (x * y)]
       using Finset.sum_congr rfl fun i _ ↦ by
-        rw [Nat.euclideanDiv_eq_core, Nat.mul_div_cancel' (dvd_of_mem_divisors i.property)]
+        rw [mul_euclideanDiv_of_mem_divisors i]
 
 lemma tsum_pow_div_one_sub_eq_tsum_sigma {r : 𝕜} (hr : ‖r‖ < 1) (k : ℕ) :
     ∑' n : ℕ+, Checked.div ((n : 𝕜) ^ k * r ^ (n : ℕ)) (1 - r ^ (n : ℕ))

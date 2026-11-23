@@ -62,11 +62,13 @@ lemma triangleRemovalBound_le {hε : 0 < ε} (hε₁ : ε ≤ 1) :
 
 private lemma aux {n k : ℕ} (hk : 0 < k) (hn : k ≤ n) :
     n < 2 * k * Nat.euclideanDiv n k hk.ne' := by
-  rw [Nat.euclideanDiv_eq_core]
-  rw [mul_assoc, two_mul, ← add_lt_add_iff_right (n % k), add_right_comm, add_assoc,
-    mod_add_div n k, add_comm, add_lt_add_iff_right]
-  apply (mod_lt n hk).trans_le
-  simpa using Nat.mul_le_mul_left k ((Nat.one_le_div_iff hk).2 hn)
+  let q := Nat.euclideanDiv n k hk.ne'
+  have hq : k ≤ k * q := by
+    simpa only [Nat.mul_one] using Nat.mul_le_mul_left k (Nat.euclideanDiv_pos hk.ne' hn)
+  calc
+    n = k * q + n % k := (Nat.euclideanDiv_mul_add_mod n k hk.ne').symm
+    _ < k * q + k * q := Nat.add_lt_add_left ((Nat.mod_lt n hk).trans_le hq) _
+    _ = _ := by rw [mul_assoc, two_mul]
 
 private lemma card_bound (hε : 0 < ε) (hP₁ : P.IsEquipartition)
     (hP₃ : #P.parts ≤ bound (ε / 8) ⌈4 / ε⌉₊) (hX : s ∈ P.parts) :

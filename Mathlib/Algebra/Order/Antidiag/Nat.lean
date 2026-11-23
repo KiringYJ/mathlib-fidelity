@@ -294,14 +294,14 @@ private theorem f_surj {n : ℕ} (hn : n ≠ 0) (b : ℕ × ℕ)
     refine ⟨?_, hn⟩
     · rw [Fin.prod_univ_three a]
       dsimp only [a, Matrix.cons_val]
-      simp only [Nat.euclideanDiv_eq_core]
-      rw [Nat.mul_div_cancel_left' (Nat.gcd_dvd_left _ _), ← hb.2, lcm,
-        Nat.mul_div_assoc b.fst (Nat.gcd_dvd_right b.fst b.snd)]
+      rw [Nat.mul_euclideanDiv_cancel hg (Nat.gcd_dvd_left _ _), ← hb.2]
+      apply Nat.eq_of_mul_eq_mul_left (Nat.pos_of_ne_zero hg)
+      rw [Nat.mul_left_comm, Nat.mul_euclideanDiv_cancel hg (Nat.gcd_dvd_right _ _)]
+      exact (Nat.gcd_mul_lcm _ _).symm
   use a; use ha
-  apply Prod.ext <;> dsimp only [a, Matrix.cons_val] <;> simp only [Nat.euclideanDiv_eq_core]
-    <;> apply Nat.mul_div_cancel'
-  · apply Nat.gcd_dvd_left
-  · apply Nat.gcd_dvd_right
+  apply Prod.ext <;> dsimp only [a, Matrix.cons_val]
+  · exact Nat.mul_euclideanDiv_cancel hg (Nat.gcd_dvd_left _ _)
+  · exact Nat.mul_euclideanDiv_cancel hg (Nat.gcd_dvd_right _ _)
 
 end card_pair_lcm_eq
 

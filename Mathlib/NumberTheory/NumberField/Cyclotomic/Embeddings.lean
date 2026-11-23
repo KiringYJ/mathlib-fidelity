@@ -56,14 +56,14 @@ theorem nrComplexPlaces_eq_totient_div_two [h : IsCyclotomicExtension {n} ℚ K]
     rw [nrRealPlaces_eq_zero K hn, zero_add, IsCyclotomicExtension.finrank (n := n) K
       (cyclotomic.irreducible_rat (NeZero.pos _)), hk, ← two_mul,
       Nat.mul_right_inj (by simp)] at key
-    simp [hk, key, ← two_mul, Nat.euclideanDiv_eq_core]
+    simp [hk, key, ← two_mul]
   · have : φ n = 1 := by
       by_cases h1 : 1 < n
       · convert! totient_two
         exact (eq_of_le_of_not_lt (succ_le_of_lt h1) hn).symm
       · convert! totient_one
         exact eq_of_le_of_not_lt (not_lt.mp h1) (by simp [NeZero.ne _])
-    rw [this, Nat.euclideanDiv_eq_core]
+    rw [this, Nat.euclideanDiv_eq_zero_of_lt (by decide : 2 ≠ 0) Nat.one_lt_two]
     apply nrComplexPlaces_eq_zero_of_finrank_eq_one
     rw [IsCyclotomicExtension.finrank K (cyclotomic.irreducible_rat (NeZero.pos n)), this]
 

@@ -160,7 +160,7 @@ theorem Prime.deficient_pow (h : Prime n) : Deficient (n ^ m) := by
         = ∑ i ∈ range m, n ^ i := by simp
       _ = Nat.euclideanDiv (n ^ m - 1) (n - 1) (Nat.ne_of_gt (Nat.sub_pos_of_lt h.one_lt)) :=
         Nat.geomSum_eq h.two_le _
-      _ ≤ n ^ m - 1 := by rw [Nat.euclideanDiv_eq_core]; exact Nat.div_le_self _ _
+      _ ≤ n ^ m - 1 := Nat.euclideanDiv_le_self _ _ _
       _ < n ^ m := sub_lt (pow_pos (Prime.pos h) m) (Nat.one_pos)
 
 theorem _root_.IsPrimePow.deficient (h : IsPrimePow n) : Deficient n := by

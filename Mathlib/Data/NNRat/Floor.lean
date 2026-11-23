@@ -52,7 +52,7 @@ theorem coe_ceil (q : ℚ≥0) : ↑⌈q⌉₊ = ⌈(q : ℚ)⌉ := Int.natCast_
 
 protected theorem floor_def (q : ℚ≥0) : ⌊q⌋₊ = Nat.euclideanDiv q.num q.den q.den_ne_zero := by
   rw [← Int.natCast_inj, NNRat.coe_floor, Rat.floor_def']
-  simp only [Int.euclideanDiv_eq_core, Nat.euclideanDiv_eq_core, Int.natCast_ediv, den_coe, num_coe]
+  simp only [Int.natCast_euclideanDiv, den_coe, num_coe]
 
 section Semifield
 

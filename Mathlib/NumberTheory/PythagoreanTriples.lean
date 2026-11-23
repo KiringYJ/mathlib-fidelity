@@ -160,7 +160,6 @@ theorem normalize (h0 : Int.gcd x y ≠ 0) :
     PythagoreanTriple (Int.euclideanDiv x (Int.gcd x y) (Int.ofNat_ne_zero.2 h0))
       (Int.euclideanDiv y (Int.gcd x y) (Int.ofNat_ne_zero.2 h0))
       (Int.euclideanDiv z (Int.gcd x y) (Int.ofNat_ne_zero.2 h0)) := by
-  simp only [Int.euclideanDiv_eq_core]
   rcases h.gcd_dvd with ⟨z0, rfl⟩
   obtain ⟨k, x0, y0, k0, h2, rfl, rfl⟩ :
     ∃ (k : ℕ) (x0 y0 : _), 0 < k ∧ Int.gcd x0 y0 = 1 ∧ x = x0 * k ∧ y = y0 * k :=
@@ -168,9 +167,9 @@ theorem normalize (h0 : Int.gcd x y ≠ 0) :
   have hk : (k : ℤ) ≠ 0 := by
     norm_cast
     rwa [pos_iff_ne_zero] at k0
-  rw [Int.gcd_mul_right, h2, Int.natAbs_natCast, one_mul] at h ⊢
+  simp only [Int.gcd_mul_right, h2, Int.natAbs_natCast, one_mul] at h ⊢
   rw [mul_comm x0, mul_comm y0, mul_iff k hk] at h
-  rwa [Int.mul_ediv_cancel _ hk, Int.mul_ediv_cancel _ hk, Int.mul_ediv_cancel_left _ hk]
+  simpa only [Int.euclideanDiv_mul_right_cancel, Int.euclideanDiv_mul_left_cancel] using h
 
 theorem isClassified_of_isPrimitiveClassified (hp : h.IsPrimitiveClassified) : h.IsClassified := by
   obtain ⟨m, n, H⟩ := hp
@@ -180,10 +179,13 @@ theorem isClassified_of_isPrimitiveClassified (hp : h.IsPrimitiveClassified) : h
 theorem isClassified_of_normalize_isPrimitiveClassified (h0 : Int.gcd x y ≠ 0)
     (hc : (h.normalize h0).IsPrimitiveClassified) :
     h.IsClassified := by
+  have recover (a : ℤ) (ha : (Int.gcd x y : ℤ) ∣ a) :
+      (Int.gcd x y : ℤ) * Int.euclideanDiv a (Int.gcd x y) (Int.ofNat_ne_zero.2 h0) = a :=
+    Int.mul_exactQuotient a _ ha _
   convert!
     (h.normalize h0).mul_isClassified (Int.gcd x y)
       (isClassified_of_isPrimitiveClassified (h.normalize h0) hc) <;>
-    rw [Int.euclideanDiv_eq_core, Int.mul_ediv_cancel']
+    rw [recover]
   · exact Int.gcd_dvd_left ..
   · exact Int.gcd_dvd_right ..
   · exact h.gcd_dvd
@@ -382,12 +384,9 @@ private theorem coprime_sq_sub_sq_sum_of_odd_odd {m n : ℤ} (h : Int.gcd m n = 
     ring
   have h2 : (m0 * 2 + 1) ^ 2 - (n0 * 2 + 1) ^ 2 = 2 * (2 * (m0 ^ 2 - n0 ^ 2 + m0 - n0)) := by ring
   have h3 : Int.euclideanDiv ((m0 * 2 + 1) ^ 2 - (n0 * 2 + 1) ^ 2) 2 % 2 = 0 := by
-    rw [Int.euclideanDiv_eq_core, h2, Int.mul_ediv_cancel_left, Int.mul_emod_right]
-    decide
+    rw [h2, Int.euclideanDiv_mul_left_cancel, Int.mul_emod_right]
   refine ⟨⟨_, h1⟩, ⟨_, h2⟩, h3, ?_⟩
-  have h20 : (2 : ℤ) ≠ 0 := by decide
-  simp only [Int.euclideanDiv_eq_core]
-  rw [h1, h2, Int.mul_ediv_cancel_left _ h20, Int.mul_ediv_cancel_left _ h20]
+  rw [h1, h2, Int.euclideanDiv_mul_left_cancel, Int.euclideanDiv_mul_left_cancel]
   by_contra h4
   obtain ⟨p, hp, hp1, hp2⟩ := Nat.Prime.not_coprime_iff_dvd.mp h4
   apply hp.not_dvd_one
@@ -507,11 +506,11 @@ theorem isPrimitiveClassified_of_coprime_of_odd_of_pos (hc : Int.gcd x y = 1) (h
     obtain ⟨hsum, hdiff, hu, hut⟩ := coprime_sq_sub_sq_sum_of_odd_odd hmncp hm2 hn2
     have h2 : y = u ∧ z = t := by
       have e1 : u * 2 = m ^ 2 - n ^ 2 := by
-        dsimp only [u]
-        rw [Int.euclideanDiv_eq_core, Int.ediv_mul_cancel hdiff]
+        rw [mul_comm]
+        exact Int.mul_exactQuotient _ _ hdiff (by decide)
       have e2 : t * 2 = m ^ 2 + n ^ 2 := by
-        dsimp only [t]
-        rw [Int.euclideanDiv_eq_core, Int.ediv_mul_cancel hsum]
+        rw [mul_comm]
+        exact Int.mul_exactQuotient _ _ hsum (by decide)
       have key : (m ^ 2 - n ^ 2) * t = u * (m ^ 2 + n ^ 2) := by
         rw [← e1, ← e2]
         ring

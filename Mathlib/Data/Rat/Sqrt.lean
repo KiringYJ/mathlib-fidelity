@@ -46,9 +46,7 @@ theorem exists_mul_self (x : ℚ) : (∃ q, q * q = x) ↔ Rat.sqrt x * Rat.sqrt
   ⟨fun ⟨n, hn⟩ => by rw [← hn, sqrt_eq, abs_mul_abs_self], fun h => ⟨Rat.sqrt x, h⟩⟩
 
 lemma sqrt_nonneg (q : ℚ) : 0 ≤ Rat.sqrt q := by
-  apply Rat.num_nonneg.mp
-  rw [sqrt, fraction, Rat.num_normalize]
-  exact Int.ediv_nonneg (Int.sqrt_nonneg _) (Int.natCast_nonneg _)
+  exact Rat.fraction_nonneg (Int.sqrt_nonneg _) _ _
 
 /-- `IsSquare` can be decided on `ℚ` by checking against the square root. -/
 instance : DecidablePred (IsSquare : ℚ → Prop) :=
@@ -57,9 +55,8 @@ instance : DecidablePred (IsSquare : ℚ → Prop) :=
 
 @[simp, norm_cast]
 theorem sqrt_intCast (z : ℤ) : Rat.sqrt (z : ℚ) = Int.sqrt z := by
-  simp only [sqrt, num_intCast, den_intCast, Nat.sqrt_one, fraction, Rat.normalize_eq,
-    Nat.gcd_one_right,
-    Int.natCast_one, Int.ediv_one, Nat.div_one, Rat.mk_den_one]
+  simp only [sqrt, num_intCast, den_intCast, Nat.sqrt_one, fraction]
+  rw [Rat.normalize_eq_mk' _ _ _ (by simp), Rat.mk_den_one]
 
 @[simp, norm_cast]
 theorem sqrt_natCast (n : ℕ) : Rat.sqrt (n : ℚ) = Nat.sqrt n := by

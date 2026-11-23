@@ -183,10 +183,18 @@ lemma isUnit_unit' {ζ : G} {n} (hn) (hζ : IsPrimitiveRoot ζ n) :
 theorem pow_div_gcd (h : IsPrimitiveRoot ζ k) (j : ℕ) (h0 : k.gcd j ≠ 0) :
     IsPrimitiveRoot (ζ ^ j) (Nat.euclideanDiv k (k.gcd j) h0) where
   pow_eq_one := by
-    rw [Nat.euclideanDiv_eq_core, ← pow_mul, ← Nat.mul_div_assoc j (k.gcd_dvd_left j), mul_comm,
-      Nat.mul_div_assoc k (k.gcd_dvd_right j), pow_mul, h.pow_eq_one, one_pow]
+    obtain ⟨t, hj⟩ := Nat.gcd_dvd_right k j
+    let q := Nat.euclideanDiv k (k.gcd j) h0
+    have hq : k.gcd j * q = k := Nat.mul_euclideanDiv_cancel h0 (Nat.gcd_dvd_left k j)
+    have he : j * q = k * t := by
+      calc
+        j * q = (k.gcd j * t) * q := congrArg (· * q) hj
+        _ = (k.gcd j * q) * t := Nat.mul_right_comm _ _ _
+        _ = k * t := congrArg (· * t) hq
+    change (ζ ^ j) ^ q = 1
+    rw [← pow_mul, he, pow_mul, h.pow_eq_one, one_pow]
   dvd_of_pow_eq_one l hl := by
-    rw [Nat.euclideanDiv_eq_core, Nat.div_dvd_iff_dvd_mul (k.gcd_dvd_left j) h0.pos]
+    rw [← mul_dvd_mul_iff_left h0, Nat.mul_euclideanDiv_cancel h0 (Nat.gcd_dvd_left k j)]
     grw [← k.gcd_dvd_right l, ← Nat.gcd_mul_right_dvd_mul_gcd]
     apply h.dvd_of_pow_eq_one
     rw [pow_gcd_eq_one]
@@ -195,7 +203,7 @@ theorem pow_div_gcd (h : IsPrimitiveRoot ζ k) (j : ℕ) (h0 : k.gcd j ≠ 0) :
 theorem pow_of_coprime (h : IsPrimitiveRoot ζ k) (i : ℕ) (hi : i.Coprime k) :
     IsPrimitiveRoot (ζ ^ i) k := by
   have hki := hi.symm.gcd_eq_one
-  simpa [hki, Nat.euclideanDiv_eq_core] using h.pow_div_gcd i (by simp [hki])
+  simpa [hki] using h.pow_div_gcd i (by simp [hki])
 
 theorem pow_of_prime (h : IsPrimitiveRoot ζ k) {p : ℕ} (hprime : Nat.Prime p) (hdiv : ¬p ∣ k) :
     IsPrimitiveRoot (ζ ^ p) k :=
@@ -248,13 +256,13 @@ theorem pow_mul_pow_lcm {ζ' : M} {k' : ℕ} (hζ : IsPrimitiveRoot ζ k) (hζ' 
   convert!
     ((Commute.all ζ ζ').orderOf_mul_pow_eq_lcm (by simpa [← hζ.eq_orderOf])
         (by simpa [← hζ'.eq_orderOf])).symm using 2
-  all_goals simp [hζ.eq_orderOf, hζ'.eq_orderOf, Nat.euclideanDiv_eq_core]
+  all_goals simp [hζ.eq_orderOf, hζ'.eq_orderOf]
 
 theorem pow_of_dvd (h : IsPrimitiveRoot ζ k) {p : ℕ} (hp : p ≠ 0) (hdiv : p ∣ k) :
     IsPrimitiveRoot (ζ ^ p) (Nat.euclideanDiv k p hp) := by
   rw [h.eq_orderOf] at hdiv ⊢
   have he : Nat.euclideanDiv (orderOf ζ) p hp = orderOf (ζ ^ p) := by
-    simpa only [Nat.euclideanDiv_eq_core] using (orderOf_pow_of_dvd hp hdiv).symm
+    exact (orderOf_pow_of_dvd hp hdiv).symm
   rw [he]
   exact IsPrimitiveRoot.orderOf _
 
@@ -569,8 +577,8 @@ theorem eq_pow_of_mem_rootsOfUnity {k : ℕ} [NeZero k] {ζ ξ : Rˣ} (h : IsPri
   lift i to ℕ using hi0 with i₀ hi₀
   refine ⟨i₀, ?_, ?_⟩
   · zify; rw [hi₀]; exact Int.emod_lt_of_pos _ hk0
-  · rw [← zpow_natCast, hi₀, ← Int.emod_add_mul_ediv n k, zpow_add, zpow_mul, h.zpow_eq_one,
-      one_zpow, mul_one]
+  · rw [← zpow_natCast, hi₀]
+    exact (zpow_eq_zpow_emod n h.zpow_eq_one).symm
 
 theorem eq_pow_of_pow_eq_one {k : ℕ} [NeZero k] {ζ ξ : R} (h : IsPrimitiveRoot ζ k)
     (hξ : ξ ^ k = 1) :

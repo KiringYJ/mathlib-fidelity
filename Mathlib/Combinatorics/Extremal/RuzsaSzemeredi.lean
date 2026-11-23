@@ -208,21 +208,25 @@ with `n` vertices and `(n / 3 - 2) * m` edges such that each edge belongs to exa
 theorem rothNumberNat_le_ruzsaSzemerediNumberNat' :
     ∀ n : ℕ, ((n : ℝ) / 3 - 2) * rothNumberNat (Nat.euclideanDiv (n - 3) 6) ≤
       ruzsaSzemerediNumberNat n
-  | 0 => by simp [Nat.euclideanDiv_eq_core]
-  | 1 => by simp [Nat.euclideanDiv_eq_core]
-  | 2 => by simp [Nat.euclideanDiv_eq_core]
+  | 0 => by simp
+  | 1 => by simp
+  | 2 => by simp
   | n + 3 => by
     calc
       _ ≤ (↑(2 * (n.euclideanDiv 6) + 1) : ℝ) * rothNumberNat (n.euclideanDiv 6) :=
         mul_le_mul_of_nonneg_right ?_ (Nat.cast_nonneg _)
       _ ≤ (ruzsaSzemerediNumberNat (6 * (n.euclideanDiv 6) + 3) : ℝ) := ?_
-      _ ≤ _ := by rw [Nat.euclideanDiv_eq_core]; grw [Nat.mul_div_le]
+      _ ≤ _ := by
+        have hq : 6 * n.euclideanDiv 6 ≤ n :=
+          (Nat.le_euclideanDiv_iff_mul_le (b := 6) (by decide)).mp le_rfl
+        grw [hq]
     · simp only [cast_add, cast_ofNat, cast_mul, cast_one, tsub_le_iff_right]
       rw [← div_add_one, ← le_sub_iff_add_le, div_le_iff₀ (zero_lt_three' ℝ),
         add_assoc, add_sub_assoc, add_mul, mul_right_comm, add_sub_cancel_left]
       norm_cast
-      rw [← mul_add_one, Nat.euclideanDiv_eq_core]
-      exact (Nat.lt_mul_div_succ _ <| by simp).le
+      rw [← mul_add_one]
+      exact ((Nat.euclideanDiv_lt_iff_lt_mul (by decide : 6 ≠ 0)).mp
+        (Nat.lt_succ_self _)).le
     · norm_cast
       exact rothNumberNat_le_ruzsaSzemerediNumberNat _
 
@@ -260,21 +264,26 @@ theorem ruzsaSzemerediNumberNat_asymptotic_lower_bound :
       refine IsLittleO.right_isBigO_sub (isLittleO_const_left.mpr (Or.inr ?_))
       simpa only [Real.norm_eq_abs, Function.comp_def] using tendsto_abs_atTop_atTop.comp
         (Tendsto.atTop_div_const (zero_lt_three : (0 : ℝ) < 3) tendsto_natCast_atTop_atTop)
-    · simp only [Nat.euclideanDiv_eq_core]
-      rw [IsBigO_def]
+    · rw [IsBigO_def]
       refine ⟨12, ?_⟩
       simp only [IsBigOWith, Real.norm_natCast, eventually_atTop]
-      exact ⟨15, fun x hx ↦ by norm_cast; lia⟩
-    · simp only [Nat.euclideanDiv_eq_core]
-      rw [isBigO_exp_comp_exp_comp]
+      refine ⟨15, fun x hx ↦ ?_⟩
+      have hrec := Nat.euclideanDiv_mul_add_mod (x - 3) 6 (by decide)
+      have hrem : (x - 3) % 6 < 6 := Nat.mod_lt _ (by decide)
+      norm_cast
+      omega
+    · rw [isBigO_exp_comp_exp_comp]
       refine ⟨0, ?_⟩
       simp only [neg_mul, eventually_map, Pi.sub_apply, sub_neg_eq_add, neg_add_le_iff_le_add,
         add_zero, eventually_atTop]
       refine ⟨9, fun x hx ↦ ?_⟩
+      have hpos : 1 ≤ (x - 3).euclideanDiv 6 :=
+        (Nat.le_euclideanDiv_iff_mul_le (b := 6) (by decide)).2 (by omega)
+      have hle : (x - 3).euclideanDiv 6 ≤ x := by
+        have hmul : 6 * (x - 3).euclideanDiv 6 ≤ x - 3 :=
+          (Nat.le_euclideanDiv_iff_mul_le (b := 6) (by decide)).1 le_rfl
+        omega
       gcongr
-      · simp
-        lia
-      · lia
   · refine .of_norm_eventuallyLE ?_
     filter_upwards [eventually_ge_atTop 6] with n hn
     have : (0 : ℝ) ≤ (n : ℝ) / 3 - 2 := by rify at hn; linarith

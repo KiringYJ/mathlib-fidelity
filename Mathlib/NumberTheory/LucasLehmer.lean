@@ -435,8 +435,7 @@ lemma two_mul_ω_pow [Fact q.Prime] (odd : Odd q) (leg3 : legendreSym q 3 = -1) 
     (2 * ω : X q) ^ Nat.euclideanDiv (q + 1) 2 = -2 := by
   rw [← one_add_α_sq, ← pow_mul]
   have : 2 * Nat.euclideanDiv (q + 1) 2 = q + 1 := by
-    rw [Nat.euclideanDiv_eq_core]
-    apply Nat.mul_div_cancel'
+    apply Nat.mul_euclideanDiv_cancel (by decide : 2 ≠ 0)
     rw [← even_iff_two_dvd]
     exact Odd.add_one odd
   rw [this, one_add_α_pow_q_succ odd leg3]
@@ -447,14 +446,11 @@ lemma pow_ω [Fact q.Prime] (odd : Odd q)
     (leg2 : legendreSym q 2 = 1) :
     (ω : X q) ^ Nat.euclideanDiv (q + 1) 2 = -1 := by
   have pow2 : (2 : ZMod q) ^ Nat.euclideanDiv (q + 1) 2 = 2 := by
-    obtain ⟨_, _⟩ := odd
     have hhalf : Nat.euclideanDiv (q + 1) 2 = Nat.euclideanDiv q 2 + 1 := by
-      simp only [Nat.euclideanDiv_eq_core]
-      lia
+      rw [Nat.euclideanDiv_succ q (by decide : 2 ≠ 0), ite_eq_left odd.add_one.two_dvd]
     rw [hhalf, pow_succ]
     have leg := legendreSym.eq_pow q 2
     have : (2 : ZMod q) = ((2 : ℤ) : ZMod q) := by norm_cast
-    simp only [Nat.euclideanDiv_eq_core] at leg ⊢
     rw [this, ← leg, leg2]
     ring
   have := two_mul_ω_pow odd leg3
@@ -464,7 +460,7 @@ lemma pow_ω [Fact q.Prime] (odd : Odd q)
     (by ring : (-2 : X q) = 2 * -1)] at this
   refine (IsUnit.of_mul_eq_one (M := X q) ↑(Nat.euclideanDiv (q + 1) 2) ?_).mul_left_cancel this
   norm_cast
-  simp [Nat.euclideanDiv_eq_core, Nat.mul_div_cancel' odd.add_one.two_dvd]
+  simp [Nat.mul_euclideanDiv_cancel (by decide : 2 ≠ 0) odd.add_one.two_dvd]
 
 /-- The final evaluation needed to establish the Lucas-Lehmer necessity. -/
 lemma ω_pow_trace [Fact q.Prime] (odd : Odd q)
@@ -478,9 +474,10 @@ lemma ω_pow_trace [Fact q.Prime] (odd : Odd q)
     ring
   have div4 : Nat.euclideanDiv (q + 1) 2 =
       Nat.euclideanDiv (q + 1) 4 + Nat.euclideanDiv (q + 1) 4 := by
-    rcases hq4 with ⟨k, hk⟩
-    simp only [Nat.euclideanDiv_eq_core]
-    lia
+    have hq2 := (show 2 ∣ 4 by decide).trans hq4
+    have h2 := Nat.mul_euclideanDiv_cancel (by decide : 2 ≠ 0) hq2
+    have h4 := Nat.mul_euclideanDiv_cancel (by decide : 4 ≠ 0) hq4
+    omega
   rw [div4, pow_add, mul_assoc, ← mul_pow, ω_mul_ωb, one_pow, mul_one] at this
   rw [this]
   ring

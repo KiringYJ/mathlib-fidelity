@@ -191,7 +191,7 @@ private theorem euclideanDiv_two_add_two (n : ℤ) :
 theorem T_eval_zero (n : ℤ) :
     (T R n).eval 0 = (if Even n then (Int.euclideanDiv n 2).negOnePow else 0 : ℤ) := by
   induction n using Polynomial.Chebyshev.induct with
-  | zero => simp [Int.euclideanDiv_eq_core]
+  | zero => simp
   | one => simp
   | add_two n ih1 ih2 =>
     have := euclideanDiv_two_add_two (n : ℤ)
@@ -207,7 +207,7 @@ theorem T_eval_zero_of_even {n : ℤ} (hn : Even n) :
   simp [T_eval_zero, hn]
 
 theorem T_eval_two_mul_zero (n : ℤ) : (T R (2 * n)).eval 0 = n.negOnePow := by
-  simp [Int.euclideanDiv_eq_core]
+  simp
 
 @[simp]
 theorem T_eval_zero_of_odd {n : ℤ} (hn : Odd n) : (T R n).eval 0 = 0 := by
@@ -369,7 +369,7 @@ theorem U_eval_neg_one (n : ℤ) : (U R n).eval (-1) = n.negOnePow * (n + 1) := 
 theorem U_eval_zero (n : ℤ) :
     (U R n).eval 0 = (if Even n then (Int.euclideanDiv n 2).negOnePow else 0 : ℤ) := by
   induction n using Polynomial.Chebyshev.induct with
-  | zero => simp [Int.euclideanDiv_eq_core]
+  | zero => simp
   | one => simp
   | add_two n ih1 ih2 =>
     have := euclideanDiv_two_add_two (n : ℤ)
@@ -385,7 +385,7 @@ theorem U_eval_zero_of_even {n : ℤ} (hn : Even n) :
   simp [U_eval_zero, hn]
 
 theorem U_eval_two_mul_zero (n : ℤ) : (U R (2 * n)).eval 0 = n.negOnePow := by
-  simp [Int.euclideanDiv_eq_core]
+  simp
 
 @[simp]
 theorem U_eval_zero_of_odd {n : ℤ} (hn : Odd n) : (U R n).eval 0 = 0 := by

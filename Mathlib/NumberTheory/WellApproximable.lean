@@ -284,7 +284,7 @@ theorem addWellApproximable_ae_empty_or_univ (δ : ℕ → ℝ) (hδ : Tendsto �
       rw [hu₀, Subtype.coe_mk, hp.coprime_iff_not_dvd, Nat.euclideanDiv_mul_left_cancel]
       exact fun contra => h_ndiv (mul_dvd_mul_left p contra)
     replace h_div : Nat.euclideanDiv n p hp.ne_zero * p = n := by
-      rw [Nat.euclideanDiv_eq_core, Nat.div_mul_cancel h_div]
+      rw [Nat.mul_comm, Nat.mul_euclideanDiv_cancel _ h_div]
     have hf : f = (fun y => x + y) ∘ fun y => p • y := by
       ext; simp [f, add_comm x]
     simp_rw [Function.comp_apply]

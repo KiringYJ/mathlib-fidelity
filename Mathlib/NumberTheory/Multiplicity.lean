@@ -128,10 +128,15 @@ theorem odd_sq_dvd_geom_sum₂_sub (hp : Odd p) :
           ((Finset.sum (range p) (fun (x : ℕ) ↦ (x : ℕ)))) := by simp only [Nat.cast_sum]
       simp only [add_eq_right, ← Finset.mul_sum, this]
       norm_cast
-      simp only [Finset.sum_range_id, Nat.euclideanDiv_eq_core]
+      have hd := (Nat.Odd.sub_odd hp odd_one).two_dvd
+      have hprod := Nat.mul_euclideanDiv_cancel (by decide : 2 ≠ 0) hd
+      have hq : Nat.euclideanDiv (p * (p - 1)) 2 =
+          p * Nat.euclideanDiv (p - 1) 2 := by
+        refine Nat.euclideanDiv_eq_of_remainder (r := 0) (by decide) ?_ Nat.zero_lt_two
+        rw [Nat.add_zero, Nat.mul_left_comm, hprod]
+      simp only [Finset.sum_range_id, hq]
       norm_cast
-      simp only [Nat.cast_mul, map_mul,
-          Nat.mul_div_assoc p (even_iff_two_dvd.mp (Nat.Odd.sub_odd hp odd_one))]
+      simp only [Nat.cast_mul, map_mul]
       ring_nf
       rw [mul_assoc, mul_assoc]
       refine mul_eq_zero_of_left ?_ _

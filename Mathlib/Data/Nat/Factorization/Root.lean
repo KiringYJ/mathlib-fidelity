@@ -63,12 +63,12 @@ lemma floorRoot_def :
         (· ^ ·) := by
   unfold floorRoot
   split_ifs with h <;>
-    simp [Nat.euclideanDiv_eq_core, Finsupp.floorDiv_def, prod_mapRange_index pow_zero]
+    simp [Finsupp.floorDiv_def, prod_mapRange_index pow_zero]
 
 @[simp] lemma floorRoot_zero_left (a : ℕ) : floorRoot 0 a = 0 := by simp [floorRoot]
 @[simp] lemma floorRoot_zero_right (n : ℕ) : floorRoot n 0 = 0 := by simp [floorRoot]
 @[simp] lemma floorRoot_one_left (a : ℕ) : floorRoot 1 a = a := by
-  simp [floorRoot, Nat.euclideanDiv_eq_core]; split_ifs <;> simp [*]
+  simp [floorRoot]; split_ifs <;> simp [*]
 @[simp] lemma floorRoot_one_right (hn : n ≠ 0) : floorRoot n 1 = 1 := by simp [floorRoot, hn]
 
 @[simp] lemma floorRoot_pow_self (hn : n ≠ 0) (a : ℕ) : floorRoot n (a ^ n) = a := by
@@ -129,13 +129,13 @@ lemma ceilRoot_def :
         (· ^ ·) := by
   unfold ceilRoot
   split_ifs with h <;>
-    simp [Nat.euclideanDiv_eq_core, Finsupp.ceilDiv_def, prod_mapRange_index pow_zero,
+    simp [Finsupp.ceilDiv_def, prod_mapRange_index pow_zero,
       Nat.ceilDiv_eq_add_pred_div]
 
 @[simp] lemma ceilRoot_zero_left (a : ℕ) : ceilRoot 0 a = 0 := by simp [ceilRoot]
 @[simp] lemma ceilRoot_zero_right (n : ℕ) : ceilRoot n 0 = 0 := by simp [ceilRoot]
 @[simp] lemma ceilRoot_one_left (a : ℕ) : ceilRoot 1 a = a := by
-  simp [ceilRoot, Nat.euclideanDiv_eq_core]; split_ifs <;> simp [*]
+  simp [ceilRoot]; split_ifs <;> simp [*]
 @[simp] lemma ceilRoot_one_right (hn : n ≠ 0) : ceilRoot n 1 = 1 := by simp [ceilRoot, hn]
 
 @[simp] lemma ceilRoot_pow_self (hn : n ≠ 0) (a : ℕ) : ceilRoot n (a ^ n) = a := by

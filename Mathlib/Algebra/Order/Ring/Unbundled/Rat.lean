@@ -34,9 +34,11 @@ variable {a b c q : ℚ}
 
 @[simp] lemma fraction_nonneg {a : ℤ} (ha : 0 ≤ a) (b : ℕ) (hb : b ≠ 0) :
     0 ≤ fraction a b hb := by
+  obtain ⟨g, hg, hn, _⟩ := Rat.normalize_num_den' a b hb
+  have hgpos : 0 < (g : ℤ) := Int.natCast_pos.mpr (Nat.pos_of_ne_zero hg)
   apply Rat.num_nonneg.mp
-  rw [fraction, Rat.num_normalize]
-  exact Int.ediv_nonneg ha (Int.natCast_nonneg _)
+  apply (Int.mul_nonneg_iff_of_pos_right hgpos).mp
+  exact hn ▸ ha
 
 theorem ofScientific_nonneg (m : ℕ) (s : Bool) (e : ℕ) : 0 ≤ Rat.ofScientific m s e := by
   rw [Rat.ofScientific]
