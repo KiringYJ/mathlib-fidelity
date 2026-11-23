@@ -125,6 +125,13 @@ and overlap with existing declarations before selecting exact theorem coverage a
   `MeasureTheory.IsSetSigmaRing.exists_eq_iUnion` and
   `MeasureTheory.IsSetSigmaRing.eventually_constant_of_monotone`.
 
+## Upstream reconciliation
+
+- [ ] **Rebase `main` onto mathlib `v4.34.0` (`5ed2965`).** Advance the upstream baseline from
+  `c02174567c` by replaying the Fidelity commits and validating the rebased tree. See the
+  [upstream release](https://github.com/leanprover-community/mathlib4/releases/tag/v4.34.0)
+  and the [reconciliation workflow](AI_AGENT_PROJECT.md#mathlib-baseline-reconciliation-workflow).
+
 ## Fork CI rollout
 
 - [x] **Replace inherited upstream automation with fork-owned validation.**
