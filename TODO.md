@@ -4540,16 +4540,21 @@ and uses the official Lean toolchain.
   `#operator_fidelity with_proofs in Mathlib.Data.Nat.Factorization.Defs`.
 
 - [ ] **Expose the exact domain of extended nonnegative division.**
-  **Accepted design, pending implementation.** The ordinary `ENNReal` quotient is the continuous
-  extension of the positive finite quotient on the complement of `(0, 0)` and `(⊤, ⊤)`.
-  `ENNReal.Tendsto.div` gives continuity there. For any positive finite `c`, the pairs `(c * t, t)`
-  approach either excluded point as `t` approaches the corresponding endpoint, with quotient `c`.
-  Hence neither point has a unique limiting value.
+  **Accepted design, pending implementation.** Ordinary `ENNReal` division is the restriction
+  of ordinary `EReal` division to nonnegative inputs. Elaborate `a / b` to `ENNReal.div a b h`,
+  with `h` proving `b ≠ 0 ∧ (a ≠ ⊤ ∨ b ≠ ⊤)`. The signed quotient is nonnegative on this domain.
+  Prove that `ENNReal.toEReal` preserves and reflects this domain and commutes with division
+  there. State the bridge in a module that imports both APIs, and prove agreement with
+  `Checked.div` for unit denominators.
 
-  - Elaborate `a / b` to `ENNReal.div a b h`, with `h` proving
-    `(a ≠ 0 ∨ b ≠ 0) ∧ (a ≠ ⊤ ∨ b ≠ ⊤)`. Use `a * b⁻¹` on this domain. In particular,
-    `a / 0 = ⊤` for `a ≠ 0` and `a / ⊤ = 0` for `a ≠ ⊤`. Prove agreement with
-    `Checked.div` for unit denominators.
+  - Expose `ENNReal.extendedDiv a b h` as the maximal continuous extension of the positive
+    finite quotient within `ENNReal`. Its proof obligation is
+    `(a ≠ 0 ∨ b ≠ 0) ∧ (a ≠ ⊤ ∨ b ≠ ⊤)`. Use `a * b⁻¹` on this domain and define the
+    ordinary quotient by restriction. In particular, `extendedDiv a 0` is `⊤` with evidence
+    `a ≠ 0`, and `extendedDiv a ⊤` is `0` with evidence `a ≠ ⊤`.
+    `ENNReal.Tendsto.div` gives continuity on this domain. For any positive finite `c`, the pairs
+    `(c * t, t)` approach either excluded point as `t` approaches the corresponding endpoint,
+    with quotient `c`. Hence neither point has a unique limiting value.
   - Expose `ENNReal.divInf a b = sInf {q | a ≤ b * q}` as a named total quotient, implemented
     by `a * b⁻¹` with the zero-absorbing product. Both excluded pairs have value zero.
     The ratio test `FormalMultilinearSeries.ofScalars_radius_eq_inv_of_tendsto_ENNReal` in
@@ -4565,14 +4570,42 @@ and uses the official Lean toolchain.
     [Bacci et al., Rational Lawvere Logic, §2 and Table 1](https://drops.dagstuhl.de/storage/00lipics/lipics-vol363-csl2026/html/LIPIcs.CSL.2026.3/LIPIcs.CSL.2026.3.html).
 
   A scratch Lean check using a local `IsQuantale` instance verified the endpoint values,
-  agreement of the two extensions exactly on the ordinary domain, and continuity there.
+  agreement of the two total extensions exactly on the domain of `extendedDiv`, and continuity
+  there.
   Implement the slash selection, proof discharge, and checked delaboration in
   `Mathlib/Lean/Elab/OperatorTree.lean`. Remove the ambient `DivInvMonoid` and `DivInvOneMonoid`
   instances in `Mathlib/Basic/ENNReal/{Basic,Inv}.lean` and provide reciprocal and integer powers
   independently of `Div`. Audit the affected callers for the intended division specification and
-  update the ordinary division contract in `FORK_DESIGN.md` in the same migration. Check that both
-  indeterminate quotients fail to elaborate, that the other boundary cases elaborate with evidence,
-  and that instance inference cannot recover ambient `Div` or `HDiv` on `ENNReal`.
+  update the ordinary division contract in `FORK_DESIGN.md` in the same migration. Check that
+  ordinary `/` rejects every zero denominator and `(⊤, ⊤)`, while `extendedDiv` admits positive
+  numerators over zero and rejects both indeterminate pairs. Verify the embedding law and check
+  that instance inference cannot recover ambient `Div` or `HDiv` on `ENNReal`.
+
+- [ ] **Expose the exact domain of signed extended-real division.**
+  **Accepted design, pending implementation.** Put `E = [-∞, +∞]` with the order topology and view
+  `ℝ` as its finite elements. Ordinary division on `EReal` is the maximal continuous extension
+  of real division, with domain
+
+  `D = (E × (ℝ \ {0})) ∪ (ℝ × {−∞, +∞})`.
+
+  A finite nonzero denominator gives the usual signed quotient, including infinite numerators.
+  A finite numerator divided by either infinity gives `0`, since the numerator stays bounded
+  locally. For a nonzero limiting numerator, denominators approaching zero from opposite sides
+  give opposite infinite limits. At `(0, 0)`, the finite pairs `(c * t, t)` give different limits
+  for different `c` as `t` approaches zero from above. At each pair of infinities, the finite
+  pairs `(s * c * t, r * t)` with the prescribed signs `s, r ∈ {−1, 1}` and `c > 0` approach the
+  pair as `t` tends to `+∞`, with quotient `s * r * c`. Thus every excluded point has competing
+  limits.
+
+  Elaborate `a / b` to a proof-bearing `EReal.div a b h`, where `h` requires `b ≠ 0` and at least
+  one of `a` and `b` to be finite. For finite nonzero `b`, reuse checked unit division and prove
+  agreement on that domain using `EReal.isUnit_iff`. For an infinite denominator, return zero
+  under the finite-numerator hypothesis. Migrate the existing division API and its automation in
+  `Mathlib/Data/EReal/Inv.lean` and the slash selection in `Mathlib/Lean/Elab/OperatorTree.lean`.
+  Prove agreement with real division and continuity on `D`, and identify the restriction of `D`
+  under `ENNReal.toEReal` with the ordinary `ENNReal` division domain above. Check finite quotients,
+  both signs of infinity in the numerator, and finite numerators over both infinities. Require
+  rejection for every zero denominator and all four pairs of infinities.
 
 - [ ] **Separate signed extended-real subtraction from nonnegative monus.**
   **Accepted design, pending implementation.** Give ordinary `EReal` subtraction the exact domain
