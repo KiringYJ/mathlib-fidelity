@@ -183,6 +183,8 @@ prepared, submitted, or forwarded as upstream mathlib pull requests.
 
 ## Project records
 
+- [CHANGELOG.md](CHANGELOG.md) summarizes significant upstream and Fidelity changes by release.
+- [TODO.md](TODO.md) tracks pending Fidelity work.
 - [FORK_DESIGN.md](FORK_DESIGN.md) records the fork's mathematical and API
   design philosophy.
 - [MIGRATION_BACKLOG.md](MIGRATION_BACKLOG.md) tracks selected external

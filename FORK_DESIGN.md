@@ -2,8 +2,8 @@
 
 ## Status
 
-This document records the personal fork's design contracts. Implementation
-and verification status is tracked in [`TODO.md`](TODO.md).
+This document records the personal fork's design contracts. Open implementation
+and verification work is tracked in [`TODO.md`](TODO.md).
 
 The interface goals and complete-migration policy below are adopted. Every
 accepted migration must deliver the final design across its selected scope in
@@ -1104,9 +1104,8 @@ migration.
 
 The inverse and exact division migration replaced the former totalized
 interfaces and migrated their affected consumers in one delivery, including
-the rational operators. Final verification was recorded on 2026-11-20 in the
-[completed migration entry](TODO.md#xl----foundational-work-implementation-requires-an-explicit-task).
-The requirements below define the scope and acceptance criteria of that migration.
+the rational operators. The [changelog](CHANGELOG.md#fidelity-changes) summarizes the
+resulting API. The requirements below define the scope and acceptance criteria of that migration.
 
 ### Inventory and mathematical contracts
 

@@ -276,7 +276,9 @@ and report inherited failures accurately without expanding the refactor.
 
 ## Remaining Work
 
-`TODO.md` is the fork's backlog. Completed records can be removed once the formal
+[`CHANGELOG.md`](CHANGELOG.md) records significant changes between consecutive Fidelity
+releases, with separate entries for the mathlib baseline and the Fidelity API.
+`TODO.md` tracks pending work. Completed records can be removed once the formal
 Lean API and [regression coverage](FORK_DESIGN.md#regression-coverage) preserve the
 completed work. Resolve every obligation of the selected migration before reporting
 it complete. Record independent
