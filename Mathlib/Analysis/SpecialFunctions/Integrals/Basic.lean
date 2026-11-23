@@ -437,14 +437,16 @@ theorem integral_div_sq_add_sq {c : ℝ} (hc : c ≠ 0) :
 
 theorem integral_id_div_sq_add_sq {c : ℝ} (hc : c ≠ 0) :
     ∫ x : ℝ in a..b, x / (c ^ 2 + x ^ 2) = (log (c ^ 2 + b ^ 2) - log (c ^ 2 + a ^ 2)) / 2 := by
+  have hu (x : ℝ) : IsUnit (c ^ 2 + x ^ 2) :=
+    (add_pos_of_pos_of_nonneg (sq_pos_of_ne_zero hc) (sq_nonneg x)).ne'.isUnit
   rw [sub_div]
   apply integral_eq_sub_of_hasDerivAt (f := fun x => log (c ^ 2 + x ^ 2) / 2)
   · intro x _
-    have h := (((hasDerivAt_pow 2 x).const_add (c ^ 2)).log
-      (by dsimp; positivity)).div_const 2
-    convert! h using 1
-    ring
-  · exact (continuous_id.div (by fun_prop) fun x => by positivity).intervalIntegrable _ _
+    have h := ((hasDerivAt_pow 2 x).const_add (c ^ 2)).log (hx := hu x)
+    convert! h.div_const 2 (hd := (two_ne_zero : (2 : ℝ) ≠ 0).isUnit) using 1
+    field [(hu x).ne_zero]
+  · exact (continuous_id.div₀ (continuous_const.add (continuous_id.pow 2))
+      (h₀ := hu)).intervalIntegrable _ _
 
 /-- The integrand is chosen to match the conclusion of `Real.deriv_log_log`. -/
 @[simp]

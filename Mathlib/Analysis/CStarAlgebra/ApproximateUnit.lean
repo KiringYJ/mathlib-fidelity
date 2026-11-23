@@ -86,7 +86,7 @@ lemma CFC.monotoneOn_one_sub_one_add_inv :
 noncomputable def NNReal.homeomorphIioOne : ℝ≥0 ≃ₜ Set.Iio (1 : ℝ≥0) where
   toFun x := ⟨1 - (1 + x)⁻¹, tsub_lt_self (zero_lt_one : (0 : ℝ≥0) < 1)
     (show (0 : ℝ≥0) < (1 + x)⁻¹ by positivity)⟩
-  invFun y := Checked.div (y : ℝ≥0) (1 - (y : ℝ≥0)) (tsub_pos_of_lt y.property).ne'.isUnit
+  invFun y := Checked.div y.val (1 - y.val) (tsub_pos_of_lt (α := ℝ≥0) y.property).ne'.isUnit
   left_inv x := by
     have hle : (1 + x)⁻¹ ≤ 1 := inv_le_one_of_one_le₀ (le_add_of_nonneg_right bot_le)
     apply div_eq_iff.mpr
@@ -96,16 +96,19 @@ noncomputable def NNReal.homeomorphIioOne : ℝ≥0 ≃ₜ Set.Iio (1 : ℝ≥0)
       (mul_inv_cancel₀ (a := 1 + x) (ha := (show 0 < 1 + x by positivity).ne'.isUnit)).symm
   right_inv y := by
     apply Subtype.ext
-    let d := Checked.div (y : ℝ≥0) (1 - (y : ℝ≥0)) (tsub_pos_of_lt y.property).ne'.isUnit
-    change 1 - (1 + d)⁻¹ = (y : ℝ≥0)
-    have h : (1 + d) * (1 - (y : ℝ≥0)) = 1 := by
-      rw [add_mul, one_mul, show d * (1 - (y : ℝ≥0)) = y from div_mul_cancel₀ _,
-        tsub_add_cancel_of_le y.property.le]
-    rw [inv_eq_of_mul_eq_one_right₀ h, tsub_tsub_cancel_of_le y.property.le]
+    let d : ℝ≥0 := Checked.div y.val (1 - y.val)
+      (tsub_pos_of_lt (α := ℝ≥0) y.property).ne'.isUnit
+    change 1 - (1 + d)⁻¹ = y.val
+    have h : (1 + d) * (1 - y.val) = 1 := by
+      rw [add_mul, one_mul, show d * (1 - y.val) = y.val from div_mul_cancel₀ _,
+        tsub_add_cancel_of_le (α := ℝ≥0) y.property.le]
+    rw [inv_eq_of_mul_eq_one_right₀ h, tsub_tsub_cancel_of_le (α := ℝ≥0) y.property.le]
   continuous_toFun := (continuous_const.sub ((continuous_const.add continuous_id).fun_inv₀
     (h0 := fun x : ℝ≥0 ↦ (show 0 < 1 + x by positivity).ne'.isUnit))).subtype_mk _
-  continuous_invFun := continuous_subtype_val.div₀ (continuous_const.sub continuous_subtype_val)
-    (h₀ := fun y ↦ (tsub_pos_of_lt y.property).ne'.isUnit)
+  continuous_invFun :=
+    (continuous_subtype_val : Continuous (Subtype.val : Set.Iio (1 : ℝ≥0) → ℝ≥0)).div₀
+      (continuous_const.sub continuous_subtype_val)
+      (h₀ := fun y ↦ (tsub_pos_of_lt (α := ℝ≥0) y.property).ne'.isUnit)
 
 /-- Real continuous functional calculus on the nonnegative cone is monotone for
 `x ↦ 1 - (1 + x)⁻¹`. Each real quasispectral value here is nonnegative. -/

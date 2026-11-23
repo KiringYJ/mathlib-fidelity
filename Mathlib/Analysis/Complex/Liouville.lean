@@ -53,7 +53,7 @@ theorem norm_iteratedDeriv_le_of_forall_mem_sphere_norm_le [CompleteSpace F] {c 
     have hnorm : ‖z.val - c‖ = R := mem_sphere_iff_norm.mp hz
     simp only [integrand, one_div₀, norm_smul, norm_inv, norm_pow, hnorm, inv_mul_eq_div₀]
     exact (div_le_div_iff_of_pos_right (pow_pos hR _)).mpr (hC z hz)
-  have hconst : ‖(2 * π * I : ℂ)‖ = 2 * π := by simp [Real.pi_pos.le]
+  have hconst : ‖(2 * π * I : ℂ)‖ = 2 * π := by simp
   have hconst₀ : IsUnit (2 * π * I : ℂ) :=
     (norm_ne_zero_iff.mp (hconst.symm ▸ Real.two_pi_pos.ne')).isUnit
   have hfac : (n.factorial : ℂ) ≠ 0 := Nat.cast_ne_zero.mpr n.factorial_ne_zero

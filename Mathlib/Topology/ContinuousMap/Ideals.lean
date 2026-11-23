@@ -177,9 +177,10 @@ theorem exists_mul_le_one_eqOn_ge (f : C(X, ℝ≥0)) {c : ℝ≥0} (hc : 0 < c)
     exact (inv_mul_le_iff₀ (hpos x)).mpr ((mul_one (f x ⊔ c)).symm ▸ le_sup_left)
   · intro x hx
     change Checked.inv (f x ⊔ c) (hu x) * f x = 1
+    have hsup : f x ⊔ c = f x := sup_eq_left.mpr hx
     calc
       _ = Checked.inv (f x ⊔ c) (hu x) * (f x ⊔ c) :=
-        congrArg (Checked.inv (f x ⊔ c) (hu x) * ·) (sup_eq_left.mpr hx).symm
+        congrArg (Checked.inv (f x ⊔ c) (hu x) * ·) hsup.symm
       _ = 1 := inv_mul_cancel₀
 
 variable [CompactSpace X] [T2Space X]

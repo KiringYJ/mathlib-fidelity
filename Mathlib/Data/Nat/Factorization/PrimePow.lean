@@ -30,7 +30,7 @@ theorem isPrimePow_of_minFac_pow_factorization_eq {n : ℕ} (hn : n ≠ 1)
   rcases eq_or_ne n 0 with (rfl | hn')
   · simp_all
   refine ⟨_, _, (Nat.minFac_prime hn).prime, ?_, h⟩
-  simpa [pos_iff_ne_zero, ← Finsupp.mem_support_iff, hn', Nat.minFac_dvd]
+  simp [pos_iff_ne_zero, ← Finsupp.mem_support_iff, hn', Nat.minFac_prime hn, Nat.minFac_dvd]
 
 theorem isPrimePow_iff_minFac_pow_factorization_eq {n : ℕ} (hn : n ≠ 1) :
     IsPrimePow n ↔ n.minFac ^ n.factorization n.minFac = n :=

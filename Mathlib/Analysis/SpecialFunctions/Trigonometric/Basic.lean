@@ -292,25 +292,26 @@ theorem sin_nat_mul_two_pi_sub (x : ℝ) (n : ℕ) : sin (n * (2 * π) - x) = -s
 theorem sin_int_mul_two_pi_sub (x : ℝ) (n : ℤ) : sin (n * (2 * π) - x) = -sin x :=
   sin_neg x ▸ sin_periodic.int_mul_sub_eq n
 
+private theorem isUnit_neg_one_unit : (isUnit_neg_one : IsUnit (-1 : ℝ)).unit = -1 :=
+  Units.ext isUnit_neg_one.unit_spec
+
 theorem sin_add_int_mul_pi (x : ℝ) (n : ℤ) : sin (x + n * π) = (-1) ^ n * sin x := by
-  have hu : isUnit_neg_one.unit = (-1 : ℝˣ) := Units.ext (by simp)
-  simpa only [Int.cast_negOnePow, isUnit_neg_one.zpow_eq_val_unit_zpow, hu] using
+  simpa only [Int.cast_negOnePow, isUnit_neg_one.zpow_eq_val_unit_zpow, isUnit_neg_one_unit] using
     sin_antiperiodic.add_int_mul_eq n
 
 theorem sin_add_nat_mul_pi (x : ℝ) (n : ℕ) : sin (x + n * π) = (-1) ^ n * sin x :=
   sin_antiperiodic.add_nat_mul_eq n
 
 theorem sin_sub_int_mul_pi (x : ℝ) (n : ℤ) : sin (x - n * π) = (-1) ^ n * sin x := by
-  have hu : isUnit_neg_one.unit = (-1 : ℝˣ) := Units.ext (by simp)
-  simpa only [Int.cast_negOnePow, isUnit_neg_one.zpow_eq_val_unit_zpow, hu] using
+  simpa only [Int.cast_negOnePow, isUnit_neg_one.zpow_eq_val_unit_zpow, isUnit_neg_one_unit] using
     sin_antiperiodic.sub_int_mul_eq n
 
 theorem sin_sub_nat_mul_pi (x : ℝ) (n : ℕ) : sin (x - n * π) = (-1) ^ n * sin x :=
   sin_antiperiodic.sub_nat_mul_eq n
 
 theorem sin_int_mul_pi_sub (x : ℝ) (n : ℤ) : sin (n * π - x) = -((-1) ^ n * sin x) := by
-  have hu : isUnit_neg_one.unit = (-1 : ℝˣ) := Units.ext (by simp)
-  simpa only [sin_neg, mul_neg, Int.cast_negOnePow, isUnit_neg_one.zpow_eq_val_unit_zpow, hu]
+  simpa only [sin_neg, mul_neg, Int.cast_negOnePow, isUnit_neg_one.zpow_eq_val_unit_zpow,
+    isUnit_neg_one_unit]
     using sin_antiperiodic.int_mul_sub_eq n
 
 theorem sin_nat_mul_pi_sub (x : ℝ) (n : ℕ) : sin (n * π - x) = -((-1) ^ n * sin x) := by
@@ -382,8 +383,7 @@ theorem cos_int_mul_two_pi_sub (x : ℝ) (n : ℤ) : cos (n * (2 * π) - x) = co
   cos_neg x ▸ cos_periodic.int_mul_sub_eq n
 
 theorem cos_add_int_mul_pi (x : ℝ) (n : ℤ) : cos (x + n * π) = (-1) ^ n * cos x := by
-  have hu : isUnit_neg_one.unit = (-1 : ℝˣ) := Units.ext (by simp)
-  simpa only [Int.cast_negOnePow, isUnit_neg_one.zpow_eq_val_unit_zpow, hu] using
+  simpa only [Int.cast_negOnePow, isUnit_neg_one.zpow_eq_val_unit_zpow, isUnit_neg_one_unit] using
     cos_antiperiodic.add_int_mul_eq n
 
 theorem cos_int_mul_pi (n : ℤ) : cos (n * π) = (-1) ^ n := by
@@ -396,16 +396,15 @@ theorem cos_nat_mul_pi (n : ℕ) : cos (n * π) = (-1) ^ n := by
   simpa using cos_add_nat_mul_pi 0 n
 
 theorem cos_sub_int_mul_pi (x : ℝ) (n : ℤ) : cos (x - n * π) = (-1) ^ n * cos x := by
-  have hu : isUnit_neg_one.unit = (-1 : ℝˣ) := Units.ext (by simp)
-  simpa only [Int.cast_negOnePow, isUnit_neg_one.zpow_eq_val_unit_zpow, hu] using
+  simpa only [Int.cast_negOnePow, isUnit_neg_one.zpow_eq_val_unit_zpow, isUnit_neg_one_unit] using
     cos_antiperiodic.sub_int_mul_eq n
 
 theorem cos_sub_nat_mul_pi (x : ℝ) (n : ℕ) : cos (x - n * π) = (-1) ^ n * cos x :=
   cos_antiperiodic.sub_nat_mul_eq n
 
 theorem cos_int_mul_pi_sub (x : ℝ) (n : ℤ) : cos (n * π - x) = (-1) ^ n * cos x := by
-  have hu : isUnit_neg_one.unit = (-1 : ℝˣ) := Units.ext (by simp)
-  simpa only [cos_neg, Int.cast_negOnePow, isUnit_neg_one.zpow_eq_val_unit_zpow, hu] using
+  simpa only [cos_neg, Int.cast_negOnePow, isUnit_neg_one.zpow_eq_val_unit_zpow,
+    isUnit_neg_one_unit] using
     cos_antiperiodic.int_mul_sub_eq n
 
 theorem cos_nat_mul_pi_sub (x : ℝ) (n : ℕ) : cos (n * π - x) = (-1) ^ n * cos x :=

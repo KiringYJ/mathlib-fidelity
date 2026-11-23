@@ -21,6 +21,17 @@ example (c : ℝ) (μ : Measure Unit) (hμ : μ ≠ 0) :
     eLpNorm (fun _ : Unit => c) ∞ μ = ‖c‖ₑ := by
   simpa using eLpNorm_const (p := ∞) c ENNReal.top_ne_zero hμ
 
+-- The numerical formula only needs the extended magnitude of the function.
+example {α ε : Type*} [SigmaAlgebra α] [ENorm ε] (f : α → ε) (μ : Measure α) :
+    eLpNorm f 1 μ = ∫⁻ x, ‖f x‖ₑ ∂μ :=
+  eLpNorm_one_eq_lintegral_enorm
+
+-- `MemLp` carries a measurability condition at exponent zero.
+example {α ε : Type*} [SigmaAlgebra α] [TopologicalSpace ε] [ENorm ε]
+    (f : α → ε) (μ : Measure α) (hf : ¬ AEStronglyMeasurable f μ) :
+    eLpNorm f 0 μ = 0 ∧ ¬ MemLp f 0 μ :=
+  ⟨eLpNorm_exponent_zero, fun h ↦ hf h.aestronglyMeasurable⟩
+
 -- Exponent evidence is inferred from the expression, including negative exponents.
 example (f : Unit → ℝ) (q : ℝ) (μ : Measure Unit) (hq : IsUnit q) :
     eLpNorm' (-f) q μ hq = eLpNorm' f q μ hq := by

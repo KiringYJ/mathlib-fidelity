@@ -12,8 +12,7 @@ public import Mathlib.GroupTheory.Nilpotent
 
 A group is *virtually cyclic* if it has a cyclic subgroup of finite index.
 Virtually cyclic groups are fundamental in geometric group theory: they are
-exactly the elementary subgroups of hyperbolic groups, the groups with at most
-two ends, and the conclusion of the curvature-free Margulis lemma of
+the elementary subgroups of hyperbolic groups and occur in the curvature-free Margulis lemma of
 Besson–Courtois–Gallot–Sambusetti.
 
 ## Main definitions and results
@@ -26,7 +25,7 @@ Besson–Courtois–Gallot–Sambusetti.
 
 ## TODO
 
-* A finitely generated group is virtually cyclic iff it has ≤ 2 ends
+* A finitely generated group is virtually cyclic iff it is finite or has exactly two ends
   (requires ends of groups, not yet in Mathlib).
 -/
 

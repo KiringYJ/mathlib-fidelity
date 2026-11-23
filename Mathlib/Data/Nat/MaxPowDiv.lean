@@ -5,7 +5,7 @@ Authors: Matthew Robert Ballard, Yury Kudryashov
 -/
 module
 
-import Mathlib.Data.Nat.Notation
+public import Mathlib.Data.Nat.Notation
 
 /-!
 # The maximal power of one natural number dividing another
@@ -54,7 +54,8 @@ def maxPowDvdDiv (p n : ℕ) (hpn : 1 < p ∧ n ≠ 0) : ℕ × ℕ :=
     rw [Nat.mul_assoc] at hmul
     exact Nat.not_le_of_lt (Nat.mul_lt_mul_of_pos_left hlt hp₀) hmul
 
-/-- The quotient of `n` by the largest power of `p` that divides `n`. If `p ≤ 1` or `n = 0`, the quotient is `n`. -/
+/-- The quotient of `n` by the largest power of `p` that divides `n`.
+If `p ≤ 1` or `n = 0`, the quotient is `n`. -/
 def divMaxPow (n p : ℕ) : ℕ :=
   if h : 1 < p ∧ n ≠ 0 then (maxPowDvdDiv p n h).2 else n
 
@@ -102,7 +103,9 @@ theorem maxPowDvdDiv_of_not_dvd {p n : ℕ} (hpn : 1 < p ∧ n ≠ 0) (h : ¬p �
     maxPowDvdDiv p n hpn = (0, n) := by
   cases n with
   | zero => simp at h
-  | succ n => simp [maxPowDvdDiv, Nat.dvd_iff_mod_eq_zero.not.mp h, maxPowDvdDiv.go]
+  | succ n =>
+    have hmod : (n + 1) % p ≠ 0 := fun hm ↦ h (Nat.dvd_iff_mod_eq_zero.mpr hm)
+    simp [maxPowDvdDiv, maxPowDvdDiv.go, hmod]
 
 @[simp]
 theorem maxPowDvdDiv_one_right {p : ℕ} (hpn : 1 < p ∧ 1 ≠ 0) : maxPowDvdDiv p 1 hpn = (0, 1) :=

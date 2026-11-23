@@ -40,17 +40,21 @@ noncomputable def gromovProduct : ℝ := (dist x y + dist x z - dist y z) / 2
 
 lemma gromovProduct_eq : gromovProduct x y z = (dist x y + dist x z - dist y z) / 2 := by rfl
 
+private lemma two_mul_gromovProduct :
+    2 * gromovProduct x y z = dist x y + dist x z - dist y z := by
+  rw [mul_comm 2, gromovProduct_eq, div_mul_cancel₀]
+
 lemma gromovProduct_comm : gromovProduct x y z = gromovProduct x z y := by
-  grind [gromovProduct_eq, dist_comm]
+  linarith only [two_mul_gromovProduct x y z, two_mul_gromovProduct x z y, dist_comm y z]
 
 grind_pattern gromovProduct_comm => gromovProduct x y z where y =/= z
 
 @[grind! .]
 lemma gromovProduct_nonneg : 0 ≤ gromovProduct x y z := by
-  grind [gromovProduct_eq, dist_triangle_left y z x]
+  linarith only [two_mul_gromovProduct x y z, dist_triangle_left y z x]
 
 lemma gromovProduct_le_dist_left : gromovProduct x y z ≤ dist x y := by
-  grind [gromovProduct_eq, dist_triangle x y z]
+  linarith only [two_mul_gromovProduct x y z, dist_triangle x y z]
 
 lemma gromovProduct_le_dist_right : gromovProduct x y z ≤ dist x z := by
   grind [gromovProduct_le_dist_left]
@@ -65,12 +69,13 @@ lemma gromovProduct_self_right : gromovProduct x y x = 0 := by
 
 @[simp]
 lemma gromovProduct_self : gromovProduct x y y = dist x y := by
-  simp [gromovProduct_eq]
+  linarith only [two_mul_gromovProduct x y y, dist_self y]
 
 lemma gromovProduct_add_gromovProduct₁₃ : gromovProduct x y z + gromovProduct z y x = dist x z := by
-  grind [gromovProduct_eq, dist_comm]
+  linarith only [two_mul_gromovProduct x y z, two_mul_gromovProduct z y x,
+    dist_comm x y, dist_comm x z, dist_comm y z]
 
 lemma gromovProduct_add_gromovProduct₁₂ : gromovProduct x y z + gromovProduct y x z = dist x y := by
-  grind [gromovProduct_eq, dist_comm]
+  linarith only [two_mul_gromovProduct x y z, two_mul_gromovProduct y x z, dist_comm x y]
 
 end Metric

@@ -54,7 +54,8 @@ def factorization (n : ℕ) : ℕ →₀ ℕ :=
 /-- The support of `n.factorization` is exactly `n.primeFactors`. -/
 @[simp] lemma support_factorization (n : ℕ) : (factorization n).support = n.primeFactors := rfl
 
-/-- The exponent of a prime in the factorization of `n` counts its entries in `n.primeFactorsList`. -/
+/-- The exponent of a prime in the factorization of `n` counts its entries
+in `n.primeFactorsList`. -/
 @[simp]
 theorem primeFactorsList_count_eq {n p : ℕ} : n.primeFactorsList.count p = n.factorization p := by
   simp [factorization]

@@ -618,7 +618,8 @@ theorem affineSpan_orthocenter_point_le_altitude (t : Triangle ℝ P) (i : Fin 3
 /-- The affine span of the orthocenter and a vertex is equal to the
 altitude if the orthocenter is not the vertex. -/
 theorem affineSpan_orthocenter_point_eq_altitude (t : Triangle ℝ P) (i : Fin 3)
-    (h : t.orthocenter ≠ t.points i) : line[ℝ, t.orthocenter, t.points i] = t.altitude i := by
+    (h : t.orthocenter ≠ t.points i) :
+    affineSpan ℝ {t.orthocenter, t.points i} = t.altitude i := by
   rw [← affineSpan_pair_altitudeFoot_eq_altitude, affineSpan_pair_eq_of_left_mem_of_ne _ h]
   rw [affineSpan_pair_altitudeFoot_eq_altitude]
   exact orthocenter_mem_altitude t

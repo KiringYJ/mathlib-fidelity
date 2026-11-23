@@ -510,7 +510,7 @@ protected theorem star {R : Type*} [SigmaAlgebra α] [Star R] [TopologicalSpace 
     [ContinuousStar R] (f : α → R) (hf : StronglyMeasurable f) : StronglyMeasurable (star f) :=
   ⟨fun n => star (hf.approx n), fun x => (hf.tendsto_approx x).star⟩
 
-protected theorem star_iff {R : Type*} [MeasurableSpace α] [InvolutiveStar R] [TopologicalSpace R]
+protected theorem star_iff {R : Type*} [SigmaAlgebra α] [InvolutiveStar R] [TopologicalSpace R]
     [ContinuousStar R] {f : α → R} :
     StronglyMeasurable (star f) ↔ StronglyMeasurable f :=
   ⟨fun h ↦ by simpa using h.star, fun h ↦ h.star⟩

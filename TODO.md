@@ -127,9 +127,11 @@ and overlap with existing declarations before selecting exact theorem coverage a
 
 ## Upstream reconciliation
 
-- [ ] **Rebase `main` onto mathlib `v4.34.0` (`5ed2965`).** Advance the upstream baseline from
-  `c02174567c` by replaying the Fidelity commits and validating the rebased tree. See the
-  [upstream release](https://github.com/leanprover-community/mathlib4/releases/tag/v4.34.0)
+- [x] **Rebase `main` onto mathlib `v4.34.0` (`5ed2965`).** Replayed the Fidelity commits from
+  `c02174567c` and validated the resulting tree on official Lean `v4.34.0`. The strict build
+  passed for `Mathlib`, `MathlibTest`, `Archive`, `Counterexamples`, and `Wanted`. The test driver,
+  environment and source linters, generated-import check, and operator-fidelity audits passed.
+  See the [upstream release](https://github.com/leanprover-community/mathlib4/releases/tag/v4.34.0)
   and the [reconciliation workflow](AI_AGENT_PROJECT.md#mathlib-baseline-reconciliation-workflow).
 
 ## Fork CI rollout

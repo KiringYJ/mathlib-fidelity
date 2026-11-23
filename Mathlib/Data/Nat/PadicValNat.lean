@@ -130,9 +130,7 @@ theorem maxPowDvdDiv_of_pow_mul_eq {p n k l : ℕ} (hpn : 1 < p ∧ n ≠ 0) (h 
     rw [fst_maxPowDvdDiv]
     apply Nat.le_antisymm
     · rw [← pow_dvd_iff_le_padicValNat (Nat.ne_of_gt hp) hn, pow_dvd_iff_le_of_spec hp hn h hl]
-      apply Nat.le_refl
     · rw [← pow_dvd_iff_le_of_spec hp hn h hl, pow_dvd_iff_le_padicValNat (Nat.ne_of_gt hp) hn]
-      apply Nat.le_refl
   have hq := (maxPowDvdDiv_spec ⟨hp, hn⟩).1
   rw [← hk] at hq
   have : p ^ k * (p.maxPowDvdDiv n ⟨hp, hn⟩).2 = p ^ k * l := by rw [Nat.mul_comm, hq, h]

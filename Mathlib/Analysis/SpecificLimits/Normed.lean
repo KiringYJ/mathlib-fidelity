@@ -308,7 +308,7 @@ using iterated multiplication. Once semigroups implement this bundled `Pow` inst
 switch the statements to use that instead, and improve the proofs. -/
 @[mk_iff hasSummableGeomSeries_iff_summable_iterate_mul]
 class HasSummableGeomSeries (K : Type*) [NonUnitalNormedRing K] : Prop where
-  summable_geometric_of_norm_lt_one : ∀ (ξ : K), ‖ξ‖ < 1 → Summable ((· * ξ)^[·] ξ)
+  summable_iterate_mul_of_norm_lt_one : ∀ (ξ : K), ‖ξ‖ < 1 → Summable ((· * ξ)^[·] ξ)
 
 -- this lemma should be removed (and unnecessary) once we have a `Pow G ℕ+` instance for semigroups
 private lemma _root_.iterate_mul_succ' {G : Type*} [Semigroup G] (x : G)
@@ -330,10 +330,10 @@ private lemma _root_.norm_iterate_mul_le (x : R) (n : ℕ) :
 
 lemma summable_iterate_mul_of_norm_lt_one [HasSummableGeomSeries R] {x : R} (h : ‖x‖ < 1) :
     Summable ((· * x)^[·] x) :=
-  HasSummableGeomSeries.summable_geometric_of_norm_lt_one x h
+  HasSummableGeomSeries.summable_iterate_mul_of_norm_lt_one x h
 
 instance [CompleteSpace R] : HasSummableGeomSeries R where
-  summable_geometric_of_norm_lt_one x hx := by
+  summable_iterate_mul_of_norm_lt_one x hx := by
     have h1 : Summable fun n : ℕ ↦ ‖x‖ ^ (n + 1) :=
       summable_nat_add_iff 1 |>.mpr <| summable_geometric_of_lt_one (norm_nonneg _) hx
     refine h1.of_norm_bounded_eventually_nat <| .of_forall <| norm_iterate_mul_le x
@@ -348,13 +348,14 @@ protected theorem Summable.add_self_mul_geom_series {x : R} (h : Summable ((· *
   rw [← h.tsum_mul_left, h.tsum_eq_zero_add]
   simp [iterate_mul_succ']
 
-/-- Bound for the sum of a geometric series in a normed ring. This formula does not assume that the
-normed ring satisfies the axiom `‖1‖ = 1`. -/
-theorem tsum_iterate_mul_le_of_norm_lt_one (x : R) (h : ‖x‖ < 1) :
+/-- Bound for the sum of a summable geometric tail in a non-unital normed ring. -/
+theorem tsum_iterate_mul_le_of_norm_lt_one (x : R) (h : ‖x‖ < 1)
+    (hs : Summable ((· * x)^[·] x)) :
     ‖∑' n : ℕ, (· * x)^[n] x‖ ≤ ‖x‖ / (1 - ‖x‖) := by
-  refine tsum_of_norm_bounded ?_ (norm_iterate_mul_le x)
-  simpa [_root_.pow_succ', div_eq_mul_inv] using
-    (hasSum_geometric_of_lt_one (norm_nonneg x) h).mul_left _
+  refine hs.hasSum.norm_le_of_bounded ?_ (norm_iterate_mul_le x)
+  simpa only [_root_.pow_succ',
+    div_eq_mul_inv₀ _ _ (hb := (sub_pos.mpr h).ne'.isUnit)] using
+    (hasSum_geometric_of_lt_one (norm_nonneg x) h).mul_left ‖x‖
 
 /-- If `‖x‖ < 1` and `x` lies in a non-unital normed ring, then `∑' n : ℕ, x ^ (n + 1)` is summable
 if and only if `-x` is quasiregular. -/
@@ -425,8 +426,8 @@ lemma hasSummableGeomSeries_iff_summable_pow :
 
 alias ⟨_, HasSummableGeomSeries.of_summable_pow⟩ := hasSummableGeomSeries_iff_summable_pow
 
-/-- If `‖x‖ < 1` and `x` lies in a normed ring, then `∑' n : ℕ, x ^ n` is summable
-if and only if `1 - x` is invertible. -/
+/-- A normed ring has summable geometric series precisely when `1 - x` is a unit for every `x`
+in the open unit ball. -/
 theorem hasSummableGeomSeries_iff_isUnit :
     HasSummableGeomSeries R ↔ ∀ ⦃x : R⦄, ‖x‖ < 1 → IsUnit (1 - x) := by
   rw [neg_involutive.surjective.forall]
@@ -437,14 +438,22 @@ theorem hasSummableGeomSeries_iff_isUnit :
 normed ring satisfies the axiom `‖1‖ = 1`. -/
 theorem tsum_geometric_le_of_norm_lt_one (x : R) (h : ‖x‖ < 1) :
     ‖∑' n : ℕ, x ^ n‖ ≤ ‖(1 : R)‖ - 1 + (1 - ‖x‖)⁻¹ := by
-  have := by simpa only [mul_right_iterate_apply_self]
-    using tsum_iterate_mul_le_of_norm_lt_one x h
   by_cases hx : Summable (fun n ↦ x ^ n)
-  · grw [hx.tsum_eq_zero_add, norm_add_le, this]
-    grind
+  · have hs : Summable ((· * x)^[·] x) := by
+      simpa only [mul_right_iterate_apply_self] using (summable_nat_add_iff 1).mpr hx
+    have htail := tsum_iterate_mul_le_of_norm_lt_one x h hs
+    simp only [mul_right_iterate_apply_self] at htail
+    have hquot : ‖x‖ / (1 - ‖x‖) = (1 - ‖x‖)⁻¹ - 1 := calc
+      _ = (1 - (1 - ‖x‖)) / (1 - ‖x‖) := by rw [sub_sub_cancel]
+      _ = _ := by rw [sub_div, one_div₀, div_self]
+    rw [hquot] at htail
+    rw [hx.tsum_eq_zero_add]
+    simp only [_root_.pow_zero]
+    exact (norm_add_le _ _).trans (by linarith only [htail])
   · simp only [tsum_eq_zero_of_not_summable hx, norm_zero]
     nontriviality R
-    positivity [sub_pos.mpr h, one_le_norm_one R]
+    have hinv : 0 ≤ (1 - ‖x‖)⁻¹ := inv_nonneg.mpr (sub_pos.mpr h).le
+    linarith only [hinv, one_le_norm_one R]
 
 variable [HasSummableGeomSeries R]
 

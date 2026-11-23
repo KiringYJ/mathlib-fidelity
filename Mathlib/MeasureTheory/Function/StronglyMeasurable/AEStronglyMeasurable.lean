@@ -804,7 +804,7 @@ theorem piecewise {s : Set α} [DecidablePred (· ∈ s)]
 theorem piecewise_iff {s : Set α} [DecidablePred (· ∈ s)] (hs : MeasurableSet s) :
     AEStronglyMeasurable (s.piecewise f g) μ ↔
       AEStronglyMeasurable f (μ.restrict s) ∧ AEStronglyMeasurable g (μ.restrict sᶜ) := by
-  refine ⟨fun h ↦ ⟨?_, ?_⟩, fun ⟨hf, hg⟩ ↦ hf.piecewise hs hg⟩
+  refine ⟨fun h ↦ ⟨?_, ?_⟩, fun ⟨hf, hg⟩ ↦ piecewise hs hf hg⟩
   · exact h.restrict.congr (piecewise_ae_eq_restrict hs)
   · exact h.restrict.congr (piecewise_ae_eq_restrict_compl hs)
 

@@ -102,6 +102,8 @@ Prefer a direct `CommRing` instance when both it and a Euclidean structure are a
 -- see Note [lower instance priority]
 attribute [instance 100] EuclideanDomain.toCommRing
 
+attribute [instance] EuclideanDomain.r_wellFounded
+
 namespace EuclideanDomain
 
 variable {R : Type u} [EuclideanDomain R]

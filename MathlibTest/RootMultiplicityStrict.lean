@@ -45,7 +45,7 @@ example (p : ℤ[X]) (hp : p ≠ 0) (a : ℤ) : 0 < p.rootMultiplicity a ↔ p.I
 
 /-! The multiplicity at the zero polynomial is infinite. -/
 
-example (a : ℤ) : emultiplicity (X - C a) (0 : ℤ[X]) = ⊤ := emultiplicity_zero _
+example (a : ℤ) : emultiplicity (X - C a) (0 : ℤ[X]) = ⊤ := emultiplicity_zero_right _
 
 /-! Without a proof that the polynomial is nonzero, there is no multiplicity. -/
 

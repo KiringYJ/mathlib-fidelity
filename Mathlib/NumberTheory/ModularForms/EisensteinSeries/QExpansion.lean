@@ -104,7 +104,7 @@ theorem summableLocallyUniformlyOn_iteratedDerivWithin_smul_cexp (k l : ℕ) {f 
       rw [Complex.div_ofReal_im]
       exact div_pos hx hp
     simpa using h1 ▸ norm_exp_two_pi_I_lt_one ⟨((x : ℂ) / (p : ℂ)), hx'⟩
-  have hpabs : IsUnit |p| := (abs_pos.mpr hp.ne').isUnit
+  have hpabs : IsUnit |p| := (abs_pos.mpr hp.ne').ne'.isUnit
   refine ⟨fun n ↦ ‖f n‖ * (Checked.div (2 * π * n) |p| hpabs) ^ k * |r| ^ n, by
     simpa using (summable_norm_mul_geometric_of_norm_lt_one' hr
       (Asymptotics.isBigO_norm_left.mpr (aux_IsBigO_mul k l p (hp := hpu) hf))), fun n z hz ↦ ?_⟩
@@ -115,8 +115,7 @@ theorem summableLocallyUniformlyOn_iteratedDerivWithin_smul_cexp (k l : ℕ) {f 
     norm_natCast, abs_norm, ge_iff_le, Real.abs_pi, r, c] at *
   rw [← mul_assoc]
   gcongr
-  · exact (div_pow₀ _ _ _).le
-  · simpa only [exp_nsmul' z (2 * π * I) p (hp := hpu), norm_pow] using! h0
+  simpa only [exp_nsmul' z (2 * π * I) p (hp := hpu), norm_pow] using! h0
 
 /-- This is a version of `summableLocallyUniformlyOn_iteratedDerivWithin_smul_cexp` for level one
 and q-expansion coefficients all `1`. -/

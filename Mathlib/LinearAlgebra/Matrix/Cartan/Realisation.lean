@@ -19,7 +19,7 @@ public import Mathlib.LinearAlgebra.RootSystem.Reduced
 Let `R` be an integral domain of characteristic zero, and let `M` and `N` be `R`-modules in perfect
 pairing. Then, given vectors `r₁, r₂, …, rₗ` in `M` and `c₁, c₂, …, cₗ` in `N`, the following two
 propositions are equivalent:
-1. The vectors `rᵢ`, `cᵢ` are the simple roots and coroots of a finite, reduced, crystrallographic
+1. The vectors `rᵢ`, `cᵢ` are the simple roots and coroots of a finite, reduced, crystallographic
    root pairing (i.e., a reduced root datum except we do not require `R = ℤ`).
 2. The matrix `Aᵢⱼ = ⟨cⱼ, rᵢ⟩` is a finite-type Cartan matrix.
 
@@ -31,8 +31,10 @@ to formalise item 2.
  * `CartanMatrix.Realisation.toRootPairing`: the root pairing defined by a realisation of a Cartan
    matrix.
  * `Matrix.IsFiniteCartan.toRealisation`: a realisation associated to an invertible Cartan matrix.
- * `Matrix.IsFiniteCartan.toRootPairing`: a reduced, irreducible, crystallographic root system
-   assocated to a Cartan matrix, with coefficients in any field of characteristic zero.
+ * `Matrix.IsFiniteCartan.toRootPairing`: a reduced crystallographic root system associated to a
+   finite-type Cartan matrix, with coefficients in any field of characteristic zero.
+ * `Matrix.IsFiniteCartan.isIrreducible_toRootPairing`: this root system is irreducible when the
+   index type is nonempty and the Cartan matrix is indecomposable.
 
 -/
 
@@ -542,7 +544,8 @@ lemma isIrreducible_toRootPairing [Nonempty n] {k V W : Type*} [Field k] [CharZe
   let f (i : n) : rl.idx := ⟨(rl.sRoot i, rl.sCoroot i), rl.sPair_mem_idx i⟩
   have hf (i j : n) : rl.toRootPairing.pairing (f i) (f j) = rl.matrix i j := rl.pairingMatrix i j
   replace hA' : (∀ i, f i ∈ Φ) ∨ (∀ i, f i ∉ Φ) := by
-    have hbt : rl.matrix.BlockTriangular fun i ↦ if f i ∈ Φ then 1 else 0 := fun i j hij ↦ by
+    have hbt : rl.matrix.BlockTriangular
+        (fun i ↦ if f i ∈ Φ then (1 : ℕ) else 0) := fun i j hij ↦ by
       have : rl.toRootPairing.coroot' (f j) (rl.toRootPairing.root (f i)) = 0 :=
         hΦker (f j) (by aesop) (hΦq ⟨f i, by aesop, rfl⟩)
       rwa [RootPairing.root_coroot'_eq_pairing, hf, Int.cast_eq_zero] at this
