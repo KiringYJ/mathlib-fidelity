@@ -4861,6 +4861,19 @@ and uses the official Lean toolchain.
   unsupported fallback branches with the selected function's consumer migration. Preserve the
   useful algebraic and analytic theorem families on their valid domains.
 
+- [ ] **Audit totalized operations and fallbacks across the library.**
+  Start from the 2026-10-20 inventory in [Audit coverage and limits](#audit-coverage-and-limits).
+  Review maintained mathematical declarations one by one, including inherited, private, and
+  generated declarations. Inspect elaborated statements, definition bodies, and dependencies to
+  find fallback behavior that lacks a source marker. Record the intended domain, specifying
+  properties, fallback values where present, and the statements and callers that depend on them.
+
+  Use the fidelity gate above to classify each candidate and record the audit coverage and
+  dispositions. Group confirmed public fallbacks into coherent migrations, reusing existing
+  operator-family TODOs where applicable. Complete the affected caller migrations under the
+  [complete-migration contract](FORK_DESIGN.md#completion) and the
+  [official Lean boundary](FORK_DESIGN.md#official-lean-and-operator-fidelity).
+
 ## Representation fidelity lint -- total objects whose representation changes the semantics
 
 These are not undefined-operation-to-junk-value defects.  The represented object is mathematically

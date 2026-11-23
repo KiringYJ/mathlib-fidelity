@@ -1367,10 +1367,6 @@ the completed inverse/division interface faithful.
 
 ## Current Non-goals
 
-- Repairing every documented fallback now. The 2026-10-20 inventory of
-  documented fallbacks is recorded as candidates in `TODO.md`; an audit of every
-  totalization in the repository, declaration by declaration, remains out of
-  scope.
 - Preserving fork-only changes in a form suitable for an upstream pull request.
 - Modifying or maintaining Lean's toolchain, banning the carrier `Rat`, or
   eliminating unavoidable official-toolchain dependencies from proof terms.
