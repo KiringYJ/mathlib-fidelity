@@ -12,14 +12,13 @@ split, or rewrite them merely for upstream pull-request acceptability. Upstream
 remains a source of useful code and updates, not the target design authority for
 this fork.
 
-`FORK_DESIGN.md` owns what the library should be: every design rule about
-semantics and domains, interfaces and quality of life, naming and notation,
-generality, and the admission and canonicalization of external material, plus
-the foundational migration contracts, which it records without authorizing
-their implementation. This file owns how work is done here: branches,
-reconciliation, contribution and intake mechanics, the refactor protocol,
-commands, and constraints. It does not restate design rules; on a design
-question, `FORK_DESIGN.md` decides.
+[FORK_DESIGN.md](FORK_DESIGN.md) is the library-wide design charter. It sets
+the principles for semantics, API design, placement, and complete migrations.
+Lean definitions and theorems specify individual APIs. Use module and
+declaration docstrings to explain their mathematical meaning and design.
+This file governs branch maintenance, reconciliation, the refactor protocol,
+and verification. The [contribution guide](.github/CONTRIBUTING.md) owns
+contributor-facing requirements.
 
 The policies below are project-local overrides. `main` is this fork's canonical
 workspace source of truth and default branch. The upstream `master` branch is
@@ -97,11 +96,10 @@ or prepare an upstream pull request, and never push to `upstream`.
 
 ## Contributions and Curated External Source Intake
 
-Contribution and intake policy, including review eligibility, the division of
-work between contributors and maintainers, admission criteria, integration
-modes, and provenance requirements, is in `FORK_DESIGN.md`. Follow its
-[placement policy](FORK_DESIGN.md#mathematical-scope-and-placement) for work
-that will be integrated in-tree.
+Follow the charter's [placement policy](FORK_DESIGN.md#mathematical-scope-and-placement)
+for in-tree work, the [contribution guide](.github/CONTRIBUTING.md#admission-and-review)
+for admission and review, and the [source registry](UPSTREAMS.md#intake-procedure)
+for the intake record and integration modes.
 
 ### Moving `main` and open pull requests
 
@@ -137,34 +135,26 @@ until a separate license review establishes an authorized path.
 
 ## Design Contract
 
-Before work that touches a public API, a domain, a name or notation, the level
-of generality, or external material, read the matching parts of
-`FORK_DESIGN.md`: Coequal Design Goals for design rules, and Contributions,
-Curated Intake, and Canonicalization together with Source Repositories and
-Provenance for external material. The heuristics and the refactor protocol
-below are working tools derived from those rules; when they seem to disagree,
-`FORK_DESIGN.md` decides.
+Before changing a public API, consult the matching principles in
+[FORK_DESIGN.md](FORK_DESIGN.md#coequal-design-goals) and inspect the relevant
+Lean definitions, theorems, and consumers. Apply the
+[admission and source policies](#contributions-and-curated-external-source-intake)
+to external material. Use the heuristics and refactor protocol below to
+apply the charter to the selected scope.
 
 ### Official toolchain and operator dependency checks
 
-Apply the official-Lean and operator-fidelity boundary in `FORK_DESIGN.md`.
-Keep `lean-toolchain` on an official release and do not patch Lean, `Init`,
-`Std`, or core proof infrastructure for a mathematical migration. An ordinary
-official version upgrade remains a separate compatibility and validation task.
+Apply the [official-Lean and operator-fidelity boundary](FORK_DESIGN.md#official-lean-and-operator-fidelity)
+to the selected operations and all affected packages. Validate an official
+Lean version upgrade as a separate compatibility task.
 
-For a selected operator migration, audit maintained declarations' elaborated
-types and semantic definition dependencies, including private and inherited
-declarations, aliases, predicate bodies, implicit instances, and structure data.
-Do not blacklist a legitimate carrier such as core `Rat` merely because it has
-an unfaithful operator. Inspect proofs and proof-producing automation too, and
-remove uses controlled by the fork wherever feasible. For unavoidable proof-only
-dependencies requiring a toolchain change to eliminate, record the actual
-declaration, ownership, and faithful boundary. Classify generated proof
-auxiliaries by provenance. Test hidden semantic dependencies, retained faithful
-operations, and the narrow toolchain exception when implementing the audit.
-Do not substitute a source grep, import prohibition, or full proof dependency
-ban. Existing conjecture, axiom, and evaluation-trust checks still traverse
-proofs. This workflow requirement does not claim the audit exists.
+Use the [operator-fidelity audit](.github/CI.md#operator-fidelity) and inspect
+its proof dependency report. Test hidden semantic dependencies, retained
+faithful operations, and the narrow toolchain exception when extending the
+audit. Record each unavoidable official proof dependency and the evidence
+for its boundary. For conjecture, axiom, and evaluation trust, follow the
+separate [proof-status design](FORK_DESIGN.md#conjectures-and-proof-status)
+and its implementation status in `TODO.md`.
 
 ## Working API Heuristics
 
@@ -228,9 +218,9 @@ For an explicitly authorized public-API canonicalization:
 1. Inventory the existing representations, notation, theorem families,
    instances, automation, and structurally different downstream consumers.
    Trace implicit entry points as well as named calls: inspect what bare
-   ambient notation such as `volume` selects. Apply the implicit-entry-point
-   contract in `FORK_DESIGN.md`; a strict named operation is not a completed
-   migration if a global instance still makes the excluded choice automatically.
+   ambient notation such as `volume` selects. Apply the charter's
+   [mathematical fidelity rule](FORK_DESIGN.md#mathematical-fidelity) to enforce
+   the same domain and canonicity at every entry point.
 2. Separate ambient objects, propositions, and proof-carrying domains before
    choosing canonical syntax. State one normal form for each intended context
    and add regression tests for definitional equalities between retained
@@ -278,12 +268,12 @@ and report inherited failures accurately without expanding the refactor.
 
 [`CHANGELOG.md`](CHANGELOG.md) records significant changes between consecutive Fidelity
 releases, with separate entries for the mathlib baseline and the Fidelity API.
-`TODO.md` tracks pending work. Completed records can be removed once the formal
-Lean API and [regression coverage](FORK_DESIGN.md#regression-coverage) preserve the
-completed work. Resolve every obligation of the selected migration before reporting
-it complete. Record independent
-foundational problems and other separately scoped work in `TODO.md`; never
-leave them only in a final report or conversation. A TODO cannot substitute for
+`TODO.md` tracks pending work. Completed entries can be removed once the Lean
+API, any necessary docstrings, and
+[regression coverage](.github/CONTRIBUTING.md#regression-coverage) preserve
+their contracts. Resolve every obligation of the selected migration before
+reporting it complete. Record independent foundational problems and other
+separately scoped work in `TODO.md`. A TODO cannot substitute for
 an in-scope proof, consumer migration, or removal. Remaining items include open
 mathematical questions, hypotheses stronger than necessary,
 deferred instances or API, unverified claims, and deferred reviewer
@@ -323,7 +313,7 @@ Desktop chat billing follows its own sign-in.
 - `MathlibTest/` contains inherited and ported upstream tests. `FidelityTest/`
   contains Fidelity-specific regression tests.
 - `Counterexamples/` and `scripts/` provide examples and repository tooling.
-- `FORK_DESIGN.md` is the authoritative design and complete-migration contract.
+- `FORK_DESIGN.md` is the library-wide design charter.
 - `UPSTREAMS.md` records external source identity, license evidence,
   provenance, integration mode, and status.
 - `AI_AGENT_GUIDE.md` is generated shared agent policy.
@@ -367,8 +357,7 @@ they remain applicable to the affected area.
 
 - `README.md`: fork overview, branch model, setup, contribution policy, and
   upstream resource links.
-- `FORK_DESIGN.md`: authoritative design contract: purpose, design rules,
-  contribution and intake policy, and foundational migration contracts.
+- `FORK_DESIGN.md` sets library-wide design and migration principles.
 - `UPSTREAMS.md`: canonical source-repository and provenance registry.
 - `TODO.md`: backlog of fidelity and API-hygiene work, with unresolved
   candidates subject to its fidelity gate.
@@ -412,10 +401,11 @@ and the provenance ledger, but must never rewrite this project file.
 
 ## Project-Specific Constraints
 
-- Follow mathlib's source documentation conventions: keep mathematical definitions,
-  API explanations, construction choices, and usage guidance in Lean module and
-  declaration docstrings. Do not add standalone API design or migration documents
-  under `docs/`, or create a parallel documentation tree for that purpose.
+- Follow [mathlib's source documentation conventions](https://mathlib.org/contribute/doc.html).
+  Keep mathematical specifications in Lean definitions and theorems. Explain
+  API choices and usage in the relevant module and declaration docstrings.
+  For a cross-module API, link the related modules from an existing entry
+  point. Keep API design and migration specifications in these docstrings.
 - In file headers, name authors by their real names, as mathlib does:
   `Copyright (c) <year> <name>. All rights reserved.` and `Authors: <name>`.
   For a file written on the maintainer's behalf, take the name from

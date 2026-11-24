@@ -12,8 +12,31 @@ import Mathlib.Tactic.Linter.Header
 /-!
 # Natural and integer quotients
 
-The natural and integer Euclidean quotients take a nonzero divisor. The exact integer quotient
-also takes evidence that the divisor divides the dividend.
+For a nonzero divisor `b`, `Nat.euclideanDiv` and `Int.euclideanDiv` give the unique quotient
+`q` satisfying `b * q + r = a` with `0 ≤ r < |b|`. The natural and integer
+`euclideanDiv_eq_of_remainder` theorems express this uniqueness. `Int.exactQuotient` gives the
+unique integer `q` with `b * q = a`, using `b ≠ 0` and `b ∣ a`.
+
+The remainder `a % b` chooses the representative of `a + bℤ` in `[0, |b|)` for `b ≠ 0`, viewing
+natural numbers in `ℤ` when necessary. At divisor zero the class is a singleton, so `a % 0 = a`.
+The reconstruction equation at `b = 0` determines the remainder and leaves the quotient
+undetermined.
+
+## Implementation notes
+
+The natural quotient is computed from a remainder. Set `c = a + 1` and
+`s = (c * a + a) % (c * b + 1)`. If `a = b * q + r` with `r < b` and `b ≠ 0`, then `q ≤ a`
+and `s = c * r + (a - q)`. Hence `a - s % c = q`. The reconstruction proof uses induction
+on the remainder algorithm.
+
+## References
+
+* [Graham, Knuth, and Patashnik, *Concrete Mathematics*, §3.4, equation (3.22)][GKP]
+  gives the zero-modulus convention.
+* [Rijke, *Lecture Notes on Number Theory*, Remark 9.1.4][Rijke] explains congruence modulo zero.
+
+[GKP]: https://ptgmedia.pearsoncmg.com/images/9780201558029/samplepages/9780201558029.pdf#page=32
+[Rijke]: https://egbertrijke.github.io/jhu-number-theory-spring-2025.pdf#page=96
 -/
 
 public section

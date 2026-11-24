@@ -36,9 +36,8 @@ it is not the design authority for this fork.
 - Admit external formalizations through explicit mathematical, licensing,
   provenance, and implementation review.
 
-These are design commitments, not claims that every inherited interface has
-already been migrated. See [FORK_DESIGN.md](FORK_DESIGN.md) for the complete
-design and migration contract.
+See the [design charter](FORK_DESIGN.md) for the criteria that govern API and
+migration decisions. The [changelog](CHANGELOG.md) records delivered changes.
 
 ## Branch model
 
@@ -90,10 +89,10 @@ baseline.
 ## Getting started
 
 Use the official Lean release and standard library selected by `lean-toolchain`.
-The inverse and exact division migration is complete, including the checked
-rational operators. Field inversion and exact division require invertibility
-evidence. The [Euclidean quotient](FORK_DESIGN.md#euclidean-quotient-and-remainder)
-requires a nonzero divisor.
+Field inversion and exact division require invertibility evidence. Use named
+Euclidean quotients for division with remainder, including on `ℕ` and `ℤ`.
+See the [arithmetic notation guide](Mathlib/Algebra/GroupWithZero/Checked/Notation.lean)
+and [native quotient laws](Mathlib/Lean/Elab/NativeDivision.lean).
 
 Install Lean and the supporting tools using the
 [upstream mathlib instructions](https://leanprover-community.github.io/get_started.html),
@@ -185,8 +184,8 @@ prepared, submitted, or forwarded as upstream mathlib pull requests.
 
 - [CHANGELOG.md](CHANGELOG.md) summarizes significant upstream and Fidelity changes by release.
 - [TODO.md](TODO.md) tracks pending Fidelity work.
-- [FORK_DESIGN.md](FORK_DESIGN.md) records the fork's mathematical and API
-  design philosophy.
+- [FORK_DESIGN.md](FORK_DESIGN.md) sets the fork's library-wide design principles.
+- [CONTRIBUTING.md](.github/CONTRIBUTING.md) gives admission, review, and testing requirements.
 - [MIGRATION_BACKLOG.md](MIGRATION_BACKLOG.md) tracks selected external
   formalization recovery and reconstruction work.
 - [UPSTREAMS.md](UPSTREAMS.md) records external source identity, licensing,

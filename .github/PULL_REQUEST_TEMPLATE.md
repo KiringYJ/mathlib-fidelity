@@ -56,7 +56,7 @@ containing GitHub Actions workflows.
 - [ ] Repository artifacts, commits, and this description are in English.
 - [ ] Relevant source, license, provenance, and verification information is
       included.
-- [ ] The change meets the regression coverage policy in `FORK_DESIGN.md`.
+- [ ] The change meets the regression coverage policy in `.github/CONTRIBUTING.md`.
 - [ ] Any migration completes its selected scope without compatibility or
       transitional layers; remaining foundational dependencies have precise TODO
       entries and proved boundaries, and final-state checks cover the change.

@@ -14,6 +14,10 @@ This file establishes basic properties related to the inversion and division ope
 For instance, as a consequence of being a `DivInvOneMonoid`, `ℝ≥0∞` inherits a power operation
 with integer exponent.
 
+The current quotient is `a / b = sInf {q | a ≤ b * q}` by `ENNReal.div_eq_sInf`. The infimum
+specification applies at zero and infinity as well. For finite inputs with positive denominator,
+`ENNReal.coe_div` gives agreement with exact division under the embedding `ℝ≥0 → ℝ≥0∞`.
+
 ## Main results
 
 A few order isomorphisms are worthy of mention:

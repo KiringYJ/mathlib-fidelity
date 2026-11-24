@@ -14,14 +14,8 @@ Project status and Mathlib overlap can change, so every recovery task must
 repeat the descendant and coverage search at its start. Failure to find a port
 is not proof that none exists.
 
-Use the recovery modes defined in `FORK_DESIGN.md`:
-
-- **port** for a Lean development whose mathematical organization remains
-  suitable;
-- **reconstruction** for selected theorem coverage that must be rebuilt on
-  current foundations and APIs; and
-- **reformalization** for results coming from another prover or a materially
-  different foundation.
+Use the [recovery modes](.github/CONTRIBUTING.md#recovery-modes) in the
+contribution guide to choose a port, reconstruction, or reformalization.
 
 The unit of preservation is an audited mathematical statement together with
 its hypotheses, constructions, trusted proof boundary, and correspondence to a

@@ -12,16 +12,40 @@ public import Mathlib.Data.Rat.Init
 /-!
 # Ordinary notation for inversion and division by invertible elements
 
-Ordinary `a / b` uses the installed division or checked exact division on its domain.
-Euclidean quotients use their named operations. Natural and integer operands require a named
-operation or explicit casts to another carrier.
-In a monoid without an ambient inverse, `a⁻¹` and `a ^ n` for integer `n` use the checked
-operations with invertibility evidence found by `checked_unit`.
+Ordinary `a / b` uses the installed division, including heterogeneous division, or checked exact
+division by a unit. For operands in a field, slash uses checked division even with a local
+`Div` instance or an explicit `Field.toEuclideanDomain` instance. Nonzero evidence supplies
+the unit requirement. Use `divp` to divide by a bundled unit in a monoid. In a monoid without
+an ambient inverse, `a⁻¹` and `a ^ n` for integer `n` use the checked operations. The
+`checked_unit` tactic can find invertibility evidence where required. Nonnegative exponents
+have the full monoid domain.
+
+## Choosing a quotient
+
+Exact right division by a unit solves `q * b = a`. Under a multiplicative embedding into a
+carrier in which the image of `b` is a unit, this equation says that the image of `q` is the
+exact quotient of the images. An integer-valued exact quotient needs both a nonzero divisor and
+divisibility, as in `Int.exactQuotient`.
+
+Use `EuclideanDomain.quotient` for division with remainder. It takes a nonzero divisor, which
+can be a nonunit. For example, `Int.euclideanDiv 3 2` is `1`, while `(3 : ℚ) / (2 : ℚ)` is
+the exact rational quotient. See `Mathlib.Lean.Elab.NativeDivision` for the quotient laws and
+the remainder at zero, and `Field.quotient_eq_div` for agreement on fields with the explicit
+Euclidean structure. Ordinals and binary numerals use their named Euclidean operations too.
+
+Slash rejects a natural or integer operand, including a definitionally equal type. Use a named
+operation or explicitly cast the operands to a carrier supporting the intended quotient.
+When an installed operation has a different mathematical specification, follow its own laws.
+For instance, `ENNReal.div_eq_sInf` describes the current quotient on extended nonnegative
+reals.
+
+## Implementation notes
 
 The operator-tree algorithm follows the pinned official Lean elaborator in Lean/Elab/Extra.lean.
 Division checks its operands before the surrounding operators insert coercions.
 Ambient division, genuine group operations and natural powers retain their ordinary
-elaborated heads.
+elaborated heads. The delaborator displays slash when it can reconstruct the selected operation
+and any required evidence.
 -/
 
 public meta section

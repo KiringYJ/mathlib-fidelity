@@ -43,6 +43,13 @@ exist on other files:
   for `a < o`.
 
 Various other basic arithmetic results are given in `Principal.lean` instead.
+
+## References
+
+* [Patrick Dehornoy, *Logique*, Proposition 2.3.14][DehornoyOrdinalDivision] gives the
+  reconstruction and uniqueness of ordinal division by a nonzero left divisor.
+
+[DehornoyOrdinalDivision]: https://www.univ-orleans.fr/lifo/Members/duchier/teaching/IPF/DehornoyChap2.pdf#page=30
 -/
 
 @[expose] public noncomputable section

@@ -50,6 +50,31 @@ The `lake test` driver builds both `MathlibTest` and `FidelityTest`.
 Mathematical statement fidelity is evaluated under the
 [fork design policy](../FORK_DESIGN.md#mathematical-fidelity).
 
+## Operator fidelity
+
+`lake lint` runs the [Mathlib operator audit](../FidelityTest/Linter/OperatorFidelityFull.lean)
+before the environment linters. The test target also runs that audit. It
+loads private declarations and rejects retired dependencies in statements,
+predicate bodies, and mathematical data. The proof report records the
+declarations and ownership of proof uses and fails if traversal is incomplete.
+Review the report against the
+[official Lean boundary](../FORK_DESIGN.md#official-lean-and-operator-fidelity).
+
+After building the companion packages, run
+`python scripts/operator_fidelity_packages.py` to audit `Archive`,
+`Counterexamples`, `Wanted`, `MathlibTest`, and `FidelityTest`. The script
+reports each package separately. The deliberate negative fixture runs in
+its own regression target. See the
+[audit implementation](../Mathlib/Tactic/Linter/OperatorFidelity.lean) for
+the current retired operators and report commands.
+
+The [retired-instance policy](../Mathlib/Lean/Elab/OperatorPolicy.lean)
+suppresses selected core instances in covered commands at elaboration time.
+The declaration audit checks the resulting dependencies, including explicit
+references and generated declarations in its scope. The general
+[priority-independent elaboration checks](../TODO.md#priority-independent-elaboration)
+remain pending.
+
 ## Workflow lint before pushing
 
 Install the `pre-push` hook in each clone used to publish `main`. It runs

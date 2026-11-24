@@ -141,19 +141,18 @@ and overlap with existing declarations before selecting exact theorem coverage a
 
 ## Conjectures and proof status -- accepted design, pending implementation
 
-The [conjecture and proof-status contract](FORK_DESIGN.md#conjectures-and-proof-status) is adopted.
-These unchecked items track implementation of that decision; they are not hypotheses about whether
-the inherited `def`-based whole-statement design should be retained. Genuine conjectures and results
-awaiting formalization share one Lean mechanism and differ only in epistemic metadata. Implement
-and validate the registry, dependency collector, and admission gate before migrating library roots
-or publishing status labels. The interface spellings below are proposed, and recording this backlog
-does not authorize their implementation in a documentation task.
+The [conjecture and proof-status policy](FORK_DESIGN.md#conjectures-and-proof-status) is adopted.
+Implement and validate the registry, dependency collector, and admission gate before migrating
+library roots or publishing status labels. The interface spellings below are proposed.
 
 - [ ] **Register both epistemic kinds as single theorem declarations with an entire-proof placeholder.**
   Add the proposed `@[conjecture]` registry using the existing Lean environment/attribute substrate.
-  Record Genuine conjecture versus Awaiting formalization with source/statement evidence as root
-  metadata. Use exactly the same theorem type, entire-proof placeholder, dependency/axiom checks,
-  and CI behavior for both kinds; an informal proof does not discharge a Lean placeholder.
+  Record **Genuine conjecture** when the source presents the exact statement as conjectural and
+  **Awaiting formalization** when the exact statement has a mathematical proof or is established
+  by the source. Both kinds use an ordinary theorem type, the same entire-proof placeholder,
+  dependency and axiom checks, and CI behavior. Record explicit source correspondence for each
+  root. Reject an affirmative root already refuted in Lean and preserve the refutation and its
+  historical source.
   Validate that registration identifies a theorem with a complete mathematical type with no direct
   holes, whose dependencies satisfy the admission gate, and that each open root owns only its
   designated whole-proof `by sorry` placeholder.
@@ -183,9 +182,19 @@ does not authorize their implementation in a documentation task.
 
 - [ ] **Enforce the three-status admission gate and an explicit trusted axiom base.**
   Run the ownership/axiom audit on the final environments for all admitted library targets.
-  Admit only Conjecture, Conditional, and Unconditional; every other local or reachable proof gap,
-  synthetic sorry, elaboration failure, or unapproved axiom is a CI error. A theorem that uses RH
-  and also contains its own `sorry` must fail rather than receive a Conditional label.
+  Let `D(T)` be the unresolved registered roots reachable from `T` through its type and proof
+  and through the elaborated types and values of their supporting declarations. Compute this
+  set from actual declaration references in the imported environment, including those through
+  private and opaque helpers. An import alone creates no edge in that dependency graph.
+
+  - **Conjecture** is a registered root of either kind with its allowed proof placeholder.
+    Display its epistemic kind separately.
+  - **Conditional** is a complete proof with `D(T)` nonempty. Display the named roots and kinds.
+  - **Unconditional** is a complete proof with `D(T)` empty under the reviewed trust base.
+
+  Reject all other local or reachable proof gaps, synthetic sorries, elaboration failures,
+  and unapproved axioms. The dependency set describes the stored proof. It can change when a
+  different proof of the same statement is supplied.
   Review the axiom allowlist, including standard logical axioms and any evaluation trust, and
   make unapproved dependencies a hard failure. The current `assert_no_sorry` in
   `Mathlib/Util/AssertNoSorry.lean` rejects transitive `sorryAx`; it is not a named-root gate.
@@ -207,7 +216,7 @@ does not authorize their implementation in a documentation task.
 - [ ] **Migrate the inherited Riemann hypothesis and audit other conjecture interfaces.**
   `RiemannHypothesis` in `Mathlib/NumberTheory/LSeries/RiemannZeta.lean` is currently a
   `@[wikidata Q205966] def ... : Prop`. Its exact statement is
-  `∀ (s : ℂ) (_ : riemannZeta s = 0) (_ : ¬∃ n : ℕ, s = -2 * (n + 1)) (_ : s ≠ 1), s.re = 1 / 2`.
+  `∀ (s : ℂ) (hs : s ≠ 1), riemannZeta s (hs := hs) = 0 → (¬∃ n : ℕ, s = -2 * (n + 1)) → s.re = 1 / 2`.
   Once the registry and gate are ready, replace the proposition definition with one registered
   theorem of Genuine conjecture kind using that same quantified statement and entire-proof
   placeholder; preserve the mathematical exclusions and Wikidata attribution, and apply the
@@ -215,9 +224,12 @@ does not authorize their implementation in a documentation task.
   Remove the old public proposition alias rather than retaining it beside a second proof theorem.
   The 2026-10-11 tracked-source scan found only this declaration and no direct consumers in
   `Mathlib/`, `MathlibTest/`, `Archive/`, `Counterexamples/`, or `Wanted/`; recheck at migration.
-  The codebase-wide inventory below covers both epistemic kinds and actual consumers. Migrate
-  actual `RH → P` or `hRH` interfaces to ordinary conclusions whose proofs use the registered
-  conjecture constant. Do not invent such consumers or rewrite ordinary mathematical hypotheses.
+  The codebase-wide inventory below covers both epistemic kinds and actual consumers. For
+  each migrated root, replace actual whole-root antecedents in dependent results, including
+  `RH → P` and `hRH` binders, with ordinary conclusions whose proofs use the registered
+  constant directly or through other declarations. Preserve genuine mathematical parameters,
+  implications, transport and refutation lemmas, and already-proved special cases. Keep names
+  and subject modules free of temporary status markers such as `_assuming_RH` and `Conditional/`.
   Acceptance requires exact statement correspondence, an open-root status, direct/transitive
   downstream status fixtures, absence of the obsolete public alias and conjecture-antecedent
   interfaces in the migrated family, relevant builds/linters, and final-state downstream checks.
@@ -381,19 +393,25 @@ The [design policy](FORK_DESIGN.md#priority-independent-mathematical-semantics) 
 Enforcement and coverage are pending foundational work. Implementation requires an explicit task
 and uses the official Lean toolchain.
 
-- [ ] **Audit instance and coercion coherence.** Use
+- [ ] **Audit instance, coercion, and notation coherence.** Use
   [`OverlappingInstances`](Mathlib/Tactic/Linter/OverlappingInstances.lean) as a starting point for
   local diamonds. Inventory overlapping global candidates and inherited projections in the
-  algebraic and order hierarchies, including actions, modules, and algebras. Check whether candidate
-  premises can hold together and compare the supplied data by definitional equality. Audit coercion
-  chains and elaborator or notation priority where they can change mathematical meaning. Repair
-  confirmed conflicts by unifying coherent paths or requiring explicit structures and maps.
+  algebraic and order hierarchies, including actions, modules, and algebras. Compare the data
+  supplied even at a fully specified class goal, including `Fintype` and `Decidable`. Check whether
+  candidate premises can hold together and compare admissible data by definitional equality.
+  Inspect competing coercion paths and notation interpretations, including macros and custom
+  elaborators. Treat ordinary precedence and associativity as syntax that gives the expression
+  its grouping. Repair conflicts by unifying coherent paths or requiring explicit structures
+  and maps.
 - [ ] **Check defaulting at elaboration time.** Track how numerals, overloaded operations, and output
-  parameters get their types, including defaults introduced by outer elaborators or generated code.
+  parameters (`outParam`, `semiOutParam`) get their types. Check `default_instance` and
+  defaults introduced by outer elaborators or generated code.
   [`OperatorPolicy`](Mathlib/Lean/Elab/OperatorPolicy.lean) illustrates interception of selected
   commands. Default instances have their own registry, and a finished term can hide the fact that
-  fallback was used. Establish which entry points can enforce the rule and report cases where
-  uniqueness cannot be verified. A successful ordinary instance search does not certify uniqueness.
+  fallback was used. Establish which entry points can enforce the rule, including those that
+  generate declarations. Distinguish a missing interpretation, multiple definitionally distinct
+  interpretations, and failure to establish uniqueness. Reject each with a diagnostic in the
+  covered scope.
 - [ ] **Verify and enforce the covered scope.** Test distinct data at the same class goal,
   propositionally equal but definitionally distinct data, definitionally equal diamonds, and
   proof-irrelevant choices. Test underconstrained numeral and operator defaults, context-determined
@@ -1543,9 +1561,9 @@ and uses the official Lean toolchain.
   `Mathlib/Lean/Elab/OperatorTree.lean`. Remove the ambient `DivInvMonoid` and `DivInvOneMonoid`
   instances in `Mathlib/Basic/ENNReal/{Basic,Inv}.lean` and provide reciprocal and integer powers
   independently of `Div`. Audit the affected callers for the intended division specification and
-  update the ordinary division contract in `FORK_DESIGN.md` in the same migration. Check that
-  ordinary `/` rejects every zero denominator and `(⊤, ⊤)`, while `extendedDiv` admits positive
-  numerators over zero and rejects both indeterminate pairs. Verify the embedding law and check
+  update the `ENNReal` API docstrings and the checked notation overview in the same migration.
+  Check that ordinary `/` rejects every zero denominator and `(⊤, ⊤)`, while `extendedDiv` admits
+  positive numerators over zero and rejects both indeterminate pairs. Verify the embedding law and check
   that instance inference cannot recover ambient `Div` or `HDiv` on `ENNReal`.
 
 - [ ] **Expose the exact domain of signed extended-real division.**
@@ -1816,7 +1834,7 @@ and uses the official Lean toolchain.
   Use the fidelity gate above to classify each candidate and record the audit coverage and
   dispositions. Group confirmed public fallbacks into coherent migrations, reusing existing
   operator-family TODOs where applicable. Complete the affected caller migrations under the
-  [complete-migration contract](FORK_DESIGN.md#completion) and the
+  [complete-migration contract](FORK_DESIGN.md#complete-migrations) and the
   [official Lean boundary](FORK_DESIGN.md#official-lean-and-operator-fidelity).
 
 ## Representation fidelity lint -- total objects whose representation changes the semantics
@@ -1849,6 +1867,15 @@ The remaining notation, presentation, and proof-maintenance candidates are not m
 fidelity work unless a concrete statement is naturally misread or changes meaning.  Do not schedule
 them ahead of unresolved mathematical-domain and representation questions merely to make the API
 more uniform, searchable, generated, or tactic-independent.
+
+- [ ] **Maintain a named-result terminology registry and check new names.**
+  Record conventional names under the [naming rules](.github/CONTRIBUTING.md#mathematical-terminology).
+  For each result or family, record the canonical ASCII spelling, mathematical scope,
+  independent citations, established alternative names, owner namespace, and evidence for
+  a primary or coequal formulation. Use a common table for transliteration, `snake_case`,
+  punctuation, surname order, and standard abbreviations. Apply the objective parts of
+  mathlib's naming conventions and the registry to new or deliberately renamed fork
+  declarations in a diff-scoped linter. Resolve semantic naming choices through review.
 
 ### Notation and term-structure hygiene -- valid terms with misleading surface syntax
 

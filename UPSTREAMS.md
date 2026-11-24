@@ -43,9 +43,9 @@ distinct, stable remote names when a later task explicitly adds them.
 
 - Repository: `leanprover/lean4`
 - URL: `https://github.com/leanprover/lean4.git`
-- Selected release: `v4.34.0-rc2`, commit
-  `6a10ac8c22beadecabdbb0919c2b50214762f91d`; `lean-toolchain` is authoritative
-  for the current official release selection
+- Selected release: [`v4.34.0`](https://github.com/leanprover/lean4/releases/tag/v4.34.0),
+  commit `293d5d0c0c3f3dded4688b3ccd6a33939ac5102b`. `lean-toolchain` is
+  authoritative for the current official release selection.
 - Integration mode: unchanged official compiler, kernel, standard libraries,
   and core metaprogramming infrastructure; no maintained toolchain fork
 - Semantic boundary: retain legitimate core carriers, including `Rat`; exclude
@@ -57,10 +57,11 @@ distinct, stable remote names when a later task explicitly adds them.
 - License evidence: the pinned source root `LICENSE` is Apache License 2.0;
   its rational and Grind source headers carry the same license.
   Preserve their existing authorship and all applicable distribution notices.
-- Status: official dependency retained. The experimental custom-toolchain route
-  is withdrawn; it produced no maintained release or completed integration.
-  The fork's inverse and rational-operator migrations remain incomplete work
-  in `TODO.md`; this registry does not claim their validation.
+- Status: active official dependency. The
+  [changelog](CHANGELOG.md#fidelity-changes) records the checked arithmetic
+  migrations on this toolchain. See
+  [operator-fidelity validation](.github/CI.md#operator-fidelity) for the
+  audit scope.
 
 ## Candidate Sources
 
@@ -254,9 +255,11 @@ independently deferred foundational TODOs together with their proved boundaries.
    `sorry`s, generated artifacts, and fidelity to the cited mathematics.
 4. Search the maintained tree and other candidates for equivalent declarations
    before importing another version of the same concept.
-5. Choose the integration mode. Multiple Git remotes are useful for discovery
-   and shared-history review, but independent histories are normally source
-   ports or Lake dependencies, not unrelated-history merges. For in-tree work,
+5. Choose the integration mode. For shared history, review coherent commits
+   for selective cherry-pick or porting. For an independent history, select
+   a reviewed source port or a Lake dependency on an independently versioned
+   library. Reference-only entries record the source without importing code.
+   Remote discovery alone grants no integration authority. For in-tree work,
    record the proposed destination modules and any split between `Mathlib/`
    and `Archive/` under the
    [placement policy](FORK_DESIGN.md#mathematical-scope-and-placement).
