@@ -9,7 +9,7 @@ the repository; local validation does not establish a successful hosted run.
 
 | Workflow | Events | Checks |
 | --- | --- | --- |
-| `fidelity-ci.yml` | Push to `main`, PR to `main`, manual, reusable call | Workflow inventory, generated imports, source style, library build with warnings as errors, `MathlibTest`, `FidelityTest`, `Archive`, `Counterexamples`, `Wanted`, test driver, environment linters |
+| `fidelity-ci.yml` | Push to `main`, PR to `main`, manual, reusable call | Workflow inventory, generated imports, source style, library build with warnings as errors, `MathlibTest`, `FidelityTest`, `Archive`, `Counterexamples`, `Wanted`, companion operator audits, test driver, environment linters |
 | `fidelity-proof-check.yml` | Monday at 02:23 UTC, manual | All Fidelity CI checks, fresh-kernel replay of `Mathlib` and `Batteries`, Mathlib test executable |
 | `actionlint.yml` | Changes under `.github/` on `main` pushes and PRs, manual | Workflow syntax, expressions, shell snippets, SHA-pinned action references |
 | `pre-commit.yml` | Push to `main`, PR to `main`, manual | Repository pre-commit hooks, without automated writeback |
@@ -24,6 +24,7 @@ lake exe cache get --cache-from=master,legacy
 lake exe mk_all --check
 lake build --wfail
 lake build MathlibTest FidelityTest Archive Counterexamples Wanted
+python3 scripts/operator_fidelity_packages.py
 lake test
 lake lint
 lake exe lint-style
@@ -60,11 +61,12 @@ declarations and ownership of proof uses and fails if traversal is incomplete.
 Review the report against the
 [official Lean boundary](../FORK_DESIGN.md#official-lean-and-operator-fidelity).
 
-After building the companion packages, run
-`python scripts/operator_fidelity_packages.py` to audit `Archive`,
-`Counterexamples`, `Wanted`, `MathlibTest`, and `FidelityTest`. The script
-reports each package separately. The deliberate negative fixture runs in
-its own regression target. See the
+After building the companion packages, Fidelity CI runs
+`python3 scripts/operator_fidelity_packages.py` to audit `Archive`,
+`Counterexamples`, `Wanted`, `MathlibTest`, and `FidelityTest`. A failed package
+audit fails the CI job. To reproduce the check locally, build those targets and
+run the same script from the repository root. The deliberate negative fixture
+runs in its own regression target. See the
 [audit implementation](../Mathlib/Tactic/Linter/OperatorFidelity.lean) for
 the current retired operators and report commands.
 
