@@ -89,13 +89,13 @@ theorem tendsto_one_div_atTop_nhds_zero_nat {𝕜 : Type*} [DivisionSemiring �
 theorem EReal.tendsto_const_div_atTop_nhds_zero_nat {C : EReal} (h : C ≠ ⊥) (h' : C ≠ ⊤) :
     Tendsto (fun n : {n : ℕ // n ≠ 0} ↦ C / ((n : ℕ) : EReal)) (comap Subtype.val atTop)
       (𝓝 0) := by
-  have : (fun n : {n : ℕ // n ≠ 0} ↦ C / ((n : ℕ) : EReal)) =
-      fun n : {n : ℕ // n ≠ 0} ↦ ((C.toReal / ((n : ℕ) : ℝ) : ℝ) : EReal) := by
+  lift C to ℝ using ⟨h', h⟩
+  have : (fun n : {n : ℕ // n ≠ 0} ↦ (C : EReal) / ((n : ℕ) : EReal)) =
+      fun n : {n : ℕ // n ≠ 0} ↦ ((C / ((n : ℕ) : ℝ) : ℝ) : EReal) := by
     ext n
-    rw [coe_div, coe_toReal h' h]
-    rfl
+    exact (EReal.coe_div C ((n : ℕ) : ℝ) (hb := (Nat.cast_ne_zero.2 n.2).isUnit)).symm
   rw [this, ← coe_zero, tendsto_coe]
-  exact _root_.tendsto_const_div_atTop_nhds_zero_nat C.toReal
+  exact _root_.tendsto_const_div_atTop_nhds_zero_nat C
 
 theorem tendsto_one_div_add_atTop_nhds_zero_nat {𝕜 : Type*} [DivisionSemiring 𝕜] [CharZero 𝕜]
     [TopologicalSpace 𝕜] [ContinuousSMul ℚ≥0 𝕜] :

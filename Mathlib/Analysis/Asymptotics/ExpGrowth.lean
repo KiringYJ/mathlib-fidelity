@@ -65,16 +65,16 @@ variable {u v : ℕ → ℝ≥0∞} {a : EReal} {b : ℝ≥0∞}
 
 lemma expGrowthInf_congr (h : u =ᶠ[atTop] v) :
     expGrowthInf u = expGrowthInf v :=
-  liminf_congr ((tendsto_comap.eventually h).mono fun _ uv ↦ by rw [uv])
+  liminf_congr ((tendsto_comap.eventually h).mono fun _ uv ↦ by simp only [uv])
 
 lemma expGrowthSup_congr (h : u =ᶠ[atTop] v) :
     expGrowthSup u = expGrowthSup v :=
-  limsup_congr ((tendsto_comap.eventually h).mono fun _ uv ↦ by rw [uv])
+  limsup_congr ((tendsto_comap.eventually h).mono fun _ uv ↦ by simp only [uv])
 
 lemma expGrowthInf_eventually_monotone (h : u ≤ᶠ[atTop] v) :
     expGrowthInf u ≤ expGrowthInf v :=
   liminf_le_liminf ((tendsto_comap.eventually h).mono fun n uv ↦
-    monotone_div_right_of_nonneg (n : ℕ).cast_nonneg' (log_monotone uv))
+    monotone_div_right_of_nonneg (hb := by checked_unit) (n : ℕ).cast_nonneg' (log_monotone uv))
 
 lemma expGrowthInf_monotone : Monotone expGrowthInf :=
   fun _ _ uv ↦ expGrowthInf_eventually_monotone (Eventually.of_forall uv)
@@ -82,7 +82,7 @@ lemma expGrowthInf_monotone : Monotone expGrowthInf :=
 lemma expGrowthSup_eventually_monotone (h : u ≤ᶠ[atTop] v) :
     expGrowthSup u ≤ expGrowthSup v :=
   limsup_le_limsup ((tendsto_comap.eventually h).mono fun n uv ↦
-    monotone_div_right_of_nonneg (n : ℕ).cast_nonneg' (log_monotone uv))
+    monotone_div_right_of_nonneg (hb := by checked_unit) (n : ℕ).cast_nonneg' (log_monotone uv))
 
 lemma expGrowthSup_monotone : Monotone expGrowthSup :=
   fun _ _ uv ↦ expGrowthSup_eventually_monotone (Eventually.of_forall uv)
@@ -92,7 +92,8 @@ lemma expGrowthInf_le_expGrowthSup : expGrowthInf u ≤ expGrowthSup u := liminf
 lemma expGrowthInf_le_expGrowthSup_of_frequently_le (h : ∃ᶠ n in atTop, u n ≤ v n) :
     expGrowthInf u ≤ expGrowthSup v :=
   liminf_le_limsup_of_frequently_le <|
-    ((frequently_comap_val_iff (eventually_ne_atTop 0)).2 h).mono fun _ u_v ↦ by gcongr
+    ((frequently_comap_val_iff (eventually_ne_atTop 0)).2 h).mono fun n u_v ↦
+      monotone_div_right_of_nonneg (hb := by checked_unit) (n : ℕ).cast_nonneg' (log_monotone u_v)
 
 lemma expGrowthInf_le_iff :
     expGrowthInf u ≤ a ↔ ∀ b > a, ∃ᶠ n : ℕ in atTop, u n ≤ exp (b * n) := by
@@ -203,11 +204,11 @@ lemma expGrowthSup_const (h : b ≠ 0) (h' : b ≠ ∞) : expGrowthSup (fun _ �
 
 lemma expGrowthInf_pow : expGrowthInf (fun n ↦ b ^ n) = log b := by
   refine (liminf_congr (Eventually.of_forall fun n ↦ ?_)).trans (liminf_const (log b))
-  simp only [log_pow, mul_div_cancel_left₀]
+  simp only [log_pow, EReal.mul_div_cancel_left (a := (n : ℕ)) (ha := by checked_unit)]
 
 lemma expGrowthSup_pow : expGrowthSup (fun n ↦ b ^ n) = log b := by
   refine (limsup_congr (Eventually.of_forall fun n ↦ ?_)).trans (limsup_const (log b))
-  simp only [log_pow, mul_div_cancel_left₀]
+  simp only [log_pow, EReal.mul_div_cancel_left (a := (n : ℕ)) (ha := by checked_unit)]
 
 lemma expGrowthInf_exp : expGrowthInf (fun n ↦ exp (a * n)) = a :=
   le_antisymm (Frequently.expGrowthInf_le (Frequently.of_forall fun _ ↦ le_refl _))
@@ -222,14 +223,16 @@ lemma expGrowthSup_exp : expGrowthSup (fun n ↦ exp (a * n)) = a :=
 lemma le_expGrowthInf_mul :
     expGrowthInf u + expGrowthInf v ≤ expGrowthInf (u * v) := by
   refine le_liminf_add.trans_eq (liminf_congr (Eventually.of_forall fun n ↦ ?_))
-  rw [Pi.add_apply, Pi.mul_apply, ← add_div_of_nonneg_right (n : ℕ).cast_nonneg', log_mul_add]
+  simp only [Pi.add_apply, Pi.mul_apply, log_mul_add,
+    add_div_of_nonneg_right (c := (n : ℕ)) (hc := by checked_unit) (n : ℕ).cast_nonneg']
 
 /-- See `expGrowthInf_mul_le'` for a version with swapped argument `u` and `v`. -/
 lemma expGrowthInf_mul_le (h : expGrowthSup u ≠ ⊥ ∨ expGrowthInf v ≠ ⊤)
     (h' : expGrowthSup u ≠ ⊤ ∨ expGrowthInf v ≠ ⊥) :
     expGrowthInf (u * v) ≤ expGrowthSup u + expGrowthInf v := by
   refine (liminf_add_le h h').trans_eq' (liminf_congr (Eventually.of_forall fun n ↦ ?_))
-  rw [Pi.add_apply, Pi.mul_apply, ← add_div_of_nonneg_right (n : ℕ).cast_nonneg', log_mul_add]
+  simp only [Pi.add_apply, Pi.mul_apply, log_mul_add,
+    add_div_of_nonneg_right (c := (n : ℕ)) (hc := by checked_unit) (n : ℕ).cast_nonneg']
 
 /-- See `expGrowthInf_mul_le` for a version with swapped argument `u` and `v`. -/
 lemma expGrowthInf_mul_le' (h : expGrowthInf u ≠ ⊥ ∨ expGrowthSup v ≠ ⊤)
@@ -241,7 +244,8 @@ lemma expGrowthInf_mul_le' (h : expGrowthInf u ≠ ⊥ ∨ expGrowthSup v ≠ �
 /-- See `le_expGrowthSup_mul'` for a version with swapped argument `u` and `v`. -/
 lemma le_expGrowthSup_mul : expGrowthSup u + expGrowthInf v ≤ expGrowthSup (u * v) := by
   refine le_limsup_add.trans_eq (limsup_congr (Eventually.of_forall fun n ↦ ?_))
-  rw [Pi.add_apply, Pi.mul_apply, log_mul_add, add_div_of_nonneg_right (n : ℕ).cast_nonneg']
+  simp only [Pi.add_apply, Pi.mul_apply, log_mul_add,
+    add_div_of_nonneg_right (c := (n : ℕ)) (hc := by checked_unit) (n : ℕ).cast_nonneg']
 
 /-- See `le_expGrowthSup_mul` for a version with swapped argument `u` and `v`. -/
 lemma le_expGrowthSup_mul' : expGrowthInf u + expGrowthSup v ≤ expGrowthSup (u * v) := by
@@ -252,17 +256,20 @@ lemma expGrowthSup_mul_le (h : expGrowthSup u ≠ ⊥ ∨ expGrowthSup v ≠ ⊤
     (h' : expGrowthSup u ≠ ⊤ ∨ expGrowthSup v ≠ ⊥) :
     expGrowthSup (u * v) ≤ expGrowthSup u + expGrowthSup v := by
   refine (limsup_add_le h h').trans_eq' (limsup_congr (Eventually.of_forall fun n ↦ ?_))
-  rw [Pi.add_apply, Pi.mul_apply, log_mul_add, add_div_of_nonneg_right (n : ℕ).cast_nonneg']
+  simp only [Pi.add_apply, Pi.mul_apply, log_mul_add,
+    add_div_of_nonneg_right (c := (n : ℕ)) (hc := by checked_unit) (n : ℕ).cast_nonneg']
 
 lemma expGrowthInf_inv : expGrowthInf u⁻¹ = - expGrowthSup u := by
   rw [expGrowthSup, ← liminf_neg]
   refine liminf_congr (Eventually.of_forall fun n ↦ ?_)
-  rw [Pi.neg_apply, Pi.inv_apply, div_eq_mul_inv₀, div_eq_mul_inv₀, ← EReal.neg_mul, log_inv]
+  simp only [Pi.neg_apply, Pi.inv_apply, log_inv]
+  exact EReal.neg_div
 
 lemma expGrowthSup_inv : expGrowthSup u⁻¹ = - expGrowthInf u := by
   rw [expGrowthInf, ← limsup_neg]
   refine limsup_congr (Eventually.of_forall fun n ↦ ?_)
-  rw [Pi.neg_apply, Pi.inv_apply, div_eq_mul_inv₀, div_eq_mul_inv₀, ← EReal.neg_mul, log_inv]
+  simp only [Pi.neg_apply, Pi.inv_apply, log_inv]
+  exact EReal.neg_div
 
 /-! ### Comparison -/
 
@@ -310,8 +317,8 @@ lemma expGrowthSup_of_eventually_ge (hb : b ≠ 0) (h : ∀ᶠ n in atTop, b * u
 lemma expGrowthInf_inf : expGrowthInf (u ⊓ v) = expGrowthInf u ⊓ expGrowthInf v := by
   rw [expGrowthInf, expGrowthInf, expGrowthInf, ← liminf_min]
   refine liminf_congr (Eventually.of_forall fun n ↦ ?_)
-  rw [Pi.inf_apply, log_monotone.map_min]
-  exact (monotone_div_right_of_nonneg (n : ℕ).cast_nonneg').map_min
+  simp only [Pi.inf_apply, log_monotone.map_min]
+  exact (monotone_div_right_of_nonneg (hb := by checked_unit) (n : ℕ).cast_nonneg').map_min
 
 /-- Lower exponential growth as an `InfTopHom`. -/
 noncomputable def expGrowthInfTopHom : InfTopHom (ℕ → ℝ≥0∞) EReal where
@@ -332,8 +339,8 @@ lemma expGrowthInf_iInf {ι : Type*} [Finite ι] (u : ι → ℕ → ℝ≥0∞)
 lemma expGrowthSup_sup : expGrowthSup (u ⊔ v) = expGrowthSup u ⊔ expGrowthSup v := by
   rw [expGrowthSup, expGrowthSup, expGrowthSup, ← limsup_max]
   refine limsup_congr (Eventually.of_forall fun n ↦ ?_)
-  rw [Pi.sup_apply, log_monotone.map_max]
-  exact (monotone_div_right_of_nonneg (n : ℕ).cast_nonneg').map_max
+  simp only [Pi.sup_apply, log_monotone.map_max]
+  exact (monotone_div_right_of_nonneg (hb := by checked_unit) (n : ℕ).cast_nonneg').map_max
 
 /-- Upper exponential growth as a `SupBotHom`. -/
 noncomputable def expGrowthSupBotHom : SupBotHom (ℕ → ℝ≥0∞) EReal where

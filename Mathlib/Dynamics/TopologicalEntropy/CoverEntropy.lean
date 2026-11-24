@@ -403,11 +403,11 @@ lemma coverEntropyEntourage_le_log_coverMincard_div (F_inv : MapsTo T F F) [U.Is
   have h := cv_mono.expGrowthSup_comp_mul n_pos
   have hdiv : (expGrowthSup fun m ↦ (coverMincard T F (U ○ U) (n * m)).toENNReal) / (n : EReal) =
       coverEntropyEntourage T F (U ○ U) := by
-    apply div_eq_iff.mpr
+    apply (EReal.div_eq_iff (b := (n : EReal)) (hb := by checked_unit)).mpr
     rw [coverEntropyEntourage, mul_comm]
     exact h
   rw [← hdiv]
-  apply monotone_div_right_of_nonneg n.cast_nonneg'
+  apply monotone_div_right_of_nonneg (hb := by checked_unit) n.cast_nonneg'
   rw [← expGrowthSup_pow]
   refine expGrowthSup_monotone fun m ↦ ?_
   rw [← ENat.toENNReal_pow]
@@ -417,7 +417,7 @@ lemma IsDynCoverOf.coverEntropyEntourage_le_log_card_div (F_inv : MapsTo T F F) 
     (n_pos : n ≠ 0) {s : Finset X} (h : IsDynCoverOf T F U n s) :
     coverEntropyEntourage T F (U ○ U) ≤ log s.card / (n : EReal) := by
   apply (coverEntropyEntourage_le_log_coverMincard_div F_inv n_pos).trans
-  apply monotone_div_right_of_nonneg n.cast_nonneg' (log_monotone _)
+  apply monotone_div_right_of_nonneg (hb := by checked_unit) n.cast_nonneg' (log_monotone _)
   exact_mod_cast coverMincard_le_card h
 
 lemma coverEntropyEntourage_le_coverEntropyInfEntourage (F_inv : MapsTo T F F) [U.IsSymm] :
@@ -435,7 +435,7 @@ lemma coverEntropyEntourage_finite_of_isCompact_invariant [UniformSpace X]
   have hcard : log (s.card : ℝ≥0∞) < ⊤ := by
     rw [log_lt_top_iff, ← ENat.toENNReal_top]
     exact_mod_cast (ENat.natCast_ne_top (Finset.card s)).lt_top
-  simpa only [Nat.cast_one, div_one₀] using hcard
+  simpa only [Nat.cast_one, EReal.div_one] using hcard
 
 /-! ### Cover entropy -/
 

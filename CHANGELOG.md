@@ -21,6 +21,9 @@ When tagging a release, move its notes under the Fidelity tag and release date a
   including nonzero evidence in a field. Nonnegative integer powers retain the monoid domain.
   `Rat.fraction` requires a nonzero denominator, and square matrix inversion requires a unit
   determinant. See the [checked operation examples](FidelityTest/Algebra/CheckedOperations.lean).
+- **Signed extended-real division.** On `EReal`, `a / b` requires a nonzero denominator and at
+  least one finite operand. This is the maximal domain of continuous extension. Finite numerators
+  divided by either infinity give zero. Finite nonzero denominators give unit division.
 - **Euclidean quotients.** Use `EuclideanDomain.quotient`, `Nat.euclideanDiv`, and `Int.euclideanDiv`
   with a nonzero divisor. `Int.exactQuotient` also requires divisibility. On `Nat` and `Int`, use
   the named quotients in place of `/`. The remainder law `a % 0 = a` continues to apply on these

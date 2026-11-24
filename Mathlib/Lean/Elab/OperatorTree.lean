@@ -82,6 +82,9 @@ private def ambientDivisionOp? (lhsType rhsType : Expr) : MetaM (Option Expr) :=
 instance search. Otherwise a monoid can divide by a proved unit when it has no ambient division. -/
 private def divisionOp? (lhsType rhsType : Expr) : MetaM (Option Expr) := do
   let homogeneous ← withNewMCtxDepth <| isDefEqGuarded lhsType rhsType
+  if homogeneous && (← getEnv).contains `EReal.div then
+    if ← withNewMCtxDepth <| isDefEqGuarded lhsType (mkConst `EReal) then
+      return some (mkConst `EReal.div)
   if homogeneous && (← usesCheckedExactDivision lhsType) then
     return ← checkedDivisionOp? lhsType
   if let some op ← ambientDivisionOp? lhsType rhsType then return some op
@@ -132,6 +135,16 @@ private def divisionProofAvailable (op lhs rhs : Expr) : MetaM Bool := do
       return false
     divisionProofAvailable selected lhs rhs)
   `($(← withNaryArg 2 delab) / $(← withNaryArg 3 delab))
+
+/-- Display extended-real division when slash can reconstruct its domain witness. -/
+@[delab app.EReal.div] def delabERealDiv : Delab :=
+  whenNotPPOption getPPExplicit <| whenPPOption getPPNotation <| withOverApp 3 do
+    let #[lhs, rhs, _] := (← getExpr).getAppArgs | failure
+    guard (← withDivisionInstances do
+      let some selected ← divisionOp? (← inferType lhs) (← inferType rhs) | return false
+      unless selected.isConstOf `EReal.div do return false
+      divisionProofAvailable selected lhs rhs)
+    `($(← withNaryArg 0 delab) / $(← withNaryArg 1 delab))
 
 /-- Display an ambient quotient with slash when instance inference selects it. -/
 @[app_delab HDiv.hDiv] def delabHDiv : Delab :=

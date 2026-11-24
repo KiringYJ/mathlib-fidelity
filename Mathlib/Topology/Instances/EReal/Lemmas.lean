@@ -19,6 +19,8 @@ We prove basic properties of the topology on `EReal`.
 * `ENNReal.toEReal : ℝ≥0∞ → EReal` is a closed embedding
 * The addition on `EReal` is continuous except at `(⊥, ⊤)` and at `(⊤, ⊥)`.
 * Negation is a homeomorphism on `EReal`.
+* Ordinary division is jointly continuous on `EReal.DivDomain` (`EReal.continuous_div`).
+  This domain is maximal (`EReal.divDomain_of_continuousWithinAt_of_real_div`).
 
 ## Implementation
 
@@ -585,5 +587,282 @@ protected theorem Tendsto.mul_const {f : Filter α} {m : α → EReal} {a b : ER
     (hm : Tendsto m f (𝓝 a)) (h₁ : a ≠ 0 ∨ b ≠ ⊥) (h₂ : a ≠ 0 ∨ b ≠ ⊤) :
     Tendsto (fun x ↦ m x * b) f (𝓝 (a * b)) := by
   simpa only [mul_comm] using EReal.Tendsto.const_mul hm h₁.symm h₂.symm
+
+/-! ### Continuity of division -/
+
+private abbrev RealUnit : Type := ({r : ℝ | IsUnit r} : Set ℝ)
+
+private abbrev NonzeroEReal : Type := ({x : EReal | x ≠ 0} : Set EReal)
+
+private def coeRealUnit (x : RealUnit) : NonzeroEReal :=
+  ⟨(x.val : ℝ), EReal.coe_ne_zero.mpr x.2.ne_zero⟩
+
+private theorem map_coeRealUnit {l : Filter ℝ} (hl : ∀ᶠ r in l, IsUnit r) :
+    map coeRealUnit (comap Subtype.val l) =
+      comap Subtype.val (map Real.toEReal l) := by
+  apply Filter.map_injective (m := (Subtype.val : NonzeroEReal → EReal)) Subtype.val_injective
+  have h₁ : Set.range (Subtype.val : RealUnit → ℝ) ∈ l := by
+    simpa [Filter.Eventually] using hl
+  have h₂ : Set.range (Subtype.val : NonzeroEReal → EReal) ∈ map Real.toEReal l := by
+    simpa [Filter.mem_map, Filter.Eventually] using hl.mono (fun r hr ↦ hr.ne_zero)
+  rw [map_comap_of_mem h₂, map_map]
+  change map (Real.toEReal ∘ (Subtype.val : RealUnit → ℝ)) _ = _
+  rw [← map_map, map_comap_of_mem h₁]
+
+private theorem nhdsNE_nonzeroEReal (x : NonzeroEReal) :
+    𝓝[≠] x = comap Subtype.val (𝓝[≠] (x : EReal)) := by
+  simp only [nhdsWithin, nhds_subtype, comap_inf, comap_principal]
+  congr 2
+  ext
+  simp [Subtype.ext_iff]
+
+/-- The reciprocal of a nonzero extended real is finite, including at both infinities. -/
+private def divRecip (b : NonzeroEReal) : ℝ :=
+  (EReal.div 1 b ⟨b.2, Or.inl ⟨coe_ne_top 1, coe_ne_bot 1⟩⟩).toReal
+
+private theorem divRecip_coe (r : RealUnit) : divRecip (coeRealUnit r) = Checked.inv r.val r.2 := by
+  change (Checked.div 1 (r.val : EReal) _).toReal = _
+  rw [div_eq_mul_inv₀, one_mul, ← coe_inv r.val (hx := r.2), toReal_coe]
+
+private theorem continuous_divRecip : Continuous divRecip := by
+  rw [continuous_iff_continuousAt]
+  rintro ⟨x, hx⟩
+  induction x with
+  | bot =>
+    have hb : divRecip ⟨⊥, hx⟩ = 0 := rfl
+    rw [continuousAt_iff_punctured_nhds, nhdsNE_nonzeroEReal, EReal.nhdsWithin_bot, hb,
+      ← map_coeRealUnit ((eventually_lt_atBot (0 : ℝ)).mono fun r hr ↦ hr.ne.isUnit),
+      tendsto_map'_iff]
+    simpa only [Function.comp_def, divRecip_coe] using tendsto_inv_atBot_zero (𝕜 := ℝ)
+  | coe r =>
+    have hr : IsUnit r := (EReal.coe_ne_zero.mp hx).isUnit
+    change Tendsto divRecip (𝓝 (coeRealUnit ⟨r, hr⟩)) (𝓝 (divRecip (coeRealUnit ⟨r, hr⟩)))
+    erw [nhds_subtype, divRecip_coe]
+    change Tendsto divRecip (comap Subtype.val (𝓝 (r : EReal))) _
+    have hu := (eventually_ne_nhds hr.ne_zero).mono fun y hy ↦ hy.isUnit
+    rw [EReal.nhds_coe, ← map_coeRealUnit hu, tendsto_map'_iff]
+    simpa only [Function.comp_def, divRecip_coe, nhds_subtype] using
+      tendsto_inv₀ (⟨r, hr⟩ : RealUnit)
+  | top =>
+    have ht : divRecip ⟨⊤, hx⟩ = 0 := rfl
+    rw [continuousAt_iff_punctured_nhds, nhdsNE_nonzeroEReal, EReal.nhdsWithin_top, ht,
+      ← map_coeRealUnit ((eventually_gt_atTop (0 : ℝ)).mono fun r hr ↦ hr.ne'.isUnit),
+      tendsto_map'_iff]
+    simpa only [Function.comp_def, divRecip_coe] using tendsto_inv_atTop_zero (𝕜 := ℝ)
+
+private theorem div_eq_mul_divRecip (a b : EReal) (h : DivDomain a b) :
+    EReal.div a b h = a * (divRecip ⟨b, h.1⟩ : EReal) := by
+  induction b with
+  | bot => exact (mul_zero _).symm
+  | top => exact (mul_zero _).symm
+  | coe r =>
+    have hr : IsUnit r := (coe_ne_zero.mp h.1).isUnit
+    change Checked.div a (r : EReal) _ = a * (divRecip (coeRealUnit ⟨r, hr⟩) : EReal)
+    rw [divRecip_coe, coe_inv r (hx := hr), div_eq_mul_inv₀]
+
+/-- Ordinary division is jointly continuous wherever the denominator is nonzero
+and at least one operand is finite. -/
+theorem continuous_div :
+    Continuous (fun p : {p : EReal × EReal // DivDomain p.1 p.2} ↦ EReal.div p.1.1 p.1.2 p.2) := by
+  let den (p : {p : EReal × EReal // DivDomain p.1 p.2}) : NonzeroEReal := ⟨p.1.2, p.2.1⟩
+  have hden : Continuous den := (continuous_snd.comp continuous_subtype_val).subtype_mk _
+  have hrec := continuous_coe_real_ereal.comp (continuous_divRecip.comp hden)
+  simp_rw [div_eq_mul_divRecip]
+  refine continuous_iff_continuousAt.2 fun p ↦ ?_
+  have hn : (p.1.1 ≠ ⊤ ∧ p.1.1 ≠ ⊥) ∨ (divRecip (den p) : EReal) ≠ 0 := by
+    obtain ⟨⟨a, b⟩, hab⟩ := p
+    rcases hab.2 with ha | hb
+    · exact Or.inl ha
+    · right
+      lift b to ℝ using hb
+      have hb' : IsUnit b := (coe_ne_zero.mp hab.1).isUnit
+      change (divRecip (coeRealUnit ⟨b, hb'⟩) : EReal) ≠ 0
+      rw [divRecip_coe, coe_ne_zero]
+      exact hb'.inv₀.ne_zero
+  exact EReal.Tendsto.mul (continuous_fst.comp continuous_subtype_val).continuousAt
+    hrec.continuousAt (.inr (coe_ne_bot _)) (.inr (coe_ne_top _))
+    (hn.imp_left And.right) (hn.imp_left And.left)
+
+/-! ### Maximality of the division domain -/
+
+private abbrev AgreesOnRealSlopes (F : EReal × EReal → EReal) : Prop :=
+  ∀ q d : ℝ, d ≠ 0 → F (↑(q * d), ↑d) = (q : EReal)
+
+/-- Find opposite finite denominators in V, with prescribed small magnitude. -/
+private lemma exists_small_opposite_mem_nhds_zero {V : Set EReal} (hV : V ∈ 𝓝 (0 : EReal))
+    {e : ℝ} (he : 0 < e) :
+    ∃ t : ℝ, 0 < t ∧ t < e ∧
+      (t : EReal) ∈ V ∧ ((-t : ℝ) : EReal) ∈ V := by
+  have hp : Tendsto (fun t : ℝ ↦ (t : EReal)) (𝓝 0) (𝓝 0) := by
+    simpa only [coe_zero] using continuous_coe_real_ereal.tendsto (0 : ℝ)
+  have hn : Tendsto (fun t : ℝ ↦ -t) (𝓝 0) (𝓝 0) := by
+    simpa only [neg_zero] using continuous_neg.tendsto (0 : ℝ)
+  have hm : Tendsto (fun t : ℝ ↦ ((-t : ℝ) : EReal)) (𝓝 0) (𝓝 0) :=
+    hp.comp hn
+  have h : ∀ᶠ t : ℝ in 𝓝 0,
+      t < e ∧ (t : EReal) ∈ V ∧ ((-t : ℝ) : EReal) ∈ V :=
+    (gt_mem_nhds he).and ((hp.eventually hV).and (hm.eventually hV))
+  have hpos : ∀ᶠ t : ℝ in 𝓝[>] 0, 0 < t := self_mem_nhdsWithin
+  exact (hpos.and (h.filter_mono nhdsWithin_le_nhds)).exists
+
+/-- This includes U a neighborhood of either infinity, or of zero. -/
+private lemma exists_nonzero_real_mem_nhds {a : EReal} {U : Set EReal} (hU : U ∈ 𝓝 a) :
+    ∃ x : ℝ, x ≠ 0 ∧ (x : EReal) ∈ U := by
+  induction a with
+  | bot =>
+    obtain ⟨c, hc⟩ := mem_nhds_bot_iff.mp hU
+    have h : min c 0 - 1 < min c 0 := sub_one_lt _
+    exact ⟨_, (h.trans_le (min_le_right c 0)).ne,
+      hc (EReal.coe_lt_coe_iff.mpr (h.trans_le (min_le_left c 0)))⟩
+  | coe r =>
+    by_cases hr : r = 0
+    · subst r
+      obtain ⟨t, ht, _, htU, _⟩ :=
+        exists_small_opposite_mem_nhds_zero (V := U) (by simpa only [coe_zero] using hU)
+          (show (0 : ℝ) < 1 by norm_num)
+      exact ⟨t, ht.ne', htU⟩
+    · exact ⟨r, hr, mem_of_mem_nhds hU⟩
+  | top =>
+    obtain ⟨c, hc⟩ := mem_nhds_top_iff.mp hU
+    have h : max c 0 < max c 0 + 1 := lt_add_one _
+    exact ⟨_, ((le_max_right c 0).trans_lt h).ne',
+      hc (EReal.coe_lt_coe_iff.mpr ((le_max_left c 0).trans_lt h))⟩
+
+private lemma exists_nhds_bounds_opposite (z : EReal) :
+    ∃ S ∈ 𝓝 z, ∀ q : ℝ,
+      (q : EReal) ∈ S → ((-q : ℝ) : EReal) ∈ S → |q| < 1 := by
+  by_cases h : z < ((1 : ℝ) : EReal)
+  · refine ⟨Iio ((1 : ℝ) : EReal), Iio_mem_nhds h, ?_⟩
+    intro q h₁ h₂
+    have e₁ : q < 1 := EReal.coe_lt_coe_iff.mp h₁
+    have e₂ : -q < 1 := EReal.coe_lt_coe_iff.mp h₂
+    exact abs_lt.mpr ⟨by linarith, e₁⟩
+  · have h' : ((-1 : ℝ) : EReal) < z :=
+      (EReal.coe_lt_coe_iff.mpr (show (-1 : ℝ) < 1 by norm_num)).trans_le
+        (le_of_not_gt h)
+    refine ⟨Ioi ((-1 : ℝ) : EReal), Ioi_mem_nhds h', ?_⟩
+    intro q h₁ h₂
+    have e₁ : -1 < q := EReal.coe_lt_coe_iff.mp h₁
+    have e₂ : -1 < -q := EReal.coe_lt_coe_iff.mp h₂
+    exact abs_lt.mpr ⟨e₁, by linarith⟩
+
+private lemma not_continuousWithinAt_zero_denominator {F : EReal × EReal → EReal}
+    {region : Set (EReal × EReal)}
+    (hregion : ∀ x y : ℝ, y ≠ 0 → (↑x, ↑y) ∈ region) (H : AgreesOnRealSlopes F)
+    {a : EReal} (hc : ContinuousWithinAt F region (a, 0)) : False := by
+  obtain ⟨S, hS, hbound⟩ := exists_nhds_bounds_opposite (F (a, 0))
+  have hpre : F ⁻¹' S ∈ 𝓝[region] (a, (0 : EReal)) := hc hS
+  obtain ⟨W, hW, hWS⟩ := mem_nhdsWithin_iff_exists_mem_nhds_inter.1 hpre
+  rw [nhds_prod_eq] at hW
+  obtain ⟨U, hU, V, hV, hUV⟩ := Filter.mem_prod_iff.mp hW
+  have rect (x y : ℝ) (hx : (x : EReal) ∈ U) (hy : (y : EReal) ∈ V) (hy' : y ≠ 0) :
+      F (↑x, ↑y) ∈ S :=
+    hWS ⟨hUV ⟨hx, hy⟩, hregion x y hy'⟩
+  obtain ⟨x, hx, hxU⟩ := exists_nonzero_real_mem_nhds hU
+  obtain ⟨t, ht, htx, htV, hmtV⟩ := exists_small_opposite_mem_nhds_zero hV (abs_pos.mpr hx)
+  obtain ⟨u, hu⟩ := ht.ne'.isUnit
+  let q : ℝ := x * (↑(u⁻¹) : ℝ)
+  have hqt : q * t = x := by
+    rw [← hu]
+    simp [q, mul_assoc]
+  have hmqt : (-q) * (-t) = x := by simpa only [neg_mul_neg] using hqt
+  have hp : F (↑x, ↑t) = (q : EReal) := by
+    simpa only [hqt] using H q t ht.ne'
+  have hm : F (↑x, ↑(-t)) = ((-q : ℝ) : EReal) := by
+    simpa only [hmqt] using H (-q) (-t) (neg_ne_zero.mpr ht.ne')
+  have hq : |q| < 1 := by
+    apply hbound q
+    · rw [← hp]
+      exact rect _ _ hxU htV ht.ne'
+    · rw [← hm]
+      exact rect _ _ hxU hmtV (neg_ne_zero.mpr ht.ne')
+  have hxabs : |x| = |q| * t := calc
+    |x| = |q * t| := congrArg abs hqt.symm
+    _ = |q| * t := by rw [_root_.abs_mul, abs_of_pos ht]
+  have hlt : |q| * t < t := by
+    simpa only [one_mul] using mul_lt_mul_of_pos_right hq ht
+  exact (not_lt_of_ge htx.le) (hxabs.trans_lt hlt)
+
+private def withSign (s : Bool) (x : ℝ) : ℝ := if s then x else -x
+private noncomputable def signedInfinity (s : Bool) : EReal := if s then ⊤ else ⊥
+
+private lemma tendsto_signed_real_ray (s : Bool) (k : ℝ) (hk : 1 ≤ k) :
+    Tendsto (fun t : ℝ ↦ (withSign s (k * t) : EReal))
+      atTop (𝓝 (signedInfinity s)) := by
+  have h : Tendsto (fun t : ℝ ↦ ((k * t : ℝ) : EReal)) atTop (𝓝 ⊤) := by
+    refine tendsto_nhds_top_iff_real.mpr fun c ↦ ?_
+    filter_upwards [eventually_gt_atTop (max c 0)] with t ht
+    have ht0 : 0 ≤ t := (le_max_right c 0).trans ht.le
+    have htk : t ≤ k * t := by
+      simpa only [one_mul] using mul_le_mul_of_nonneg_right hk ht0
+    exact EReal.coe_lt_coe_iff.mpr (((le_max_left c 0).trans_lt ht).trans_le htk)
+  cases s with
+  | false => simpa [withSign, signedInfinity, coe_neg] using h.neg
+  | true => exact h
+
+private lemma eq_signed_ratio_at_infinite_pair {F : EReal × EReal → EReal}
+    {region : Set (EReal × EReal)}
+    (hregion : ∀ x y : ℝ, y ≠ 0 → (↑x, ↑y) ∈ region) (H : AgreesOnRealSlopes F)
+    (s v : Bool) (k : ℝ) (hk : 1 ≤ k)
+    (hc : ContinuousWithinAt F region (signedInfinity s, signedInfinity v)) :
+    F (signedInfinity s, signedInfinity v) = (withSign s (withSign v k) : EReal) := by
+  have hv : Tendsto (fun t : ℝ ↦ (withSign v t : EReal))
+      atTop (𝓝 (signedInfinity v)) := by
+    simpa only [one_mul] using tendsto_signed_real_ray v 1 le_rfl
+  have hpath : Tendsto (fun t : ℝ ↦ (↑(withSign s (k * t)), ↑(withSign v t))) atTop
+      (𝓝[region] (signedInfinity s, signedInfinity v)) := by
+    refine tendsto_nhdsWithin_iff.2 ⟨(tendsto_signed_real_ray s k hk).prodMk_nhds hv, ?_⟩
+    filter_upwards [eventually_gt_atTop (0 : ℝ)] with t ht
+    exact hregion _ _ (by cases v <;> simp [withSign, ht.ne'])
+  have hlim := hc.tendsto.comp hpath
+  apply tendsto_nhds_unique hlim
+  apply tendsto_nhds_of_eventually_eq
+  filter_upwards [eventually_gt_atTop (0 : ℝ)] with t ht
+  change F (↑(withSign s (k * t)), ↑(withSign v t)) = _
+  have hd : withSign v t ≠ 0 := by cases v <;> simp [withSign, ht.ne']
+  have hmul : withSign s (withSign v k) * withSign v t = withSign s (k * t) := by
+    cases s <;> cases v <;> simp [withSign, neg_mul, mul_neg]
+  simpa only [hmul] using H (withSign s (withSign v k)) (withSign v t) hd
+
+private lemma not_continuousWithinAt_infinite_pair {F : EReal × EReal → EReal}
+    {region : Set (EReal × EReal)}
+    (hregion : ∀ x y : ℝ, y ≠ 0 → (↑x, ↑y) ∈ region) (H : AgreesOnRealSlopes F)
+    (s v : Bool) (hc : ContinuousWithinAt F region (signedInfinity s, signedInfinity v)) :
+    False := by
+  have he := (eq_signed_ratio_at_infinite_pair hregion H s v 1 le_rfl hc).symm.trans
+    (eq_signed_ratio_at_infinite_pair hregion H s v 2 (by norm_num) hc)
+  have hr := EReal.coe_eq_coe_iff.1 he
+  cases s <;> cases v <;> norm_num [withSign] at hr
+
+/-- Every point of continuity of an extension of real division lies in the signed division
+domain. The region of the extension must contain the real pairs with nonzero denominator. -/
+theorem divDomain_of_continuousWithinAt_of_real_div {F : EReal × EReal → EReal}
+    {region : Set (EReal × EReal)} {p : EReal × EReal}
+    (hregion : ∀ x y : ℝ, y ≠ 0 → (↑x, ↑y) ∈ region)
+    (hF : ∀ x y : ℝ, ∀ hy : y ≠ 0, F (↑x, ↑y) = ↑(Checked.div x y hy.isUnit))
+    (hc : ContinuousWithinAt F region p) : DivDomain p.1 p.2 := by
+  have hSlope : AgreesOnRealSlopes F := by
+    intro q d hd
+    rw [hF _ _ hd]
+    exact congrArg Real.toEReal (mul_div_cancel_right₀ q (hb := hd.isUnit))
+  obtain ⟨a, b⟩ := p
+  change DivDomain a b
+  refine ⟨?_, ?_⟩
+  · intro he
+    subst b
+    exact not_continuousWithinAt_zero_denominator hregion hSlope hc
+  · rcases eq_or_ne a ⊤ with rfl | hat
+    · refine Or.inr ⟨fun he ↦ ?_, fun he ↦ ?_⟩
+      · exact not_continuousWithinAt_infinite_pair hregion hSlope true true
+          (by simpa [signedInfinity, he] using hc)
+      · exact not_continuousWithinAt_infinite_pair hregion hSlope true false
+          (by simpa [signedInfinity, he] using hc)
+    rcases eq_or_ne a ⊥ with rfl | hab
+    · refine Or.inr ⟨fun he ↦ ?_, fun he ↦ ?_⟩
+      · exact not_continuousWithinAt_infinite_pair hregion hSlope false true
+          (by simpa [signedInfinity, he] using hc)
+      · exact not_continuousWithinAt_infinite_pair hregion hSlope false false
+          (by simpa [signedInfinity, he] using hc)
+    · exact Or.inl ⟨hat, hab⟩
 
 end EReal

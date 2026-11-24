@@ -64,11 +64,11 @@ variable {u v : ℕ → EReal} {a b : EReal}
 
 lemma linearGrowthInf_congr (h : u =ᶠ[atTop] v) :
     linearGrowthInf u = linearGrowthInf v :=
-  liminf_congr ((tendsto_comap.eventually h).mono fun _ uv ↦ by rw [uv])
+  liminf_congr ((tendsto_comap.eventually h).mono fun _ uv ↦ by simp only [uv])
 
 lemma linearGrowthSup_congr (h : u =ᶠ[atTop] v) :
     linearGrowthSup u = linearGrowthSup v :=
-  limsup_congr ((tendsto_comap.eventually h).mono fun _ uv ↦ by rw [uv])
+  limsup_congr ((tendsto_comap.eventually h).mono fun _ uv ↦ by simp only [uv])
 
 lemma linearGrowthInf_le_linearGrowthSup : linearGrowthInf u ≤ linearGrowthSup u :=
   liminf_le_limsup
@@ -76,7 +76,7 @@ lemma linearGrowthInf_le_linearGrowthSup : linearGrowthInf u ≤ linearGrowthSup
 lemma linearGrowthInf_eventually_monotone (h : u ≤ᶠ[atTop] v) :
     linearGrowthInf u ≤ linearGrowthInf v :=
   liminf_le_liminf ((tendsto_comap.eventually h).mono fun n u_v ↦
-    monotone_div_right_of_nonneg (n : ℕ).cast_nonneg' u_v)
+    monotone_div_right_of_nonneg (hb := by checked_unit) (n : ℕ).cast_nonneg' u_v)
 
 lemma linearGrowthInf_monotone : Monotone linearGrowthInf :=
   fun _ _ h ↦ linearGrowthInf_eventually_monotone (Eventually.of_forall h)
@@ -84,7 +84,7 @@ lemma linearGrowthInf_monotone : Monotone linearGrowthInf :=
 lemma linearGrowthSup_eventually_monotone (h : u ≤ᶠ[atTop] v) :
     linearGrowthSup u ≤ linearGrowthSup v :=
   limsup_le_limsup ((tendsto_comap.eventually h).mono fun n u_v ↦
-    monotone_div_right_of_nonneg (n : ℕ).cast_nonneg' u_v)
+    monotone_div_right_of_nonneg (hb := by checked_unit) (n : ℕ).cast_nonneg' u_v)
 
 lemma linearGrowthSup_monotone : Monotone linearGrowthSup :=
   fun _ _ h ↦ linearGrowthSup_eventually_monotone (Eventually.of_forall h)
@@ -92,7 +92,8 @@ lemma linearGrowthSup_monotone : Monotone linearGrowthSup :=
 lemma linearGrowthInf_le_linearGrowthSup_of_frequently_le (h : ∃ᶠ n in atTop, u n ≤ v n) :
     linearGrowthInf u ≤ linearGrowthSup v :=
   liminf_le_limsup_of_frequently_le <|
-    ((frequently_comap_val_iff (eventually_ne_atTop 0)).2 h).mono fun _ u_v ↦ by gcongr
+    ((frequently_comap_val_iff (eventually_ne_atTop 0)).2 h).mono fun n u_v ↦
+      monotone_div_right_of_nonneg (hb := by checked_unit) (n : ℕ).cast_nonneg' u_v
 
 lemma linearGrowthInf_le_iff :
     linearGrowthInf u ≤ a ↔ ∀ b > a, ∃ᶠ n : ℕ in atTop, u n ≤ b * n := by
@@ -226,14 +227,16 @@ lemma tendsto_atTop_of_linearGrowthInf_pos (h : 0 < linearGrowthInf u) :
 lemma le_linearGrowthInf_add :
     linearGrowthInf u + linearGrowthInf v ≤ linearGrowthInf (u + v) := by
   refine le_liminf_add.trans_eq (liminf_congr (Eventually.of_forall fun n ↦ ?_))
-  rw [Pi.add_apply, Pi.add_apply, ← add_div_of_nonneg_right (n : ℕ).cast_nonneg']
+  simp only [Pi.add_apply,
+    add_div_of_nonneg_right (c := (n : ℕ)) (hc := by checked_unit) (n : ℕ).cast_nonneg']
 
 /-- See `linearGrowthInf_add_le'` for a version with swapped argument `u` and `v`. -/
 lemma linearGrowthInf_add_le (h : linearGrowthSup u ≠ ⊥ ∨ linearGrowthInf v ≠ ⊤)
     (h' : linearGrowthSup u ≠ ⊤ ∨ linearGrowthInf v ≠ ⊥) :
     linearGrowthInf (u + v) ≤ linearGrowthSup u + linearGrowthInf v := by
   refine (liminf_add_le h h').trans_eq' (liminf_congr (Eventually.of_forall fun n ↦ ?_))
-  rw [Pi.add_apply, Pi.add_apply, ← add_div_of_nonneg_right (n : ℕ).cast_nonneg']
+  simp only [Pi.add_apply,
+    add_div_of_nonneg_right (c := (n : ℕ)) (hc := by checked_unit) (n : ℕ).cast_nonneg']
 
 /-- See `linearGrowthInf_add_le` for a version with swapped argument `u` and `v`. -/
 lemma linearGrowthInf_add_le' (h : linearGrowthInf u ≠ ⊥ ∨ linearGrowthSup v ≠ ⊤)
@@ -245,7 +248,8 @@ lemma linearGrowthInf_add_le' (h : linearGrowthInf u ≠ ⊥ ∨ linearGrowthSup
 /-- See `le_linearGrowthSup_add'` for a version with swapped argument `u` and `v`. -/
 lemma le_linearGrowthSup_add : linearGrowthSup u + linearGrowthInf v ≤ linearGrowthSup (u + v) := by
   refine le_limsup_add.trans_eq (limsup_congr (Eventually.of_forall fun n ↦ ?_))
-  rw [Pi.add_apply, Pi.add_apply, add_div_of_nonneg_right (n : ℕ).cast_nonneg']
+  simp only [Pi.add_apply,
+    add_div_of_nonneg_right (c := (n : ℕ)) (hc := by checked_unit) (n : ℕ).cast_nonneg']
 
 /-- See `le_linearGrowthSup_add` for a version with swapped argument `u` and `v`. -/
 lemma le_linearGrowthSup_add' :
@@ -257,17 +261,20 @@ lemma linearGrowthSup_add_le (h : linearGrowthSup u ≠ ⊥ ∨ linearGrowthSup 
     (h' : linearGrowthSup u ≠ ⊤ ∨ linearGrowthSup v ≠ ⊥) :
     linearGrowthSup (u + v) ≤ linearGrowthSup u + linearGrowthSup v := by
   refine (limsup_add_le h h').trans_eq' (limsup_congr (Eventually.of_forall fun n ↦ ?_))
-  rw [Pi.add_apply, Pi.add_apply, add_div_of_nonneg_right (n : ℕ).cast_nonneg']
+  simp only [Pi.add_apply,
+    add_div_of_nonneg_right (c := (n : ℕ)) (hc := by checked_unit) (n : ℕ).cast_nonneg']
 
 lemma linearGrowthInf_neg : linearGrowthInf (-u) = - linearGrowthSup u := by
   rw [linearGrowthSup, ← liminf_neg]
   refine liminf_congr (Eventually.of_forall fun n ↦ ?_)
-  rw [Pi.neg_apply, Pi.neg_apply, div_eq_mul_inv₀, div_eq_mul_inv₀, ← neg_mul]
+  simp only [Pi.neg_apply]
+  exact EReal.neg_div
 
 lemma linearGrowthSup_inv : linearGrowthSup (-u) = - linearGrowthInf u := by
   rw [linearGrowthInf, ← limsup_neg]
   refine limsup_congr (Eventually.of_forall fun n ↦ ?_)
-  rw [Pi.neg_apply, Pi.neg_apply, div_eq_mul_inv₀, div_eq_mul_inv₀, ← neg_mul]
+  simp only [Pi.neg_apply]
+  exact EReal.neg_div
 
 /-! ### Affine bounds -/
 
@@ -297,7 +304,7 @@ lemma linearGrowthInf_inf :
     linearGrowthInf (u ⊓ v) = min (linearGrowthInf u) (linearGrowthInf v) := by
   rw [linearGrowthInf, linearGrowthInf, linearGrowthInf, ← liminf_min]
   refine liminf_congr (Eventually.of_forall fun n ↦ ?_)
-  exact (monotone_div_right_of_nonneg (n : ℕ).cast_nonneg').map_min
+  exact (monotone_div_right_of_nonneg (hb := by checked_unit) (n : ℕ).cast_nonneg').map_min
 
 /-- Lower linear growth as an `InfTopHom`. -/
 noncomputable def linearGrowthInfTopHom : InfTopHom (ℕ → EReal) EReal where
@@ -319,7 +326,7 @@ lemma linearGrowthSup_sup :
     linearGrowthSup (u ⊔ v) = max (linearGrowthSup u) (linearGrowthSup v) := by
   rw [linearGrowthSup, linearGrowthSup, linearGrowthSup, ← limsup_max]
   refine limsup_congr (Eventually.of_forall fun n ↦ ?_)
-  exact (monotone_div_right_of_nonneg (n : ℕ).cast_nonneg').map_max
+  exact (monotone_div_right_of_nonneg (hb := by checked_unit) (n : ℕ).cast_nonneg').map_max
 
 /-- Upper linear growth as a `SupBotHom`. -/
 noncomputable def linearGrowthSupBotHom : SupBotHom (ℕ → EReal) EReal where
@@ -486,12 +493,15 @@ lemma _root_.Monotone.linearGrowthInf_comp_le (h : Monotone u)
   obtain ⟨M', aM_M'⟩ := exists_nat_ge_mul a_top M
   obtain ⟨n, n_M', ⟨un_bn, _⟩, k, an_k, k_an'⟩ := frequently_atTop.1 u_b M'
   refine ⟨k, ?_, fun vk_ak' ↦ ?_⟩
-  · rw [mul_comm a, ← le_div_iff_mul_le a_0 a_top, div_eq_inv_mul₀] at aM_M'
+  · rw [mul_comm a, ← le_div_iff_mul_le a_0 a_top,
+      EReal.div_eq_inv_mul (b := a) (hb := by checked_unit)] at aM_M'
     apply Nat.cast_le.1 <| aM_M'.trans <| an_k.trans' _
     gcongr
   · rw [comp_apply, mul_comm a b, mul_assoc b a]
-    rw [← div_eq_inv_mul₀, le_div_iff_mul_le a_0' (ne_top_of_lt a_a'), mul_comm] at k_an'
-    rw [← div_eq_inv_mul₀, div_le_iff_le_mul a_0 a_top] at an_k
+    rw [← EReal.div_eq_inv_mul (b := a') (hb := by checked_unit),
+      le_div_iff_mul_le a_0' (ne_top_of_lt a_a'), mul_comm] at k_an'
+    rw [← EReal.div_eq_inv_mul (b := a) (hb := by checked_unit),
+      div_le_iff_le_mul a_0 a_top] at an_k
     have vk_n := Nat.cast_le.1 (vk_ak'.trans k_an')
     exact (h vk_n).trans <| un_bn.trans <| by gcongr
 
@@ -527,12 +537,15 @@ lemma _root_.Monotone.le_linearGrowthSup_comp (h : Monotone u)
   obtain ⟨M', aM_M'⟩ := exists_nat_ge_mul a_top' M
   obtain ⟨n, n_M', ⟨bn_un, _⟩, k, an_k', k_an⟩ := frequently_atTop.1 b_u M'
   refine ⟨k, ?_, fun ak_vk' ↦ ?_⟩
-  · rw [mul_comm a', ← le_div_iff_mul_le a_0' a_top', div_eq_inv_mul₀] at aM_M'
+  · rw [mul_comm a', ← le_div_iff_mul_le a_0' a_top',
+      EReal.div_eq_inv_mul (b := a') (hb := by checked_unit)] at aM_M'
     apply Nat.cast_le.1 <| aM_M'.trans <| an_k'.trans' _
     gcongr
   · rw [comp_apply, mul_comm a b, mul_assoc b a]
-    rw [← div_eq_inv_mul₀, div_le_iff_le_mul a_0' a_top'] at an_k'
-    rw [← div_eq_inv_mul₀, le_div_iff_mul_le a_0 (ne_top_of_lt a_a'), mul_comm] at k_an
+    rw [← EReal.div_eq_inv_mul (b := a') (hb := by checked_unit),
+      div_le_iff_le_mul a_0' a_top'] at an_k'
+    rw [← EReal.div_eq_inv_mul (b := a) (hb := by checked_unit),
+      le_div_iff_mul_le a_0 (ne_top_of_lt a_a'), mul_comm] at k_an
     have n_vk := Nat.cast_le.1 (an_k'.trans ak_vk')
     exact le_trans (by gcongr) <| bn_un.trans (h n_vk)
 
@@ -605,7 +618,7 @@ lemma _root_.Monotone.linearGrowthInf_comp_mul {m : ℕ} (h : Monotone u) (hm : 
   have : Tendsto (fun n : {n : ℕ // n ≠ 0} ↦ ((m * n : ℕ) : EReal) / ((n : ℕ) : EReal))
       (comap Subtype.val atTop) (𝓝 m) := by
     refine tendsto_nhds_of_eventually_eq (Eventually.of_forall fun x ↦ ?_)
-    rw [natCast_mul, mul_div_cancel_right₀]
+    rw [natCast_mul, EReal.mul_div_cancel_right (b := (x : ℕ)) (hb := by checked_unit)]
   exact h.linearGrowthInf_comp this (Nat.cast_ne_zero.2 hm) (natCast_ne_top m)
 
 lemma _root_.Monotone.linearGrowthSup_comp_mul {m : ℕ} (h : Monotone u) (hm : m ≠ 0) :
@@ -613,7 +626,7 @@ lemma _root_.Monotone.linearGrowthSup_comp_mul {m : ℕ} (h : Monotone u) (hm : 
   have : Tendsto (fun n : {n : ℕ // n ≠ 0} ↦ ((m * n : ℕ) : EReal) / ((n : ℕ) : EReal))
       (comap Subtype.val atTop) (𝓝 m) := by
     refine tendsto_nhds_of_eventually_eq (Eventually.of_forall fun x ↦ ?_)
-    rw [natCast_mul, mul_div_cancel_right₀]
+    rw [natCast_mul, EReal.mul_div_cancel_right (b := (x : ℕ)) (hb := by checked_unit)]
   exact h.linearGrowthSup_comp this (Nat.cast_ne_zero.2 hm) (natCast_ne_top m)
 
 end composition

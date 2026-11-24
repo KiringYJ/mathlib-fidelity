@@ -20,6 +20,10 @@ an ambient inverse, `a⁻¹` and `a ^ n` for integer `n` use the checked operati
 `checked_unit` tactic can find invertibility evidence where required. Nonnegative exponents
 have the full monoid domain.
 
+For signed extended reals, slash uses `EReal.div` with a nonzero denominator and at least one
+finite operand. A finite numerator divided by either infinity gives zero. Inversion on signed
+extended reals still requires a unit.
+
 ## Choosing a quotient
 
 Exact right division by a unit solves `q * b = a`. Under a multiplicative embedding into a

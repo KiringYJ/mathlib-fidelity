@@ -16,10 +16,12 @@ public import Mathlib.Data.Nat.Cast.Order.Field
 This file defines an absolute value and sign function on `EReal` and uses them to provide a
 `CommMonoidWithZero` instance, based on the absolute value and sign characterising all `EReal`s.
 
-The operations `a⁻¹` and `a / b` require the inverted element to be a unit of `EReal`.
-The units of `EReal` are its nonzero real elements (`EReal.isUnit_iff`). The evidence
-search `checked_unit` finds this evidence from hypotheses such as `0 < b` and `b ≠ ⊤`, and for real
-and natural casts.
+The operation `a⁻¹` requires a unit of `EReal`. The units are its nonzero real elements
+(`EReal.isUnit_iff`). The evidence search `checked_unit` finds the requisite evidence
+from hypotheses such as `0 < b` and `b ≠ ⊤`, and for real and natural casts.
+
+The quotient `a / b` requires `EReal.DivDomain a b`. A nonzero finite denominator permits any
+numerator. An infinite denominator permits a finite numerator and gives quotient zero.
 
 A total inverse would need a value at `0`, and any value is arbitrary: the one-sided limits of
 `x⁻¹` at `0` are `⊥` and `⊤`. The reciprocals `⊥⁻¹ = ⊤⁻¹ = 0` of extended real arithmetic are
@@ -345,11 +347,137 @@ lemma inv_strictAntiOn :
 
 /-! ### Division
 
-There is no ambient division on `EReal`: `a / b` is the quotient by a unit `b`, a nonzero real
-element. -/
+The domain consists of pairs with nonzero denominator and at least one finite operand.
+
+At a zero denominator and a nonzero limiting numerator, approaching zero on opposite sides
+gives quotients tending to opposite infinities. At `(0, 0)`, the real pairs `(c * t, t)` give
+different limits as `c` varies and `t` tends to zero through positive values. At a pair of
+infinities, let the two operands tend to their respective endpoints at a fixed ratio of
+magnitudes. Different positive ratios again give distinct limits. These cases exhaust the
+points where real division has no continuous extension.
+-/
+
+/-- The domain of ordinary division on the two-sided extended real line. -/
+def DivDomain (a b : EReal) : Prop :=
+  b ≠ 0 ∧ ((a ≠ ⊤ ∧ a ≠ ⊥) ∨ (b ≠ ⊤ ∧ b ≠ ⊥))
+
+theorem DivDomain.of_isUnit (a : EReal) {b : EReal} (hb : IsUnit b) : DivDomain a b :=
+  let ⟨hbot, htop, hzero⟩ := isUnit_iff.1 hb
+  ⟨hzero, Or.inr ⟨htop, hbot⟩⟩
+
+theorem divDomain_coe_ennreal {a b : ℝ≥0∞} :
+    DivDomain (a : EReal) (b : EReal) ↔ b ≠ 0 ∧ (a ≠ ⊤ ∨ b ≠ ⊤) := by
+  simp [DivDomain]
+
+/-- Discharge the domain of signed extended-real division. -/
+syntax (name := solveERealDivDomain) "ereal_div_domain" : tactic
+
+set_option linter.style.setOption false in
+-- Limit the search run by the default domain argument, including during delaboration.
+macro_rules
+  | `(tactic| ereal_div_domain) => `(tactic|
+      set_option maxHeartbeats 4000 in
+      solve
+      | assumption
+      | (apply EReal.DivDomain.of_isUnit; checked_unit)
+      | (refine ⟨?_, ?_⟩
+         · solve
+           | exact top_ne_zero
+           | exact bot_ne_zero
+           | checked_nonzero
+         · solve
+           | assumption
+           | exact Or.inl ‹_›
+           | exact Or.inr ‹_›
+           | (left
+              constructor
+              · solve
+                | assumption
+                | exact EReal.coe_ne_top _
+                | exact EReal.zero_ne_top
+                | exact EReal.natCast_ne_top _
+                | exact ne_top_of_lt ‹_›
+              · solve
+                | assumption
+                | exact EReal.coe_ne_bot _
+                | exact EReal.zero_ne_bot
+                | exact EReal.natCast_ne_bot _
+                | exact ne_bot_of_gt ‹_›))
+      | fail "extended-real division requires a nonzero denominator and a finite operand")
+
+/-- The continuous extension of real division to its domain on the extended real line.
+With a finite denominator it is division by a unit. With an infinite denominator its value is
+zero. Write it as `a / b`. -/
+protected def div (a b : EReal) (h : DivDomain a b := by ereal_div_domain) : EReal :=
+  match b with
+  | ⊥ => 0
+  | ⊤ => 0
+  | (x : ℝ) => Checked.div a (x : EReal) (isUnit_coe_iff.2 (coe_ne_zero.1 h.1))
+
+/-- Ordinary division agrees with unit division for a finite nonzero denominator. -/
+lemma div_eq_checked_div (a b : EReal) (hb : IsUnit b) {h : DivDomain a b} :
+    EReal.div a b h = Checked.div a b hb := by
+  have ⟨hbot, htop, _⟩ := isUnit_iff.1 hb
+  lift b to ℝ using ⟨htop, hbot⟩
+  rfl
+
+lemma isUnit_div {a b : EReal} {h : DivDomain a b} (ha : IsUnit a) (hb : IsUnit b) :
+    IsUnit (EReal.div a b h) :=
+  (div_eq_checked_div a b hb).symm ▸ ha.div₀ hb
+
+macro_rules
+  | `(tactic| checked_unit) => `(tactic|
+      (with_reducible apply EReal.isUnit_div) <;> checked_unit)
+
+lemma div_eq_mul_inv (a b : EReal) {hb : IsUnit b} : a / b = a * b⁻¹ :=
+  (div_eq_checked_div a b hb).trans rfl
+
+lemma div_eq_inv_mul (a b : EReal) {hb : IsUnit b} : a / b = b⁻¹ * a :=
+  (div_eq_mul_inv a b (hb := hb)).trans (mul_comm _ _)
+
+@[simp]
+lemma div_top (a : EReal) {h : DivDomain a ⊤} : EReal.div a ⊤ h = 0 := rfl
+
+@[simp]
+lemma div_bot (a : EReal) {h : DivDomain a ⊥} : EReal.div a ⊥ h = 0 := rfl
+
+@[simp]
+lemma zero_div (b : EReal) {h : DivDomain 0 b} : EReal.div 0 b h = 0 := by
+  induction b
+  · rfl
+  · exact zero_mul _
+  · rfl
+
+@[simp]
+lemma div_one (a : EReal) : a / (1 : EReal) = a :=
+  (div_eq_checked_div a 1 isUnit_one).trans (div_one₀ a)
+
+@[simp]
+lemma mul_div_cancel_right (a b : EReal) {hb : IsUnit b} : (a * b) / b = a :=
+  (div_eq_checked_div (a * b) b hb).trans (mul_div_cancel_right₀ a)
+
+@[simp]
+lemma mul_div_cancel_left (a b : EReal) {ha : IsUnit a} : (a * b) / a = b :=
+  (div_eq_checked_div (a * b) a ha).trans (mul_div_cancel_left₀ b)
+
+@[simp]
+lemma div_mul_cancel (a b : EReal) {hb : IsUnit b} : a / b * b = a :=
+  (congrArg (· * b) (div_eq_checked_div a b hb)).trans (div_mul_cancel₀ a)
+
+lemma div_eq_iff {a b c : EReal} {hb : IsUnit b} : a / b = c ↔ a = c * b := by
+  rw [div_eq_checked_div _ _ hb, _root_.div_eq_iff (hb := hb)]
+
+lemma neg_div {a b : EReal} {h : DivDomain a b} {hn : DivDomain (-a) b} :
+    EReal.div (-a) b hn = -EReal.div a b h := by
+  induction b with
+  | bot => simp
+  | top => simp
+  | coe r =>
+    have hr := isUnit_coe_iff.2 (coe_ne_zero.1 h.1)
+    simp only [div_eq_mul_inv _ _ (hb := hr), neg_mul]
 
 lemma coe_div (a b : ℝ) {hb : IsUnit b} : ((a / b : ℝ) : EReal) = (a : EReal) / (b : EReal) := by
-  rw [div_eq_mul_inv₀, div_eq_mul_inv₀, coe_mul, coe_inv]
+  rw [div_eq_mul_inv₀, div_eq_mul_inv _ _ (hb := isUnit_coe_iff.2 hb.ne_zero), coe_mul, coe_inv]
 
 theorem natCast_div_le (m n : ℕ) {hn : IsUnit (n : EReal)} :
     (Nat.euclideanDiv m n (fun he => (isUnit_iff.1 hn).2.2 (he ▸ Nat.cast_zero)) : EReal) ≤
@@ -361,28 +489,34 @@ theorem natCast_div_le (m n : ℕ) {hn : IsUnit (n : EReal)} :
   rw [← coe_div (hb := (Nat.cast_ne_zero.2 hn').isUnit), EReal.coe_le_coe_iff]
   exact Nat.cast_div_le (hn := (Nat.cast_ne_zero.2 hn').isUnit)
 
-lemma top_div_of_pos_ne_top {a : EReal} (h : 0 < a) (h' : a ≠ ⊤) : ⊤ / a = ⊤ :=
-  top_mul_of_pos (inv_pos_of_pos_ne_top h h')
+lemma top_div_of_pos_ne_top {a : EReal} (h : 0 < a) (h' : a ≠ ⊤) : ⊤ / a = ⊤ := by
+  rw [div_eq_mul_inv ⊤ a (hb := by checked_unit)]
+  exact top_mul_of_pos (inv_pos_of_pos_ne_top h h')
 
-lemma top_div_of_neg_ne_bot {a : EReal} (h : a < 0) (h' : a ≠ ⊥) : ⊤ / a = ⊥ :=
-  top_mul_of_neg (inv_neg_of_neg_ne_bot h h')
+lemma top_div_of_neg_ne_bot {a : EReal} (h : a < 0) (h' : a ≠ ⊥) : ⊤ / a = ⊥ := by
+  rw [div_eq_mul_inv ⊤ a (hb := by checked_unit)]
+  exact top_mul_of_neg (inv_neg_of_neg_ne_bot h h')
 
-lemma bot_div_of_pos_ne_top {a : EReal} (h : 0 < a) (h' : a ≠ ⊤) : ⊥ / a = ⊥ :=
-  bot_mul_of_pos (inv_pos_of_pos_ne_top h h')
+lemma bot_div_of_pos_ne_top {a : EReal} (h : 0 < a) (h' : a ≠ ⊤) : ⊥ / a = ⊥ := by
+  rw [div_eq_mul_inv ⊥ a (hb := by checked_unit)]
+  exact bot_mul_of_pos (inv_pos_of_pos_ne_top h h')
 
-lemma bot_div_of_neg_ne_bot {a : EReal} (h : a < 0) (h' : a ≠ ⊥) : ⊥ / a = ⊤ :=
-  bot_mul_of_neg (inv_neg_of_neg_ne_bot h h')
+lemma bot_div_of_neg_ne_bot {a : EReal} (h : a < 0) (h' : a ≠ ⊥) : ⊥ / a = ⊤ := by
+  rw [div_eq_mul_inv ⊥ a (hb := by checked_unit)]
+  exact bot_mul_of_neg (inv_neg_of_neg_ne_bot h h')
 
 /-! #### Division and Order -/
 
 variable {a b c : EReal}
 
-lemma monotone_div_right_of_nonneg {hb : IsUnit b} (h : 0 ≤ b) : Monotone fun a ↦ a / b :=
-  fun _ _ h' ↦ mul_le_mul_of_nonneg_right h' (inv_nonneg_of_nonneg (ha := hb) h)
+lemma monotone_div_right_of_nonneg {hb : IsUnit b} (h : 0 ≤ b) : Monotone fun a ↦ a / b := by
+  intro a a' h'
+  simpa only [div_eq_mul_inv _ _ (hb := hb)] using
+    mul_le_mul_of_nonneg_right h' (inv_nonneg_of_nonneg (ha := hb) h)
 
 @[gcongr]
 lemma div_le_div_right_of_nonneg {hc : IsUnit c} (h : 0 ≤ c) (h' : a ≤ b) : a / c ≤ b / c :=
-  monotone_div_right_of_nonneg h h'
+  monotone_div_right_of_nonneg (hb := hc) h h'
 
 lemma strictMono_div_right_of_pos (h : 0 < b) (h' : b ≠ ⊤) : StrictMono fun a ↦ a / b := by
   have hb : IsUnit b := isUnit_iff.2 ⟨ne_bot_of_gt h, h', h.ne'⟩
@@ -390,7 +524,7 @@ lemma strictMono_div_right_of_pos (h : 0 < b) (h' : b ≠ ⊤) : StrictMono fun 
   apply lt_of_le_of_ne <| div_le_div_right_of_nonneg (hc := hb) (le_of_lt h) (le_of_lt a_lt_a')
   intro hyp
   apply ne_of_lt a_lt_a'
-  rw [← mul_div_cancel₀ a (hb := hb), hyp, mul_div_cancel₀]
+  simpa only [div_mul_cancel _ _ (hb := hb)] using congrArg (· * b) hyp
 
 @[gcongr]
 lemma div_lt_div_right_of_pos (h₁ : 0 < c) (h₂ : c ≠ ⊤) (h₃ : a < b) : a / c < b / c :=
@@ -399,7 +533,7 @@ lemma div_lt_div_right_of_pos (h₁ : 0 < c) (h₂ : c ≠ ⊤) (h₃ : a < b) :
 lemma antitone_div_right_of_nonpos {hb : IsUnit b} (h : b ≤ 0) : Antitone fun a ↦ a / b := by
   intro a a' h'
   have key : ∀ x : EReal, x / b = -(x / -b) := fun x ↦ by
-    rw [div_eq_mul_inv₀, div_eq_mul_inv₀ (hb := hb.neg), inv_neg₀ (ha := hb.neg), mul_neg,
+    rw [div_eq_mul_inv (hb := hb), div_eq_mul_inv (hb := hb.neg), inv_neg₀ (ha := hb.neg), mul_neg,
       neg_neg]
   change a' / b ≤ a / b
   rw [key a, key a', neg_le_neg_iff]
@@ -407,7 +541,7 @@ lemma antitone_div_right_of_nonpos {hb : IsUnit b} (h : b ≤ 0) : Antitone fun 
   exact div_le_div_right_of_nonneg (hc := hb.neg) this h'
 
 lemma div_le_div_right_of_nonpos {hc : IsUnit c} (h : c ≤ 0) (h' : a ≤ b) : b / c ≤ a / c :=
-  antitone_div_right_of_nonpos h h'
+  antitone_div_right_of_nonpos (hb := hc) h h'
 
 lemma strictAnti_div_right_of_neg (h : b < 0) (h' : b ≠ ⊥) : StrictAnti fun a ↦ a / b := by
   have hb : IsUnit b := isUnit_iff.2 ⟨h', ne_top_of_lt h, h.ne⟩
@@ -415,49 +549,54 @@ lemma strictAnti_div_right_of_neg (h : b < 0) (h' : b ≠ ⊥) : StrictAnti fun 
   apply lt_of_le_of_ne <| div_le_div_right_of_nonpos (hc := hb) (le_of_lt h) (le_of_lt a_lt_a')
   intro hyp
   apply ne_of_lt a_lt_a'
-  rw [← mul_div_cancel₀ a (hb := hb), ← hyp, mul_div_cancel₀]
+  simpa only [div_mul_cancel _ _ (hb := hb)] using congrArg (· * b) hyp.symm
 
 lemma div_lt_div_right_of_neg (h₁ : c < 0) (h₂ : c ≠ ⊥) (h₃ : a < b) : b / c < a / c :=
   strictAnti_div_right_of_neg h₁ h₂ h₃
 
 lemma le_div_iff_mul_le (h : b > 0) (h' : b ≠ ⊤) : a ≤ c / b ↔ a * b ≤ c := by
   have hb : IsUnit b := isUnit_iff.2 ⟨ne_bot_of_gt h, h', h.ne'⟩
-  nth_rw 1 [← mul_div_cancel₀ a (hb := hb)]
-  rw [mul_div₀ b a b, mul_comm a b]
-  exact StrictMono.le_iff_le (strictMono_div_right_of_pos h h')
+  rw [← (strictMono_div_right_of_pos h h').le_iff_le (a := a * b) (b := c)]
+  rw [mul_div_cancel_right (hb := hb)]
 
 lemma div_le_iff_le_mul (h : 0 < b) (h' : b ≠ ⊤) : a / b ≤ c ↔ a ≤ b * c := by
   have hb : IsUnit b := isUnit_iff.2 ⟨ne_bot_of_gt h, h', h.ne'⟩
-  nth_rw 1 [← mul_div_cancel₀ c (hb := hb)]
-  rw [mul_div₀ b c b, mul_comm b]
-  exact StrictMono.le_iff_le (strictMono_div_right_of_pos h h')
+  rw [mul_comm b c, ← (strictMono_div_right_of_pos h h').le_iff_le (a := a) (b := c * b)]
+  rw [mul_div_cancel_right (hb := hb)]
 
 lemma lt_div_iff (h : 0 < b) (h' : b ≠ ⊤) : a < c / b ↔ a * b < c := by
   have hb : IsUnit b := isUnit_iff.2 ⟨ne_bot_of_gt h, h', h.ne'⟩
-  nth_rw 1 [← mul_div_cancel₀ a (hb := hb)]
-  rw [mul_div₀ b a b, mul_comm a b]
-  exact (strictMono_div_right_of_pos h h').lt_iff_lt
+  rw [← (strictMono_div_right_of_pos h h').lt_iff_lt (a := a * b) (b := c)]
+  rw [mul_div_cancel_right (hb := hb)]
 
 lemma div_lt_iff (h : 0 < c) (h' : c ≠ ⊤) : b / c < a ↔ b < a * c := by
   have hc : IsUnit c := isUnit_iff.2 ⟨ne_bot_of_gt h, h', h.ne'⟩
-  nth_rw 1 [← mul_div_cancel₀ a (hb := hc)]
-  rw [mul_div₀ c a c, mul_comm a c]
-  exact (strictMono_div_right_of_pos h h').lt_iff_lt
+  rw [← (strictMono_div_right_of_pos h h').lt_iff_lt (a := b) (b := a * c)]
+  rw [mul_div_cancel_right (hb := hc)]
 
-lemma div_nonneg {hb : IsUnit b} (h : 0 ≤ a) (h' : 0 ≤ b) : 0 ≤ a / b :=
-  mul_nonneg h (inv_nonneg_of_nonneg (ha := hb) h')
+lemma div_nonneg {h : DivDomain a b} (ha : 0 ≤ a) (hb : 0 ≤ b) : 0 ≤ EReal.div a b h := by
+  by_cases htop : b = ⊤
+  · subst b
+    simp
+  have hu := isUnit_iff.2 ⟨ne_bot_of_gt (bot_lt_zero.trans_le hb), htop, h.1⟩
+  rw [div_eq_mul_inv (hb := hu)]
+  exact mul_nonneg ha (inv_nonneg_of_nonneg (ha := hu) hb)
 
-lemma div_pos (ha : 0 < a) (hb : 0 < b) (hb' : b ≠ ⊤) : 0 < a / b :=
-  EReal.mul_pos ha (inv_pos_of_pos_ne_top hb hb')
+lemma div_pos (ha : 0 < a) (hb : 0 < b) (hb' : b ≠ ⊤) : 0 < a / b := by
+  rw [div_eq_mul_inv a b (hb := by checked_unit)]
+  exact EReal.mul_pos ha (inv_pos_of_pos_ne_top hb hb')
 
-lemma div_nonpos_of_nonpos_of_nonneg {hb : IsUnit b} (h : a ≤ 0) (h' : 0 ≤ b) : a / b ≤ 0 :=
-  mul_nonpos_of_nonpos_of_nonneg h (inv_nonneg_of_nonneg (ha := hb) h')
+lemma div_nonpos_of_nonpos_of_nonneg {hb : IsUnit b} (h : a ≤ 0) (h' : 0 ≤ b) : a / b ≤ 0 := by
+  rw [div_eq_mul_inv (hb := hb)]
+  exact mul_nonpos_of_nonpos_of_nonneg h (inv_nonneg_of_nonneg (ha := hb) h')
 
-lemma div_nonpos_of_nonneg_of_nonpos {hb : IsUnit b} (h : 0 ≤ a) (h' : b ≤ 0) : a / b ≤ 0 :=
-  mul_nonpos_of_nonneg_of_nonpos h (inv_nonpos_of_nonpos (ha := hb) h')
+lemma div_nonpos_of_nonneg_of_nonpos {hb : IsUnit b} (h : 0 ≤ a) (h' : b ≤ 0) : a / b ≤ 0 := by
+  rw [div_eq_mul_inv (hb := hb)]
+  exact mul_nonpos_of_nonneg_of_nonpos h (inv_nonpos_of_nonpos (ha := hb) h')
 
 lemma div_nonneg_of_nonpos_of_nonpos {hb : IsUnit b} (h : a ≤ 0) (h' : b ≤ 0) : 0 ≤ a / b :=
-  le_of_eq_of_le (zero_div b).symm (div_le_div_right_of_nonpos (hc := hb) h' h)
+  le_of_eq_of_le (zero_div (h := DivDomain.of_isUnit 0 hb) b).symm
+    (div_le_div_right_of_nonpos (hc := hb) h' h)
 
 private lemma exists_lt_mul_left_of_nonneg (ha : 0 ≤ a) (hc : 0 ≤ c) (h : c < a * b) :
     ∃ a' ∈ Ioo 0 a, c < a' * b := by
@@ -522,13 +661,15 @@ lemma mul_le_of_forall_lt_of_nonneg (ha : 0 ≤ a) (hc : 0 ≤ c)
 /-! #### Division Distributivity -/
 
 lemma div_right_distrib_of_nonneg {hc : IsUnit c} (h : 0 ≤ a) (h' : 0 ≤ b) :
-    (a + b) / c = a / c + b / c :=
-  EReal.right_distrib_of_nonneg h h'
+    (a + b) / c = a / c + b / c := by
+  simp only [div_eq_mul_inv _ _ (hb := hc)]
+  exact EReal.right_distrib_of_nonneg h h'
 
 lemma add_div_of_nonneg_right {hc : IsUnit c} (h : 0 ≤ c) :
-    (a + b) / c = a / c + b / c :=
-  right_distrib_of_nonneg_of_ne_top (inv_nonneg_of_nonneg (ha := hc) h) (inv_lt_top c (hx := hc)).ne
-    a b
+    (a + b) / c = a / c + b / c := by
+  simp only [div_eq_mul_inv _ _ (hb := hc)]
+  exact right_distrib_of_nonneg_of_ne_top
+    (inv_nonneg_of_nonneg (ha := hc) h) (inv_lt_top c (hx := hc)).ne a b
 
 end EReal
 
@@ -553,24 +694,20 @@ meta def evalERealInv : PositivityExt where eval {u α} zα pα? e :=
     | none => pure .none
   | _, _, _ => throwError "not an inverse of an `EReal`"
 
-/-- Extension for the `positivity` tactic: ratio of two `EReal`s, a quotient by a unit. -/
-@[positivity Checked.div _ _ _]
+/-- Extension for the `positivity` tactic for ordinary `EReal` division. -/
+@[positivity EReal.div _ _ _]
 meta def evalERealDiv : PositivityExt where eval {u α} zα pα? e :=
   match pα? with | none => pure .none | some pα => do
   match u, α, e with
   | 0, ~q(EReal), e =>
-    let e' ← withReducible (whnf e)
-    unless e'.isAppOfArity ``Checked.div 5 do throwError "not a ratio of 2 `EReal`s"
-    let .app (.app (.app _ (a : Q(EReal))) (b : Q(EReal))) (hb : Q(IsUnit $b)) := e'
-      | throwError "not a ratio of 2 `EReal`s"
-    let _e_eq : $e =Q Checked.div $a $b $hb := ⟨⟩
+    let .app (.app (.app (.const ``EReal.div _) (a : Q(EReal))) (b : Q(EReal)))
+      (h : Q(EReal.DivDomain $a $b)) := e
+      | throwError "not a ratio of two extended real numbers"
+    let _e_eq : $e =Q EReal.div $a $b $h := ⟨⟩
     assertInstancesCommute
-    match (← core zα pα a).toNonneg with
-    | some pa =>
-      match (← core zα pα b).toNonneg with
-      | some pb => pure (.nonnegative q(EReal.div_nonneg (hb := $hb) $pa $pb))
-      | none => pure .none
-    | _ => pure .none
-  | _, _, _ => throwError "not a ratio of 2 `EReal`s"
+    let some pa := (← core zα pα a).toNonneg | return .none
+    let some pb := (← core zα pα b).toNonneg | return .none
+    return .nonnegative q(EReal.div_nonneg (h := $h) $pa $pb)
+  | _, _, _ => throwError "not a ratio of two extended real numbers"
 
 end Mathlib.Meta.Positivity
