@@ -3,9 +3,10 @@
 ## Purpose and Status
 
 This is the canonical registry for repositories considered as sources for this
-curated downstream library. It records observed identity and intended handling;
-it does not by itself authorize adding a Git remote, fetching, copying source,
-adding a dependency, merging, committing, or publishing.
+curated downstream library. It records source identity, candidate recovery
+priorities, provenance, and integration status. Listing a source grants no
+authorization to add a Git remote, fetch, copy source, add a dependency, merge,
+commit, or publish.
 
 The word "source" is used here for any external repository from which material
 might be learned, depended on, or integrated. The Git remote literally named
@@ -76,24 +77,52 @@ maintenance, or migration audit is implied. No local remotes have been added
 for them, and their moving default refs are not intake revision pins.
 
 Keep sources with open admission checks in the candidate registry. Before
-promoting any row to `accepted`, record its full immutable source commit and
+promoting a candidate to `accepted`, record its full immutable source commit and
 complete the required intake record below. Maintainers select and schedule
 intake within the available audit and migration capacity.
 
 ### Lean 3 preservation and reconstruction leads
 
-These projects require theorem-level comparison with the current library before
-any source transfer. Their provisional recovery modes and priorities are
-tracked in `MIGRATION_BACKLOG.md`; the rows here record source identity only.
+The priorities below are provisional. Use the
+[contribution guide](.github/CONTRIBUTING.md#recovery-modes) to assess maintained
+descendants, compare theorem coverage, and choose a recovery mode.
 
-| Candidate | Scope to investigate | Observed default ref |
-| --- | --- | --- |
-| [adamtopaz/lean-acl-pairs](https://github.com/adamtopaz/lean-acl-pairs) | alternating pairs and valuation rings; possible small Lean 3 port pilot | `master` |
-| [leanprover-community/lean-liquid](https://github.com/leanprover-community/lean-liquid) | Liquid Tensor Experiment theorem coverage on current condensed and homological-algebra APIs | `master` |
-| [leanprover-community/lean-perfectoid-spaces](https://github.com/leanprover-community/lean-perfectoid-spaces) | perfectoid-space, adic-space, and Huber infrastructure requiring current-Mathlib overlap analysis | `master` |
-| [dagurtomas/lean-solid](https://github.com/dagurtomas/lean-solid) | solid-abelian-group results requiring semantic comparison with `Mathlib.Condensed.Solid` | `master` |
-| [b-mehta/topos](https://github.com/b-mehta/topos) | topos, Lawvere--Tierney topology, and sheafification results requiring overlap analysis | `master` |
-| [ianklatzco/flypitch](https://github.com/ianklatzco/flypitch) | existing Lean 4 Flypitch descendant to audit rather than reconstruct from scratch | `master` |
+#### Priority A -- port pilot and reconstruction candidates
+
+- [adamtopaz/lean-acl-pairs](https://github.com/adamtopaz/lean-acl-pairs) (`master`).
+  Bounded port pilot for alternating pairs and valuation rings. Check for a
+  maintained Lean 4 descendant, audit the main and converse statements and
+  their proofs, and compare them with the current valuation and linear-algebra
+  APIs.
+- [leanprover-community/lean-liquid](https://github.com/leanprover-community/lean-liquid) (`master`).
+  Flagship reconstruction candidate for the Liquid Tensor Experiment. Map the
+  blueprint and theorem dependencies, including `src/for_mathlib`, to current
+  condensed and homological-algebra declarations. The acceptance target is an
+  audited current theorem corresponding to the historical
+  `liquid_tensor_experiment`.
+- [leanprover-community/lean-perfectoid-spaces](https://github.com/leanprover-community/lean-perfectoid-spaces) (`master`).
+  Compare the Huber, adic-space, and perfectoid-space layers declaration by
+  declaration with current valuation, topology, and perfectoid infrastructure.
+  Use the [current perfectoid modules](Mathlib/RingTheory/Perfectoid/) to help
+  identify the unmatched mathematics before defining a reconstruction scope.
+
+#### Priority B -- theorem-level overlap audits
+
+- [dagurtomas/lean-solid](https://github.com/dagurtomas/lean-solid) (`master`).
+  Compare the fork-specific `src/solid/` declarations with `profiniteSolid`,
+  solidification, and `CondensedMod.IsSolid`. Check the open solidity results
+  and the general-ring boundary documented in
+  [Mathlib.Condensed.Solid](Mathlib/Condensed/Solid.lean).
+- [b-mehta/topos](https://github.com/b-mehta/topos) (`master`).
+  Map named results on cartesian and locally cartesian closed categories,
+  toposes, Lawvere--Tierney topologies, and sheafification to current category,
+  site, Grothendieck-topology, and sheaf declarations.
+
+#### Existing Lean 4 descendant
+
+- [ianklatzco/flypitch](https://github.com/ianklatzco/flypitch) (`master`).
+  Start with the `flypitch4` development and its validation records. Audit its
+  trusted proof boundary and correspondence with the original Lean 3 source.
 
 ### Established mathlib-downstream leads
 
@@ -108,7 +137,7 @@ current mathlib downstream registry or directly by repository identity.
 | [teorth/pfr](https://github.com/teorth/pfr) | Polynomial Freiman--Ruzsa formalization | `master` |
 | [AlexKontorovich/PrimeNumberTheoremAnd](https://github.com/AlexKontorovich/PrimeNumberTheoremAnd) | prime number theorem and analytic-number-theory infrastructure | `main` |
 | [kbuzzard/ClassFieldTheory](https://github.com/kbuzzard/ClassFieldTheory) | class field theory | `main` |
-| [leanprover-community/sphere-eversion](https://github.com/leanprover-community/sphere-eversion) | sphere eversion and differential topology | `master` |
+| [leanprover-community/sphere-eversion](https://github.com/leanprover-community/sphere-eversion) | existing Lean 4 port to audit for sphere eversion and differential topology | `master` |
 | [thefundamentaltheor3m/Sphere-Packing-Lean](https://github.com/thefundamentaltheor3m/Sphere-Packing-Lean) | sphere packing in dimension eight | `main` |
 | [emilyriehl/infinity-cosmos](https://github.com/emilyriehl/infinity-cosmos) | higher category theory and infinity-cosmoses | `main` |
 | [teorth/equational_theories](https://github.com/teorth/equational_theories) | equational theories and universal algebra | `main` |
@@ -198,10 +227,10 @@ revision, and scope before promoting them to candidate rows:
 - LeanProject and Lean Reservoir project catalogues;
 - repositories using `formalization.yaml` or the Palomar template as discovery
   feeds.
-- cross-prover versions of Flyspeck, the computation of
-  `pi_4(S^3)`, and the Four Color Theorem; identify the exact maintained source
-  and audit foundation compatibility before treating any as a Lean migration
-  candidate.
+- Flyspeck, the Cubical Agda computation of `pi_4(S^3)`, and the Rocq/Coq Four
+  Color Theorem. Identify the maintained source and assess its trusted boundary,
+  foundation gap, overlap with Lean developments, and infrastructure cost
+  before selecting a reformalization.
 
 Discovery feeds are indexes, not trusted proof sources. Follow each pointer to
 the underlying repository and perform the ordinary intake audit.

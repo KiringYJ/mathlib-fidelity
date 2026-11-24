@@ -186,10 +186,8 @@ prepared, submitted, or forwarded as upstream mathlib pull requests.
 - [TODO.md](TODO.md) tracks pending Fidelity work.
 - [FORK_DESIGN.md](FORK_DESIGN.md) sets the fork's library-wide design principles.
 - [CONTRIBUTING.md](.github/CONTRIBUTING.md) gives admission, review, and testing requirements.
-- [MIGRATION_BACKLOG.md](MIGRATION_BACKLOG.md) tracks selected external
-  formalization recovery and reconstruction work.
-- [UPSTREAMS.md](UPSTREAMS.md) records external source identity, licensing,
-  provenance, integration mode, and status.
+- [SOURCES.md](SOURCES.md) records external sources, candidate recovery
+  priorities, licensing, provenance, integration mode, and status.
 - [AI_AGENT_PROJECT.md](AI_AGENT_PROJECT.md) defines the repository workflow,
   branch policy, and verification requirements.
 

@@ -145,7 +145,7 @@ Selected developments require audit, deduplication, adaptation to the maintained
 API, and final verification. Differences in names, namespaces, imports,
 abstraction, proof locality, and API usage are integration work. Keep raw
 external snapshots as provenance evidence outside the public API. Record
-candidates with open admission checks in the [source registry](../UPSTREAMS.md#candidate-sources).
+candidates with open admission checks in the [source registry](../SOURCES.md#candidate-sources).
 Maintainers select and schedule intake according to audit and migration
 capacity, build time, dependencies, and integration and maintenance costs.
 
@@ -176,17 +176,24 @@ Classify recovery work by its preservation goal.
   materially different foundation and requires a new trusted-boundary and
   foundation audit.
 
-For a reconstruction, map selected statements, hypotheses, constructions, and
-proof status to their current counterparts. Search for maintained descendants
-and existing library coverage before starting. Reuse sound modern
-infrastructure and reprove the unmatched mathematical layer. Completion
-requires theorem-level correspondence evidence and end-to-end acceptance
-targets. The old directory tree, API, or translated file count does not
-establish that correspondence.
+At the start of each recovery audit, search again for maintained descendants
+and current library coverage. Map the selected source theorems and their
+dependencies to current declarations, recording which results survive, have
+been superseded, differ in statement, or remain unmatched. For a
+reconstruction, reuse sound current infrastructure and reprove the unmatched
+layer. Set theorem-level acceptance targets and verify the correspondence of
+statements, hypotheses, constructions, and trusted proof boundaries at the
+final integrated state. Apply the
+[complete-migration contract](../FORK_DESIGN.md#complete-migrations).
 
-Planning priorities and open evidence gates are in
-[`MIGRATION_BACKLOG.md`](../MIGRATION_BACKLOG.md). A candidate there does not
-admit its source or authorize intake.
+Mathport relies on the port-era `#align` support. If translation preserves
+useful structure, pair `mathport:v3-eol` with `mathlib4:v3-eol`, then upgrade
+the result manually to the current baseline. Assess a reconstruction on
+current APIs when the old foundations have been superseded. See the
+[Mathport documentation](https://github.com/leanprover-community/mathport#readme).
+
+Provisional recovery priorities and open audit questions are recorded with the
+[candidate sources](../SOURCES.md#lean-3-preservation-and-reconstruction-leads).
 
 ## External sources and provenance
 
@@ -197,7 +204,7 @@ When a contribution copies, adapts, or reconstructs external material:
   content, and applicable `NOTICE` obligations;
 - report axioms, `sorry` declarations, generated artifacts, and overlap with
   existing declarations; and
-- update [UPSTREAMS.md](../UPSTREAMS.md) when material is integrated into the
+- update [SOURCES.md](../SOURCES.md) when material is integrated into the
   fork.
 
 A public repository or mathematically valid result does not establish permission

@@ -98,7 +98,7 @@ or prepare an upstream pull request, and never push to `upstream`.
 
 Follow the charter's [placement policy](FORK_DESIGN.md#mathematical-scope-and-placement)
 for in-tree work, the [contribution guide](.github/CONTRIBUTING.md#admission-and-review)
-for admission and review, and the [source registry](UPSTREAMS.md#intake-procedure)
+for admission and review, and the [source registry](SOURCES.md#intake-procedure)
 for the intake record and integration modes.
 
 ### Moving `main` and open pull requests
@@ -130,7 +130,7 @@ license and redistribution conditions, per-file authorship, third-party content,
 `NOTICE` obligations, axioms, `sorry`s, generated artifacts, mathematical
 status, and overlap with existing declarations. Record the source, in-tree
 destination modules where applicable, and integration evidence in
-`UPSTREAMS.md`. If permission is absent or unclear, retain only a reference
+`SOURCES.md`. If permission is absent or unclear, retain only a reference
 until a separate license review establishes an authorized path.
 
 ## Design Contract
@@ -314,8 +314,8 @@ Desktop chat billing follows its own sign-in.
   contains Fidelity-specific regression tests.
 - `Counterexamples/` and `scripts/` provide examples and repository tooling.
 - `FORK_DESIGN.md` is the library-wide design charter.
-- `UPSTREAMS.md` records external source identity, license evidence,
-  provenance, integration mode, and status.
+- `SOURCES.md` records external source identity, candidate recovery priorities,
+  license evidence, provenance, integration mode, and status.
 - `AI_AGENT_GUIDE.md` is generated shared agent policy.
 - `AI_AGENT_PROJECT.md` is the manually maintained policy for this fork and
   must be preserved verbatim by future workbench syncs.
@@ -358,7 +358,7 @@ they remain applicable to the affected area.
 - `README.md`: fork overview, branch model, setup, contribution policy, and
   upstream resource links.
 - `FORK_DESIGN.md` sets library-wide design and migration principles.
-- `UPSTREAMS.md`: canonical source-repository and provenance registry.
+- `SOURCES.md`: canonical source-repository and provenance registry.
 - `TODO.md`: backlog of fidelity and API-hygiene work, with unresolved
   candidates subject to its fidelity gate.
 - `.github/CONTRIBUTING.md`: contribution requirements for pull requests to
@@ -423,7 +423,7 @@ and the provenance ledger, but must never rewrite this project file.
   upstream API, theorem, or behavior still has a particular form.
 - Do not add source remotes, dependencies, or imported code merely because a
   repository is mentioned. Require an explicit intake task and update
-  `UPSTREAMS.md` from verified evidence.
+  `SOURCES.md` from verified evidence.
 - Never infer redistribution permission from a public repository alone. Keep
   sources without a verified compatible license reference-only pending review,
   and preserve all applicable authorship, license, modification, and `NOTICE`

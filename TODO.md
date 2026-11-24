@@ -383,7 +383,7 @@ finitary instance, and `Matrix.IsHadamard` is a matrix predicate; keep their gen
 Robbins and `Counterexample.aharoni_korman_false` are already proved results. CH/GCH, Kaplansky,
 Weinstein, Duffin-Schaeffer and other reference-only hits create no additional declaration migration
 in this checkout. External-only catalogue entries (such as Catalan/modularity statements in
-`docs/1000.yaml` and reference repositories in `UPSTREAMS.md`) are discovery evidence, not new
+`docs/1000.yaml` and reference repositories in `SOURCES.md`) are discovery evidence, not new
 local code or an authorized intake task. Deliberate test-suite axiom/opaque/sorry fixtures are
 not production conjecture roots; distinguish goal metadata and test scaffolding from result proofs.
 

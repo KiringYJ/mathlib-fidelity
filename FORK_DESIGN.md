@@ -258,7 +258,7 @@ Admit external work through mathematical and technical review, licensing
 review, and source recording. Bring in-tree material onto the canonical API
 and preserve attribution and provenance through adaptation. See the
 [contribution guide](.github/CONTRIBUTING.md#external-sources-and-provenance)
-and [source registry](UPSTREAMS.md).
+and [source registry](SOURCES.md).
 
 ## Relationship to Upstream
 
