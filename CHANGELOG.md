@@ -10,9 +10,8 @@ When tagging a release, move its notes under the Fidelity tag and release date a
 
 ### Upstream changes
 
-- Rebased Fidelity from mathlib `c02174567c` onto `v4.34.0` (`5ed2965256`) and updated the official Lean
-  toolchain to `v4.34.0`. See the [mathlib release](https://github.com/leanprover-community/mathlib4/releases/tag/v4.34.0)
-  and the [upstream comparison](https://github.com/leanprover-community/mathlib4/compare/c02174567c98cac8b9a8e2ee34ee8e2ffa98df94...v4.34.0).
+- Rebased Fidelity onto mathlib `v4.34.0` with the matching official Lean toolchain. See the
+  [mathlib release](https://github.com/leanprover-community/mathlib4/releases/tag/v4.34.0).
 - Future upstream updates use [stable release merges](AI_AGENT_PROJECT.md#mathlib-baseline-reconciliation-workflow).
 
 ### Fidelity changes
