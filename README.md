@@ -31,8 +31,8 @@ it is not the design authority for this fork.
   API quality.
 - Complete each accepted migration across its selected API and all affected
   consumers in one delivery, without compatibility or transitional layers.
-  Independent foundational problems may be tracked separately in `TODO.md`
-  when a proved boundary preserves the completed API's mathematical contract.
+  Track independent foundational problems in separate issues when a proved boundary
+  preserves the completed API's mathematical contract.
 - Admit external formalizations through explicit mathematical, licensing,
   provenance, and implementation review.
 
@@ -112,9 +112,8 @@ Separate weekly and manual runs also replay Mathlib and Batteries with
 `leanchecker` and run the Mathlib test executable.
 
 See [the CI guide](.github/CI.md) for validation scope, cache and resource
-limits, and the upstream workflow isolation policy. The conjecture registry
-and proof-status admission gate remain separate implementation work in
-[TODO.md](TODO.md#conjectures-and-proof-status----accepted-design-pending-implementation).
+limits, and the upstream workflow isolation policy. The separate implementation
+of the conjecture registry and proof-status admission gate is tracked in [issue #3](https://github.com/KiringYJ/mathlib-fidelity/issues/3).
 
 ## Using the fork as a dependency
 
@@ -133,6 +132,8 @@ The upstream
 still applies to the surrounding Lake project setup.
 
 ## Contributing
+
+Report bugs and propose changes through [GitHub Issues](https://github.com/KiringYJ/mathlib-fidelity/issues).
 
 Pull requests to this fork are welcome when they follow the mathematical
 fidelity, API, source, licensing, provenance, testing, and review requirements
@@ -160,7 +161,8 @@ prepared, submitted, or forwarded as upstream mathlib pull requests.
 ## Project records
 
 - [CHANGELOG.md](CHANGELOG.md) summarizes significant upstream and Fidelity changes by release.
-- [TODO.md](TODO.md) tracks pending Fidelity work.
+- [Project maintenance guide](AI_AGENT_PROJECT.md#fidelity-gate) defines fidelity assessment and
+  [library-wide audit procedures](AI_AGENT_PROJECT.md#full-library-fallback-audit).
 - [FORK_DESIGN.md](FORK_DESIGN.md) sets the fork's library-wide design principles.
 - [CONTRIBUTING.md](.github/CONTRIBUTING.md) gives admission, review, and testing requirements.
 - [SOURCES.md](SOURCES.md) records external sources, candidate recovery

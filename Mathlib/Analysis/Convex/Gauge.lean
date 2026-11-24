@@ -53,8 +53,8 @@ variable [AddCommGroup E] [Module ℝ E]
 
 /-- The real-valued Minkowski functional on its finite domain: the infimum of the positive
 scalars `r` such that `x ∈ r • s`, provided this set is nonempty. The infimum need not be attained.
-The implementation retains the inherited empty real-infimum convention outside this domain;
-that unsupported case is tracked separately in `TODO.md`. -/
+The implementation retains the inherited empty real-infimum convention outside this domain.
+The [conditional extrema audit](https://github.com/KiringYJ/mathlib-fidelity/issues/88) tracks this case. -/
 def gauge (s : Set E) (x : E) : ℝ :=
   sInf { r : ℝ | 0 < r ∧ x ∈ r • s }
 

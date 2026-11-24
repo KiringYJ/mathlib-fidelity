@@ -91,9 +91,8 @@ workflow or secret access as ordinary integration authority.
 Every migration follows the [complete-migration contract](../FORK_DESIGN.md#complete-migrations).
 Internal experiments and incremental development are allowed; a prototype or
 partial consumer migration is not a completed migration. Independent
-foundational problems may remain separate TODO items, for example an XL issue
-encountered during an L migration, provided the PR proves that its selected API
-is faithful and identifies the lower-level dependency precisely. Required
+foundational problems may remain separate issues when the PR proves that its
+selected API is faithful and identifies the lower-level dependency precisely. Required
 in-scope proofs, consumer updates, and removals cannot be deferred this way.
 
 ## Mathematical terminology

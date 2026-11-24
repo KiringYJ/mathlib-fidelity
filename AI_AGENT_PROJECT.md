@@ -39,7 +39,8 @@ The policies below are project-local overrides.
   branches.
 - `exp/<slug>` may be used for work whose mathematical or API direction is not
   yet settled.
-- Formal Fidelity releases are published as immutable tags.
+- Formal Fidelity releases are published as immutable tags. Follow the
+  [release-candidate fallback audit](#full-library-fallback-audit).
 - External pull requests target `main` from contributor-owned branches.
   Contributor branch names are not part of this repository's maintained branch
   taxonomy.
@@ -139,8 +140,35 @@ Before changing a public API, consult the matching principles in
 [FORK_DESIGN.md](FORK_DESIGN.md#coequal-design-goals) and inspect the relevant
 Lean definitions, theorems, and consumers. Apply the
 [admission and source policies](#contributions-and-curated-external-source-intake)
-to external material. Use the heuristics and refactor protocol below to
-apply the charter to the selected scope.
+to external material. Use the fidelity gate, API heuristics, and refactor protocol below to apply
+the charter to the selected scope.
+
+### Fidelity gate
+
+Apply the [mathematical fidelity principles](FORK_DESIGN.md#mathematical-fidelity) before promoting
+an audit candidate to an implementation task.
+
+1. State a representation-independent specifying or universal property for the intended object.
+2. Determine the exact mathematical domain and distinguish necessary conditions from sufficient
+   assumptions supplied by typeclasses or automation.
+3. Classify the current behavior as an independently specified total object, choice of a unique
+   value, chosen representative of an equivalence class, checked projection, or fallback.
+   A value assigned solely to make a partial operation total is a fallback. For an independently
+   total object, cite the mathematical source and show that its laws determine the value on every
+   input, including degenerate cases. Use the equivalence class when the specification determines
+   only a class. For a private witness confined to a `Prop`-valued existence proof, verify that
+   no public definition unfolds to it.
+4. Test positive, negative, degenerate, characteristic-sensitive, and nonunique cases where relevant.
+5. Check that the name and notation convey the intended mathematical object. Choose a presentation
+   that exposes its exact domain and canonicity, such as a relation, extended-valued invariant,
+   canonical value, equivalence class, subtype, proof argument, or explicit partiality type.
+6. Validate the candidate in representative consumers and record whether it is accepted, reframed,
+   rejected, or still open.
+
+For an accepted migration, prove agreement on the valid domain and audit statements that depend on
+the fallback branches. Add negative tests for the actual boundary and run affected checks at the
+final source state. Follow the [complete-migration contract](FORK_DESIGN.md#complete-migrations)
+and its [independent foundational dependency rule](FORK_DESIGN.md#independent-foundational-dependencies).
 
 ### Official toolchain and operator dependency checks
 
@@ -153,8 +181,12 @@ its proof dependency report. Test hidden semantic dependencies, retained
 faithful operations, and the narrow toolchain exception when extending the
 audit. Record each unavoidable official proof dependency and the evidence
 for its boundary. For conjecture, axiom, and evaluation trust, follow the
-separate [proof-status design](FORK_DESIGN.md#conjectures-and-proof-status)
-and its implementation status in `TODO.md`.
+separate [proof-status design](FORK_DESIGN.md#conjectures-and-proof-status).
+For a source proof-status audit, combine status markers with an inventory of declarations whose
+result types are propositional, including types inferred by Lean. Check the findings against
+elaborated dependencies, mathematical sources, current evidence, and representative consumers.
+Follow the [registry and admission gate issue](https://github.com/KiringYJ/mathlib-fidelity/issues/3)
+for implementation progress.
 
 ## Working API Heuristics
 
@@ -178,8 +210,8 @@ concrete use cases before redesigning existing code.
 - If a total object is claimed to be independently mathematical, which exact
   literature and specifying properties establish its degenerate cases? If it
   is the selected operation's fallback, is it removed? If it belongs to an
-  independent lower-level problem, is its use proved faithful and recorded in
-  a precise TODO entry?
+  independent lower-level problem, is its use proved faithful and the obligation
+  recorded in a precise issue?
 - Can a thin facade improve semantic fidelity without duplicating a parallel
   theorem ecosystem?
 - Does the migration replace the selected interface and all affected callers
@@ -188,6 +220,11 @@ concrete use cases before redesigning existing code.
 - Does generated proof glue merely conceal an ontology mismatch? Automation
   and language models can assist discovery, but should not be used as evidence
   that a human-facing interface is already adequate.
+
+For a notation audit, trace parser and elaborator expansions, inserted arguments, and delaboration.
+Check representative uses for hidden arguments, ambiguous declarations, and parser collisions.
+When auditing duplicate function presentations, check typed transport, equality orientation,
+attributes, theorem search, and which mathematical structure the input types carry.
 
 Treat these as hypotheses to test through downstream code, not as blanket
 claims about every mathlib module or maintainer. Keep criticism technical and
@@ -204,11 +241,10 @@ deprecated aliases, or private transitional adapters. Internal experiments,
 incremental edits, and focused builds remain part of the same work; a
 prototype-only delivery is not completion of an accepted migration.
 
-An independent lower-level problem may be deferred: an L migration can finish
-while an XL foundational issue is recorded in `TODO.md`. Identify the actual
-declarations and obligation, and prove that the completed L interface is
-faithful despite that dependency. This does not permit deferring callers or
-proof obligations required by the selected L interface. Keep the completed
+A cross-module migration may finish with a separate foundational issue open.
+Identify the affected declarations and remaining obligation. Prove the completed
+API is faithful at the dependency boundary. Complete every caller migration and
+proof required by the selected scope. Keep the completed
 scope and deferred foundation distinct in the final report.
 
 ### Broad API refactor protocol
@@ -259,30 +295,55 @@ For an explicitly authorized public-API canonicalization:
    Textual absence alone does not establish the boundary. A later core edit or
    byte-level normalization invalidates affected evidence and requires the
    relevant checks to be rerun.
+8. Run the [full-library fallback audit](#full-library-fallback-audit) on the
+   final source state.
 
 When a style tool traverses transitive imports, distinguish errors introduced
 by the current diff from pre-existing repository debt. Fix in-scope new errors
 and report inherited failures accurately without expanding the refactor.
 
+### Full-library fallback audit
+
+Run this audit on the final source state of each broad migration and on the
+candidate revision before tagging a Fidelity release. Build a fresh candidate inventory from the
+maintained sources at that revision. Check declaration and module documentation, names such as
+`_undef` and `_of_not_`, and definitions with default branches, lossy projections, or choice
+without evidence for the specified domain. Review ordinary computational defaults when they can
+affect a mathematical interface.
+
+Review each maintained mathematical declaration, including inherited, private, and generated
+declarations. Inspect elaborated statements, definition bodies, and dependencies, including
+declarations with no source match.
+
+Apply the [fidelity gate](#fidelity-gate) and the
+[official Lean boundary](FORK_DESIGN.md#official-lean-and-operator-fidelity).
+Record audit coverage and each candidate's domain, specifying properties,
+fallback behavior, affected statements and callers, and disposition. Resolve
+in-scope findings under the
+[complete-migration contract](FORK_DESIGN.md#complete-migrations). Track
+independent findings in GitHub issues, grouped by affected API, and reuse
+existing issues where applicable.
+
 ## Remaining Work
 
 [`CHANGELOG.md`](CHANGELOG.md) records significant changes between consecutive Fidelity
 releases, with separate entries for the mathlib baseline and the Fidelity API.
-`TODO.md` tracks pending work. Completed entries can be removed once the Lean
-API, any necessary docstrings, and
-[regression coverage](.github/CONTRIBUTING.md#regression-coverage) preserve
-their contracts. Resolve every obligation of the selected migration before
-reporting it complete. Record independent foundational problems and other
-separately scoped work in `TODO.md`. A TODO cannot substitute for
-an in-scope proof, consumer migration, or removal. Remaining items include open
-mathematical questions, hypotheses stronger than necessary,
-deferred instances or API, unverified claims, and deferred reviewer
-suggestions. An entry names the affected files and declarations, states the
-obligation precisely, and records any known paper proof, counterexample, or
-source. Before recording a question as open, check whether a short argument
-settles it. A suggestion declined for a stated reason is a decision, not
-remaining work; give the reason in the report. The final report points each
-remaining item to the commit that resolved it or to its `TODO.md` entry.
+[GitHub Issues](https://github.com/KiringYJ/mathlib-fidelity/issues) tracks scoped pending work.
+For Lean work, close a delivery issue after its verified changes reach `main`
+and the API, necessary docstrings, and
+[regression coverage](.github/CONTRIBUTING.md#regression-coverage) preserve the
+contract. Resolve the selected proofs, consumer migrations, and removals before
+reporting completion. Record separately scoped foundational obligations in
+issues with their proved boundaries. Start implementation of foundational work
+with an explicitly selected scope.
+
+Track open mathematical questions, hypotheses stronger than necessary, deferred
+instances and APIs, unverified claims, and deferred reviewer suggestions in
+issues. Name the affected files and declarations, state the obligation precisely,
+and record any known proof, counterexample, or mathematical source. Before
+recording a question as open, check whether a short argument settles it. Record
+the reason for declining a suggestion in the report. Link each resolution to
+its commit and each remaining scoped obligation to its issue.
 
 ## Using API credits
 
@@ -359,8 +420,6 @@ they remain applicable to the affected area.
   upstream resource links.
 - `FORK_DESIGN.md` sets library-wide design and migration principles.
 - `SOURCES.md`: canonical source-repository and provenance registry.
-- `TODO.md`: backlog of fidelity and API-hygiene work, with unresolved
-  candidates subject to its fidelity gate.
 - `.github/CONTRIBUTING.md`: contribution requirements for pull requests to
   this fork and the separate upstream boundary.
 - `.github/PULL_REQUEST_TEMPLATE.md`: fork-specific submission prompts

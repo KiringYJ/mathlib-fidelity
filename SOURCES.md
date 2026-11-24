@@ -271,7 +271,7 @@ provenance, migration, and verification evidence.
 The `migrating` status records work in progress, not an accepted transitional
 API. Integration follows the complete-migration contract in `FORK_DESIGN.md`:
 complete the selected scope without compatibility layers, and identify any
-independently deferred foundational TODOs together with their proved boundaries.
+independently deferred foundational issues together with their proved boundaries.
 
 ## Intake Procedure
 

@@ -44,8 +44,8 @@ The bundled `leanchecker` replays declarations through Lean's kernel; it is
 not an independently implemented verifier or an axiom admission audit. No
 nanoda result is claimed by these workflows. The conjecture registry, named
 root dependency analysis, reviewed axiom base, and three-status admission gate
-remain the separate accepted implementation tasks in
-[`TODO.md`](../TODO.md#conjectures-and-proof-status----accepted-design-pending-implementation).
+are tracked as separate implementation work in the
+[registry and admission gate issue](https://github.com/KiringYJ/mathlib-fidelity/issues/3).
 The `lake test` driver builds both `MathlibTest` and `FidelityTest`.
 Mathematical statement fidelity is evaluated under the
 [fork design policy](../FORK_DESIGN.md#mathematical-fidelity).
@@ -71,9 +71,8 @@ the current retired operators and report commands.
 The [retired-instance policy](../Mathlib/Lean/Elab/OperatorPolicy.lean)
 suppresses selected core instances in covered commands at elaboration time.
 The declaration audit checks the resulting dependencies, including explicit
-references and generated declarations in its scope. The general
-[priority-independent elaboration checks](../TODO.md#priority-independent-elaboration)
-remain pending.
+references and generated declarations in its scope. The general checks are tracked
+in the [priority-independent elaboration issue](https://github.com/KiringYJ/mathlib-fidelity/issues/16).
 
 ## Workflow lint before pushing
 

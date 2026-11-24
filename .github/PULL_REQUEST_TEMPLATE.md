@@ -33,8 +33,8 @@ when external material is involved. Write "No external material" otherwise.
 ## Limitations and follow-up
 
 <!--
-State known gaps or write "None". For migrations, link independent foundational
-TODO items and explain the proved boundary that permits their deferral.
+State known gaps or write "None". For migrations, link issues for independent
+foundational work and explain the proved boundary that permits deferral.
 Unfinished in-scope proofs, consumers, or removals mean the migration is
 incomplete, not an accepted partial delivery.
 -->
@@ -48,7 +48,7 @@ incomplete, not an accepted partial delivery.
       included.
 - [ ] The change meets the regression coverage policy in `.github/CONTRIBUTING.md`.
 - [ ] Any migration completes its selected scope without compatibility or
-      transitional layers; remaining foundational dependencies have precise TODO
-      entries and proved boundaries, and final-state checks cover the change.
+      transitional layers. Issues for remaining foundational dependencies record
+      their proved boundaries, and final-state checks cover the change.
 - [ ] No credentials, private paths, generated noise, or unrelated changes are
       included.

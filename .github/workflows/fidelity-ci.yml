@@ -134,5 +134,5 @@ jobs:
         run: |
           {
             printf '\nPassed: library build, MathlibTest, FidelityTest, Archive, Counterexamples, Wanted, test driver, both linter families, generated imports.\n'
-            printf 'The conjecture registry and proof-status admission gate remain pending in TODO.md.\n'
+            printf 'Track the proof-status implementation in [the registry and admission gate issue](https://github.com/KiringYJ/mathlib-fidelity/issues/3).\n'
           } >> "$GITHUB_STEP_SUMMARY"

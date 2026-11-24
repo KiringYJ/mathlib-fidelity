@@ -13,10 +13,10 @@ behavior their coverage supports.
 
 - [Contribution guide](.github/CONTRIBUTING.md) and
   [project maintenance guide](AI_AGENT_PROJECT.md) govern review, intake,
-  reconciliation, and verification.
+  reconciliation, and verification. The [fidelity gate](AI_AGENT_PROJECT.md#fidelity-gate)
+  and [full-library fallback audit](AI_AGENT_PROJECT.md#full-library-fallback-audit) govern audit work.
 - [Changelog](CHANGELOG.md) records significant changes by release.
-  [TODO](TODO.md) records outstanding work, including enforcement of adopted
-  principles that still needs implementation.
+  [GitHub Issues](https://github.com/KiringYJ/mathlib-fidelity/issues) tracks scoped work.
 
 ## Coequal Design Goals
 
@@ -130,8 +130,8 @@ explicit structure argument, a bundled object, or a deliberately selected
 local instance. A propositional equality can justify explicit transport
 between interpretations.
 
-The [elaboration audit](TODO.md#priority-independent-elaboration) tracks
-enforcement and coverage on official Lean.
+Enforcement and coverage on official Lean are tracked in the
+[priority-independent elaboration issue](https://github.com/KiringYJ/mathlib-fidelity/issues/16).
 
 ### Mathematical vocabulary first
 
@@ -204,8 +204,8 @@ proof, consumer migration, and removal. Follow the
 
 ### Independent foundational dependencies
 
-A genuinely separate lower-level issue can remain in [TODO](TODO.md) when
-the selected API already satisfies its full domain and specification.
+Track a genuinely separate lower-level obligation as an issue when the selected
+API already satisfies its full domain and specification.
 Identify the underlying declarations, consumers, and remaining obligation.
 Prove valid-domain use, unreachability, or independence from a lower-level
 fallback. If an unchanged generic interface requires a total function,
@@ -229,8 +229,8 @@ change. Kernel checking validates the elaborated proposition under its
 actual dependencies. Mathematical review establishes correspondence with
 the intended result. See the [Lean proof validation guide](https://lean-lang.org/doc/reference/latest/ValidatingProofs/).
 
-The registry, admission gate, status interface, and migration of existing
-statements are [pending implementation](TODO.md#conjectures-and-proof-status----accepted-design-pending-implementation).
+The [registry and admission gate issue](https://github.com/KiringYJ/mathlib-fidelity/issues/3)
+tracks the prerequisites for its dependent status interface and root migrations.
 
 ## Mathematical scope and placement
 
