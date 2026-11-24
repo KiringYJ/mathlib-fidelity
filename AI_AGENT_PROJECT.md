@@ -40,7 +40,7 @@ The policies below are project-local overrides.
 - `exp/<slug>` may be used for work whose mathematical or API direction is not
   yet settled.
 - Formal Fidelity releases are published as immutable tags. Follow the
-  [release-candidate fallback audit](#full-library-fallback-audit).
+  [release fallback review](#fidelity-release-fallback-review).
 - External pull requests target `main` from contributor-owned branches.
   Contributor branch names are not part of this repository's maintained branch
   taxonomy.
@@ -95,6 +95,20 @@ use Bash.
    the same commit.
 
 Use Git ancestry as the record of the reconciled baseline.
+
+## Fidelity Release Fallback Review
+
+Before tagging a Fidelity release, review fallback behavior on the candidate
+revision. Use applicable passing results from the
+[operator-fidelity audit](.github/CI.md#operator-fidelity) and other mechanical
+checks. Reuse earlier review evidence while its relevant inputs remain unchanged.
+
+Use the release changes and open findings to identify gaps in that evidence.
+For those cases, apply the [fidelity gate](#fidelity-gate) and inspect elaborated
+statements, definition bodies, and dependencies as needed. Include inherited,
+private, and generated declarations where they affect the case. Record the review
+coverage and dispositions. Track independent findings in issues grouped by
+affected API, reusing existing issues where applicable.
 
 ## Contributions and Curated External Source Intake
 
@@ -295,34 +309,10 @@ For an explicitly authorized public-API canonicalization:
    Textual absence alone does not establish the boundary. A later core edit or
    byte-level normalization invalidates affected evidence and requires the
    relevant checks to be rerun.
-8. Run the [full-library fallback audit](#full-library-fallback-audit) on the
-   final source state.
 
 When a style tool traverses transitive imports, distinguish errors introduced
 by the current diff from pre-existing repository debt. Fix in-scope new errors
 and report inherited failures accurately without expanding the refactor.
-
-### Full-library fallback audit
-
-Run this audit on the final source state of each broad migration and on the
-candidate revision before tagging a Fidelity release. Build a fresh candidate inventory from the
-maintained sources at that revision. Check declaration and module documentation, names such as
-`_undef` and `_of_not_`, and definitions with default branches, lossy projections, or choice
-without evidence for the specified domain. Review ordinary computational defaults when they can
-affect a mathematical interface.
-
-Review each maintained mathematical declaration, including inherited, private, and generated
-declarations. Inspect elaborated statements, definition bodies, and dependencies, including
-declarations with no source match.
-
-Apply the [fidelity gate](#fidelity-gate) and the
-[official Lean boundary](FORK_DESIGN.md#official-lean-and-operator-fidelity).
-Record audit coverage and each candidate's domain, specifying properties,
-fallback behavior, affected statements and callers, and disposition. Resolve
-in-scope findings under the
-[complete-migration contract](FORK_DESIGN.md#complete-migrations). Track
-independent findings in GitHub issues, grouped by affected API, and reuse
-existing issues where applicable.
 
 ## Remaining Work
 

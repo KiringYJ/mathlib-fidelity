@@ -162,7 +162,7 @@ prepared, submitted, or forwarded as upstream mathlib pull requests.
 
 - [CHANGELOG.md](CHANGELOG.md) summarizes significant upstream and Fidelity changes by release.
 - [Project maintenance guide](AI_AGENT_PROJECT.md#fidelity-gate) defines fidelity assessment and
-  [library-wide audit procedures](AI_AGENT_PROJECT.md#full-library-fallback-audit).
+  the [pre-release fallback review](AI_AGENT_PROJECT.md#fidelity-release-fallback-review).
 - [FORK_DESIGN.md](FORK_DESIGN.md) sets the fork's library-wide design principles.
 - [CONTRIBUTING.md](.github/CONTRIBUTING.md) gives admission, review, and testing requirements.
 - [SOURCES.md](SOURCES.md) records external sources, candidate recovery

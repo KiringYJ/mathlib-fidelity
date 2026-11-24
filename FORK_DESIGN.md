@@ -14,7 +14,8 @@ behavior their coverage supports.
 - [Contribution guide](.github/CONTRIBUTING.md) and
   [project maintenance guide](AI_AGENT_PROJECT.md) govern review, intake,
   reconciliation, and verification. The [fidelity gate](AI_AGENT_PROJECT.md#fidelity-gate)
-  and [full-library fallback audit](AI_AGENT_PROJECT.md#full-library-fallback-audit) govern audit work.
+  and [release fallback review](AI_AGENT_PROJECT.md#fidelity-release-fallback-review)
+  govern audit work.
 - [Changelog](CHANGELOG.md) records significant changes by release.
   [GitHub Issues](https://github.com/KiringYJ/mathlib-fidelity/issues) tracks scoped work.
 
