@@ -2,7 +2,7 @@
 
 Fidelity releases align with mathlib releases. Each entry summarizes the significant changes since
 the preceding Fidelity release. Until the first Fidelity release, `Unreleased` records the current
-mathlib baseline and the major changes in the Fidelity patch stack.
+mathlib baseline and major Fidelity changes.
 When tagging a release, move its notes under the Fidelity tag and release date and start a new
 `Unreleased` section.
 
@@ -10,9 +10,10 @@ When tagging a release, move its notes under the Fidelity tag and release date a
 
 ### Upstream changes
 
-- Updated the mathlib baseline from `c02174567c` to `v4.34.0` (`5ed2965256`) and the official Lean
+- Rebased Fidelity from mathlib `c02174567c` onto `v4.34.0` (`5ed2965256`) and updated the official Lean
   toolchain to `v4.34.0`. See the [mathlib release](https://github.com/leanprover-community/mathlib4/releases/tag/v4.34.0)
   and the [upstream comparison](https://github.com/leanprover-community/mathlib4/compare/c02174567c98cac8b9a8e2ee34ee8e2ffa98df94...v4.34.0).
+- Future upstream updates use [stable release merges](AI_AGENT_PROJECT.md#mathlib-baseline-reconciliation-workflow).
 
 ### Fidelity changes
 

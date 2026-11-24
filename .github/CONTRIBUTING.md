@@ -36,17 +36,13 @@ such as duplication, design conflicts, or integration and maintenance costs.
   changes.
 
 Maintainers normally integrate pull requests by rebase or squash, according to
-whether the reviewed commit structure should be retained. Upstream-style merge
-commits are not part of the maintained Fidelity patch stack.
+whether the reviewed commit structure should be retained.
 
-## Moving `main` and integration responsibility
+## Updating open pull requests
 
-`main` is periodically rebased onto `upstream/master`, so its published history
-and a pull request's merge base may change. Maintainers batch reconciliation,
-avoid unnecessary rewrites during active review, and may temporarily freeze
-reconciliation while a substantial pull request is close to merger. Before a
-rewrite, maintainers inventory open pull requests and retain their old merge
-bases and head object IDs ephemerally.
+Upstream release merges preserve the published commits on `main`. An open pull
+request may need an update if the merge introduces conflicts or changes APIs
+that it uses.
 
 Contributors own the mathematical content, original implementation, and
 responses to substantive review. Maintainers own integration conflicts and API
@@ -55,18 +51,18 @@ migrations. Contributors are not expected to absorb repository-maintenance
 churn unrelated to the substance of their contribution.
 
 When the author enables **Allow edits from maintainers**, a maintainer may
-prepare the rebase and resolve repository-driven fallout. Writing to the pull
-request branch also requires explicit authorization for the current operation.
+prepare a branch update and resolve repository-driven fallout. Writing to a
+pull request branch also requires explicit authorization for the operation.
 A force-update may be used only after verifying that GitHub and the
 branch rules permit it. This permission is optional and is not a condition for
 review. Without it, the maintainer and contributor must coordinate the required
 update. See
 [GitHub's maintainer-edit documentation](https://docs.github.com/en/pull-requests/how-tos/work-with-forks/allowing-changes-to-a-pull-request-branch-created-from-a-fork).
 
-Maintainer-driven updates replay only the contributor commits onto the new
-`main`, using the retained old merge base. Any force-update of the pull request
-branch must use its retained head object ID as an explicit force-with-lease;
-bare force options are not permitted.
+If a maintainer rebases the pull request branch, replay only the contributor
+commits and use the captured pre-update head object ID as the explicit lease
+for any force-update.
+[Maintainer branch-update procedure](../AI_AGENT_PROJECT.md#updating-open-pull-requests)
 
 If the contributor's fork contains GitHub Actions workflows, GitHub may present
 this permission as **Allow edits and access to secrets by maintainers**. Authors

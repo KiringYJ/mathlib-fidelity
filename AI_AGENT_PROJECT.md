@@ -20,79 +20,80 @@ This file governs branch maintenance, reconciliation, the refactor protocol,
 and verification. The [contribution guide](.github/CONTRIBUTING.md) owns
 contributor-facing requirements.
 
-The policies below are project-local overrides. `main` is this fork's canonical
-workspace source of truth and default branch. The upstream `master` branch is
-tracked directly as `upstream/master`; this fork does not keep a local
-`master` mirror or publish `origin/master`.
+The policies below are project-local overrides.
 
 ## Branch Model
 
 - `main` is the canonical personal branch, GitHub default branch, and daily
-  driver. It is the latest reconciled upstream baseline plus a maintained stack
-  of Fidelity commits. Periodic upstream reconciliation may rewrite its
-  published history; `main` is not an append-only branch. The agent-workbench
-  and fork-design files are tracked only on this personal line of development.
+  driver. It contains Fidelity changes and the history of reconciled mathlib
+  releases. Publish updates as fast-forwards so existing commits remain in its
+  history. The agent-workbench and fork-design files are tracked only on this
+  personal line of development.
 - `upstream/master` is the read-only remote-tracking reference for the official
-  `leanprover-community/mathlib4:master` baseline. Do not recreate a local
+  `leanprover-community/mathlib4:master` branch. Do not recreate a local
   `master` mirror or publish an `origin/master` branch merely to mirror it.
 - `palomar/<slug>` branches are separately maintained delivery branches for
   Palomar Registry projects. Keep project-specific theorem, source, provenance,
-  and review records inside the corresponding branch. These branches are not
-  part of the `main` Fidelity patch stack, alternative defaults, or general
-  development branches; do not merge them wholesale into `main` merely to
-  synchronize branch history.
+  and review records inside the corresponding branch. Maintain their histories
+  independently of `main` and keep general development on `main` or its topic
+  branches.
 - `exp/<slug>` may be used for work whose mathematical or API direction is not
   yet settled.
-- Formal releases are published as tags. A published release tag is an
-  immutable snapshot and is not moved when `main` is rebased.
+- Formal Fidelity releases are published as immutable tags.
 - External pull requests target `main` from contributor-owned branches.
   Contributor branch names are not part of this repository's maintained branch
   taxonomy.
 
 Do not infer authorization to push from a fetch, sync, or local branch update.
-All pushes go to `origin`; never push to `upstream`.
+Publish Fidelity branches and releases only to `origin`. Target this fork
+with project pull requests.
 
-Keep logically independent changes in separate, semantically coherent commits
-on `main`. Those commits form the maintained Fidelity patch stack and must stay
-reviewable and replayable across upstream rebases.
+Keep logically independent Fidelity changes in separate, reviewable commits
+on `main`.
 
 ## Mathlib Baseline Reconciliation Workflow
 
-Routine upstream reconciliation uses rebase, not upstream merge commits. Batch
-reconciliations at a justified cadence rather than rewriting `main` for every
-small upstream movement.
+The rebase onto mathlib `v4.34.0` established the starting baseline. For each
+subsequent batch, select an official stable tag from the
+[mathlib releases](https://github.com/leanprover-community/mathlib4/releases)
+and integrate it with a merge commit on local `main`. The command examples
+use Bash.
 
-1. Require a clean working tree and fetch `origin`. Capture the exact
-   `origin/main` object ID as `<expected-origin-main>` and verify that it is an
-   ancestor of local `main`. Local-ahead Fidelity commits are allowed; stop if
-   the remote tip is not incorporated locally or the histories have diverged.
-2. Before rewriting `main`, inventory open pull requests that target it. Retain
-   each old merge base, head ref, and head object ID ephemerally so later updates
-   can replay only the contributor commits and can use a separate exact lease.
-3. Fetch `upstream` and inspect the new `upstream/master`. Avoid an unnecessary
-   base rewrite during active review; when a substantial pull request is close
-   to merger, the maintainer may temporarily freeze reconciliation.
-4. Rebase `main` onto `upstream/master`. Do not merge `upstream/master` into
-   `main` in the routine workflow.
-5. Resolve conflicts and repair API fallout according to this fork's
-   mathematical and API design while retaining sound upstream improvements.
-6. Run checks proportional to every affected module at the final rebased state.
-   Upstream's successful checks do not validate fork-specific conflict repairs.
-   Before any publication, run `python scripts/check_fidelity_workflows.py`
-   and review the workflow diff under the isolation policy in `.github/CI.md`.
-   Newly introduced upstream workflows must not become active implicitly.
-7. After explicit publication authorization, confirm that branch rules permit
-   the rewrite and push with
-   `git push --force-with-lease=refs/heads/main:<expected-origin-main> origin main:refs/heads/main`.
-   Never use bare `--force-with-lease` or plain `--force`; if the explicit lease
-   fails, stop and re-evaluate the remote changes rather than overwriting them.
-8. Verify that local `main`, `origin/main`, and the live remote ref resolve to
+1. Start on `main` with a clean working tree. Run
+   `git fetch origin && git merge-base --is-ancestor origin/main main` and
+   continue only on success. Unpublished Fidelity commits on `main` are allowed.
+2. Set `release` to the selected upstream release tag. Fetch the tag directly
+   into `FETCH_HEAD` and resolve its commit so a same-named local tag cannot
+   select a different revision. Save the current `main` tip for workflow review.
+
+   ```shell
+   release=vX.Y.Z
+   git fetch --no-tags upstream "refs/tags/$release" &&
+     upstream_commit=$(git rev-parse --verify 'FETCH_HEAD^{commit}') &&
+     pre_merge_main=$(git rev-parse --verify refs/heads/main)
+   ```
+
+3. Skip a release that is already integrated, as determined by
+   `git merge-base --is-ancestor "$upstream_commit" main`. For a new release,
+   run `git merge --no-ff --no-commit "$upstream_commit"` on `main`. Resolve
+   conflicts and repair API fallout according to the fork's mathematical and
+   API design while retaining sound upstream improvements. Finish the merge
+   with a Conventional Commit subject such as `chore(upstream): merge mathlib vX.Y.Z`.
+4. Verify that the merge commit has the pre-merge `main` tip as its first
+   parent and the upstream release commit as its second. Run checks
+   proportional to every affected module on the final `main`. Before
+   publication, complete the
+   [workflow diff review and inventory checks](.github/CI.md#preserved-upstream-automation-and-reconciliation)
+   using the saved `pre_merge_main`.
+5. After explicit publication authorization, push normally with
+   `git push origin main:refs/heads/main`. The branch rules must permit merge
+   commits and direct fast-forward updates. If the push is rejected because
+   `origin/main` advanced, fetch and reconcile the remote commits, then verify
+   the resulting revision before retrying.
+6. Verify that local `main`, `origin/main`, and the live remote ref resolve to
    the same commit.
 
-Do not maintain a separate last-reconciled SHA file or ledger field. Git
-ancestry records the reconciled baseline. The lease and open-PR object IDs are
-ephemeral transaction state, not persistent reconciliation metadata. Never open
-or prepare an upstream pull request, and never push to `upstream`.
+Use Git ancestry as the record of the reconciled baseline.
 
 ## Contributions and Curated External Source Intake
 
@@ -101,27 +102,26 @@ for in-tree work, the [contribution guide](.github/CONTRIBUTING.md#admission-and
 for admission and review, and the [source registry](SOURCES.md#intake-procedure)
 for the intake record and integration modes.
 
-### Moving `main` and open pull requests
+### Updating open pull requests
 
-When the author of an open pull request has granted maintainer access, a
-maintainer may prepare the rebase and resolve repository-driven fallout. A
-force-update may be used only after verifying that the hosting service and
-branch rules permit it. This policy is not standing authorization to write to a
-contributor's branch: both the author's branch permission and explicit
-authorization for the current operation remain required. If either is
-unavailable, coordinate the update with the contributor. If maintainer edits
-also expose workflow-secret access, treat that access as security-sensitive and
-do not use it beyond the authorized integration work.
+An upstream release merge preserves the existing `main` commits on which open
+pull requests are based. Update a pull request when integration conflicts or API
+changes require it. A maintainer writing to a contributor's branch needs both
+the author's branch permission and explicit authorization for the operation.
+Otherwise, coordinate the update with the contributor. Treat any accompanying
+access to GitHub Actions workflow secrets as security-sensitive and use access
+only for the authorized integration work.
 
-When updating a pull request after `main` moves, use its retained old merge base
-to replay only the contributor range, normally with
-`git rebase --onto <new-main> <old-merge-base> <pr-head>`. Do not naively rebase
-the old-base branch in a way that replays the obsolete Fidelity stack. Before a
-permitted force-update of the pull request branch, use the retained pre-work
-head object ID as the expected value in a separate explicit force-with-lease.
-If the live head has changed, stop, incorporate the contributor's new commits,
-and begin a new update transaction with a newly captured head object ID; do not
-merely recapture the advanced head and overwrite it.
+Capture the pull request branch's head object ID before updating it. If the
+update uses a rebase, identify the original merge base and replay only
+the contributor commits, for example with
+`git rebase --onto <new-main> <old-merge-base> <pr-branch>`. For a branch that
+still uses the history before the `v4.34.0` rebase, verify the merge base in
+that earlier Fidelity history. Before a force-update, confirm that the hosting
+service and branch rules permit it and pass
+`--force-with-lease=refs/heads/<remote-branch>:<old-head>` using the captured
+head. If the live head has changed, fetch and incorporate the new contributor
+commits before retrying with an updated lease.
 
 ### Intake procedure
 
@@ -363,8 +363,8 @@ they remain applicable to the affected area.
   candidates subject to its fidelity gate.
 - `.github/CONTRIBUTING.md`: contribution requirements for pull requests to
   this fork and the separate upstream boundary.
-- `.github/PULL_REQUEST_TEMPLATE.md`: fork-specific submission prompts,
-  verification checklist, and moving-base disclosure.
+- `.github/PULL_REQUEST_TEMPLATE.md`: fork-specific submission prompts
+  and verification checklist.
 - `lakefile.lean` and `lean-toolchain`: project and Lean toolchain definitions.
 - `.agent-workbench.yaml`: human-owned desired workbench configuration.
 - `.agent-workbench.lock.json`: generated sync provenance and checksum ledger.
@@ -413,7 +413,7 @@ and the provenance ledger, but must never rewrite this project file.
   never use a GitHub handle.
 - Inspect the current branch before editing. Personal changes belong on `main`
   or an explicitly selected topic branch; use `upstream/master` only as the
-  official baseline reference.
+  upstream development reference.
 - Keep hooks enabled and follow the fork's naming, style, documentation, and
   verification requirements. Upstream conventions are useful defaults only
   where they do not conflict with `FORK_DESIGN.md`.

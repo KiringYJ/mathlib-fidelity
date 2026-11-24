@@ -28,13 +28,13 @@ distinct, stable remote names when a later task explicitly adds them.
 - Repository: `leanprover-community/mathlib4`
 - Local remote: `upstream`
 - URL: `https://github.com/leanprover-community/mathlib4.git`
-- Tracked ref: `upstream/master`
-- History relationship: shared ancestry; `main` is periodically rebased onto
-  `upstream/master` as a maintained Fidelity patch stack
-- Integration mode: batched rebase onto `upstream/master`, followed by API
-  repair and final-state validation
-- Reconciliation state: Git ancestry is authoritative; no separate
-  last-reconciled SHA is maintained
+- Upstream development reference: `upstream/master`
+- History relationship: shared ancestry through the mathlib `v4.34.0` rebase,
+  with future merges extending the published Fidelity history
+- Integration mode: batched merges of official stable mathlib release tags
+  into local `main`, with API repair and final-state validation
+- Reconciliation state: Git ancestry records the integrated releases. See the
+  [maintenance procedure](AI_AGENT_PROJECT.md#mathlib-baseline-reconciliation-workflow).
 - License evidence: the current source tree contains the Apache License 2.0 in
   `LICENSE`; recheck the exact source revision and any file-specific notices at
   each import boundary

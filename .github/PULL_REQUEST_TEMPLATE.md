@@ -39,16 +39,6 @@ Unfinished in-scope proofs, consumers, or removals mean the migration is
 incomplete, not an accepted partial delivery.
 -->
 
-## Moving-base acknowledgement
-
-<!--
-The target branch `main` may be periodically rebased onto `upstream/master`.
-Maintainers batch these reconciliations and may help resolve repository-driven
-fallout when branch access is available. Enabling maintainer edits is optional;
-review GitHub's workflow-secret warning before granting that access on a fork
-containing GitHub Actions workflows.
--->
-
 ## Checklist
 
 - [ ] I read `.github/CONTRIBUTING.md` and the linked fork policies.

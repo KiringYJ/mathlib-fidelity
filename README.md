@@ -42,18 +42,17 @@ migration decisions. The [changelog](CHANGELOG.md) records delivered changes.
 ## Branch model
 
 - `main` is the canonical personal branch, GitHub default branch, and daily
-  driver. It is the latest reconciled upstream baseline plus the maintained
-  Fidelity patch stack, and its history may be rewritten by periodic upstream
-  rebases.
+  driver. Its published history includes Fidelity changes and the reconciled
+  mathlib releases.
 - `upstream/master` is the remote-tracking reference for the official mathlib
-  baseline. This fork does not keep a local `master` mirror or publish
+  development branch. This fork does not keep a local `master` mirror or publish
   `origin/master`.
 - `palomar/<slug>` branches contain separately maintained Palomar Registry
   delivery artifacts. They are not alternative default or general development
   branches and should not be merged wholesale into `main` merely to synchronize
   history.
 - `exp/<slug>` may be used for mathematically or API-uncertain experiments.
-- Formal releases are immutable tags and are not moved when `main` is rebased.
+- Formal Fidelity releases are published as immutable tags.
 
 All publication goes to this fork's `origin`; nothing in this repository
 authorizes pushes or pull requests to upstream. See
@@ -61,30 +60,12 @@ authorizes pushes or pull requests to upstream. See
 
 ## Upstream reconciliation
 
-`main` is intentionally rebaseable rather than append-only. Maintainers batch
-upstream reconciliation, avoid unnecessary base rewrites during active pull
-request review, and may temporarily freeze reconciliation while a substantial
-pull request is close to merger. The captured `origin/main` tip must already be
-an ancestor of local `main`; unpublished local Fidelity commits are allowed,
-but remote-only or divergent history stops the reconciliation. The routine
-publication shape is:
-
-```shell
-git fetch origin
-expected_origin_main="$(git rev-parse refs/remotes/origin/main)"
-git fetch upstream
-git rebase upstream/master
-# repair API fallout and validate
-git push --force-with-lease="refs/heads/main:${expected_origin_main}" \
-  origin main:refs/heads/main
-```
-
-These are maintainer operations and still require explicit publication
-authorization. Before rewriting `main`, maintainers inventory open pull requests
-and retain their old merge bases and head object IDs ephemerally. Bare
-`--force-with-lease` and plain `--force` are not permitted. No separate
-last-reconciled SHA is maintained; Git ancestry records the reconciled upstream
-baseline.
+The rebase onto mathlib `v4.34.0` established the starting baseline. For later
+updates, maintainers merge official stable mathlib release tags into local
+`main`. They resolve conflicts, repair API fallout, and verify the result
+before publishing with an authorized fast-forward push. Existing Fidelity
+commit IDs remain in the history of `main`.
+[Maintenance procedure](AI_AGENT_PROJECT.md#mathlib-baseline-reconciliation-workflow)
 
 ## Getting started
 
@@ -137,18 +118,15 @@ and proof-status admission gate remain separate implementation work in
 
 ## Using the fork as a dependency
 
-This fork deliberately evolves independently of upstream's public API. For a
-durable dependency, pin an immutable formal release tag rather than the moving
-`main` branch:
+This fork deliberately evolves independently of upstream's public API. Pin an
+immutable Fidelity release tag for a durable dependency.
 
 ```lean
 require mathlib from git
   "https://github.com/KiringYJ/mathlib-fidelity.git" @ "<release-tag>"
 ```
 
-An exact commit from `main` is suitable for short-lived evaluation, but a later
-rebase may make an untagged old commit unreachable. Do not treat such a commit
-as a durable published release.
+For evaluation, pin the exact commit from `main` that you tested.
 
 The upstream
 [dependency guide](https://github.com/leanprover-community/mathlib4/wiki/Using-mathlib4-as-a-dependency)
@@ -170,11 +148,10 @@ mathematical fidelity, proof status, provenance, and licensing.
 [Placement policy](FORK_DESIGN.md#mathematical-scope-and-placement) ·
 [Archive guide](Archive/README.md)
 
-Because `main` may be periodically rebased, an open pull request may need a new
-base. Maintainers batch reconciliation and may handle repository-driven rebase
-or canonical-API fallout when the contributor grants branch access; contributors
-remain responsible for the substance of their contribution. See the contribution
-guide for the permission and security boundaries.
+Maintainers handle integration conflicts and API fallout caused by upstream
+reconciliation or fork-wide migrations. Contributors remain responsible for
+the substance of their contribution.
+[Pull request update policy](.github/CONTRIBUTING.md#updating-open-pull-requests)
 
 External formalizations may arrive either through a pull request or through
 maintainer-led curated intake. Contributions to this fork are not automatically

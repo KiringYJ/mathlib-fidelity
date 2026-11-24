@@ -100,8 +100,9 @@ fi
 Every checkout explicitly selects `github.sha` and disables credential
 persistence. For a PR this is GitHub's test merge commit with the base, rather
 than an independently moving branch name. The Lean job verifies and records
-that exact checkout SHA in its summary. A rebase changes the tested revision
-and requires new checks.
+that exact checkout SHA in its summary. Rerun affected checks when the tested
+revision changes, including after an upstream release merge changes a PR's
+test merge commit.
 
 Contributor code runs only through `pull_request` with `contents: read`.
 The workflows neither inherit secrets nor request OIDC, PR write, or repository
@@ -141,18 +142,19 @@ and reusable-build workflows are not executable entry points. Supporting
 `.github/actions/` and upstream scripts remain in place for reference. Do not
 call archived reusable workflows from an active workflow.
 
-After rebasing onto `upstream/master`, inspect upstream additions and modified
-archived files before any push:
+After merging an upstream release, review the workflow diff against the
+`pre_merge_main` tip saved in the
+[reconciliation procedure](../AI_AGENT_PROJECT.md#mathlib-baseline-reconciliation-workflow).
+The merge commit's first parent identifies that tip for later reviews. Run
+the inventory check and its tests before publication.
 
 ```shell
-git diff --name-status upstream/master...main -- .github/workflows .github/upstream-workflows
+git diff "$pre_merge_main" main -- .github/workflows .github/upstream-workflows
 python3 scripts/check_fidelity_workflows.py
 python3 -B -m unittest discover -s scripts -p test_fidelity_workflows.py
 ```
 
-New upstream files can reappear in the active directory even when existing
-files were moved by an earlier Fidelity commit. Reconcile those files into
-the inactive snapshot or deliberately review an added active workflow and
-update the inventory. CI detection alone is too late to prevent an unreviewed
-workflow from triggering on that first push, which is why this check is also
-a pre-publication reconciliation requirement.
+An upstream merge can add workflow files alongside the reviewed active ones.
+Move inherited additions into the inactive snapshot, or explicitly review and
+admit them and update the inventory. Complete that review locally before the
+first push, which can trigger any newly active workflow.
