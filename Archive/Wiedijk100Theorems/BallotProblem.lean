@@ -395,16 +395,17 @@ theorem ballot_problem :
         ENNReal.div (p - q : ℕ) ((p : ℝ≥0∞) + q) (ballot_div_domain _ p q (by omega)) := by
   intro q p qp
   have hd : 0 < p + q := by omega
+  have hden := ballot_total_isUnit p q hd
   have hs : ((p - q : ℕ) : ℝ≥0∞).toReal = (p : ℝ) - q := by
     rw [ENNReal.toReal_natCast, Nat.cast_sub qp.le]
   have he :
       (uniformOn (countedSequence p q) (isConditionable_countedSequence p q)
         staysPositive).toReal =
-          (ENNReal.div (p - q : ℕ) ((p : ℝ≥0∞) + q) (ballot_div_domain _ p q hd)).toReal := by
+        ((↑(p - q : ℕ) : ℝ≥0∞) / ((p : ℝ≥0∞) + q)).toReal := by
     rw [ballot_toReal_div _ p q hd]
     simpa only [hs] using ballot_problem' q p qp
   have hnum : ((p - q : ℕ) : ℝ≥0∞) ≠ ⊤ := ENNReal.natCast_ne_top _
   exact (ENNReal.toReal_eq_toReal_iff' (measure_lt_top _ _).ne
-    (ENNReal.div_ne_top hnum (ballot_total_isUnit p q hd).ne_zero)).mp he
+    (ENNReal.div_ne_top hnum hden.ne_zero)).mp he
 
 end Ballot

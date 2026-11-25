@@ -596,7 +596,7 @@ theorem unifIntegrable_of' (hp : 1 ≤ p) (hp' : p ≠ ∞) {f : ι → α → �
   refine unifIntegrable_iff'.2 fun ε hε ↦ ?_
   obtain ⟨C, hCpos, hC⟩ := h (ε / 2) (ENNReal.half_pos hε.ne')
   have hC₀ : (C : ℝ≥0∞) ≠ 0 := ENNReal.coe_ne_zero.2 hCpos.ne'
-  let η := ENNReal.div (ε / 2) C ⟨hC₀, .inr coe_ne_top⟩
+  let η := (ε / 2) / (C : ℝ≥0∞)
   refine ⟨η ^ p.toReal, ?_, ?_⟩
   · exact rpow_pos_of_nonneg
       (ENNReal.div_pos (ENNReal.half_pos hε.ne').ne' hC₀ coe_ne_top) toReal_nonneg

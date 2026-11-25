@@ -181,8 +181,7 @@ lemma le_egauge_smul_left (c : 𝕜) (s : Set E) (x : E) :
   exact egauge_le_of_mem_smul <| smul_mem_smul_set hx
 
 lemma egauge_smul_left (hc : c ≠ 0) (s : Set E) (x : E) :
-    egauge 𝕜 (c • s) x =
-      ENNReal.div (egauge 𝕜 s x) ‖c‖ₑ ⟨by simpa using hc, Or.inr enorm_ne_top⟩ := by
+    egauge 𝕜 (c • s) x = egauge 𝕜 s x / ‖c‖ₑ := by
   refine le_antisymm ?_ (le_egauge_smul_left _ _ _)
   rw [ENNReal.le_div_iff_mul_le]
   calc

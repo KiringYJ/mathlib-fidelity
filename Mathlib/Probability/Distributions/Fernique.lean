@@ -238,7 +238,7 @@ lemma measure_gt_normThreshold_le_rpow [IsProbabilityMeasure μ]
   replace hc_gt : 2⁻¹ < c := ha_gt
   have hc_pos : 0 < c := lt_of_lt_of_le (by simp) hc_gt.le
   have hc_lt_top : c < ∞ := measure_lt_top _ _
-  let q := ENNReal.div (ENNReal.monus 1 c) c ⟨hc_pos.ne', Or.inr hc_lt_top.ne⟩
+  let q := ENNReal.monus 1 c / c
   change μ {x | normThreshold a n < ‖x‖} ≤ c * q ^ (2 ^ n)
   induction n with
   | zero =>
@@ -273,16 +273,15 @@ lemma measure_gt_normThreshold_le_exp [IsProbabilityMeasure μ]
   have hc_pos : 0 < c := lt_of_lt_of_le (by simp) ha_gt.le
   replace hc_lt : c < 1 := ha_lt
   have hc_lt_top : c < ∞ := measure_lt_top _ _
-  have hc_one_sub_lt_top : ENNReal.monus 1 c < ∞ := (ENNReal.monus_ne_top ENNReal.one_ne_top).lt_top
+  have hc_den := isUnit_one_monus hc_lt
   have hc_real : 0 < c.toReal := ENNReal.toReal_pos hc_pos.ne' hc_lt_top.ne
   have hc_sub_real : 0 < (ENNReal.monus 1 c).toReal :=
-    ENNReal.toReal_pos (ENNReal.monus_pos_of_lt hc_lt).ne' hc_one_sub_lt_top.ne
-  have hc_ratio_pos : 0 < (ENNReal.div c (ENNReal.monus 1 c) (odds_domain hc_lt)).toReal := by
+    ENNReal.toReal_pos hc_den.ne_zero (ENNReal.isUnit_ne_top hc_den)
+  have hc_ratio_pos : 0 < (c / ENNReal.monus 1 c).toReal := by
     rw [ENNReal.toReal_div _ _ (hb := hc_sub_real.ne'.isUnit)]
     exact div_pos hc_real hc_sub_real
-  have hinv : Checked.inv (ENNReal.div c (ENNReal.monus 1 c) (odds_domain hc_lt)).toReal
-      hc_ratio_pos.ne'.isUnit =
-      (ENNReal.div (ENNReal.monus 1 c) c ⟨hc_pos.ne', Or.inr hc_lt_top.ne⟩).toReal := by
+  have hinv : Checked.inv (c / ENNReal.monus 1 c).toReal hc_ratio_pos.ne'.isUnit =
+      (ENNReal.monus 1 c / c).toReal := by
     apply inv_eq_of_mul_eq_one_right₀
     rw [ENNReal.toReal_div _ _ (hb := hc_sub_real.ne'.isUnit),
       ENNReal.toReal_div _ _ (hb := hc_real.ne'.isUnit), div_mul_div_cancel₀, div_self]
@@ -344,14 +343,15 @@ lemma logRatio_mul_normThreshold_add_one_le {c : ℝ≥0∞}
     (hc_gt : (2 : ℝ≥0∞)⁻¹ < c) (hc_lt : c < 1) (n : ℕ) {ha : IsUnit a} :
     logRatio c hc_lt * normThreshold a (n + 1) ^ 2 * a⁻¹ ^ 2
       ≤ 2⁻¹ * Real.log (ENNReal.div c (ENNReal.monus 1 c) (odds_domain hc_lt)).toReal * 2 ^ n := by
-  have hc : 0 < (ENNReal.monus 1 c).toReal := ENNReal.toReal_pos
-    (isUnit_one_monus hc_lt).ne_zero (ENNReal.monus_ne_top ENNReal.one_ne_top)
+  have hc_den := isUnit_one_monus hc_lt
+  have hc : 0 < (ENNReal.monus 1 c).toReal :=
+    ENNReal.toReal_pos hc_den.ne_zero (ENNReal.isUnit_ne_top hc_den)
   calc logRatio c hc_lt * normThreshold a (n + 1) ^ 2 * a⁻¹ ^ 2
   _ ≤ logRatio c hc_lt * (a ^ 2 * (1 + √2) ^ 2 * 2 ^ (n + 2)) * a⁻¹ ^ 2 := by
     gcongr
     · exact (logRatio_pos hc_gt hc_lt).le
     · exact sq_normThreshold_add_one_le n
-  _ = 2⁻¹ * Real.log (ENNReal.div c (ENNReal.monus 1 c) (odds_domain hc_lt)).toReal * 2 ^ n := by
+  _ = 2⁻¹ * Real.log (c / ENNReal.monus 1 c).toReal * 2 ^ n := by
     dsimp only [logRatio]
     rw [ENNReal.toReal_div _ _ (hb := hc.ne'.isUnit),
       pow_add (2 : ℝ) n 2]
@@ -372,6 +372,7 @@ lemma lintegral_closedBall_sdiff_exp_logRatio_mul_sq_le [IsProbabilityMeasure μ
   let t := normThreshold a
   let c := μ {x | ‖x‖ ≤ a}
   let C := logRatio c ha_lt * a⁻¹ ^ 2
+  have := odds_domain ha_lt
   calc ∫⁻ x in (closedBall 0 (t (n + 1)) \ closedBall 0 (t n)), .ofReal (rexp (C * ‖x‖ ^ 2)) ∂μ
   -- We bound the function on the set by its maximal value, at the outer boundary of the annulus
   _ ≤ ∫⁻ x in (closedBall 0 (t (n + 1)) \ closedBall 0 (t n)),
@@ -390,20 +391,16 @@ lemma lintegral_closedBall_sdiff_exp_logRatio_mul_sq_le [IsProbabilityMeasure μ
     simp
   -- We obtained an upper bound on the measure of that annulus in a previous lemma
   _ ≤ .ofReal (rexp (C * t (n + 1) ^ 2))
-      * c * .ofReal (rexp (-Real.log (ENNReal.div c (ENNReal.monus 1 c)
-        (odds_domain ha_lt)).toReal * 2 ^ n)) := by
+      * c * .ofReal (rexp (-Real.log (c / ENNReal.monus 1 c).toReal * 2 ^ n)) := by
     conv_rhs => rw [mul_assoc]
     gcongr
     exact measure_gt_normThreshold_le_exp h_rot ha_gt ha_lt n
-  _ ≤ .ofReal (rexp (2⁻¹ * Real.log (ENNReal.div c (ENNReal.monus 1 c)
-        (odds_domain ha_lt)).toReal * 2 ^ n))
-      * c * .ofReal (rexp (-Real.log (ENNReal.div c (ENNReal.monus 1 c)
-        (odds_domain ha_lt)).toReal * 2 ^ n)) := by
+  _ ≤ .ofReal (rexp (2⁻¹ * Real.log (c / ENNReal.monus 1 c).toReal * 2 ^ n))
+      * c * .ofReal (rexp (-Real.log (c / ENNReal.monus 1 c).toReal * 2 ^ n)) := by
     gcongr ENNReal.ofReal (rexp ?_) * _ * _
     convert! logRatio_mul_normThreshold_add_one_le ha_gt ha_lt n (ha := ha_pos.ne'.isUnit) using 1
     ring
-  _ = c * .ofReal (rexp (-2⁻¹ * Real.log (ENNReal.div c (ENNReal.monus 1 c)
-        (odds_domain ha_lt)).toReal * 2 ^ n)) := by
+  _ = c * .ofReal (rexp (-2⁻¹ * Real.log (c / ENNReal.monus 1 c).toReal * 2 ^ n)) := by
     rw [mul_comm _ c, mul_assoc, ← ENNReal.ofReal_mul (by positivity), ← Real.exp_add]
     congr
     ring
@@ -544,7 +541,7 @@ lemma exists_integrable_exp_sq_of_map_rotation_eq_self' [IsProbabilityMeasure μ
   let c := μ {x | ‖x‖ ≤ a}
   replace hc_lt : c < 1 := ha_lt
   have hc_lt_top : c < ∞ := measure_lt_top _ _
-  have hc_one_sub_lt_top : ENNReal.monus 1 c < ∞ := (ENNReal.monus_ne_top ENNReal.one_ne_top).lt_top
+  have hc_den := isUnit_one_monus hc_lt
   have h_one_sub_lt_self : ENNReal.monus 1 c < c := monus_lt_of_half_lt ha_gt hc_lt
   have h_pos : 0 < logRatio c hc_lt * a⁻¹ ^ 2 := mul_pos (logRatio_pos ha_gt hc_lt) (by positivity)
   refine ⟨logRatio c hc_lt * a⁻¹ ^ 2, h_pos, ⟨by fun_prop, ?_⟩⟩
@@ -555,12 +552,12 @@ lemma exists_integrable_exp_sq_of_map_rotation_eq_self' [IsProbabilityMeasure μ
   refine Summable.tsum_ofReal_lt_top <|
     Real.summable_exp_nat_mul_of_ge ?_ (fun i ↦ mod_cast (Nat.lt_pow_self (by simp)).le)
   refine mul_neg_of_neg_of_pos (by simp) (Real.log_pos ?_)
-  change 1 < (ENNReal.div c (ENNReal.monus 1 c) (odds_domain hc_lt)).toReal
+  change 1 < (c / ENNReal.monus 1 c).toReal
   have hden : 0 < (ENNReal.monus 1 c).toReal :=
-    ENNReal.toReal_pos (isUnit_one_monus hc_lt).ne_zero hc_one_sub_lt_top.ne
+    ENNReal.toReal_pos hc_den.ne_zero (ENNReal.isUnit_ne_top hc_den)
   rw [ENNReal.toReal_div _ _ (hb := hden.ne'.isUnit), one_lt_div_iff]
   exact .inl ⟨hden,
-    (ENNReal.toReal_lt_toReal hc_one_sub_lt_top.ne hc_lt_top.ne).2 h_one_sub_lt_self⟩
+    (ENNReal.toReal_lt_toReal (ENNReal.isUnit_ne_top hc_den) hc_lt_top.ne).2 h_one_sub_lt_self⟩
 
 /-- Auxiliary lemma for `exists_integrable_exp_sq_of_map_rotation_eq_self`, in which we will replace
 the assumption `IsProbabilityMeasure μ` by the weaker `IsFiniteMeasure μ`. -/

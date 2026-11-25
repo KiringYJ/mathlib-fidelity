@@ -252,8 +252,7 @@ open scoped Classical in
 @[simp]
 theorem toOuterMeasure_uniformOfFinset_apply :
     (uniformOfFinset s hs).toOuterMeasure t =
-      ENNReal.div (#{x ∈ s | x ∈ t}) (#s)
-        ⟨Nat.cast_ne_zero.2 hs.card_ne_zero, Or.inr (ENNReal.natCast_ne_top _)⟩ :=
+      (#{x ∈ s | x ∈ t} : ℝ≥0∞) / (#s : ℝ≥0∞) :=
   calc
     (uniformOfFinset s hs).toOuterMeasure t = ∑' x, if x ∈ t then uniformOfFinset s hs x else 0 :=
       toOuterMeasure_apply (uniformOfFinset s hs) t
@@ -273,8 +272,7 @@ open scoped Classical in
 @[simp]
 theorem toMeasure_uniformOfFinset_apply [SigmaAlgebra α] (ht : MeasurableSet t) :
     (uniformOfFinset s hs).toMeasure t =
-      ENNReal.div (#{x ∈ s | x ∈ t}) (#s)
-        ⟨Nat.cast_ne_zero.2 hs.card_ne_zero, Or.inr (ENNReal.natCast_ne_top _)⟩ :=
+      (#{x ∈ s | x ∈ t} : ℝ≥0∞) / (#s : ℝ≥0∞) :=
   (toMeasure_apply_eq_toOuterMeasure_apply _ ht).trans (toOuterMeasure_uniformOfFinset_apply hs t)
 
 end Measure
@@ -306,16 +304,14 @@ variable (s : Set α)
 
 theorem toOuterMeasure_uniformOfFintype_apply [Fintype s] :
     (uniformOfFintype α).toOuterMeasure s =
-      ENNReal.div (Fintype.card s) (Fintype.card α)
-        ⟨Nat.cast_ne_zero.2 Fintype.card_ne_zero, Or.inr (ENNReal.natCast_ne_top _)⟩ := by
+      (Fintype.card s : ℝ≥0∞) / (Fintype.card α : ℝ≥0∞) := by
   classical
   simp only [uniformOfFintype, toOuterMeasure_uniformOfFinset_apply, ENNReal.div_eq_mul_inv,
     Fintype.card_subtype, Finset.card_univ]
 
 theorem toMeasure_uniformOfFintype_apply [SigmaAlgebra α] (hs : MeasurableSet s) [Fintype s] :
     (uniformOfFintype α).toMeasure s =
-      ENNReal.div (Fintype.card s) (Fintype.card α)
-        ⟨Nat.cast_ne_zero.2 Fintype.card_ne_zero, Or.inr (ENNReal.natCast_ne_top _)⟩ := by
+      (Fintype.card s : ℝ≥0∞) / (Fintype.card α : ℝ≥0∞) := by
   classical
   simp [uniformOfFintype, Fintype.card_subtype, ENNReal.div_eq_mul_inv, hs]
 
@@ -329,8 +325,7 @@ open scoped Classical in
 /-- Given a non-empty multiset `s` we construct the `PMF` which sends `a` to the fraction of
   elements in `s` that are `a`. -/
 def ofMultiset (s : Multiset α) (hs : s ≠ 0) : PMF α :=
-  ⟨fun a => ENNReal.div (s.count a) s.card
-      ⟨Nat.cast_ne_zero.2 (hs ∘ Multiset.card_eq_zero.1), Or.inr (ENNReal.natCast_ne_top _)⟩,
+  ⟨fun a => (s.count a : ℝ≥0∞) / (s.card : ℝ≥0∞),
     ENNReal.summable.hasSum_iff.2
       (calc
         (∑' b : α, (s.count b : ℝ≥0∞) * (s.card : ℝ≥0∞)⁻¹)
@@ -351,9 +346,7 @@ variable {s : Multiset α} (hs : s ≠ 0)
 open scoped Classical in
 @[simp]
 theorem ofMultiset_apply (a : α) :
-    ofMultiset s hs a =
-      ENNReal.div (s.count a) s.card
-        ⟨Nat.cast_ne_zero.2 (hs ∘ Multiset.card_eq_zero.1), Or.inr (ENNReal.natCast_ne_top _)⟩ :=
+    ofMultiset s hs a = (s.count a : ℝ≥0∞) / (s.card : ℝ≥0∞) :=
   rfl
 
 open scoped Classical in
@@ -377,8 +370,7 @@ open scoped Classical in
 @[simp]
 theorem toOuterMeasure_ofMultiset_apply :
     (ofMultiset s hs).toOuterMeasure t =
-      ENNReal.div (∑' x, (s.filter (· ∈ t)).count x : ℝ≥0∞) s.card
-        ⟨Nat.cast_ne_zero.2 (hs ∘ Multiset.card_eq_zero.1), Or.inr (ENNReal.natCast_ne_top _)⟩ := by
+      (∑' x, (s.filter (· ∈ t)).count x : ℝ≥0∞) / (s.card : ℝ≥0∞) := by
   simp_rw [ENNReal.div_eq_mul_inv,
     ← ENNReal.tsum_mul_right, toOuterMeasure_apply]
   refine tsum_congr fun x => ?_
@@ -389,8 +381,7 @@ open scoped Classical in
 @[simp]
 theorem toMeasure_ofMultiset_apply [SigmaAlgebra α] (ht : MeasurableSet t) :
     (ofMultiset s hs).toMeasure t =
-      ENNReal.div (∑' x, (s.filter (· ∈ t)).count x : ℝ≥0∞) s.card
-        ⟨Nat.cast_ne_zero.2 (hs ∘ Multiset.card_eq_zero.1), Or.inr (ENNReal.natCast_ne_top _)⟩ :=
+      (∑' x, (s.filter (· ∈ t)).count x : ℝ≥0∞) / (s.card : ℝ≥0∞) :=
   (toMeasure_apply_eq_toOuterMeasure_apply _ ht).trans (toOuterMeasure_ofMultiset_apply hs t)
 
 end Measure

@@ -582,8 +582,8 @@ theorem exist_finset_disjoint_balls_large_measure (μ : Measure α) [IsFiniteMea
   have hn₀ : n ≠ 0 := Nat.cast_ne_zero.mpr Npos
   have hd : n + 1 ≠ ∞ := ENNReal.add_ne_top.2 ⟨hn, ENNReal.one_ne_top⟩
   have hd₀ : n + 1 ≠ 0 := by simp
-  let q := ENNReal.div (μ s) n ⟨hn₀, Or.inr hn⟩
-  let q' := ENNReal.div (μ s) (n + 1) ⟨hd₀, Or.inr hd⟩
+  let q := μ s / n
+  let q' := μ s / (n + 1)
   have S : ∑ _i : Fin N, q ≤ ∑ i, μ (s ∩ v i) :=
     calc
       ∑ _i : Fin N, q = μ s := by
@@ -805,7 +805,7 @@ theorem exists_disjoint_closedBall_covering_ae_of_finiteMeasure_aux (μ : Measur
       apply ENNReal.tendsto_pow_atTop_nhds_zero_of_lt_one
       have hn := ENNReal.natCast_ne_top N
       have hd := ENNReal.add_ne_top.2 ⟨hn, ENNReal.one_ne_top⟩
-      change ENNReal.div N ((N : ℝ≥0∞) + 1) ⟨by simp, Or.inr hd⟩ < 1
+      change (N : ℝ≥0∞) / ((N : ℝ≥0∞) + 1) < 1
       exact (ENNReal.div_lt_iff ⟨by simp, Or.inr hd⟩).2
         (by simpa only [one_mul] using ENNReal.lt_add_right hn one_ne_zero)
     rw [zero_mul] at C
@@ -889,7 +889,7 @@ theorem exists_closedBall_covering_tsum_measure_le (μ : Measure α) [SFinite μ
     measure at most `ε / (2 N)`, the sum of their measures is at most `ε / 2`,
     completing the proof. -/
   classical
-  let e := ENNReal.div ε 2 ⟨two_ne_zero, Or.inr ENNReal.ofNat_ne_top⟩
+  let e := ε / 2
   have he : e ≠ 0 := (ENNReal.half_pos hε).ne'
   obtain ⟨u, su, u_open, μu⟩ : ∃ U, U ⊇ s ∧ IsOpen U ∧ μ U ≤ μ s + e :=
     Set.exists_isOpen_le_add _ _ he

@@ -212,7 +212,7 @@ lemma eHolderNorm_eq_zero {r : ℝ≥0} {f : X → Y} :
         (ENNReal.rpow_pos (edist_pos.2 hx) (edist_lt_top x₁ x₂).ne).ne'
       have ht : edist x₁ x₂ ^ (r : ℝ) ≠ ∞ :=
         (ENNReal.rpow_lt_top_of_nonneg zero_le_coe (edist_lt_top x₁ x₂).ne).ne
-      obtain ⟨C, hC, hC'⟩ := h (ENNReal.div b _ ⟨hz, .inr ht⟩)
+      obtain ⟨C, hC, hC'⟩ := h (b / edist x₁ x₂ ^ (r : ℝ))
         (ENNReal.div_pos hb.ne.symm hz ht)
       exact lt_of_le_of_lt (hC x₁ x₂) <| ENNReal.mul_lt_of_lt_div ⟨hz, .inr ht⟩ hC'
   · intro h

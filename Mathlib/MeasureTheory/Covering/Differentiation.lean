@@ -900,7 +900,7 @@ theorem ae_tendsto_average_norm_sub {f : α → E} (hf : LocallyIntegrable f μ)
   filter_upwards [v.eventually_measure_lt_top x, v.eventually_filterAt_integrableOn x hf, hpos]
     with a h'a h''a ha
   have haUnit : IsUnit (μ a).toReal := (ENNReal.toReal_pos ha.ne' h'a.ne).ne'.isUnit
-  change (ENNReal.div (∫⁻ y in a, ‖f y - f x‖ₑ ∂μ) (μ a) ⟨ha.ne', Or.inr h'a.ne⟩).toReal = _
+  change ((∫⁻ y in a, ‖f y - f x‖ₑ ∂μ) / μ a).toReal = _
   simp only [ENNReal.toReal_div _ _ (hb := haUnit),
     setAverage_eq μ (fun y ↦ ‖f y - f x‖) a (hs := haUnit), div_eq_inv_mul₀]
   have A : IntegrableOn (fun y => (‖f y - f x‖₊ : ℝ)) a μ := by

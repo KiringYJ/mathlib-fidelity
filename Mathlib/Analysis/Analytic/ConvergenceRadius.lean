@@ -378,7 +378,7 @@ theorem leftMulResiduation_le_radius_compContinuousLinearMap
     exact ENNReal.coe_ne_zero.mpr h_zero.ne'
   have hu_top : ‖u‖ₑ ≠ ∞ := enorm_ne_top
   rw [ENNReal.leftMulResiduation_eq_extendedDiv ⟨Or.inr huₑ, Or.inr hu_top⟩]
-  change ENNReal.div p.radius ‖u‖ₑ ⟨huₑ, Or.inr hu_top⟩ ≤ _
+  change p.radius / ‖u‖ₑ ≤ _
   rw [ENNReal.div_le_iff huₑ hu_top]
   refine le_of_forall_nnreal_lt fun r hr ↦ ?_
   have hu_coe : (‖u‖₊ : ℝ≥0∞) ≠ 0 := ENNReal.coe_ne_zero.mpr h_zero.ne'

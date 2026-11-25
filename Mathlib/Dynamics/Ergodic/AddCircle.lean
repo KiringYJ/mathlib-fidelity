@@ -95,8 +95,7 @@ theorem ae_empty_or_univ_of_forall_vadd_ae_eq_self {s : Set <| AddCircle T}
       simp only [one_mul, mem_closedBall, dist_self]
       apply hj.le
     exact hd _ δ hδ₁ hw
-  suffices ∀ᶠ j in l', ratio j =
-      ENNReal.div (μ s) (ENNReal.ofReal T) ⟨hT₁, Or.inr ENNReal.ofReal_ne_top⟩ by
+  suffices ∀ᶠ j in l', ratio j = μ s / ENNReal.ofReal T by
     replace hd := hd.congr' this
     rwa [tendsto_const_nhds_iff, ENNReal.div_eq_one_iff hT₁ ENNReal.ofReal_ne_top] at hd
   refine .of_forall fun j ↦ ?_

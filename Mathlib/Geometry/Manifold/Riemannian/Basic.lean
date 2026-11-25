@@ -375,7 +375,7 @@ lemma eventually_riemannianEDist_lt (x : M) {c : ℝ≥0∞} (hc : 0 < c) :
   rcases eventually_riemannianEDist_le_edist_extChartAt I x with ⟨C, C_pos, hC⟩
   have hC₀ : (C : ℝ≥0∞) ≠ 0 := ENNReal.coe_ne_zero.mpr C_pos.ne'
   have hCt : (C : ℝ≥0∞) ≠ ⊤ := ENNReal.coe_ne_top
-  let δ : ℝ≥0∞ := ENNReal.div c (C : ℝ≥0∞) ⟨hC₀, Or.inr hCt⟩
+  let δ : ℝ≥0∞ := c / (C : ℝ≥0∞)
   have hball : (extChartAt I x) ⁻¹' (Metric.eball (extChartAt I x x) δ) ∈ 𝓝 x := by
     apply (continuousAt_extChartAt x).preimage_mem_nhds
     exact Metric.eball_mem_nhds _ (ENNReal.div_pos hc.ne' hC₀ hCt)

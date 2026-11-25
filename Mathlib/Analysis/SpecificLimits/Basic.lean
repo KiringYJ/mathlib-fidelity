@@ -774,10 +774,10 @@ theorem exists_pos_tsum_mul_lt_of_countable {ε : ℝ≥0∞} (hε : ε ≠ 0) {
   refine lt_of_le_of_lt (ENNReal.tsum_le_tsum fun i ↦ ?_) Hsum
   rw [coe_div (hr := (this i).ne'.isUnit)]
   let b : ℝ≥0 := max 1 (w i)
+  have hb : (b : ℝ≥0∞) ≠ 0 := coe_ne_zero.2 (this i).ne'
   have hwb : (w i : ℝ≥0∞) ≤ (b : ℝ≥0∞) := coe_le_coe.2 (le_max_right 1 (w i))
   calc
-    _ ≤ (b : ℝ≥0∞) * ENNReal.div (δ' i) (b : ℝ≥0∞)
-        ⟨coe_ne_zero.2 (this i).ne', Or.inr coe_ne_top⟩ := mul_le_mul_left hwb _
+    _ ≤ (b : ℝ≥0∞) * ((δ' i : ℝ≥0∞) / (b : ℝ≥0∞)) := mul_le_mul_left hwb _
     _ ≤ _ := ENNReal.mul_div_le _
 
 end ENNReal

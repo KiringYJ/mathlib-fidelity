@@ -139,7 +139,7 @@ theorem tendsto_nhds_mean (hfoel : IsFoelner G μ u F) (s : Set X) :
     Tendsto (fun i ↦ ENNReal.divInf (μ (s ∩ F i)) (μ (F i))) u (𝓝 (mean μ u F s)) := by
   have mem_Icc : ∀ᶠ i in u, ENNReal.divInf (μ (s ∩ F i)) (μ (F i)) ∈ Icc 0 1 := by
     filter_upwards [hfoel.eventually_meas_ne_zero, hfoel.eventually_meas_ne_top] with i hi hi'
-    change ENNReal.div (μ (s ∩ F i)) (μ (F i)) ⟨hi, Or.inr hi'⟩ ∈ Icc 0 1
+    change μ (s ∩ F i) / μ (F i) ∈ Icc 0 1
     simpa [ENNReal.div_le_iff hi hi'] using μ.mono inter_subset_right
   obtain ⟨x, hx⟩ := isCompact_Icc.ultrafilter_le_nhds'
     (u.map (fun i ↦ ENNReal.divInf (μ (s ∩ F i)) (μ (F i)))) (mem_map.1 mem_Icc)

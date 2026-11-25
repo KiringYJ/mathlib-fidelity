@@ -56,8 +56,7 @@ protected theorem div_eq_mul_inv (a b : ℝ≥0∞) (h) : div a b h = a * b⁻¹
 
 protected theorem div_eq_inv_mul (a b : ℝ≥0∞) (h) : div a b h = b⁻¹ * a := mul_comm _ _
 
-@[simp] theorem one_div (a : ℝ≥0∞) (ha : a ≠ 0) :
-    div 1 a ⟨ha, Or.inl one_ne_top⟩ = a⁻¹ := one_mul _
+@[simp] theorem one_div (a : ℝ≥0∞) (ha : a ≠ 0) : 1 / a = a⁻¹ := one_mul _
 
 protected theorem div_right_comm (hab h₁ hac h₂) :
     div (div a b hab) c h₁ = div (div a c hac) b h₂ :=
@@ -98,8 +97,7 @@ theorem coe_div {hr : IsUnit r} :
 @[simp] protected theorem inv_one : (1 : ℝ≥0∞)⁻¹ = 1 := by
   simpa only [coe_inv, coe_one] using coe_inj.2 (inv_one₀ (M := ℝ≥0))
 
-@[simp] protected theorem div_one (a : ℝ≥0∞) :
-    div a 1 ⟨one_ne_zero, Or.inr one_ne_top⟩ = a := by
+@[simp] protected theorem div_one (a : ℝ≥0∞) : a / 1 = a := by
   simp [ENNReal.div_eq_mul_inv]
 
 protected theorem inv_pow : ∀ {a : ℝ≥0∞} {n : ℕ}, (a ^ n)⁻¹ = a⁻¹ ^ n
@@ -172,16 +170,13 @@ protected lemma inv_mul_cancel_right' (hb₀ : b = 0 → a = 0) (hb : b = ∞ �
 protected lemma inv_mul_cancel_right (hb₀ : b ≠ 0) (hb : b ≠ ∞) : a * b⁻¹ * b = a :=
   ENNReal.inv_mul_cancel_right' (by simp [hb₀]) (by simp [hb])
 
-protected lemma mul_div_cancel_right (hb₀ : b ≠ 0) (hb : b ≠ ∞) :
-    div (a * b) b ⟨hb₀, Or.inr hb⟩ = a :=
+protected lemma mul_div_cancel_right (hb₀ : b ≠ 0) (hb : b ≠ ∞) : a * b / b = a :=
   ENNReal.mul_inv_cancel_right hb₀ hb
 
-protected lemma div_mul_cancel (ha₀ : a ≠ 0) (ha : a ≠ ∞) :
-    div b a ⟨ha₀, Or.inr ha⟩ * a = b :=
+protected lemma div_mul_cancel (ha₀ : a ≠ 0) (ha : a ≠ ∞) : b / a * a = b :=
   ENNReal.inv_mul_cancel_right ha₀ ha
 
-protected lemma mul_div_cancel (ha₀ : a ≠ 0) (ha : a ≠ ∞) :
-    a * div b a ⟨ha₀, Or.inr ha⟩ = b := by
+protected lemma mul_div_cancel (ha₀ : a ≠ 0) (ha : a ≠ ∞) : a * (b / a) = b := by
   rw [mul_comm, ENNReal.div_mul_cancel ha₀ ha]
 
 protected theorem mul_comm_div (h₁ h₂) : div a b h₁ * c = a * div c b h₂ := by
@@ -195,7 +190,7 @@ protected theorem mul_div_assoc (a b c : ℝ≥0∞) (h₁ h₂) :
   mul_assoc a b c⁻¹
 
 protected lemma div_mul_div_cancel (hb₀ : b ≠ 0) (hb : b ≠ ∞) (h₁ h₂) :
-    div a b ⟨hb₀, Or.inr hb⟩ * div b c h₁ = div a c h₂ := by
+    a / b * div b c h₁ = div a c h₂ := by
   simp only [ENNReal.div_eq_mul_inv, ← mul_assoc, ENNReal.inv_mul_cancel_right hb₀ hb]
 
 instance : InvolutiveInv ℝ≥0∞ where
@@ -220,11 +215,11 @@ protected alias ⟨_, Finiteness.inv_ne_top⟩ := ENNReal.inv_ne_top
 theorem inv_lt_top {x : ℝ≥0∞} : x⁻¹ < ∞ ↔ 0 < x := by
   simp only [lt_top_iff_ne_top, inv_ne_top, pos_iff_ne_zero]
 
-theorem div_lt_top {x y : ℝ≥0∞} (h1 : x ≠ ∞) (h2 : y ≠ 0) : div x y ⟨h2, Or.inl h1⟩ < ∞ :=
+theorem div_lt_top {x y : ℝ≥0∞} (h1 : x ≠ ∞) (h2 : y ≠ 0) : x / y < ∞ :=
   mul_lt_top h1.lt_top (inv_ne_top.mpr h2).lt_top
 
 @[aesop (rule_sets := [finiteness]) safe apply]
-theorem div_ne_top {x y : ℝ≥0∞} (h1 : x ≠ ∞) (h2 : y ≠ 0) : div x y ⟨h2, Or.inl h1⟩ ≠ ∞ :=
+theorem div_ne_top {x y : ℝ≥0∞} (h1 : x ≠ ∞) (h2 : y ≠ 0) : x / y ≠ ∞ :=
   (div_lt_top h1 h2).ne
 
 @[simp]
@@ -233,8 +228,7 @@ protected theorem inv_eq_zero : a⁻¹ = 0 ↔ a = ∞ :=
 
 protected theorem inv_ne_zero : a⁻¹ ≠ 0 ↔ a ≠ ∞ := by simp
 
-protected theorem div_pos (ha : a ≠ 0) (hb₀ : b ≠ 0) (hb : b ≠ ∞) :
-    0 < div a b ⟨hb₀, Or.inr hb⟩ :=
+protected theorem div_pos (ha : a ≠ 0) (hb₀ : b ≠ 0) (hb : b ≠ ∞) : 0 < a / b :=
   ENNReal.mul_pos ha <| ENNReal.inv_ne_zero.2 hb
 
 protected theorem inv_mul_le_iff {x y z : ℝ≥0∞} (h1 : x ≠ 0) (h2 : x ≠ ∞) :
@@ -246,11 +240,11 @@ protected theorem mul_inv_le_iff {x y z : ℝ≥0∞} (h1 : y ≠ 0) (h2 : y ≠
   rw [mul_comm, ENNReal.inv_mul_le_iff h1 h2, mul_comm]
 
 protected theorem div_le_iff {x y z : ℝ≥0∞} (h₀ : y ≠ 0) (ht : y ≠ ∞) :
-    div x y ⟨h₀, Or.inr ht⟩ ≤ z ↔ x ≤ z * y :=
+    x / y ≤ z ↔ x ≤ z * y :=
   ENNReal.mul_inv_le_iff h₀ ht
 
 protected theorem div_le_iff' {x y z : ℝ≥0∞} (h₀ : y ≠ 0) (ht : y ≠ ∞) :
-    div x y ⟨h₀, Or.inr ht⟩ ≤ z ↔ x ≤ y * z := by
+    x / y ≤ z ↔ x ≤ y * z := by
   rw [mul_comm, ENNReal.div_le_iff h₀ ht]
 
 /-- The infimum quotient measures the multipliers sufficient in the order comparison.
@@ -382,26 +376,23 @@ theorem _root_.OrderIso.invENNReal_symm_apply (a : ℝ≥0∞ᵒᵈ) :
     OrderIso.invENNReal.symm a = (OrderDual.ofDual a)⁻¹ :=
   rfl
 
-@[simp] theorem div_top (ha : a ≠ ∞) :
-    div a ∞ ⟨top_ne_zero, Or.inl ha⟩ = 0 := extendedDiv_top ha
+@[simp] theorem div_top (ha : a ≠ ∞) : a / ∞ = 0 := extendedDiv_top ha
 
-@[simp] theorem top_div (h : a ≠ 0 ∧ (∞ ≠ ∞ ∨ a ≠ ∞)) :
-    div ∞ a h = ∞ := by
+@[simp] theorem top_div (h : a ≠ 0 ∧ (∞ ≠ ∞ ∨ a ≠ ∞)) : ∞ / a = ∞ := by
   rw [ENNReal.div_eq_mul_inv,
     top_mul (ENNReal.inv_ne_zero.2 (h.2.resolve_left (not_not_intro rfl)))]
 
-theorem top_div_of_ne_top (ht : a ≠ ∞) (h₀ : a ≠ 0) :
-    div ∞ a ⟨h₀, Or.inr ht⟩ = ∞ := top_div ⟨h₀, Or.inr ht⟩
+theorem top_div_of_ne_top (ht : a ≠ ∞) (h₀ : a ≠ 0) : ∞ / a = ∞ :=
+  top_div ⟨h₀, Or.inr ht⟩
 
 theorem top_div_coe (hp : p ≠ 0) :
-    div ∞ p ⟨coe_ne_zero.2 hp, Or.inr coe_ne_top⟩ = ∞ :=
+    ∞ / (p : ℝ≥0∞) = ∞ :=
   top_div_of_ne_top coe_ne_top (coe_ne_zero.2 hp)
 
-theorem top_div_of_lt_top (ht : a < ∞) (h₀ : a ≠ 0) :
-    div ∞ a ⟨h₀, Or.inr ht.ne⟩ = ∞ := top_div_of_ne_top ht.ne h₀
+theorem top_div_of_lt_top (ht : a < ∞) (h₀ : a ≠ 0) : ∞ / a = ∞ :=
+  top_div_of_ne_top ht.ne h₀
 
-@[simp] protected theorem zero_div (hb : b ≠ 0) :
-    div 0 b ⟨hb, Or.inl zero_ne_top⟩ = 0 := zero_mul _
+@[simp] protected theorem zero_div (hb : b ≠ 0) : 0 / b = 0 := zero_mul _
 
 theorem divInf_eq_top : divInf a b = ∞ ↔ a ≠ 0 ∧ b = 0 ∨ a = ∞ ∧ b ≠ ∞ := by
   simp [divInf, ENNReal.mul_eq_top]
@@ -506,7 +497,7 @@ theorem div_lt_of_lt_mul' (h₀) (h : a < b * c) : div a b h₀ < c :=
   div_lt_of_lt_mul h₀ <| by rwa [mul_comm]
 
 protected lemma div_lt_div_iff_left (hc₀ : c ≠ 0) (hc : c ≠ ∞) :
-    div a c ⟨hc₀, Or.inr hc⟩ < div b c ⟨hc₀, Or.inr hc⟩ ↔ a < b :=
+    a / c < b / c ↔ a < b :=
   ENNReal.mul_lt_mul_iff_left (by simpa) (by simpa)
 
 protected lemma div_lt_div_iff_right (ha₀ : a ≠ 0) (ha : a ≠ ∞) (h₁ h₂) :
@@ -515,7 +506,7 @@ protected lemma div_lt_div_iff_right (ha₀ : a ≠ 0) (ha : a ≠ ∞) (h₁ h�
 
 @[gcongr]
 protected lemma div_lt_div_right (hc₀ : c ≠ 0) (hc : c ≠ ∞) (hab : a < b) :
-    div a c ⟨hc₀, Or.inr hc⟩ < div b c ⟨hc₀, Or.inr hc⟩ :=
+    a / c < b / c :=
   (ENNReal.div_lt_div_iff_left hc₀ hc).2 hab
 
 @[gcongr]
@@ -589,8 +580,7 @@ protected theorem div_add_div_same (h₁ h₂ h₃) :
     div a c h₁ + div b c h₂ = div (a + b) c h₃ :=
   (ENNReal.add_div h₃ h₁ h₂).symm
 
-protected theorem div_self (h₀ : a ≠ 0) (ht : a ≠ ∞) :
-    div a a ⟨h₀, Or.inr ht⟩ = 1 :=
+protected theorem div_self (h₀ : a ≠ 0) (ht : a ≠ ∞) : a / a = 1 :=
   ENNReal.mul_inv_cancel h₀ ht
 
 theorem mul_mul_inv_le : a * (b * a⁻¹) ≤ b :=
@@ -598,19 +588,18 @@ theorem mul_mul_inv_le : a * (b * a⁻¹) ≤ b :=
 
 theorem mul_div_le (h) : a * div b a h ≤ b := mul_mul_inv_le
 
-theorem eq_div_iff (ha : a ≠ 0) (hat : a ≠ ∞) :
-    b = div c a ⟨ha, Or.inr hat⟩ ↔ a * b = c := by
+theorem eq_div_iff (ha : a ≠ 0) (hat : a ≠ ∞) : b = c / a ↔ a * b = c := by
   refine ⟨fun h => h ▸ ENNReal.mul_div_cancel ha hat, fun h => ?_⟩
   rw [← h, ENNReal.div_eq_mul_inv, mul_comm a b, ENNReal.mul_inv_cancel_right ha hat]
 
 protected theorem div_eq_div_iff (ha : a ≠ 0) (ha' : a ≠ ∞) (hb : b ≠ 0) (hb' : b ≠ ∞) :
-    div c b ⟨hb, Or.inr hb'⟩ = div d a ⟨ha, Or.inr ha'⟩ ↔ a * c = b * d := by
+    c / b = d / a ↔ a * c = b * d := by
   rw [eq_div_iff ha ha']
   conv_rhs => rw [eq_comm]
   rw [← eq_div_iff hb hb', ENNReal.mul_div_assoc, eq_comm]
 
 theorem div_eq_one_iff {a b : ℝ≥0∞} (hb₀ : b ≠ 0) (hb₁ : b ≠ ∞) :
-    div a b ⟨hb₀, Or.inr hb₁⟩ = 1 ↔ a = b :=
+    a / b = 1 ↔ a = b :=
   ⟨fun h => by rw [← (eq_div_iff hb₀ hb₁).mp h.symm, mul_one], fun h =>
     h.symm ▸ ENNReal.div_self hb₀ hb₁⟩
 
@@ -623,15 +612,11 @@ theorem inv_three_add_inv_three : (3 : ℝ≥0∞)⁻¹ + 3⁻¹ + 3⁻¹ = 1 :=
   ring
 
 @[simp]
-protected theorem add_halves (a : ℝ≥0∞) :
-    div a 2 ⟨two_ne_zero, Or.inr ofNat_ne_top⟩ + div a 2 ⟨two_ne_zero, Or.inr ofNat_ne_top⟩ =
-      a := by
+protected theorem add_halves (a : ℝ≥0∞) : a / 2 + a / 2 = a := by
   simp only [ENNReal.div_eq_mul_inv, ← mul_add, inv_two_add_inv_two, mul_one]
 
 @[simp]
-theorem add_thirds (a : ℝ≥0∞) :
-    div a 3 ⟨three_ne_zero, Or.inr ofNat_ne_top⟩ + div a 3 ⟨three_ne_zero, Or.inr ofNat_ne_top⟩ +
-      div a 3 ⟨three_ne_zero, Or.inr ofNat_ne_top⟩ = a := by
+theorem add_thirds (a : ℝ≥0∞) : a / 3 + a / 3 + a / 3 = a := by
   simp only [ENNReal.div_eq_mul_inv, ← mul_add, inv_three_add_inv_three, mul_one]
 
 @[simp] theorem div_eq_zero_iff (h) : div a b h = 0 ↔ a = 0 ∨ b = ∞ := by
@@ -656,25 +641,22 @@ protected lemma mul_div_mul_comm (hc : c ≠ 0 ∨ d ≠ ∞) (hd : c ≠ ∞ �
   simp only [ENNReal.div_eq_mul_inv, ENNReal.mul_inv hc hd]
   ring
 
-protected theorem half_pos (h : a ≠ 0) : 0 < div a 2 ⟨two_ne_zero, Or.inr ofNat_ne_top⟩ :=
+protected theorem half_pos (h : a ≠ 0) : 0 < a / 2 :=
   ENNReal.div_pos h two_ne_zero ofNat_ne_top
 
 protected theorem one_half_lt_one : (2⁻¹ : ℝ≥0∞) < 1 :=
   ENNReal.inv_lt_one.2 <| one_lt_two
 
-protected theorem half_lt_self (hz : a ≠ 0) (ht : a ≠ ∞) :
-    div a 2 ⟨two_ne_zero, Or.inr ofNat_ne_top⟩ < a := by
+protected theorem half_lt_self (hz : a ≠ 0) (ht : a ≠ ∞) : a / 2 < a := by
   lift a to ℝ≥0 using ht
   rw [coe_ne_zero] at hz
   simpa only [coe_div (hr := (two_ne_zero' ℝ≥0).isUnit), coe_two] using
     coe_lt_coe.2 (NNReal.half_lt_self hz)
 
-protected theorem half_le_self : div a 2 ⟨two_ne_zero, Or.inr ofNat_ne_top⟩ ≤ a :=
+protected theorem half_le_self : a / 2 ≤ a :=
   le_add_self.trans_eq <| ENNReal.add_halves _
 
-theorem monus_half (h : a ≠ ∞) :
-    monus a (div a 2 ⟨two_ne_zero, Or.inr ofNat_ne_top⟩) =
-      div a 2 ⟨two_ne_zero, Or.inr ofNat_ne_top⟩ :=
+theorem monus_half (h : a ≠ ∞) : monus a (a / 2) = a / 2 :=
   ENNReal.monus_eq_of_eq_add' h a.add_halves.symm
 
 @[simp]
@@ -893,7 +875,7 @@ lemma isUnit_iff : IsUnit a ↔ a ≠ 0 ∧ a ≠ ∞ := by
 
 /-- Checked division by a unit agrees with ordinary extended-real division. -/
 theorem checkedDiv_eq_div (a b : ℝ≥0∞) (hb : IsUnit b) :
-    Checked.div a b hb = div a b ⟨hb.ne_zero, Or.inr (isUnit_iff.1 hb).2⟩ :=
+    Checked.div a b hb = a / b :=
   congrArg (a * ·) (ENNReal.eq_inv_of_mul_eq_one_left hb.val_inv_mul)
 
 /-- Left multiplication by a nonzero finite `a` as an order isomorphism. -/

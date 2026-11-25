@@ -800,8 +800,7 @@ theorem hausdorffMeasure_preimage_le (hf : AntilipschitzWith K f) (hd : 0 ≤ d)
     ← ENNReal.tsum_mul_left]
   refine iSup₂_le fun ε ε0 => ?_
   have hK : (K : ℝ≥0∞) ≠ 0 := ENNReal.coe_ne_zero.2 h0
-  refine le_iSup₂_of_le (ENNReal.div ε K ⟨hK, Or.inr ENNReal.coe_ne_top⟩)
-    (ENNReal.div_pos ε0.ne' hK ENNReal.coe_ne_top) ?_
+  refine le_iSup₂_of_le (ε / (K : ℝ≥0∞)) (ENNReal.div_pos ε0.ne' hK ENNReal.coe_ne_top) ?_
   refine le_iInf₂ fun t hst => le_iInf fun htε => ?_
   replace hst : f ⁻¹' s ⊆ _ := preimage_mono hst; rw [preimage_iUnion] at hst
   refine iInf₂_le_of_le _ hst (iInf_le_of_le (fun n => ?_) ?_)

@@ -618,7 +618,7 @@ private theorem nhdsNE_nonzeroEReal (x : NonzeroEReal) :
 
 /-- The reciprocal of a nonzero extended real is finite, including at both infinities. -/
 private def divRecip (b : NonzeroEReal) : ℝ :=
-  (EReal.div 1 b ⟨b.2, Or.inl ⟨coe_ne_top 1, coe_ne_bot 1⟩⟩).toReal
+  ((1 : EReal) / (b : EReal)).toReal
 
 private theorem divRecip_coe (r : RealUnit) : divRecip (coeRealUnit r) = Checked.inv r.val r.2 := by
   change (Checked.div 1 (r.val : EReal) _).toReal = _
@@ -651,7 +651,7 @@ private theorem continuous_divRecip : Continuous divRecip := by
     simpa only [Function.comp_def, divRecip_coe] using tendsto_inv_atTop_zero (𝕜 := ℝ)
 
 private theorem div_eq_mul_divRecip (a b : EReal) (h : DivDomain a b) :
-    EReal.div a b h = a * (divRecip ⟨b, h.1⟩ : EReal) := by
+    a / b = a * (divRecip ⟨b, h.1⟩ : EReal) := by
   induction b with
   | bot => exact (mul_zero _).symm
   | top => exact (mul_zero _).symm

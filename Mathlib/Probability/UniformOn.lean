@@ -105,8 +105,7 @@ instance isProbabilityMeasure_uniformOn (hs : IsConditionable Measure.count s) :
 theorem uniformOn_empty (hs : IsConditionable Measure.count s) : uniformOn s hs ∅ = 0 := by simp
 
 theorem uniformOn_univ [Fintype Ω] [Nonempty Ω] {s : Set Ω} :
-    uniformOn Set.univ .univ s = ENNReal.div (Measure.count s) (Fintype.card Ω)
-      ⟨Nat.cast_ne_zero.2 Fintype.card_ne_zero, Or.inr (ENNReal.natCast_ne_top _)⟩ := by
+    uniformOn Set.univ .univ s = Measure.count s / (Fintype.card Ω : ℝ≥0∞) := by
   simp [uniformOn, cond_apply, ENNReal.div_eq_inv_mul]
 
 lemma uniformOn_apply_finset' {Ω : Type*} [DecidableEq Ω] {_ : SigmaAlgebra Ω} {s t : Finset Ω}

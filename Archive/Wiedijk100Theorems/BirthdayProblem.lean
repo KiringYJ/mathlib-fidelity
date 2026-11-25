@@ -44,8 +44,7 @@ noncomputable instance measureSpace : MeasureSpace (Fin n → Fin m) :=
   ⟨uniformOn Set.univ .univ⟩
 
 theorem Fin.measure_apply {s : Set <| Fin n → Fin m} :
-    ℙ s = ENNReal.div (|s.toFinite.toFinset|) (‖Fin n → Fin m‖)
-      ⟨Nat.cast_ne_zero.2 Fintype.card_ne_zero, Or.inr (ENNReal.natCast_ne_top _)⟩ := by
+    ℙ s = (|s.toFinite.toFinset| : ℝ≥0∞) / (‖Fin n → Fin m‖ : ℝ≥0∞) := by
   rw [volume, measureSpace, uniformOn_univ]
   simp only [ENNReal.div_eq_mul_inv, Measure.count_apply_finite s s.toFinite]
 
@@ -63,7 +62,7 @@ theorem birthday_measure :
     · rw [Fintype.card_embedding_eq, Fintype.card_fin, Fintype.card_fin]
       rfl
   rw [this, mul_comm (2 : ℝ≥0∞)⁻¹]
-  change _ < ENNReal.div (‖Fin 23 → Fin 365‖) 2 ⟨two_ne_zero, Or.inr ENNReal.ofNat_ne_top⟩
+  change _ < (‖Fin 23 → Fin 365‖ : ℝ≥0∞) / 2
   rw [ENNReal.lt_div_iff_mul_lt _ (Or.inl two_ne_zero) (Or.inl ENNReal.ofNat_ne_top)]
   all_goals
     simp only [Fintype.card_pi, Fintype.card_fin, Finset.prod_const, Finset.card_univ]

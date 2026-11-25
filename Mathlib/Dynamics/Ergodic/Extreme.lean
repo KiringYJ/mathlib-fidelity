@@ -52,8 +52,7 @@ theorem of_mem_extremePoints_measure_univ_eq {c : ℝ≥0∞} (hc : c ≠ ∞)
       simpa [eventuallyEmptyOrUniv_iff, ae_iff, and_comm] using! H
     have hcond : c • μ[|s] = μ := by
       apply h.2 (this hsm hfs hs) (this hsm.compl (by rw [preimage_compl, hfs]) hs')
-      have dom (x : ℝ≥0∞) : c ≠ 0 ∧ (x ≠ ∞ ∨ c ≠ ∞) := ⟨hc₀, Or.inr hc⟩
-      refine ⟨ENNReal.div (μ s) c (dom _), ENNReal.div (μ sᶜ) c (dom _),
+      refine ⟨μ s / c, μ sᶜ / c,
         ENNReal.div_pos hs hc₀ hc, ENNReal.div_pos hs' hc₀ hc, ?_, ?_⟩
       · simp only [ENNReal.div_eq_mul_inv]
         rw [← add_mul, measure_add_measure_compl hsm, h.1.2, ENNReal.mul_inv_cancel hc₀ hc]

@@ -398,7 +398,7 @@ protected theorem continuous_mul_const {a : ℝ≥0∞} (ha : a ≠ ∞) : Conti
 
 @[fun_prop]
 protected theorem continuous_div_const (c : ℝ≥0∞) (hc₀ : c ≠ 0) (hct : c ≠ ∞) :
-    Continuous fun x : ℝ≥0∞ => ENNReal.div x c ⟨hc₀, Or.inr hct⟩ :=
+    Continuous fun x : ℝ≥0∞ => x / c :=
   ENNReal.continuous_mul_const (ENNReal.inv_ne_top.2 hc₀)
 
 @[fun_prop]
@@ -487,7 +487,7 @@ protected theorem Tendsto.extendedDiv {f : Filter α} {u v : α → ℝ≥0∞} 
 protected theorem Tendsto.div {f : Filter α} {u v : α → ℝ≥0∞} {a b : ℝ≥0∞}
     (hu : Tendsto u f (𝓝 a)) (hv : Tendsto v f (𝓝 b))
     (huv : ∀ i, v i ≠ 0 ∧ (u i ≠ ∞ ∨ v i ≠ ∞)) (hab : b ≠ 0 ∧ (a ≠ ∞ ∨ b ≠ ∞)) :
-    Tendsto (fun i => ENNReal.div (u i) (v i) (huv i)) f (𝓝 (ENNReal.div a b hab)) :=
+    Tendsto (fun i => ENNReal.div (u i) (v i) (huv i)) f (𝓝 (a / b)) :=
   ENNReal.Tendsto.extendedDiv hu hv
     (fun i => ⟨Or.inr (huv i).1, (huv i).2⟩) ⟨Or.inr hab.1, hab.2⟩
 

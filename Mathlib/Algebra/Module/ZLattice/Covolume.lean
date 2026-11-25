@@ -238,8 +238,7 @@ end Basic
 namespace covolume
 
 private theorem toReal_div_ofReal_pos (a : ENNReal) {b : ℝ} (hb : 0 < b) :
-    (ENNReal.div a (ENNReal.ofReal b)
-      ⟨ENNReal.ofReal_ne_zero_iff.mpr hb, Or.inr ENNReal.ofReal_ne_top⟩).toReal =
+    (a / ENNReal.ofReal b).toReal =
       Checked.div a.toReal b hb.ne'.isUnit := by
   have h := ENNReal.toReal_ofReal hb.le
   have hu : IsUnit (ENNReal.ofReal b).toReal := h.symm ▸ hb.ne'.isUnit

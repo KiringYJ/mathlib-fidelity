@@ -139,8 +139,7 @@ instance instCompleteSpace [CompleteSpace α] : CompleteSpace (Closeds α) := by
            This sequence is a Cauchy sequence, therefore converging as the space is complete, to
            a limit which satisfies the required properties. -/
     intro n x hx
-    let Bn (k : ℕ) : ℝ≥0∞ := ENNReal.div (B n) ((2 : ℝ≥0∞) ^ k)
-      ⟨(ENNReal.isUnit_two_pow k).ne_zero, .inl (B_ne_top n)⟩
+    let Bn (k : ℕ) : ℝ≥0∞ := B n / (2 : ℝ≥0∞) ^ k
     obtain ⟨z, hz₀, hz⟩ :
       ∃ z : ∀ l, s (n + l), (z 0 : α) = x ∧ ∀ k, edist (z k : α) (z (k + 1) : α) ≤ Bn k := by
       -- We prove existence of the sequence by induction.

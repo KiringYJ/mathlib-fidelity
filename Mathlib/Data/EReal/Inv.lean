@@ -416,13 +416,13 @@ protected def div (a b : EReal) (h : DivDomain a b := by ereal_div_domain) : ERe
 
 /-- Ordinary division agrees with unit division for a finite nonzero denominator. -/
 lemma div_eq_checked_div (a b : EReal) (hb : IsUnit b) {h : DivDomain a b} :
-    EReal.div a b h = Checked.div a b hb := by
+    a / b = Checked.div a b hb := by
   have ⟨hbot, htop, _⟩ := isUnit_iff.1 hb
   lift b to ℝ using ⟨htop, hbot⟩
   rfl
 
 lemma isUnit_div {a b : EReal} {h : DivDomain a b} (ha : IsUnit a) (hb : IsUnit b) :
-    IsUnit (EReal.div a b h) :=
+    IsUnit (a / b) :=
   (div_eq_checked_div a b hb).symm ▸ ha.div₀ hb
 
 macro_rules
@@ -436,13 +436,13 @@ lemma div_eq_inv_mul (a b : EReal) {hb : IsUnit b} : a / b = b⁻¹ * a :=
   (div_eq_mul_inv a b (hb := hb)).trans (mul_comm _ _)
 
 @[simp]
-lemma div_top (a : EReal) {h : DivDomain a ⊤} : EReal.div a ⊤ h = 0 := rfl
+lemma div_top (a : EReal) {h : DivDomain a ⊤} : a / ⊤ = 0 := rfl
 
 @[simp]
-lemma div_bot (a : EReal) {h : DivDomain a ⊥} : EReal.div a ⊥ h = 0 := rfl
+lemma div_bot (a : EReal) {h : DivDomain a ⊥} : a / ⊥ = 0 := rfl
 
 @[simp]
-lemma zero_div (b : EReal) {h : DivDomain 0 b} : EReal.div 0 b h = 0 := by
+lemma zero_div (b : EReal) {h : DivDomain 0 b} : 0 / b = 0 := by
   induction b
   · rfl
   · exact zero_mul _
@@ -468,7 +468,7 @@ lemma div_eq_iff {a b c : EReal} {hb : IsUnit b} : a / b = c ↔ a = c * b := by
   rw [div_eq_checked_div _ _ hb, _root_.div_eq_iff (hb := hb)]
 
 lemma neg_div {a b : EReal} {h : DivDomain a b} {hn : DivDomain (-a) b} :
-    EReal.div (-a) b hn = -EReal.div a b h := by
+    -a / b = -(a / b) := by
   induction b with
   | bot => simp
   | top => simp
@@ -574,7 +574,7 @@ lemma div_lt_iff (h : 0 < c) (h' : c ≠ ⊤) : b / c < a ↔ b < a * c := by
   rw [← (strictMono_div_right_of_pos h h').lt_iff_lt (a := b) (b := a * c)]
   rw [mul_div_cancel_right (hb := hc)]
 
-lemma div_nonneg {h : DivDomain a b} (ha : 0 ≤ a) (hb : 0 ≤ b) : 0 ≤ EReal.div a b h := by
+lemma div_nonneg {h : DivDomain a b} (ha : 0 ≤ a) (hb : 0 ≤ b) : 0 ≤ a / b := by
   by_cases htop : b = ⊤
   · subst b
     simp
@@ -673,7 +673,7 @@ lemma add_div_of_nonneg_right {hc : IsUnit c} (h : 0 ≤ c) :
 
 /-- Ordinary nonnegative division commutes with the embedding into the signed extended reals. -/
 theorem coe_ennreal_div (a b : ℝ≥0∞) (h : b ≠ 0 ∧ (a ≠ ⊤ ∨ b ≠ ⊤)) :
-    ((ENNReal.div a b h : ℝ≥0∞) : EReal) =
+    ((a / b : ℝ≥0∞) : EReal) =
       EReal.div (a : EReal) (b : EReal) (divDomain_coe_ennreal.2 h) := by
   by_cases hb : b = ⊤
   · subst b
@@ -689,7 +689,7 @@ theorem coe_ennreal_div (a b : ℝ≥0∞) (h : b ≠ 0 ∧ (a ≠ ⊤ ∨ b ≠
   rw [div_eq_mul_inv _ _ (hb := hu), coe_ennreal_mul, hinv]
 
 theorem div_coe_ennreal_nonneg (a b : ℝ≥0∞) (h : DivDomain (a : EReal) (b : EReal)) :
-    0 ≤ EReal.div (a : EReal) (b : EReal) h := by
+    0 ≤ (a : EReal) / (b : EReal) := by
   rw [← coe_ennreal_div a b (divDomain_coe_ennreal.1 h)]
   exact coe_ennreal_nonneg _
 
