@@ -590,30 +590,38 @@ namespace ENNReal
 
 /-- **Young's inequality**, `ℝ≥0∞` version with real conjugate exponents. -/
 theorem young_inequality (a b : ℝ≥0∞) {p q : ℝ} (hpq : p.HolderConjugate q) :
-    a * b ≤ ((a ^ p) / (.ofReal p)) + ((b ^ q) / (.ofReal q)) := by
+    a * b ≤ ENNReal.div (a ^ p) (.ofReal p)
+        ⟨(ofReal_pos.2 hpq.pos).ne', Or.inr ofReal_ne_top⟩
+      + ENNReal.div (b ^ q) (.ofReal q)
+        ⟨(ofReal_pos.2 hpq.symm.pos).ne', Or.inr ofReal_ne_top⟩ := by
   by_cases! h : a = ⊤ ∨ b = ⊤
   · refine le_trans le_top (le_of_eq ?_)
     repeat rw [ENNReal.div_eq_mul_inv]
     rcases h with h | h <;> rw [h] <;> simp [hpq.pos, hpq.symm.pos]
   -- if `a ≠ ⊤` and `b ≠ ⊤`, use the `NNReal` version: `NNReal.young_inequality_real`
   rw [← coe_toNNReal h.left, ← coe_toNNReal h.right, ← coe_mul, ← coe_rpow_of_nonneg _ hpq.nonneg,
-    ← coe_rpow_of_nonneg _ hpq.symm.nonneg, ENNReal.ofReal, ENNReal.ofReal, ←
-    @coe_div (Real.toNNReal p) _ (by simp [hpq.pos]), ←
-    @coe_div (Real.toNNReal q) _ (by simp [hpq.symm.pos]), ← coe_add, coe_le_coe]
+    ← coe_rpow_of_nonneg _ hpq.symm.nonneg]
+  erw [← @coe_div (Real.toNNReal p) _ (by simp [hpq.pos]),
+    ← @coe_div (Real.toNNReal q) _ (by simp [hpq.symm.pos])]
+  rw [← coe_add, coe_le_coe]
   exact NNReal.young_inequality_real a.toNNReal b.toNNReal hpq
 
 /-- **Young's inequality** equality condition, `ℝ≥0∞` version with real conjugate exponents. -/
 theorem young_inequality_eq_iff (a b : ℝ≥0∞) {p q : ℝ} (hpq : p.HolderConjugate q) :
-    a * b = ((a ^ p) / (.ofReal p)) + ((b ^ q) / (.ofReal q)) ↔
+    a * b = ENNReal.div (a ^ p) (.ofReal p)
+        ⟨(ofReal_pos.2 hpq.pos).ne', Or.inr ofReal_ne_top⟩
+      + ENNReal.div (b ^ q) (.ofReal q)
+        ⟨(ofReal_pos.2 hpq.symm.pos).ne', Or.inr ofReal_ne_top⟩ ↔
       (a = ⊤ ∧ b ≠ 0) ∨ (a ≠ 0 ∧ b = ⊤) ∨ a ^ p = b ^ q := by
   by_cases! h0 : a = 0 ∨ b = 0
-  · rcases h0 with rfl | rfl <;> simp [hpq.pos, hpq.symm.pos, eq_comm]
+  · rcases h0 with rfl | rfl <;> simp [hpq.pos, hpq.symm.pos, eq_comm, ENNReal.div_eq_mul_inv]
   by_cases! h : a = ⊤ ∨ b = ⊤
   · rcases h with rfl | rfl <;> simp [hpq.pos, hpq.symm.pos, h0, ENNReal.div_eq_mul_inv]
   rw [← coe_toNNReal h.left, ← coe_toNNReal h.right, ← coe_mul, ← coe_rpow_of_nonneg _ hpq.nonneg,
-    ← coe_rpow_of_nonneg _ hpq.symm.nonneg, ← ofNNReal_toNNReal, ← ofNNReal_toNNReal,
-    ← coe_div (hr := (Real.toNNReal_pos.mpr hpq.pos).ne'.isUnit),
-    ← coe_div (hr := (Real.toNNReal_pos.mpr hpq.symm.pos).ne'.isUnit), ← coe_add, coe_inj, coe_inj]
+    ← coe_rpow_of_nonneg _ hpq.symm.nonneg]
+  erw [← coe_div (hr := (Real.toNNReal_pos.mpr hpq.pos).ne'.isUnit),
+    ← coe_div (hr := (Real.toNNReal_pos.mpr hpq.symm.pos).ne'.isUnit)]
+  rw [← coe_add, coe_inj, coe_inj]
   simp [young_inequality_real_eq_iff a.toNNReal b.toNNReal hpq]
 
 end ENNReal

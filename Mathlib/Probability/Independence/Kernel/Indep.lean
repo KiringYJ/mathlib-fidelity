@@ -492,7 +492,7 @@ theorem IndepSets.indep_aux {m₂ m : SigmaAlgebra Ω}
       measure_sdiff inter_subset_left
         (MeasurableSet.nullMeasurableSet (MeasurableSet.inter ht1m (h2 hu)))
         (measure_ne_top _ _),
-      ha, measure_compl (h2 hu) (measure_ne_top _ _), measure_univ, ENNReal.mul_sub, mul_one]
+      ha, measure_compl (h2 hu) (measure_ne_top _ _), measure_univ, ENNReal.mul_monus, mul_one]
     exact fun _ _ ↦ measure_ne_top _ _
   | iUnion f hfd hfm ihf =>
     rw [← ae_all_iff] at ihf
@@ -527,7 +527,8 @@ theorem IndepSets.indep {m1 m2 m : SigmaAlgebra Ω} {κ : Kernel α Ω} {μ : Me
         (MeasurableSet.nullMeasurableSet (MeasurableSet.inter (h2 ht2) (h1 ht)))
         (measure_ne_top (κ a) _),
       Set.inter_comm, ha, measure_compl (h1 ht) (measure_ne_top (κ a) t), measure_univ,
-      mul_comm (1 - κ a t), ENNReal.mul_sub (fun _ _ ↦ measure_ne_top (κ a) _), mul_one, mul_comm]
+      mul_comm (ENNReal.monus 1 (κ a t)), ENNReal.mul_monus (fun _ _ ↦ measure_ne_top (κ a) _),
+      mul_one, mul_comm]
   | iUnion f hf_disj hf_meas h =>
     rw [← ae_all_iff] at h
     filter_upwards [h] with a ha

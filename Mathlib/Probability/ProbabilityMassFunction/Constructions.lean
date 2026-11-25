@@ -299,12 +299,16 @@ section bernoulli
 /-- A `PMF` which assigns probability `p` to `true` and `1 - p` to `false`. -/
 @[deprecated ProbabilityTheory.bernoulliMeasure (since := "2026-04-07")]
 def bernoulli (p : ℝ≥0) (h : p ≤ 1) : PMF Bool :=
-  ofFintype (fun b => cond b p (1 - p)) (by simp [h])
+  ofFintype (fun b => cond b p (↑(1 - p : ℝ≥0))) (by
+    simp only [Fintype.sum_bool, Bool.cond_true, Bool.cond_false, ENNReal.coe_monus,
+      ENNReal.coe_one]
+    rw [add_comm]
+    exact ENNReal.monus_add_cancel_of_le (ENNReal.coe_le_coe.2 h))
 
 variable {p : ℝ≥0} (h : p ≤ 1) (b : Bool)
 
 @[deprecated ProbabilityTheory.bernoulliMeasure_apply (since := "2026-04-07")]
-theorem bernoulli_apply : bernoulli p h b = cond b p (1 - p) := by
+theorem bernoulli_apply : bernoulli p h b = cond b p (↑(1 - p : ℝ≥0)) := by
   simp only [bernoulli, ofFintype_apply]
   exact Eq.symm (Bool.apply_cond ofNNReal)
 
@@ -312,15 +316,9 @@ theorem bernoulli_apply : bernoulli p h b = cond b p (1 - p) := by
 theorem support_bernoulli : (bernoulli p h).support = { b | cond b (p ≠ 0) (p ≠ 1) } := by
   refine Set.ext fun b => ?_
   induction b
-  · simp_rw [mem_support_iff, bernoulli_apply, Bool.cond_false, Ne, ENNReal.coe_sub,
-      ENNReal.coe_one, Bool.cond_prop, Set.mem_ofPred_eq, Bool.false_eq_true, ite_false,
-      not_iff_not]
-    constructor
-    · intro h'
-      simp only [tsub_eq_zero_iff_le, one_le_coe_iff] at h'
-      exact eq_of_le_of_ge h h'
-    · intro h'
-      simp only [h', ENNReal.coe_one, tsub_self]
+  · simp only [mem_support_iff, bernoulli_apply, Bool.cond_false, Set.mem_ofPred_eq,
+      ne_eq, ENNReal.coe_eq_zero, tsub_eq_zero_iff_le]
+    exact not_congr ⟨fun hp ↦ h.antisymm hp, fun hp ↦ hp ▸ le_rfl⟩
   · simp only [mem_support_iff, bernoulli_apply, Bool.cond_true, Set.mem_ofPred_eq, ne_eq,
       ENNReal.coe_eq_zero]
 

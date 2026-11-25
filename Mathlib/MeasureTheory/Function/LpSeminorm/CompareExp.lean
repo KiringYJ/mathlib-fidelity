@@ -68,12 +68,12 @@ theorem eLpNorm'_le_eLpNormEssSup_mul_rpow_measure_univ {q : ℝ} (hq_pos : 0 < 
 theorem eLpNorm_le_eLpNorm_mul_rpow_measure_univ {p q : ℝ≥0∞} (hpq : p ≤ q)
     (hf : AEStronglyMeasurable f μ) :
     eLpNorm f p μ ≤ eLpNorm f q μ *
-      μ Set.univ ^ ((1 / p).toReal - (1 / q).toReal) := by
+      μ Set.univ ^ ((p⁻¹).toReal - (q⁻¹).toReal) := by
   obtain rfl | hp0 := eq_or_ne p 0
   · simp
   have hq0_lt : 0 < q := hp0.pos.trans_le hpq
   obtain rfl | hq_top := eq_or_ne q ∞
-  · simp only [ENNReal.div_top, ENNReal.toReal_zero, sub_zero]
+  · simp only [ENNReal.inv_top, ENNReal.toReal_zero, sub_zero]
     obtain rfl | hp_top := eq_or_ne p ∞
     · simp
     rw [eLpNorm_eq_eLpNorm' hp0 hp_top]
@@ -238,7 +238,7 @@ theorem eLpNorm_le_eLpNorm_mul_eLpNorm_of_nnnorm {p q r : ℝ≥0∞}
     (hf : AEStronglyMeasurable f μ) (hg : AEStronglyMeasurable g μ) (b : E → F → G) (c : ℝ≥0)
     (h : ∀ᵐ x ∂μ, ‖b (f x) (g x)‖₊ ≤ c * ‖f x‖₊ * ‖g x‖₊) [hpqr : HolderTriple p q r] :
     eLpNorm (fun x => b (f x) (g x)) r μ ≤ c * eLpNorm f p μ * eLpNorm g q μ := by
-  have hpqr := hpqr.one_div_eq
+  have hpqr := ENNReal.HolderTriple.inv_eq p q r
   obtain (rfl | rfl | hp) := ENNReal.trichotomy p
   · simp_all
   · have : r = q := by simpa using hpqr

@@ -142,16 +142,15 @@ open Filter Finset
 
 variable {u : ℕ → ℕ} {f : ℕ → ℝ≥0∞}
 
-open NNReal in
 theorem le_tsum_schlomilch (hf : ∀ ⦃m n⦄, 0 < m → m ≤ n → f n ≤ f m) (h_pos : ∀ n, 0 < u n)
     (hu : StrictMono u) :
-    ∑' k, f k ≤ ∑ k ∈ range (u 0), f k + ∑' k : ℕ, (u (k + 1) - u k) * f (u k) := by
+    ∑' k, f k ≤ ∑ k ∈ range (u 0), f k +
+      ∑' k : ℕ, ((u (k + 1) - u k : ℕ) : ℝ≥0∞) * f (u k) := by
   rw [ENNReal.tsum_eq_iSup_nat' hu.tendsto_atTop]
   refine iSup_le fun n => ?_
   grw [Finset.le_sum_schlomilch hf h_pos hu.monotone n]
   gcongr
-  have (k : ℕ) : (u (k + 1) - u k : ℝ≥0∞) = (u (k + 1) - (u k : ℕ) : ℕ) := by simp
-  simp only [nsmul_eq_mul, this]
+  simp only [nsmul_eq_mul]
   apply ENNReal.sum_le_tsum
 
 theorem le_tsum_condensed (hf : ∀ ⦃m n⦄, 0 < m → m ≤ n → f n ≤ f m) :
@@ -163,7 +162,8 @@ theorem le_tsum_condensed (hf : ∀ ⦃m n⦄, 0 < m → m ≤ n → f n ≤ f m
 
 theorem tsum_schlomilch_le {C : ℕ} (hf : ∀ ⦃m n⦄, 1 < m → m ≤ n → f n ≤ f m) (h_pos : ∀ n, 0 < u n)
     (h_nonneg : ∀ n, 0 ≤ f n) (hu : Monotone u) (h_succ_diff : SuccDiffBounded C u) :
-    ∑' k : ℕ, (u (k + 1) - u k) * f (u k) ≤ (u 1 - u 0) * f (u 0) + C * ∑' k, f k := by
+    ∑' k : ℕ, ((u (k + 1) - u k : ℕ) : ℝ≥0∞) * f (u k) ≤
+      ((u 1 - u 0 : ℕ) : ℝ≥0∞) * f (u 0) + (C : ℝ≥0∞) * ∑' k, f k := by
   rw [ENNReal.tsum_eq_iSup_nat' (tendsto_atTop_mono Nat.le_succ tendsto_id)]
   refine iSup_le fun n => ?_
   grw [← ENNReal.sum_le_tsum <| Finset.Ico (u 0 + 1) (u n + 1)]
@@ -189,7 +189,8 @@ theorem summable_schlomilch_iff {C : ℕ} {u : ℕ → ℕ} {f : ℕ → ℝ≥0
     (h_pos : ∀ n, 0 < u n) (hu_strict : StrictMono u)
     (hC_nonzero : C ≠ 0) (h_succ_diff : SuccDiffBounded C u) :
     (Summable fun k : ℕ => (u (k + 1) - (u k : ℝ≥0)) * f (u k)) ↔ Summable f := by
-  simp only [← tsum_coe_ne_top_iff_summable, Ne, not_iff_not, ENNReal.coe_mul]
+  simp only [← tsum_coe_ne_top_iff_summable, Ne, not_iff_not, ENNReal.coe_mul,
+    ← Nat.cast_tsub, ENNReal.coe_natCast]
   constructor <;> intro h
   · replace hf : ∀ m n, 1 < m → m ≤ n → (f n : ℝ≥0∞) ≤ f m := fun m n hm hmn =>
       ENNReal.coe_le_coe.2 (hf (zero_lt_one.trans hm) hmn)

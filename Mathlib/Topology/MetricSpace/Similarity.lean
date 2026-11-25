@@ -89,8 +89,8 @@ alias ⟨_, of_exists_pairwise_edist_eq⟩ := similar_iff_exists_pairwise_edist_
 @[symm] protected lemma symm (h : v₁ ∼ v₂) : v₂ ∼ v₁ := by
   rcases h with ⟨r, hr, h⟩
   refine ⟨r⁻¹, inv_ne_zero, fun _ _ => ?_⟩
-  rw [ENNReal.coe_inv, ← ENNReal.div_eq_inv_mul, ENNReal.eq_div_iff _ ENNReal.coe_ne_top, h]
-  norm_cast
+  rw [ENNReal.coe_inv (hr := hr.isUnit), h,
+    ENNReal.inv_mul_cancel_left (ENNReal.coe_ne_zero.2 hr) ENNReal.coe_ne_top]
 
 lemma _root_.similar_comm : v₁ ∼ v₂ ↔ v₂ ∼ v₁ := ⟨Similar.symm, Similar.symm⟩
 

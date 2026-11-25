@@ -273,7 +273,7 @@ theorem edist_coe (a b : ℝ≥0) : edist (a : ℝ≥0∞) b = edist a b :=
 theorem edist_eq_top_iff (a b : ℝ≥0∞) : edist a b = ∞ ↔ a ≠ b ∧ (a = ∞ ∨ b = ∞) := by
   cases a <;> cases b <;> simp
 
-theorem edist_eq_max (a b : ℝ≥0∞) : edist a b = max (a - b) (b - a) := by
+theorem edist_eq_max (a b : ℝ≥0∞) : edist a b = max (monus a b) (monus b a) := by
   cases a <;> cases b
   case coe.coe =>
     rw [edist_coe, ← coe_nnreal_ennreal_nndist, NNReal.nndist_eq]
@@ -281,16 +281,18 @@ theorem edist_eq_max (a b : ℝ≥0∞) : edist a b = max (a - b) (b - a) := by
   all_goals simp
 
 theorem edist_le_iff_le_add_left (a b c : ℝ≥0∞) : edist a b ≤ c ↔ a ≤ c + b ∧ b ≤ c + a := by
-  simp [edist_eq_max]
+  simp [edist_eq_max, ENNReal.monus_le_iff]
 
 theorem edist_le_iff_le_add_right (a b c : ℝ≥0∞) : edist a b ≤ c ↔ a ≤ b + c ∧ b ≤ a + c := by
   simp only [edist_le_iff_le_add_left, add_comm]
 
-theorem sub_le_dist (a b : ℝ≥0∞) : a - b ≤ edist a b := by
-  grw [edist_eq_max, ← le_max_left]
+theorem monus_le_edist (a b : ℝ≥0∞) : monus a b ≤ edist a b := by
+  rw [edist_eq_max]
+  exact le_max_left _ _
 
 theorem le_add_edist (a b : ℝ≥0∞) : a ≤ b + edist a b := by
-  grw [← sub_le_dist, ← le_add_tsub]
+  rw [add_comm]
+  exact (monus_le_iff.mp (monus_le_edist a b))
 
 @[simp]
 theorem edist_zero_left (a : ℝ≥0∞) : edist 0 a = a := by
@@ -303,20 +305,20 @@ theorem edist_zero_right (a : ℝ≥0∞) : edist a 0 = a := by
 @[simp]
 theorem edist_add_left (a b : ℝ≥0∞) {c : ℝ≥0∞} (hc : c ≠ ∞) :
     edist (c + a) (c + b) = edist a b := by
-  simp only [edist_eq_max, add_sub_add_eq_sub_left hc]
+  simp only [edist_eq_max, add_monus_add_eq_monus_left hc]
 
 @[simp]
 theorem edist_add_right (a b : ℝ≥0∞) {c : ℝ≥0∞} (hc : c ≠ ∞) :
     edist (a + c) (b + c) = edist a b := by
-  simp only [edist_eq_max, add_sub_add_eq_sub_right hc]
+  simp only [edist_eq_max, add_monus_add_eq_monus_right hc]
 
 theorem edist_mul_left (a b : ℝ≥0∞) {c : ℝ≥0∞} (hc : c ≠ ∞) :
     edist (c * a) (c * b) = c * edist a b := by
-  simp_rw [edist_eq_max, mul_max, ENNReal.mul_sub fun _ _ => hc]
+  simp_rw [edist_eq_max, mul_max, ENNReal.mul_monus fun _ _ => hc]
 
 theorem edist_mul_right (a b : ℝ≥0∞) {c : ℝ≥0∞} (hc : c ≠ ∞) :
     edist (a * c) (b * c) = edist a b * c := by
-  simp_rw [edist_eq_max, max_mul, ENNReal.sub_mul fun _ _ => hc]
+  simp_rw [edist_eq_max, max_mul, ENNReal.monus_mul fun _ _ => hc]
 
 end ENNReal
 

@@ -41,6 +41,10 @@ example (a b : ℝ≥0∞) :
     EReal.DivDomain (a : EReal) (b : EReal) ↔ b ≠ 0 ∧ (a ≠ ⊤ ∨ b ≠ ⊤) :=
   EReal.divDomain_coe_ennreal
 
+example (a b : ℝ≥0∞) (h : b ≠ 0 ∧ (a ≠ ⊤ ∨ b ≠ ⊤)) :
+    (ENNReal.div a b h : EReal) = EReal.div a b (EReal.divDomain_coe_ennreal.2 h) :=
+  EReal.coe_ennreal_div a b h
+
 noncomputable section
 
 /--

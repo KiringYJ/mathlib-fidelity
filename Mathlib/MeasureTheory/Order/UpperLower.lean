@@ -53,6 +53,25 @@ open scoped Topology
 
 variable {ι : Type*} [Fintype ι] {s : Set (ι → ℝ)} {x : ι → ℝ}
 
+private lemma divInf_volume_closedBall_quarter (x y : ι → ℝ) {r : ℝ} (hr : 0 < r) :
+    ENNReal.divInf (volume (closedBall y (r / 4))) (volume (closedBall x r)) =
+      ENNReal.ofReal (4⁻¹ ^ Fintype.card ι) := by
+  rw [Real.volume_pi_closedBall y (show 0 ≤ r / 4 from by positivity),
+    Real.volume_pi_closedBall x hr.le, ENNReal.divInf]
+  calc
+    _ = ENNReal.ofReal (((2 * (r / 4)) ^ Fintype.card ι) / ((2 * r) ^ Fintype.card ι)) := by
+      rw [ENNReal.ofReal_div_of_pos (pow_pos (mul_pos zero_lt_two hr) _), ENNReal.div_eq_mul_inv]
+    _ = _ := by
+      congr 1
+      have hu : IsUnit ((2 : ℝ) * r) := (mul_pos zero_lt_two hr).ne'.isUnit
+      rw [← div_pow₀] <;> try assumption
+      congr 1
+      calc
+        2 * (r / 4) / (2 * r) = (2 * r) * (2 * r)⁻¹ * 4⁻¹ := by
+          simp only [div_eq_mul_inv₀]
+          ring
+        _ = _ := by rw [mul_inv_cancel₀ (ha := hu), one_mul]
+
 /-- If we can fit a small ball inside a set `s` intersected with any neighborhood of `x`, then the
 density of `s` near `x` is not `0`.
 
@@ -61,7 +80,8 @@ that the frontier of an order-connected set is null. -/
 private lemma aux₀
     (h : ∀ δ, 0 < δ →
       ∃ y, closedBall y (δ / 4) ⊆ closedBall x δ ∧ closedBall y (δ / 4) ⊆ interior s) :
-    ¬Tendsto (fun r ↦ (volume (closure s ∩ closedBall x r) / volume (closedBall x r)))
+    ¬Tendsto (fun r ↦
+      ENNReal.divInf (volume (closure s ∩ closedBall x r)) (volume (closedBall x r)))
         (𝓝[>] 0) (𝓝 0) := by
   choose f hf₀ hf₁ using h
   intro H
@@ -72,15 +92,16 @@ private lemma aux₀
       lt_of_le_of_lt ?_)
   on_goal 2 =>
     calc
-      ENNReal.ofReal (4⁻¹ ^ Fintype.card ι)
-        = (volume (closedBall (f (ε n) (hε' n)) (ε n / 4)) / volume (closedBall x (ε n))) := ?_
-      _ ≤ (volume (closure s ∩ closedBall x (ε n)) / volume (closedBall x (ε n))) := by
+      ENNReal.ofReal (4⁻¹ ^ Fintype.card ι) =
+          ENNReal.divInf (volume (closedBall (f (ε n) (hε' n)) (ε n / 4)))
+            (volume (closedBall x (ε n))) :=
+        (divInf_volume_closedBall_quarter x _ (hε' n)).symm
+      _ ≤ ENNReal.divInf (volume (closure s ∩ closedBall x (ε n)))
+            (volume (closedBall x (ε n))) := by
+        simp only [ENNReal.divInf]
         gcongr
         exact subset_inter ((hf₁ _ <| hε' n).trans interior_subset_closure) <| hf₀ _ <| hε' n
-    have := hε' n
-    rw [Real.volume_pi_closedBall, Real.volume_pi_closedBall, ← ENNReal.ofReal_div_of_pos,
-      ← div_pow₀, mul_div_mul_left, div_right_comm₀, div_self, one_div₀]
-  all_goals first | positivity | exact (hε' _).ne' | exact isUnit_iff_ne_zero.2 (by positivity)
+  positivity
 
 /-- If we can fit a small ball inside a set `sᶜ` intersected with any neighborhood of `x`, then the
 density of `s` near `x` is not `1`.
@@ -90,38 +111,40 @@ that the frontier of an order-connected set is null. -/
 private lemma aux₁
     (h : ∀ δ, 0 < δ →
       ∃ y, closedBall y (δ / 4) ⊆ closedBall x δ ∧ closedBall y (δ / 4) ⊆ interior sᶜ) :
-    ¬Tendsto (fun r ↦ (volume (closure s ∩ closedBall x r) / volume (closedBall x r)))
+    ¬Tendsto (fun r ↦
+      ENNReal.divInf (volume (closure s ∩ closedBall x r)) (volume (closedBall x r)))
         (𝓝[>] 0) (𝓝 1) := by
   choose f hf₀ hf₁ using h
   intro H
   obtain ⟨ε, -, hε', hε₀⟩ := exists_seq_strictAnti_tendsto_nhdsWithin (0 : ℝ)
   refine not_eventually.2
-      (Frequently.of_forall fun _ ↦ lt_irrefl <| 1 - ENNReal.ofReal (4⁻¹ ^ Fintype.card ι))
+      (Frequently.of_forall fun _ ↦
+        lt_irrefl <| ENNReal.monus 1 (ENNReal.ofReal (4⁻¹ ^ Fintype.card ι)))
       ((Filter.Tendsto.eventually_lt tendsto_const_nhds (H.comp hε₀) <|
-            ENNReal.sub_lt_self ENNReal.one_ne_top one_ne_zero ?_).mono
+            ENNReal.monus_lt_self ENNReal.one_ne_top one_ne_zero ?_).mono
         fun n ↦ lt_of_le_of_lt' ?_)
   on_goal 2 =>
     calc
-      (volume (closure s ∩ closedBall x (ε n)) / volume (closedBall x (ε n)))
-        ≤ volume (closedBall x (ε n) \ closedBall (f (ε n) <| hε' n) (ε n / 4)) /
-            volume (closedBall x (ε n)) := by
-        gcongr
-        rw [sdiff_eq_compl_inter]
-        refine inter_subset_inter_left _ ?_
-        rw [subset_compl_comm, ← interior_compl]
-        exact hf₁ _ _
-      _ = 1 - ENNReal.ofReal (4⁻¹ ^ Fintype.card ι) := ?_
-    have := hε' n
-    rw [measure_sdiff (hf₀ _ _) _ ((Real.volume_pi_closedBall _ _).trans_ne ENNReal.ofReal_ne_top),
-      Real.volume_pi_closedBall, Real.volume_pi_closedBall, ENNReal.sub_div fun _ _ ↦ _,
-      ENNReal.div_self _ ENNReal.ofReal_ne_top, ← ENNReal.ofReal_div_of_pos, ← div_pow₀,
-      mul_div_mul_left, div_right_comm₀, div_self, one_div₀]
-  all_goals first
-    | positivity
-    | exact (hε' _).ne'
-    | exact isUnit_iff_ne_zero.2 (by positivity)
-    | exact measurableSet_closedBall.nullMeasurableSet
-    | intro _ _; exact (ENNReal.ofReal_pos.mpr (by positivity)).ne'
+      ENNReal.divInf (volume (closure s ∩ closedBall x (ε n))) (volume (closedBall x (ε n)))
+        ≤ ENNReal.divInf (volume (closedBall x (ε n) \ closedBall (f (ε n) (hε' n)) (ε n / 4)))
+            (volume (closedBall x (ε n))) := by
+          simp only [ENNReal.divInf]
+          gcongr
+          rw [sdiff_eq_compl_inter]
+          refine inter_subset_inter_left _ ?_
+          rw [subset_compl_comm, ← interior_compl]
+          exact hf₁ _ _
+      _ = ENNReal.monus 1 (ENNReal.ofReal (4⁻¹ ^ Fintype.card ι)) := by
+        have hball₀ := (measure_closedBall_pos volume x (hε' n)).ne'
+        have hballt : volume (closedBall x (ε n)) ≠ ⊤ := measure_closedBall_lt_top.ne
+        rw [measure_sdiff (hf₀ (ε n) (hε' n)) measurableSet_closedBall.nullMeasurableSet
+          measure_closedBall_lt_top.ne]
+        simp only [ENNReal.divInf]
+        rw [ENNReal.monus_mul (fun _ _ => ENNReal.inv_ne_top.2 hball₀),
+          ENNReal.mul_inv_cancel hball₀ hballt]
+        congr 1
+        exact divInf_volume_closedBall_quarter x _ (hε' n)
+  exact (ENNReal.ofReal_pos.2 (pow_pos (inv_pos.mpr (by norm_num)) _)).ne'
 
 theorem IsUpperSet.null_frontier (hs : IsUpperSet s) : volume (frontier s) = 0 := by
   refine measure_mono_null (fun x hx ↦ ?_)

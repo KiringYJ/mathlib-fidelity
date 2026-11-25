@@ -106,7 +106,7 @@ theorem measure_eq_top_of_setLIntegral_ne_top {f : α → ℝ≥0∞} {s : Set �
 theorem meas_ge_le_lintegral_div {f : α → ℝ≥0∞} (hf : AEMeasurable f μ) {ε : ℝ≥0∞} (hε : ε ≠ 0)
     (hε' : ε ≠ ∞) : μ { x | ε ≤ f x } ≤
       (∫⁻ a, f a ∂μ) / ε := by
-  apply (ENNReal.le_div_iff_mul_le (Or.inl hε) (Or.inl hε')).2
+  apply (ENNReal.le_div_iff_mul_le ⟨hε, .inr hε'⟩).2
   simpa only [mul_comm] using mul_meas_ge_le_lintegral₀ hf ε
 
 theorem ae_eq_of_ae_le_of_lintegral_le {f g : α → ℝ≥0∞} (hfg : f ≤ᵐ[μ] g) (hf : ∫⁻ x, f x ∂μ ≠ ∞)

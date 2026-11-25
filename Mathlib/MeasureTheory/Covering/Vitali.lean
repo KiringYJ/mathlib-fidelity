@@ -346,11 +346,11 @@ theorem exists_disjoint_covering_ae
       _ < ∞ := μK
   -- we can obtain a finite subfamily of `v`, such that the measures of the remaining elements
   -- add up to an arbitrarily small number, say `ε / C`.
-  obtain ⟨w, hw⟩ : ∃ w : Finset v, (∑' a : { a // a ∉ w }, μ (B a)) < (ε / (C : ℝ≥0∞)) :=
-    haveI : 0 < (ε / (C : ℝ≥0∞)) := by
-      simp only [ENNReal.div_pos_iff, εpos.ne', ENNReal.coe_ne_top, Ne, not_false_iff,
-        and_self_iff]
-    ((tendsto_order.1 (ENNReal.tendsto_tsum_compl_atTop_zero I.ne)).2 _ this).exists
+  let e := ε * (C : ℝ≥0∞)⁻¹
+  have he : 0 < e :=
+    ENNReal.mul_pos εpos.ne' (ENNReal.inv_ne_zero.2 ENNReal.coe_ne_top)
+  obtain ⟨w, hw⟩ : ∃ w : Finset v, (∑' a : {a // a ∉ w}, μ (B a)) < e :=
+    ((tendsto_order.1 (ENNReal.tendsto_tsum_compl_atTop_zero I.ne)).2 _ he).exists
   -- main property: the points `z` of `s` which are not covered by `u` are contained in the
   -- enlargements of the elements not in `w`.
   have M : (s \ ⋃ a ∈ u, B a) ∩
@@ -420,8 +420,8 @@ theorem exists_disjoint_covering_ae
     _ ≤ ∑' a : { a // a ∉ w }, μ (closedBall (c a) (3 * r a)) := measure_iUnion_le _
     _ ≤ ∑' a : { a // a ∉ w }, C * μ (B a) := (ENNReal.tsum_le_tsum fun a => μB a (ut (vu a.1.2)))
     _ = C * ∑' a : { a // a ∉ w }, μ (B a) := ENNReal.tsum_mul_left
-    _ ≤ C * (ε / (C : ℝ≥0∞)) := by gcongr
-    _ ≤ ε := ENNReal.mul_div_le
+    _ ≤ C * e := by gcongr
+    _ ≤ ε := ENNReal.mul_mul_inv_le
 
 /-- The measurable **Vitali covering theorem**, filter version.
 

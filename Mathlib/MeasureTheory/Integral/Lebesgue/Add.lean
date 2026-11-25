@@ -319,9 +319,13 @@ theorem lintegral_add_left {f : α → ℝ≥0∞} (hf : Measurable f) (g : α �
   rcases exists_measurable_le_lintegral_eq μ fun a => f a + g a with ⟨φ, hφm, hφ_le, hφ_eq⟩
   calc
     ∫⁻ a, f a + g a ∂μ = ∫⁻ a, φ a ∂μ := hφ_eq
-    _ ≤ ∫⁻ a, f a + (φ a - f a) ∂μ := lintegral_mono fun a => le_add_tsub
-    _ = ∫⁻ a, f a ∂μ + ∫⁻ a, φ a - f a ∂μ := lintegral_add_aux hf (hφm.sub hf)
-    _ ≤ ∫⁻ a, f a ∂μ + ∫⁻ a, g a ∂μ := by gcongr with a; exact tsub_le_iff_left.2 <| hφ_le _
+    _ ≤ ∫⁻ a, f a + ENNReal.monus (φ a) (f a) ∂μ :=
+      lintegral_mono fun a => ENNReal.le_monus_add.trans_eq (add_comm _ _)
+    _ = ∫⁻ a, f a ∂μ + ∫⁻ a, ENNReal.monus (φ a) (f a) ∂μ :=
+      lintegral_add_aux hf (hφm.ennreal_monus hf)
+    _ ≤ ∫⁻ a, f a ∂μ + ∫⁻ a, g a ∂μ := by
+      gcongr with a
+      exact ENNReal.monus_le_iff.2 <| (hφ_le a).trans_eq (add_comm _ _)
 
 theorem lintegral_add_left' {f : α → ℝ≥0∞} (hf : AEMeasurable f μ) (g : α → ℝ≥0∞) :
     ∫⁻ a, f a + g a ∂μ = ∫⁻ a, f a ∂μ + ∫⁻ a, g a ∂μ := by

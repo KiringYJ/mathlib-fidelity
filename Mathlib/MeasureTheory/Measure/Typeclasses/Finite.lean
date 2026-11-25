@@ -57,10 +57,11 @@ theorem measure_ne_top (μ : Measure α) [IsFiniteMeasure μ] (s : Set α) : μ 
 
 theorem measure_compl_le_add_of_le_add [IsFiniteMeasure μ] (hs : MeasurableSet s)
     (ht : MeasurableSet t) {ε : ℝ≥0∞} (h : μ s ≤ μ t + ε) : μ tᶜ ≤ μ sᶜ + ε := by
-  rw [measure_compl ht (by finiteness), measure_compl hs (by finiteness), tsub_le_iff_right]
+  rw [measure_compl ht (by finiteness), measure_compl hs (by finiteness), ENNReal.monus_le_iff]
   calc
-    μ univ = μ univ - μ s + μ s := (tsub_add_cancel_of_le <| measure_mono s.subset_univ).symm
-    _ ≤ μ univ - μ s + (μ t + ε) := by gcongr
+    μ univ = ENNReal.monus (μ univ) (μ s) + μ s :=
+      (ENNReal.monus_add_cancel_of_le <| measure_mono s.subset_univ).symm
+    _ ≤ ENNReal.monus (μ univ) (μ s) + (μ t + ε) := by gcongr
     _ = _ := by rw [add_right_comm, add_assoc]
 
 theorem measure_compl_le_add_iff [IsFiniteMeasure μ] (hs : MeasurableSet s) (ht : MeasurableSet t)
@@ -104,8 +105,8 @@ instance isFiniteMeasureSMulNNReal [IsFiniteMeasure μ] {r : ℝ≥0} : IsFinite
 
 instance IsFiniteMeasure.average : IsFiniteMeasure ((μ univ)⁻¹ • μ) where
   measure_univ_lt_top := by
-    rw [Measure.smul_apply, smul_eq_mul, ← ENNReal.div_eq_inv_mul]
-    exact ENNReal.div_self_le_one.trans_lt ENNReal.one_lt_top
+    rw [Measure.smul_apply, smul_eq_mul]
+    exact (ENNReal.inv_mul_le_one _).trans_lt ENNReal.one_lt_top
 
 instance isFiniteMeasureSMulOfNNRealTower {R} [SMul R ℝ≥0] [SMul R ℝ≥0∞] [IsScalarTower R ℝ≥0 ℝ≥0∞]
     [IsScalarTower R ℝ≥0∞ ℝ≥0∞] [IsFiniteMeasure μ] {r : R} : IsFiniteMeasure (r • μ) := by
@@ -214,8 +215,8 @@ theorem abs_measureReal_sub_le_measureReal_symmDiff'
     rw [this, measure_symmDiff_eq hs ht, ENNReal.toReal_add hst hts]
     convert! abs_sub (μ (s \ t)).toReal (μ (t \ s)).toReal <;> simp
   rw [measure_sdiff' s ht ht', measure_sdiff' t hs hs',
-    ENNReal.toReal_sub_of_le measure_le_measure_union_right (by finiteness),
-    ENNReal.toReal_sub_of_le measure_le_measure_union_right (by finiteness),
+    ENNReal.toReal_monus_of_le measure_le_measure_union_right (by finiteness),
+    ENNReal.toReal_monus_of_le measure_le_measure_union_right (by finiteness),
     union_comm t s]
   abel
 

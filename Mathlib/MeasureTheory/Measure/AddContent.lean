@@ -47,7 +47,7 @@ we have the properties
 If `C` is a set ring (`MeasureTheory.IsSetRing C`), we have
 
 * `MeasureTheory.addContent_union_le`: for `s, t ∈ C`, `m (s ∪ t) ≤ m s + m t`
-* `MeasureTheory.addContent_le_sdiff`: for `s, t ∈ C`, `m s - m t ≤ m (s \ t)`
+* `MeasureTheory.addContent_le_sdiff`: for `s, t ∈ C`, `ENNReal.monus (m s) (m t) ≤ m (s \ t)`
 * `IsSetRing.addContent_of_union`: a function on a ring of sets which is additive on pairs of
   disjoint sets defines an additive content
 * `addContent_iUnion_eq_sum_of_tendsto_zero`: if an additive content is continuous at `∅`, then
@@ -566,23 +566,23 @@ lemma addContent_biUnion_le {ι : Type*} (hC : IsSetRing C) {s : ι → Set α}
     exact add_le_add le_rfl (h hs.2)
 
 lemma le_addContent_sdiff (m : AddContent ℝ≥0∞ C) (hC : IsSetRing C) (hs : s ∈ C) (ht : t ∈ C) :
-    m s - m t ≤ m (s \ t) := by
+    ENNReal.monus (m s) (m t) ≤ m (s \ t) := by
+  rw [ENNReal.monus_le_iff_left]
   conv_lhs => rw [← inter_union_sdiff s t]
-  rw [addContent_union hC (hC.inter_mem hs ht) (hC.sdiff_mem hs ht) disjoint_inf_sdiff, add_comm]
-  refine add_tsub_le_assoc.trans_eq ?_
-  rw [tsub_eq_zero_of_le
-    (addContent_mono hC.isSetSemiring (hC.inter_mem hs ht) ht inter_subset_right), add_zero]
+  rw [addContent_union hC (hC.inter_mem hs ht) (hC.sdiff_mem hs ht) disjoint_inf_sdiff]
+  exact add_le_add_left
+    (addContent_mono hC.isSetSemiring (hC.inter_mem hs ht) ht inter_subset_right) _
 
 @[deprecated (since := "2026-06-03")] alias le_addContent_diff := le_addContent_sdiff
 
 lemma addContent_sdiff_of_ne_top (m : AddContent ℝ≥0∞ C) (hC : IsSetRing C)
     (hm_ne_top : ∀ s ∈ C, m s ≠ ∞)
     {s t : Set α} (hs : s ∈ C) (ht : t ∈ C) (hts : t ⊆ s) :
-    m (s \ t) = m s - m t := by
+    m (s \ t) = ENNReal.monus (m s) (m t) := by
   have h_union : m (t ∪ s \ t) = m t + m (s \ t) :=
     addContent_union hC ht (hC.sdiff_mem hs ht) disjoint_sdiff_self_right
   simp_rw [Set.union_sdiff_self, Set.union_eq_right.mpr hts] at h_union
-  rw [h_union, ENNReal.add_sub_cancel_left (hm_ne_top _ ht)]
+  rw [h_union, ENNReal.add_monus_cancel_left (hm_ne_top _ ht)]
 
 @[deprecated (since := "2026-06-03")] alias addContent_diff_of_ne_top := addContent_sdiff_of_ne_top
 
@@ -607,13 +607,13 @@ theorem addContent_iUnion_eq_sum_of_tendsto_zero (hC : IsSetRing C) (m : AddCont
     · simp_rw [s, Set.sdiff_eq]
       rw [Set.iInter_inter_distrib, Set.iInter_const, ← Set.compl_iUnion, Set.iUnion_accumulate]
       exact Set.inter_compl_self _
-  have hmsn n : m (s n) = m (⋃ i, f i) - ∑ i ∈ Finset.range (n + 1), m (f i) := by
+  have hmsn n : m (s n) = ENNReal.monus (m (⋃ i, f i)) (∑ i ∈ Finset.range (n + 1), m (f i)) := by
     rw [addContent_sdiff_of_ne_top m hC hm_ne_top hUf (hC.accumulate_mem hf n)
       (Set.accumulate_subset_iUnion _), addContent_accumulate m hC h_disj hf n]
   simp_rw [hmsn] at h_tendsto
   refine tendsto_nhds_unique ?_ (ENNReal.tendsto_nat_tsum fun i ↦ m (f i))
   refine (Filter.tendsto_add_atTop_iff_nat 1).mp ?_
-  rwa [ENNReal.tendsto_const_sub_nhds_zero_iff (hm_ne_top _ hUf) (fun n ↦ ?_)] at h_tendsto
+  rwa [ENNReal.tendsto_const_monus_nhds_zero_iff (hm_ne_top _ hUf) (fun n ↦ ?_)] at h_tendsto
   rw [← addContent_accumulate m hC h_disj hf]
   exact addContent_mono hC.isSetSemiring (hC.accumulate_mem hf n) hUf
     (Set.accumulate_subset_iUnion _)

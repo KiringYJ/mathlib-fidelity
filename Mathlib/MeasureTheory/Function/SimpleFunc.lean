@@ -927,7 +927,8 @@ lemma tendsto_eapprox {f : α → ℝ≥0∞} (hf_meas : Measurable f) (a : α) 
 in `ℝ≥0`. -/
 def eapproxDiff (f : α → ℝ≥0∞) : ℕ → α →ₛ ℝ≥0
   | 0 => (eapprox f 0).map ENNReal.toNNReal
-  | n + 1 => (eapprox f (n + 1) - eapprox f n).map ENNReal.toNNReal
+  | n + 1 => ((eapprox f (n + 1)).pair (eapprox f n)).map
+      fun p => (ENNReal.monus p.1 p.2).toNNReal
 
 theorem sum_eapproxDiff (f : α → ℝ≥0∞) (n : ℕ) (a : α) :
     (∑ k ∈ Finset.range (n + 1), (eapproxDiff f k a : ℝ≥0∞)) = eapprox f n a := by
@@ -935,12 +936,11 @@ theorem sum_eapproxDiff (f : α → ℝ≥0∞) (n : ℕ) (a : α) :
   | zero =>
     simp [eapproxDiff, (eapprox_lt_top f 0 a).ne]
   | succ n IH =>
-    rw [Finset.sum_range_succ, IH, eapproxDiff, coe_map, Function.comp_apply,
-      coe_sub, Pi.sub_apply, ENNReal.coe_toNNReal,
-      add_tsub_cancel_of_le (monotone_eapprox f (Nat.le_succ _) _)]
-    apply (lt_of_le_of_lt _ (eapprox_lt_top f (n + 1) a)).ne
-    rw [tsub_le_iff_right]
-    exact le_self_add
+    rw [Finset.sum_range_succ, IH]
+    change eapprox f n a +
+      ↑(ENNReal.monus (eapprox f (n + 1) a) (eapprox f n a)).toNNReal = _
+    rw [ENNReal.coe_toNNReal (ENNReal.monus_ne_top (eapprox_lt_top f (n + 1) a).ne),
+      add_comm, ENNReal.monus_add_cancel_of_le (monotone_eapprox f (Nat.le_succ n) a)]
 
 theorem tsum_eapproxDiff (f : α → ℝ≥0∞) (hf : Measurable f) (a : α) :
     (∑' n, (eapproxDiff f n a : ℝ≥0∞)) = f a := by

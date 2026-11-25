@@ -147,7 +147,7 @@ theorem _root_.MeasureTheory.IsCondExp.ae_eq_zero_or_one_iff (hm : m ≤ m0) {t 
       rw [Set.inter_self, measureReal_def, measureReal_def,
         ENNReal.toReal_eq_toReal_iff' (hμ_inter s) hμs] at h
       rw [← Set.sdiff_inter_self_eq_sdiff, measure_sdiff Set.inter_subset_right
-        (ht.inter hs'.nullMeasurableSet) (hμ_inter s), h, tsub_self]
+        (ht.inter hs'.nullMeasurableSet) (hμ_inter s), h, ENNReal.monus_self]
   · rintro ⟨s, hs, hts⟩
     have hs_ver : IsCondExp m μ (t.indicator fun _ ↦ (1 : ℝ)) (s.indicator fun _ ↦ (1 : ℝ)) :=
       (isCondExp_self (stronglyMeasurable_const.indicator hs).aestronglyMeasurable).congr_left

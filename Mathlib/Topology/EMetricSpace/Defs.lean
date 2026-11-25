@@ -184,10 +184,10 @@ theorem EMetric.isOpen_iff : IsOpen s ↔ ∀ x ∈ s, ∃ ε > 0, eball x ε �
 
 @[simp] theorem Metric.isOpen_eball {r : ℝ≥0∞} : IsOpen (eball x r) := by
   apply EMetric.isOpen_iff.mpr fun y hy ↦ ?_
-  refine ⟨r - edist x y, by simp_all [PseudoEMetricSpace.edist_comm], fun a ha ↦ ?_⟩
+  refine ⟨ENNReal.monus r (edist x y), by simp_all [PseudoEMetricSpace.edist_comm], fun a ha ↦ ?_⟩
   simp only [mem_eball, PseudoEMetricSpace.edist_comm y x] at hy ha ⊢
   grw [PseudoEMetricSpace.edist_triangle a y x, PseudoEMetricSpace.edist_comm y x,
-    ← tsub_add_cancel_of_le hy.le, (ENNReal.add_lt_add_iff_right (LT.lt.ne_top hy)).mpr ha]
+    ← ENNReal.monus_add_cancel_of_le hy.le, (ENNReal.add_lt_add_iff_right (LT.lt.ne_top hy)).mpr ha]
 
 end
 
@@ -577,9 +577,9 @@ theorem eball_subset (h : edist x y + ε₁ ≤ ε₂) (h' : edist x y ≠ ∞) 
     _ ≤ ε₂ := h
 
 theorem exists_eball_subset_eball (h : y ∈ eball x ε) : ∃ ε' > 0, eball y ε' ⊆ eball x ε := by
-  have : 0 < ε - edist y x := by simpa using h
-  refine ⟨ε - edist y x, this, eball_subset ?_ (ne_top_of_lt h)⟩
-  exact (add_tsub_cancel_of_le (mem_eball.mp h).le).le
+  have : 0 < ENNReal.monus ε (edist y x) := by simpa using h
+  refine ⟨ENNReal.monus ε (edist y x), this, eball_subset ?_ (ne_top_of_lt h)⟩
+  simpa only [add_comm] using (ENNReal.monus_add_cancel_of_le (mem_eball.mp h).le).le
 
 theorem eball_eq_empty_iff : eball x ε = ∅ ↔ ε = 0 :=
   eq_empty_iff_forall_notMem.trans

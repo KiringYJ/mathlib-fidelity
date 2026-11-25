@@ -97,8 +97,8 @@ protected theorem injective {α : Type*} {β : Type*} [EMetricSpace α] [PseudoE
 
 theorem mul_le_edist (hf : AntilipschitzWith K f) (x y : α) :
     (K : ℝ≥0∞)⁻¹ * edist x y ≤ edist (f x) (f y) := by
-  rw [mul_comm, ← div_eq_mul_inv]
-  exact ENNReal.div_le_of_le_mul' (hf x y)
+  rw [mul_comm]
+  exact ENNReal.mul_inv_le_of_le_mul (by simpa only [mul_comm] using hf x y)
 
 theorem ediam_preimage_le (hf : AntilipschitzWith K f) (s : Set β) :
     ediam (f ⁻¹' s) ≤ K * ediam s :=
@@ -145,9 +145,10 @@ theorem comap_uniformity_le (hf : AntilipschitzWith K f) : (𝓤 β).comap (Prod
   refine ((uniformity_basis_edist.comap _).le_basis_iff uniformity_basis_edist).2 fun ε h₀ => ?_
   refine ⟨(↑K)⁻¹ * ε, ENNReal.mul_pos (ENNReal.inv_ne_zero.2 ENNReal.coe_ne_top) h₀.ne', ?_⟩
   refine fun x hx => (hf x.1 x.2).trans_lt ?_
-  rw [mul_comm, ← div_eq_mul_inv] at hx
+  change edist (f x.1) (f x.2) < (K : ℝ≥0∞)⁻¹ * ε at hx
+  rw [mul_comm] at hx
   rw [mul_comm]
-  exact ENNReal.mul_lt_of_lt_div hx
+  exact ENNReal.mul_lt_of_lt_mul_inv hx
 
 theorem isUniformInducing (hf : AntilipschitzWith K f) (hfc : UniformContinuous f) :
     IsUniformInducing f :=

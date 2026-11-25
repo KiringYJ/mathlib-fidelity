@@ -91,21 +91,20 @@ lemma gc_ceil_toENNReal : GaloisConnection ceil (↑) := fun _ _ ↦ ceil_le
 
 @[simp] lemma floor_le (hn : n ≠ ⊤) : ⌊r⌋ₑ ≤ n ↔ r < n + 1 := by simp [← lt_add_one_iff hn]
 
-@[simp] lemma le_ceil (hn₀ : n ≠ 0) (hn : n ≠ ⊤) : n ≤ ⌈r⌉ₑ ↔ n - 1 < r := by
-  lift n to ℕ using hn
-  cases r
-  · simp only [ceil_top, le_top, toENNReal_coe, true_iff]
-    norm_cast
-    exact ENNReal.coe_lt_top
-  · simp only [ne_eq, Nat.cast_eq_zero, ceil_coe, Nat.cast_le, toENNReal_coe] at hn₀ ⊢
-    norm_cast
-    rw [← Nat.add_one_le_ceil_iff, Nat.sub_add_cancel]
+@[simp] lemma le_ceil (hn₀ : n ≠ 0) (hn : n ≠ ⊤) :
+    n ≤ ⌈r⌉ₑ ↔ ((n - 1 : ℕ∞) : ℝ≥0∞) < r := by
+  have h₁ : (1 : ℕ∞) ≤ n := by
+    lift n to ℕ using hn
+    norm_cast at hn₀ ⊢
     lia
+  have hfinite : n - 1 ≠ ⊤ := ne_top_of_le_ne_top hn tsub_le_self
+  rw [← lt_ceil, ← add_one_le_iff hfinite, tsub_add_cancel_of_le h₁]
 
 @[simp] lemma lt_floor (hn : n ≠ ⊤) : n < ⌊r⌋ₑ ↔ n + 1 ≤ r := by simp [← add_one_le_iff hn]
 
-@[simp] lemma ceil_lt (hn₀ : n ≠ 0) (hn : n ≠ ⊤) : ⌈r⌉ₑ < n ↔ r ≤ n - 1 := by
-  simpa using (le_ceil hn₀ hn).not
+@[simp] lemma ceil_lt (hn₀ : n ≠ 0) (hn : n ≠ ⊤) :
+    ⌈r⌉ₑ < n ↔ r ≤ ((n - 1 : ℕ∞) : ℝ≥0∞) := by
+  simpa only [not_le, not_lt] using (le_ceil hn₀ hn).not
 
 lemma floor_mono : Monotone (floor : ℝ≥0∞ → ℕ∞) :=
   fun r s hrs ↦ by simpa using hrs.trans' floor_le_self
@@ -152,7 +151,7 @@ lemma ceil_congr (h : ∀ n : ℕ∞, r ≤ n ↔ s ≤ n) : ⌈r⌉ₑ = ⌈s�
   | ∞, _ => by simp
   | _, ⊤ => by simp
   | (r : ℝ≥0), (n : ℕ) => by
-    -- FIXME: Why does `norm_cast` not use `ENNReal.ofNNReal_sub_natCast`?
+    -- FIXME: Why does `norm_cast` not use `ENNReal.ofNNReal_add_natCast`?
     norm_cast; rw [← ENNReal.ofNNReal_add_natCast]; norm_cast; exact Nat.ceil_add_natCast zero_le _
 
 @[simp] lemma floor_toENNReal_add (r : ℝ≥0∞) (n : ℕ∞) : ⌊n + r⌋ₑ = n + ⌊r⌋ₑ := by
@@ -178,34 +177,46 @@ lemma floor_add_ofNat (r : ℝ≥0∞) (n : ℕ) [n.AtLeastTwo] : ⌊r + ofNat(n
 lemma ceil_add_ofNat (r : ℝ≥0∞) (n : ℕ) [n.AtLeastTwo] : ⌈r + ofNat(n)⌉ₑ = ⌈r⌉ₑ + ofNat(n) :=
   ceil_add_natCast r n
 
-@[simp] lemma floor_sub_toENNReal : ∀ (r : ℝ≥0∞) (n : ℕ∞), ⌊r - n⌋ₑ = ⌊r⌋ₑ - n
+@[simp] lemma floor_monus_toENNReal : ∀ (r : ℝ≥0∞) (n : ℕ∞), ⌊ENNReal.monus r n⌋ₑ = ⌊r⌋ₑ - n
   | ∞, ⊤ => by simp
   | ∞, (n : ℕ) => by simp
   | (r : ℝ≥0), ⊤ => by simp
   | (r : ℝ≥0), (n : ℕ) => by
-    -- FIXME: Why does `norm_cast` not use `ENNReal.ofNNReal_sub_natCast`?
-    norm_cast; rw [← ENNReal.ofNNReal_sub_natCast]; norm_cast; exact Nat.floor_sub_natCast ..
+    norm_cast
+    rw [← ENNReal.ofNNReal_monus_natCast]
+    norm_cast
+    exact Nat.floor_sub_natCast r n
 
-@[simp] lemma ceil_sub_toENNReal : ∀ (r : ℝ≥0∞) (n : ℕ∞), ⌈r - n⌉ₑ = ⌈r⌉ₑ - n
+@[simp] lemma ceil_monus_toENNReal : ∀ (r : ℝ≥0∞) (n : ℕ∞), ⌈ENNReal.monus r n⌉ₑ = ⌈r⌉ₑ - n
   | ∞, ⊤ => by simp
   | ∞, (n : ℕ) => by simp
   | (r : ℝ≥0), ⊤ => by simp
   | (r : ℝ≥0), (n : ℕ) => by
-    -- FIXME: Why does `norm_cast` not use `ENNReal.ofNNReal_sub_natCast`?
-    norm_cast; rw [← ENNReal.ofNNReal_sub_natCast]; norm_cast; exact Nat.ceil_sub_natCast ..
+    norm_cast
+    rw [← ENNReal.ofNNReal_monus_natCast]
+    norm_cast
+    exact Nat.ceil_sub_natCast r n
 
-@[simp] lemma floor_sub_natCast (r : ℝ≥0∞) (n : ℕ) : ⌊r - n⌋ₑ = ⌊r⌋ₑ - n := floor_sub_toENNReal r n
-@[simp] lemma ceil_sub_natCast (r : ℝ≥0∞) (n : ℕ) : ⌈r - n⌉ₑ = ⌈r⌉ₑ - n := ceil_sub_toENNReal r n
+@[simp] lemma floor_monus_natCast (r : ℝ≥0∞) (n : ℕ) : ⌊ENNReal.monus r n⌋ₑ = ⌊r⌋ₑ - n :=
+  floor_monus_toENNReal r n
 
-@[simp] lemma floor_sub_one (r : ℝ≥0∞) : ⌊r - 1⌋ₑ = ⌊r⌋ₑ - 1 := mod_cast floor_sub_toENNReal r 1
-@[simp] lemma ceil_sub_one (r : ℝ≥0∞) : ⌈r - 1⌉ₑ = ⌈r⌉ₑ - 1 := mod_cast ceil_sub_toENNReal r 1
+@[simp] lemma ceil_monus_natCast (r : ℝ≥0∞) (n : ℕ) : ⌈ENNReal.monus r n⌉ₑ = ⌈r⌉ₑ - n :=
+  ceil_monus_toENNReal r n
+
+@[simp] lemma floor_monus_one (r : ℝ≥0∞) : ⌊ENNReal.monus r 1⌋ₑ = ⌊r⌋ₑ - 1 :=
+  mod_cast floor_monus_toENNReal r 1
+
+@[simp] lemma ceil_monus_one (r : ℝ≥0∞) : ⌈ENNReal.monus r 1⌉ₑ = ⌈r⌉ₑ - 1 :=
+  mod_cast ceil_monus_toENNReal r 1
 
 @[simp]
-lemma floor_sub_ofNat (r : ℝ≥0∞) (n : ℕ) [n.AtLeastTwo] : ⌊r - ofNat(n)⌋ₑ = ⌊r⌋ₑ - ofNat(n) :=
-  floor_sub_toENNReal r n
+lemma floor_monus_ofNat (r : ℝ≥0∞) (n : ℕ) [n.AtLeastTwo] :
+    ⌊ENNReal.monus r (ofNat(n))⌋ₑ = ⌊r⌋ₑ - ofNat(n) :=
+  floor_monus_toENNReal r n
 
-@[simp] lemma ceil_sub_ofNat (r : ℝ≥0∞) (n : ℕ) [n.AtLeastTwo] :
-    ⌈r - ofNat(n)⌉ₑ = ⌈r⌉ₑ - ofNat(n) := ceil_sub_toENNReal r n
+@[simp] lemma ceil_monus_ofNat (r : ℝ≥0∞) (n : ℕ) [n.AtLeastTwo] :
+    ⌈ENNReal.monus r (ofNat(n))⌉ₑ = ⌈r⌉ₑ - ofNat(n) :=
+  ceil_monus_toENNReal r n
 
 @[bound]
 lemma ceil_lt_add_one (hr : r ≠ ∞) : (⌈r⌉ₑ : ℝ≥0∞) < r + 1 := by

@@ -26,10 +26,8 @@ algebraic and lattice structure can be found in `Mathlib.Basic.ENNReal.Real`.
 
 This file proves many of the order properties of `ℝ≥0∞`, with the exception of the ways those relate
 to the algebraic structure, which are included in `Mathlib.Basic.ENNReal.Operations`.
-This file also defines inversion and division: this includes `Inv` and `Div` instances on `ℝ≥0∞`
-making it into a `DivInvOneMonoid`.
-As a consequence of being a `DivInvOneMonoid`, `ℝ≥0∞` inherits a power operation with integer
-exponent: this and other properties is shown in `Mathlib.Basic.ENNReal.Inv`.
+This file also defines inversion, integer powers, and the ordinary, continuous and infimum
+quotients. Properties of these operations are shown in `Mathlib.Basic.ENNReal.Inv`.
 
 
 ## Main definitions
@@ -46,20 +44,22 @@ exponent: this and other properties is shown in `Mathlib.Basic.ENNReal.Inv`.
   - `a * b` is defined so that `↑p * ↑q = ↑(p * q)` for `(p q : ℝ≥0)`, `0 * ∞ = ∞ * 0 = 0`, and
     `a * ∞ = ∞ * a = ∞` for `a ≠ 0`;
 
-  - `a - b` is defined as the minimal `d` such that `a ≤ d + b`; this way we have
-    `↑p - ↑q = ↑(p - q)`, `∞ - ↑p = ∞`, `↑p - ∞ = ∞ - ∞ = 0`; note that there is no negation, only
-    subtraction;
+  - `ENNReal.monus a b` is the least `q` such that `a ≤ q + b`.
+    On finite inputs it is the coercion of `ℝ≥0` truncated subtraction;
+    `ENNReal.monus ∞ ↑p = ∞` and `ENNReal.monus a ∞ = 0`.
+    There is no subtraction instance on `ℝ≥0∞`.
 
   The addition and multiplication defined this way together with `0 = ↑0` and `1 = ↑1` turn
   `ℝ≥0∞` into a canonically ordered commutative semiring of characteristic zero.
 
   - `a⁻¹` is defined as `Inf {b | 1 ≤ a * b}`. This way we have `(↑p)⁻¹ = ↑(p⁻¹)` for
     `p : ℝ≥0`, `p ≠ 0`, `0⁻¹ = ∞`, and `∞⁻¹ = 0`.
-  - `a / b` is defined as `a * b⁻¹`.
-
-  This inversion and division include `Inv` and `Div` instances on `ℝ≥0∞`,
-  making it into a `DivInvOneMonoid`. Further properties of these are shown in
-  `Mathlib.Basic.ENNReal.Inv`.
+  - `a / b` means `ENNReal.div a b h`, with evidence that `b ≠ 0` and at least one operand is
+    finite.
+  - `ENNReal.extendedDiv` also allows a nonzero numerator over zero. Both quotients compute
+    `a * b⁻¹` on their respective domains.
+  - `ENNReal.divInf a b` is the infimum of the multipliers `q` with `a ≤ b * q`. It also computes
+    `a * b⁻¹`, taking value zero at `(0, 0)` and `(⊤, ⊤)`.
 
 * Coercions to/from other types:
 
@@ -164,9 +164,16 @@ noncomputable instance : LinearOrder ℝ≥0∞ :=
 instance : IsOrderedAddMonoid ℝ≥0∞ :=
   inferInstanceAs (IsOrderedAddMonoid (WithTop ℝ≥0))
 
-instance instSub : Sub ℝ≥0∞ := inferInstanceAs (Sub (WithTop ℝ≥0))
+/-- The least `q` such that `a ≤ q + b`. In particular, `monus ⊤ ⊤ = 0`. -/
+def monus (a b : ℝ≥0∞) : ℝ≥0∞ :=
+  WithTop.sub (α := ℝ≥0) a b
 
-instance : OrderedSub ℝ≥0∞ := inferInstanceAs (OrderedSub (WithTop ℝ≥0))
+/-- `monus a b` is the additive residual for every pair of extended nonnegative reals. -/
+theorem monus_le_iff {a b q : ℝ≥0∞} : monus a b ≤ q ↔ a ≤ q + b :=
+  tsub_le_iff_right (α := WithTop ℝ≥0)
+
+theorem monus_le_iff_left {a b q : ℝ≥0∞} : monus a b ≤ q ↔ a ≤ b + q := by
+  rw [monus_le_iff, add_comm]
 
 noncomputable instance : LinearOrderedAddCommMonoidWithTop ℝ≥0∞ :=
   inferInstanceAs (LinearOrderedAddCommMonoidWithTop (WithTop ℝ≥0))
@@ -174,7 +181,28 @@ noncomputable instance : LinearOrderedAddCommMonoidWithTop ℝ≥0∞ :=
 -- RFC: redefine using pattern matching?
 noncomputable instance : Inv ℝ≥0∞ := ⟨fun a => sInf { b | 1 ≤ a * b }⟩
 
-noncomputable instance : DivInvMonoid ℝ≥0∞ where
+noncomputable instance : Pow ℝ≥0∞ ℤ where
+  pow a
+    | .ofNat n => a ^ n
+    | .negSucc n => (a ^ (n + 1))⁻¹
+
+@[simp] protected theorem zpow_natCast (a : ℝ≥0∞) (n : ℕ) :
+    a ^ (n : ℤ) = a ^ n := rfl
+
+@[simp] protected theorem zpow_negSucc (a : ℝ≥0∞) (n : ℕ) :
+    a ^ (Int.negSucc n) = (a ^ (n + 1))⁻¹ := rfl
+
+@[simp] protected theorem zpow_zero (a : ℝ≥0∞) : a ^ (0 : ℤ) = 1 :=
+  pow_zero a
+
+/-- Continuous extension of the positive finite quotient, excluding `(0, 0)` and `(⊤, ⊤)`. -/
+noncomputable def extendedDiv (a b : ℝ≥0∞)
+    (_h : (a ≠ 0 ∨ b ≠ 0) ∧ (a ≠ ⊤ ∨ b ≠ ⊤)) : ℝ≥0∞ :=
+  a * b⁻¹
+
+/-- Infimum of the multipliers `q` satisfying `a ≤ b * q`. See `ENNReal.divInf_eq_sInf`. -/
+noncomputable def divInf (a b : ℝ≥0∞) : ℝ≥0∞ :=
+  a * b⁻¹
 
 variable {a b c : ℝ≥0∞} {r p q : ℝ≥0} {n : ℕ}
 
@@ -515,6 +543,53 @@ theorem natCast_ne_top (n : ℕ) : (n : ℝ≥0∞) ≠ ∞ := WithTop.natCast_n
 @[simp, aesop (rule_sets := [finiteness]) safe apply]
 lemma ofNat_ne_top {n : ℕ} [Nat.AtLeastTwo n] : ofNat(n) ≠ ∞ := natCast_ne_top n
 
+theorem isUnit_ne_top (h : IsUnit a) : a ≠ ∞ := by
+  obtain ⟨u, rfl⟩ := h
+  intro he
+  have hm : (↑u : ℝ≥0∞) * ↑u⁻¹ = 1 := u.val_inv
+  rw [he] at hm
+  have ht : (∞ : ℝ≥0∞) * ↑u⁻¹ = ∞ := WithTop.top_mul u⁻¹.ne_zero
+  rw [ht] at hm
+  exact top_ne_one hm
+
+/-- Discharge the domain of ordinary nonnegative extended-real division. -/
+syntax (name := solveENNRealDivDomain) "ennreal_div_domain" : tactic
+
+set_option linter.style.setOption false in
+-- Bound the search even when invoked speculatively by the printer.
+macro_rules
+  | `(tactic| ennreal_div_domain) => do
+      let finite ← `(tactic| solve
+        | assumption
+        | exact ENNReal.zero_ne_top
+        | exact ENNReal.one_ne_top
+        | exact ENNReal.ofNat_ne_top
+        | exact ENNReal.natCast_ne_top _
+        | exact ENNReal.coe_ne_top
+        | exact ENNReal.ofReal_ne_top
+        | exact ne_top_of_lt ‹_›
+        | exact ENNReal.isUnit_ne_top ‹_›)
+      `(tactic|
+        first
+        | done
+        | (set_option maxHeartbeats 1000 in
+            solve
+            | assumption
+            | (refine ⟨?_, ?_⟩
+               · solve
+                 | exact ENNReal.top_ne_zero
+                 | checked_nonzero
+               · solve
+                 | assumption
+                 | (left; $finite:tactic)
+                 | (right; $finite:tactic))
+            | fail "ENNReal division requires a nonzero denominator and a finite operand"))
+
+/-- Ordinary nonnegative extended-real quotient, on the domain inherited from `EReal`. -/
+noncomputable def div (a b : ℝ≥0∞)
+    (h : b ≠ 0 ∧ (a ≠ ⊤ ∨ b ≠ ⊤) := by ennreal_div_domain) : ℝ≥0∞ :=
+  extendedDiv a b ⟨Or.inr h.1, h.2⟩
+
 @[simp]
 lemma ofNat_lt_top {n : ℕ} [Nat.AtLeastTwo n] : ofNat(n) < ∞ := natCast_lt_top n
 
@@ -529,8 +604,11 @@ lemma ofNat_lt_top {n : ℕ} [Nat.AtLeastTwo n] : ofNat(n) < ∞ := natCast_lt_t
 @[simp, norm_cast] lemma ofNNReal_add_natCast (r : ℝ≥0) (n : ℕ) : ofNNReal (r + n) = r + n := rfl
 @[simp, norm_cast] lemma ofNNReal_natCast_add (n : ℕ) (r : ℝ≥0) : ofNNReal (n + r) = n + r := rfl
 
-@[simp, norm_cast] lemma ofNNReal_sub_natCast (r : ℝ≥0) (n : ℕ) : ofNNReal (r - n) = r - n := rfl
-@[simp, norm_cast] lemma ofNNReal_natCast_sub (n : ℕ) (r : ℝ≥0) : ofNNReal (n - r) = n - r := rfl
+@[simp, norm_cast] lemma ofNNReal_monus_natCast (r : ℝ≥0) (n : ℕ) :
+    ofNNReal (r - n) = monus r n := rfl
+
+@[simp, norm_cast] lemma ofNNReal_natCast_monus (n : ℕ) (r : ℝ≥0) :
+    ofNNReal (n - r) = monus n r := rfl
 
 @[simp] theorem one_lt_top : 1 < ∞ := coe_lt_top
 

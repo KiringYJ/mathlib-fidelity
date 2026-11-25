@@ -389,7 +389,7 @@ private lemma measure_condExpKernel_add_lt_condDistrib_eq_zero {β γ : Type*}
     rcases ha haB with h0 | h1
     · have : η₂ a (X ⁻¹' s) + ε < 0 := h0 ▸ haE
       exact absurd this (not_lt.2 zero_le)
-    · rw [prob_compl_eq_one_sub hs, h1, tsub_self]
+    · rw [prob_compl_eq_one_sub hs, h1, ENNReal.monus_self]
   -- The integral over `E` of the mass of `X ⁻¹' sᶜ` vanishes, so the other is `1` there too.
   have hv : ∀ᵐ a ∂μ, a ∈ E → η₂ a (X ⁻¹' sᶜ) = 0 := by
     have h := setLIntegral_condDistrib_eq_setLIntegral_condExpKernel hX hY hη₁ hη₂
@@ -402,7 +402,7 @@ private lemma measure_condExpKernel_add_lt_condDistrib_eq_zero {β γ : Type*}
   have hv1 : η₂ a (X ⁻¹' s) = 1 := by
     have ha' := ha haE
     rw [preimage_compl, prob_compl_eq_one_sub (hX hs)] at ha'
-    exact le_antisymm prob_le_one (tsub_eq_zero_iff_le.1 ha')
+    exact le_antisymm prob_le_one (ENNReal.monus_eq_zero_iff_le.1 ha')
   have h_lt : η₂ a (X ⁻¹' s) + ε < η₁ (Y a) s := haE
   rw [hv1] at h_lt
   exact absurd (h_lt.trans_le prob_le_one) (not_lt.2 le_self_add)
@@ -450,7 +450,7 @@ lemma condDistrib_apply_ae_eq_condExpKernel_map {β γ : Type*} {mβ : SigmaAlge
   filter_upwards [h_le s hs, h_le sᶜ hs.compl] with a h h'
   refine le_antisymm h ?_
   rw [prob_compl_eq_one_sub hs, preimage_compl, prob_compl_eq_one_sub (hX hs)] at h'
-  exact (ENNReal.sub_le_sub_iff_left prob_le_one ENNReal.one_ne_top).1 h'
+  exact (ENNReal.monus_le_monus_iff_left prob_le_one ENNReal.one_ne_top).1 h'
 
 /-- If `μ.trim hm` is s-finite, then for every s-finite representative `η` of `condExpKernel μ hm`
 and every integrable `f`, `fun ω => ∫ y, f y ∂(η ω)` is a conditional expectation of `f` given

@@ -80,7 +80,7 @@ structure IsAddFoelner : Prop where
   eventually_meas_ne_zero : ∀ᶠ i in l, μ (F i) ≠ 0
   eventually_meas_ne_top : ∀ᶠ i in l, μ (F i) ≠ ∞
   tendsto_meas_vadd_symmDiff (g : G) :
-    Tendsto (fun i ↦ (μ ((g +ᵥ F i) ∆ F i) / μ (F i))) l (𝓝 0)
+    Tendsto (fun i ↦ ENNReal.divInf (μ ((g +ᵥ F i) ∆ F i)) (μ (F i))) l (𝓝 0)
 
 variable (G μ l F) in
 /-- Consider a group `G` acting on a measure space `X`.
@@ -94,7 +94,7 @@ structure IsFoelner : Prop where
   eventually_meas_ne_zero : ∀ᶠ i in l, μ (F i) ≠ 0
   eventually_meas_ne_top : ∀ᶠ i in l, μ (F i) ≠ ∞
   tendsto_meas_smul_symmDiff (g : G) :
-    Tendsto (fun i ↦ (μ ((g • F i) ∆ F i) / μ (F i))) l (𝓝 0)
+    Tendsto (fun i ↦ ENNReal.divInf (μ ((g • F i) ∆ F i)) (μ (F i))) l (𝓝 0)
 
 attribute [to_additive IsAddFoelner] IsFoelner
 attribute [to_additive existing isAddFoelner_iff] isFoelner_iff
@@ -108,7 +108,7 @@ theorem univ_of_isFiniteMeasure [NeZero μ] [IsFiniteMeasure μ] :
   eventually_measurableSet := by simp
   eventually_meas_ne_zero := by simp [NeZero.ne]
   eventually_meas_ne_top := by simp
-  tendsto_meas_smul_symmDiff := by simp [tendsto_const_nhds]
+  tendsto_meas_smul_symmDiff := by simp [ENNReal.divInf, tendsto_const_nhds]
 
 @[to_additive]
 theorem mono {l' : Filter ι} (hfoel : IsFoelner G μ l F) (hle : l' ≤ l) :
@@ -132,16 +132,17 @@ variable (μ u F) in
 @[to_additive
 /-- The limit along an ultrafilter of the density of a set with respect to a sequence in `X`. -/]
 noncomputable def mean (s : Set X) :=
-  limUnder u (fun i ↦ (μ (s ∩ F i) / μ (F i)))
+  limUnder u (fun i ↦ ENNReal.divInf (μ (s ∩ F i)) (μ (F i)))
 
 @[to_additive]
 theorem tendsto_nhds_mean (hfoel : IsFoelner G μ u F) (s : Set X) :
-    Tendsto (fun i ↦ (μ (s ∩ F i) / μ (F i))) u (𝓝 (mean μ u F s)) := by
-  have mem_Icc : ∀ᶠ i in u, (μ (s ∩ F i) / μ (F i)) ∈ Icc 0 1 := by
+    Tendsto (fun i ↦ ENNReal.divInf (μ (s ∩ F i)) (μ (F i))) u (𝓝 (mean μ u F s)) := by
+  have mem_Icc : ∀ᶠ i in u, ENNReal.divInf (μ (s ∩ F i)) (μ (F i)) ∈ Icc 0 1 := by
     filter_upwards [hfoel.eventually_meas_ne_zero, hfoel.eventually_meas_ne_top] with i hi hi'
+    change ENNReal.div (μ (s ∩ F i)) (μ (F i)) ⟨hi, Or.inr hi'⟩ ∈ Icc 0 1
     simpa [ENNReal.div_le_iff hi hi'] using μ.mono inter_subset_right
   obtain ⟨x, hx⟩ := isCompact_Icc.ultrafilter_le_nhds'
-    (u.map (fun i ↦ (μ (s ∩ F i) / μ (F i)))) (mem_map.1 mem_Icc)
+    (u.map (fun i ↦ ENNReal.divInf (μ (s ∩ F i)) (μ (F i)))) (mem_map.1 mem_Icc)
   exact tendsto_nhds_limUnder (by use x; exact hx.2)
 
 @[to_additive]
@@ -149,7 +150,7 @@ theorem mean_univ_eq_one (hfoel : IsFoelner G μ u F) :
     mean μ u F .univ = 1 := by
   refine tendsto_nhds_unique_of_eventuallyEq (hfoel.tendsto_nhds_mean _) tendsto_const_nhds ?_
   filter_upwards [hfoel.eventually_meas_ne_zero, hfoel.eventually_meas_ne_top] with i hi hi'
-  simp [ENNReal.div_self hi hi']
+  simp [ENNReal.divInf, ENNReal.mul_inv_cancel hi hi']
 
 @[to_additive]
 theorem mean_union_eq_add_of_disjoint (hfoel : IsFoelner G μ u F)
@@ -159,12 +160,13 @@ theorem mean_union_eq_add_of_disjoint (hfoel : IsFoelner G μ u F)
     (hfoel.tendsto_nhds_mean _) (hfoel.tendsto_nhds_mean _ |>.add <| hfoel.tendsto_nhds_mean _) ?_
   filter_upwards [hfoel.eventually_measurableSet] with i hi
   rw [union_inter_distrib_right,
-    measure_union (hdisj.inter_left _ |>.inter_right _) (ht.inter hi), ENNReal.add_div]
+    measure_union (hdisj.inter_left _ |>.inter_right _) (ht.inter hi)]
+  simp only [ENNReal.divInf, add_mul]
 
 @[to_additive]
 theorem tendsto_meas_smul_symmDiff_smul [SMulInvariantMeasure G X μ]
     (hfoel : IsFoelner G μ u F) (g h : G) :
-    Tendsto (fun i ↦ (μ ((g • F i) ∆ (h • F i)) / μ (F i))) u (𝓝 0) := by
+    Tendsto (fun i ↦ ENNReal.divInf (μ ((g • F i) ∆ (h • F i))) (μ (F i))) u (𝓝 0) := by
   simpa [← smul_smul] using hfoel.tendsto_meas_smul_symmDiff (h⁻¹ * g)
 
 @[to_additive]
@@ -179,8 +181,10 @@ theorem mean_smul_eq_mean_smul [SMulInvariantMeasure G X μ]
     (hfoel.tendsto_nhds_mean (g • s))
     (hfoel.tendsto_nhds_mean (h • s) |>.add <| hfoel.tendsto_meas_smul_symmDiff_smul g⁻¹ h⁻¹) ?_
   filter_upwards [hfoel.eventually_meas_ne_zero] with i hi
-  rw [← tsub_le_iff_left, ← ENNReal.sub_div <| fun _ _ ↦ hi]
-  refine ENNReal.div_le_div_right (le_trans ?_ (measure_mono <| @inter_subset_right _ s _)) _
+  rw [← ENNReal.monus_le_iff_left]
+  simp only [ENNReal.divInf]
+  rw [← ENNReal.monus_mul (fun _ _ ↦ ENNReal.inv_ne_top.2 hi)]
+  refine mul_le_mul' (le_trans ?_ (measure_mono <| @inter_subset_right _ s _)) le_rfl
   simpa [inter_symmDiff_distrib_left, ← measure_inter_inv_smul] using le_measure_symmDiff
 
 @[to_additive]
@@ -217,7 +221,7 @@ variable (G μ) in
     on measurable sets of finite non-zero measure. -/]
 noncomputable def maxFoelner : Filter (Set X) :=
   𝓟 {s : Set X | MeasurableSet s ∧ μ s ≠ 0 ∧ μ s ≠ ∞} ⊓
-  ⨅ (g : G), comap (fun s ↦ (μ ((g • s) ∆ s) / μ s)) (𝓝 0)
+  ⨅ (g : G), comap (fun s ↦ ENNReal.divInf (μ ((g • s) ∆ s)) (μ s)) (𝓝 0)
 
 variable (l F) in
 @[to_additive isAddFoelner_iff_tendsto]

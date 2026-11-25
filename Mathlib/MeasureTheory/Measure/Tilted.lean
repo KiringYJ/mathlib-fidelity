@@ -264,7 +264,7 @@ lemma tilted_neg_same [IsProbabilityMeasure μ] {hf : IsUnit (∫ x, exp (f x) �
     (μ.tilted f).tilted (-f) ((isUnit_integral_exp_tilted_iff f (-f)).mpr (by
       simpa only [add_neg_cancel, Pi.zero_apply] using
         isUnit_tilted_normalizer_const μ 0)) = μ := by
-  simpa only [measure_univ, inv_one, one_smul] using
+  simpa only [measure_univ, ENNReal.inv_one, one_smul] using
     (tilted_neg_same' (f := f) (hzero := isUnit_tilted_normalizer_const μ 0))
 
 lemma tilted_absolutelyContinuous (μ : Measure α) (f : α → ℝ)

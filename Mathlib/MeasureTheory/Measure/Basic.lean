@@ -207,23 +207,24 @@ theorem measure_add_sdiff (hs : NullMeasurableSet s μ) (t : Set α) :
 @[deprecated (since := "2026-06-03")] alias measure_add_diff := measure_add_sdiff
 
 theorem measure_sdiff' (s : Set α) (hm : NullMeasurableSet t μ) (h_fin : μ t ≠ ∞) :
-    μ (s \ t) = μ (s ∪ t) - μ t :=
-  ENNReal.eq_sub_of_add_eq h_fin <| by rw [add_comm, measure_add_sdiff hm, union_comm]
+    μ (s \ t) = ENNReal.monus (μ (s ∪ t)) (μ t) :=
+  ENNReal.eq_monus_of_add_eq h_fin <| by rw [add_comm, measure_add_sdiff hm, union_comm]
 
 @[deprecated (since := "2026-06-03")] alias measure_diff' := measure_sdiff'
 
 theorem measure_sdiff (h : s₂ ⊆ s₁) (h₂ : NullMeasurableSet s₂ μ) (h_fin : μ s₂ ≠ ∞) :
-    μ (s₁ \ s₂) = μ s₁ - μ s₂ := by rw [measure_sdiff' _ h₂ h_fin, union_eq_self_of_subset_right h]
+    μ (s₁ \ s₂) = ENNReal.monus (μ s₁) (μ s₂) := by
+  rw [measure_sdiff' _ h₂ h_fin, union_eq_self_of_subset_right h]
 
 @[deprecated (since := "2026-06-03")] alias measure_diff := measure_sdiff
 
-theorem le_measure_sdiff : μ s₁ - μ s₂ ≤ μ (s₁ \ s₂) :=
-  tsub_le_iff_left.2 <| (measure_le_inter_add_sdiff μ s₁ s₂).trans <| by
+theorem le_measure_sdiff : ENNReal.monus (μ s₁) (μ s₂) ≤ μ (s₁ \ s₂) :=
+  ENNReal.monus_le_iff_left.2 <| (measure_le_inter_add_sdiff μ s₁ s₂).trans <| by
     gcongr; apply inter_subset_right
 
 @[deprecated (since := "2026-06-03")] alias le_measure_diff := le_measure_sdiff
 
-theorem le_measure_symmDiff : μ s₁ - μ s₂ ≤ μ (s₁ ∆ s₂) :=
+theorem le_measure_symmDiff : ENNReal.monus (μ s₁) (μ s₂) ≤ μ (s₁ ∆ s₂) :=
   le_trans le_measure_sdiff (measure_mono <| by simp [symmDiff_def])
 
 /-- If the measure of the symmetric difference of two sets is finite,
@@ -236,7 +237,7 @@ theorem measure_eq_top_iff_of_symmDiff (hμst : μ (s ∆ t) ≠ ∞) : μ s = �
   apply hμuv
   rw [Set.symmDiff_def, eq_top_iff]
   calc
-    ∞ = μ u - μ v := by rw [ENNReal.sub_eq_top_iff.2 ⟨hμu, hμv⟩]
+    ∞ = ENNReal.monus (μ u) (μ v) := (ENNReal.monus_eq_top_iff.2 ⟨hμu, hμv⟩).symm
     _ ≤ μ (u \ v) := le_measure_sdiff
     _ ≤ μ (u \ v ∪ v \ u) := measure_mono subset_union_left
 
@@ -248,13 +249,13 @@ theorem measure_ne_top_iff_of_symmDiff (hμst : μ (s ∆ t) ≠ ∞) : μ s ≠
 theorem measure_sdiff_lt_of_lt_add (hs : NullMeasurableSet s μ) (hst : s ⊆ t) (hs' : μ s ≠ ∞)
     {ε : ℝ≥0∞} (h : μ t < μ s + ε) : μ (t \ s) < ε := by
   rw [measure_sdiff hst hs hs']; rw [add_comm] at h
-  exact ENNReal.sub_lt_of_lt_add (measure_mono hst) h
+  exact ENNReal.monus_lt_of_lt_add (measure_mono hst) h
 
 @[deprecated (since := "2026-06-03")] alias measure_diff_lt_of_lt_add := measure_sdiff_lt_of_lt_add
 
 theorem measure_sdiff_le_iff_le_add (hs : NullMeasurableSet s μ) (hst : s ⊆ t) (hs' : μ s ≠ ∞)
     {ε : ℝ≥0∞} : μ (t \ s) ≤ ε ↔ μ t ≤ μ s + ε := by
-  rw [measure_sdiff hst hs hs', tsub_le_iff_left]
+  rw [measure_sdiff hst hs hs', ENNReal.monus_le_iff_left]
 
 @[deprecated (since := "2026-06-03")]
 alias measure_diff_le_iff_le_add := measure_sdiff_le_iff_le_add
@@ -296,10 +297,11 @@ alias measure_eq_measure_larger_of_between_null_diff :=
   measure_eq_measure_larger_of_between_null_sdiff
 
 lemma measure_compl₀ (h : NullMeasurableSet s μ) (hs : μ s ≠ ∞) :
-    μ sᶜ = μ Set.univ - μ s := by
-  rw [← measure_add_measure_compl₀ h, ENNReal.add_sub_cancel_left hs]
+    μ sᶜ = ENNReal.monus (μ Set.univ) (μ s) := by
+  rw [← measure_add_measure_compl₀ h, ENNReal.add_monus_cancel_left hs]
 
-theorem measure_compl (h₁ : MeasurableSet s) (h_fin : μ s ≠ ∞) : μ sᶜ = μ univ - μ s :=
+theorem measure_compl (h₁ : MeasurableSet s) (h_fin : μ s ≠ ∞) :
+    μ sᶜ = ENNReal.monus (μ univ) (μ s) :=
   measure_compl₀ h₁.nullMeasurableSet h_fin
 
 lemma measure_inter_conull' (ht : μ (s \ t) = 0) : μ (s ∩ t) = μ s := by
@@ -326,7 +328,8 @@ theorem ae_eq_of_ae_subset_of_measure_ge (h₁ : s ≤ᵐ[μ] t) (h₂ : μ t �
   refine eventuallySubset_antisymm_iff.mpr ⟨h₁, ae_le_set.mpr ?_⟩
   replace h₂ : μ t = μ s := h₂.antisymm (measure_mono_ae h₁)
   replace ht : μ s ≠ ∞ := h₂ ▸ ht
-  rw [measure_sdiff' t hsm ht, measure_congr (union_ae_eq_left_iff_ae_subset.mpr h₁), h₂, tsub_self]
+  rw [measure_sdiff' t hsm ht, measure_congr (union_ae_eq_left_iff_ae_subset.mpr h₁),
+    h₂, ENNReal.monus_self]
 
 /-- If `s ⊆ t`, `μ t ≤ μ s`, `μ t ≠ ∞`, and `s` is measurable, then `s =ᵐ[μ] t`. -/
 theorem ae_eq_of_subset_of_measure_ge (h₁ : s ⊆ t) (h₂ : μ t ≤ μ s) (hsm : NullMeasurableSet s μ)

@@ -9,10 +9,10 @@ public import Mathlib.Basic.ENNReal.Real
 public import Mathlib.Tactic.Finiteness
 
 /-!
-# Properties of addition, multiplication and subtraction on extended non-negative real numbers
+# Properties of addition, multiplication and monus on extended nonnegative real numbers
 
 In this file we prove elementary properties of algebraic operations on `ℝ≥0∞`, including addition,
-multiplication, natural powers and truncated subtraction, as well as how these interact with the
+multiplication, natural powers and monus, as well as how these interact with the
 order structure on `ℝ≥0∞`. Notably excluded from this list are inversion and division, the
 definitions and properties of which can be found in `Mathlib/Basic/ENNReal/Inv.lean`.
 
@@ -274,183 +274,237 @@ theorem add_left_inj (h : a ≠ ∞) : b + a = c + a ↔ b = c :=
 
 end Cancel
 
-section Sub
+section Monus
 
-theorem sub_eq_sInf {a b : ℝ≥0∞} : a - b = sInf { d | a ≤ d + b } :=
-  le_antisymm (le_sInf fun _ h => tsub_le_iff_right.mpr h) <| sInf_le <| mem_ofPred.2 le_tsub_add
+theorem le_monus_add : a ≤ monus a b + b := monus_le_iff.mp le_rfl
 
-/-- This is a special case of `WithTop.coe_sub` in the `ENNReal` namespace -/
-@[simp, norm_cast] theorem coe_sub : (↑(r - p) : ℝ≥0∞) = ↑r - ↑p := WithTop.coe_sub
+/-- The least solution to `a ≤ q + b`, expressed as an infimum. -/
+theorem monus_eq_sInf : monus a b = sInf {q | a ≤ q + b} :=
+  le_antisymm (le_sInf fun _ h => monus_le_iff.mpr h) (sInf_le le_monus_add)
 
-/-- This is a special case of `WithTop.top_sub_coe` in the `ENNReal` namespace -/
-@[simp] theorem top_sub_coe : ∞ - ↑r = ∞ := rfl
+@[simp, norm_cast] theorem coe_monus : (↑(r - p) : ℝ≥0∞) = monus r p := rfl
 
-@[simp] lemma top_sub (ha : a ≠ ∞) : ∞ - a = ∞ := by lift a to ℝ≥0 using ha; exact top_sub_coe
+@[simp] theorem top_monus_coe : monus ∞ r = ∞ := rfl
 
-/-- This is a special case of `WithTop.sub_top` in the `ENNReal` namespace -/
-@[simp] theorem sub_top : a - ∞ = 0 := WithTop.sub_top
+@[simp] theorem top_monus (ha : a ≠ ∞) : monus ∞ a = ∞ := by
+  lift a to ℝ≥0 using ha
+  exact top_monus_coe
 
-@[simp] theorem sub_eq_top_iff : a - b = ∞ ↔ a = ∞ ∧ b ≠ ∞ := WithTop.sub_eq_top_iff
-lemma sub_ne_top_iff : a - b ≠ ∞ ↔ a ≠ ∞ ∨ b = ∞ := WithTop.sub_ne_top_iff
+@[simp] theorem monus_top : monus a ∞ = 0 := by
+  cases a <;> rfl
 
--- This is unsafe because we could have `a = b = ∞`
+@[simp] theorem monus_eq_top_iff : monus a b = ∞ ↔ a = ∞ ∧ b ≠ ∞ :=
+  WithTop.sub_eq_top_iff (a := (a : WithTop ℝ≥0)) (b := (b : WithTop ℝ≥0))
+
+lemma monus_ne_top_iff : monus a b ≠ ∞ ↔ a ≠ ∞ ∨ b = ∞ :=
+  WithTop.sub_ne_top_iff (a := (a : WithTop ℝ≥0)) (b := (b : WithTop ℝ≥0))
+
+-- The result can also be finite when both arguments are infinite.
 @[aesop (rule_sets := [finiteness]) unsafe 75% apply]
-theorem sub_ne_top (ha : a ≠ ∞) : a - b ≠ ∞ := mt sub_eq_top_iff.mp <| mt And.left ha
+theorem monus_ne_top (ha : a ≠ ∞) : monus a b ≠ ∞ :=
+  monus_ne_top_iff.2 (.inl ha)
 
-@[simp, norm_cast]
-theorem natCast_sub (m n : ℕ) : ↑(m - n) = (m - n : ℝ≥0∞) := by
-  rw [← coe_natCast, Nat.cast_tsub, coe_sub, coe_natCast, coe_natCast]
+@[simp, norm_cast] theorem natCast_monus (m n : ℕ) :
+    (↑(m - n) : ℝ≥0∞) = monus m n := by
+  rw [← coe_natCast, Nat.cast_tsub, coe_monus, coe_natCast, coe_natCast]
 
-/-- See `ENNReal.sub_eq_of_eq_add'` for a version assuming that `a = c + b` itself is finite rather
-than `b`. -/
-protected theorem sub_eq_of_eq_add (hb : b ≠ ∞) : a = c + b → a - b = c :=
-  (cancel_of_ne hb).tsub_eq_of_eq_add
+theorem monus_eq_zero_iff_le : monus a b = 0 ↔ a ≤ b := by
+  rw [← nonpos_iff_eq_zero, monus_le_iff, zero_add]
 
-/-- Weaker version of `ENNReal.sub_eq_of_eq_add` assuming that `a = c + b` itself is finite rather
-han `b`. -/
-protected lemma sub_eq_of_eq_add' (ha : a ≠ ∞) : a = c + b → a - b = c :=
-  (cancel_of_ne ha).tsub_eq_of_eq_add'
+theorem monus_eq_zero_of_le (h : a ≤ b) : monus a b = 0 :=
+  monus_eq_zero_iff_le.2 h
 
-/-- See `ENNReal.eq_sub_of_add_eq'` for a version assuming that `b = a + c` itself is finite rather
-than `c`. -/
-protected theorem eq_sub_of_add_eq (hc : c ≠ ∞) : a + c = b → a = b - c :=
-  (cancel_of_ne hc).eq_tsub_of_add_eq
+@[simp] theorem monus_pos_iff_lt : 0 < monus a b ↔ b < a := by
+  rw [pos_iff_ne_zero, Ne, monus_eq_zero_iff_le, not_le]
 
-/-- Weaker version of `ENNReal.eq_sub_of_add_eq` assuming that `b = a + c` itself is finite rather
-than `c`. -/
-protected lemma eq_sub_of_add_eq' (hb : b ≠ ∞) : a + c = b → a = b - c :=
-  (cancel_of_ne hb).eq_tsub_of_add_eq'
+theorem monus_pos_of_lt (h : b < a) : 0 < monus a b :=
+  monus_pos_iff_lt.2 h
 
-/-- See `ENNReal.sub_eq_of_eq_add_rev'` for a version assuming that `a = b + c` itself is finite
-rather than `b`. -/
-protected theorem sub_eq_of_eq_add_rev (hb : b ≠ ∞) : a = b + c → a - b = c :=
-  (cancel_of_ne hb).tsub_eq_of_eq_add_rev
+theorem lt_monus_iff_add_lt_right : a < monus b c ↔ a + c < b := by
+  rw [← not_le, monus_le_iff, not_le]
 
-/-- Weaker version of `ENNReal.sub_eq_of_eq_add_rev` assuming that `a = b + c` itself is finite
-rather than `b`. -/
-protected lemma sub_eq_of_eq_add_rev' (ha : a ≠ ∞) : a = b + c → a - b = c :=
-  (cancel_of_ne ha).tsub_eq_of_eq_add_rev'
+theorem lt_monus_iff_add_lt_left : a < monus b c ↔ c + a < b := by
+  rw [lt_monus_iff_add_lt_right, add_comm]
 
-protected theorem add_sub_cancel_left (ha : a ≠ ∞) : a + b - a = b := by
-  simp [ha]
+theorem lt_monus_comm : a < monus b c ↔ c < monus b a := by
+  rw [lt_monus_iff_add_lt_right, lt_monus_iff_add_lt_left]
 
-protected theorem add_sub_cancel_right (hb : b ≠ ∞) : a + b - b = a := by
-  simp [hb]
+@[simp] theorem monus_self (a : ℝ≥0∞) : monus a a = 0 :=
+  monus_eq_zero_of_le le_rfl
 
-protected theorem sub_add_eq_add_sub (hab : b ≤ a) (b_ne_top : b ≠ ∞) :
-    a - b + c = a + c - b := by
-  by_cases c_top : c = ∞
-  · simpa [c_top] using! ENNReal.eq_sub_of_add_eq b_ne_top rfl
-  refine ENNReal.eq_sub_of_add_eq b_ne_top ?_
-  simp only [add_assoc, add_comm c b]
-  simpa only [← add_assoc] using! (add_left_inj c_top).mpr <| tsub_add_cancel_of_le hab
+@[simp] theorem monus_zero (a : ℝ≥0∞) : monus a 0 = a := by
+  apply eq_of_forall_ge_iff
+  simp [monus_le_iff]
 
-lemma add_sub_add_eq_sub_right (hc : c ≠ ∞ := by finiteness) : (a + c) - (b + c) = a - b := by
-  lift c to ℝ≥0 using hc
-  cases a <;> cases b
-  · simp
-  · simp
-  · simp
-  · norm_cast
-    rw [add_tsub_add_eq_tsub_right]
+@[simp] theorem zero_monus (a : ℝ≥0∞) : monus 0 a = 0 :=
+  monus_eq_zero_of_le zero_le
 
-lemma add_sub_add_eq_sub_left (hc : c ≠ ∞ := by finiteness) : (c + a) - (c + b) = a - b := by
-  simp_rw [add_comm c]
-  exact ENNReal.add_sub_add_eq_sub_right hc
+theorem monus_le_self : monus a b ≤ a := monus_le_iff.2 le_self_add
 
-protected theorem lt_add_of_sub_lt_left (h : a ≠ ∞ ∨ b ≠ ∞) : a - b < c → a < b + c := by
+@[gcongr] theorem monus_le_monus (hac : a ≤ c) (hdb : d ≤ b) :
+    monus a b ≤ monus c d :=
+  monus_le_iff.2 (hac.trans <| (le_monus_add (a := c) (b := d)).trans <| add_le_add_right hdb _)
+
+theorem monus_add_cancel_of_le (h : b ≤ a) : monus a b + b = a :=
+  tsub_add_cancel_of_le (α := WithTop ℝ≥0) h
+
+theorem add_le_of_le_monus_right_of_le (hcb : c ≤ b) (h : a ≤ monus b c) : a + c ≤ b :=
+  (add_le_add_left h c).trans_eq (monus_add_cancel_of_le hcb)
+
+theorem add_le_of_le_monus_left_of_le (hcb : c ≤ b) (h : a ≤ monus b c) : c + a ≤ b := by
+  rw [add_comm]
+  exact add_le_of_le_monus_right_of_le hcb h
+
+/-- Recover the remaining summand when the removed summand is finite. -/
+protected theorem monus_eq_of_eq_add (hb : b ≠ ∞) : a = c + b → monus a b = c :=
+  AddLECancellable.tsub_eq_of_eq_add (α := WithTop ℝ≥0) (cancel_of_ne hb)
+
+/-- Recover the remaining summand when the sum is finite. -/
+protected theorem monus_eq_of_eq_add' (ha : a ≠ ∞) : a = c + b → monus a b = c :=
+  AddLECancellable.tsub_eq_of_eq_add' (α := WithTop ℝ≥0) (cancel_of_ne ha)
+
+protected theorem eq_monus_of_add_eq (hc : c ≠ ∞) (h : a + c = b) : a = monus b c :=
+  (ENNReal.monus_eq_of_eq_add hc h.symm).symm
+
+protected theorem eq_monus_of_add_eq' (hb : b ≠ ∞) (h : a + c = b) : a = monus b c :=
+  (ENNReal.monus_eq_of_eq_add' hb h.symm).symm
+
+protected theorem monus_eq_of_eq_add_rev (hb : b ≠ ∞) (h : a = b + c) : monus a b = c :=
+  ENNReal.monus_eq_of_eq_add hb (h.trans (add_comm _ _))
+
+protected theorem monus_eq_of_eq_add_rev' (ha : a ≠ ∞) (h : a = b + c) : monus a b = c :=
+  ENNReal.monus_eq_of_eq_add' ha (h.trans (add_comm _ _))
+
+protected theorem add_monus_cancel_left (ha : a ≠ ∞) : monus (a + b) a = b :=
+  ENNReal.monus_eq_of_eq_add_rev ha rfl
+
+protected theorem add_monus_cancel_right (hb : b ≠ ∞) : monus (a + b) b = a :=
+  ENNReal.monus_eq_of_eq_add hb rfl
+
+protected theorem monus_add_eq_add_monus (hab : b ≤ a) (hb : b ≠ ∞) :
+    monus a b + c = monus (a + c) b := by
+  apply ENNReal.eq_monus_of_add_eq hb
+  rw [add_right_comm, monus_add_cancel_of_le hab]
+
+lemma add_monus_add_eq_monus_right (hc : c ≠ ∞ := by finiteness) :
+    monus (a + c) (b + c) = monus a b := by
+  refine eq_of_forall_ge_iff fun q => ?_
+  rw [monus_le_iff, monus_le_iff, ← add_assoc, ENNReal.add_le_add_iff_right hc]
+
+lemma add_monus_add_eq_monus_left (hc : c ≠ ∞ := by finiteness) :
+    monus (c + a) (c + b) = monus a b := by
+  simpa only [add_comm c] using add_monus_add_eq_monus_right (a := a) (b := b) hc
+
+protected theorem lt_add_of_monus_lt_left (h : a ≠ ∞ ∨ b ≠ ∞) :
+    monus a b < c → a < b + c := by
   obtain rfl | hb := eq_or_ne b ∞
   · rw [top_add, lt_top_iff_ne_top]
     exact fun _ => h.resolve_right (Classical.not_not.2 rfl)
-  · exact (cancel_of_ne hb).lt_add_of_tsub_lt_left
+  · exact AddLECancellable.lt_add_of_tsub_lt_left (α := WithTop ℝ≥0) (cancel_of_ne hb)
 
-protected theorem lt_add_of_sub_lt_right (h : a ≠ ∞ ∨ c ≠ ∞) : a - c < b → a < b + c :=
-  add_comm c b ▸ ENNReal.lt_add_of_sub_lt_left h
+protected theorem lt_add_of_monus_lt_right (h : a ≠ ∞ ∨ c ≠ ∞) :
+    monus a c < b → a < b + c :=
+  add_comm c b ▸ ENNReal.lt_add_of_monus_lt_left h
 
-theorem le_sub_of_add_le_left (ha : a ≠ ∞) : a + b ≤ c → b ≤ c - a :=
-  (cancel_of_ne ha).le_tsub_of_add_le_left
+theorem le_monus_of_add_le_left (ha : a ≠ ∞) : a + b ≤ c → b ≤ monus c a :=
+  AddLECancellable.le_tsub_of_add_le_left (α := WithTop ℝ≥0) (cancel_of_ne ha)
 
-theorem le_sub_of_add_le_right (hb : b ≠ ∞) : a + b ≤ c → a ≤ c - b :=
-  (cancel_of_ne hb).le_tsub_of_add_le_right
+theorem le_monus_of_add_le_right (hb : b ≠ ∞) : a + b ≤ c → a ≤ monus c b :=
+  AddLECancellable.le_tsub_of_add_le_right (α := WithTop ℝ≥0) (cancel_of_ne hb)
 
-protected theorem sub_lt_of_lt_add (hac : c ≤ a) (h : a < b + c) : a - c < b :=
-  ((cancel_of_lt' <| hac.trans_lt h).tsub_lt_iff_right hac).mpr h
+protected theorem monus_lt_iff_lt_right (hb : b ≠ ∞) (hab : b ≤ a) :
+    monus a b < c ↔ a < c + b :=
+  AddLECancellable.tsub_lt_iff_right (α := WithTop ℝ≥0) (cancel_of_ne hb) hab
 
-protected theorem sub_lt_iff_lt_right (hb : b ≠ ∞) (hab : b ≤ a) : a - b < c ↔ a < c + b :=
-  (cancel_of_ne hb).tsub_lt_iff_right hab
+protected theorem monus_lt_iff_lt_left (hb : b ≠ ∞) (hab : b ≤ a) :
+    monus a b < c ↔ a < b + c :=
+  AddLECancellable.tsub_lt_iff_left (α := WithTop ℝ≥0) (cancel_of_ne hb) hab
 
-protected theorem sub_lt_iff_lt_left (hb : b ≠ ∞) (hab : b ≤ a) : a - b < c ↔ a < b + c :=
-  (cancel_of_ne hb).tsub_lt_iff_left hab
+protected theorem monus_lt_of_lt_add (hac : c ≤ a) (h : a < b + c) : monus a c < b :=
+  (ENNReal.monus_lt_iff_lt_right (hac.trans_lt h).ne_top hac).2 h
 
-theorem le_sub_iff_add_le_left (hc : c ≠ ∞) (hcb : c ≤ b) : a ≤ b - c ↔ c + a ≤ b :=
-  ⟨fun h ↦ add_le_of_le_tsub_left_of_le hcb h, le_sub_of_add_le_left hc⟩
+theorem le_monus_iff_add_le_right (hc : c ≠ ∞) (hcb : c ≤ b) :
+    a ≤ monus b c ↔ a + c ≤ b :=
+  ⟨add_le_of_le_monus_right_of_le hcb,
+    le_monus_of_add_le_right hc⟩
 
-theorem le_sub_iff_add_le_right (hc : c ≠ ∞) (hcb : c ≤ b) : a ≤ b - c ↔ a + c ≤ b :=
-  ⟨fun h ↦ add_le_of_le_tsub_right_of_le hcb h, le_sub_of_add_le_right hc⟩
+theorem le_monus_iff_add_le_left (hc : c ≠ ∞) (hcb : c ≤ b) :
+    a ≤ monus b c ↔ c + a ≤ b := by
+  rw [le_monus_iff_add_le_right hc hcb, add_comm]
 
-protected theorem sub_lt_self (ha : a ≠ ∞) (ha₀ : a ≠ 0) (hb : b ≠ 0) : a - b < a :=
-  (cancel_of_ne ha).tsub_lt_self (pos_iff_ne_zero.2 ha₀) (pos_iff_ne_zero.2 hb)
+protected theorem monus_lt_self (ha : a ≠ ∞) (ha₀ : a ≠ 0) (hb : b ≠ 0) : monus a b < a :=
+  AddLECancellable.tsub_lt_self (α := WithTop ℝ≥0) (cancel_of_ne ha)
+    (pos_iff_ne_zero.2 ha₀) (pos_iff_ne_zero.2 hb)
 
-protected theorem sub_lt_self_iff (ha : a ≠ ∞) : a - b < a ↔ 0 < a ∧ 0 < b :=
-  (cancel_of_ne ha).tsub_lt_self_iff
+protected theorem monus_lt_self_iff (ha : a ≠ ∞) : monus a b < a ↔ 0 < a ∧ 0 < b :=
+  AddLECancellable.tsub_lt_self_iff (α := WithTop ℝ≥0) (cancel_of_ne ha)
 
-theorem sub_lt_of_sub_lt (h₂ : c ≤ a) (h₃ : a ≠ ∞ ∨ b ≠ ∞) (h₁ : a - b < c) : a - c < b :=
-  ENNReal.sub_lt_of_lt_add h₂ (add_comm c b ▸ ENNReal.lt_add_of_sub_lt_right h₃ h₁)
+theorem monus_lt_of_monus_lt (h₂ : c ≤ a) (h₃ : a ≠ ∞ ∨ b ≠ ∞) (h₁ : monus a b < c) :
+    monus a c < b :=
+  ENNReal.monus_lt_of_lt_add h₂ (add_comm c b ▸ ENNReal.lt_add_of_monus_lt_right h₃ h₁)
 
-theorem sub_sub_cancel (h : a ≠ ∞) (h2 : b ≤ a) : a - (a - b) = b :=
-  (cancel_of_ne <| sub_ne_top h).tsub_tsub_cancel_of_le h2
+theorem monus_monus_cancel (ha : a ≠ ∞) (h : b ≤ a) : monus a (monus a b) = b :=
+  ENNReal.monus_eq_of_eq_add_rev (monus_ne_top ha) (monus_add_cancel_of_le h).symm
 
-theorem sub_right_inj {a b c : ℝ≥0∞} (ha : a ≠ ∞) (hb : b ≤ a) (hc : c ≤ a) :
-    a - b = a - c ↔ b = c :=
-  (cancel_of_ne ha).tsub_right_inj (cancel_of_ne <| ne_top_of_le_ne_top ha hb)
-    (cancel_of_ne <| ne_top_of_le_ne_top ha hc) hb hc
+theorem monus_right_inj (ha : a ≠ ∞) (hb : b ≤ a) (hc : c ≤ a) :
+    monus a b = monus a c ↔ b = c := by
+  refine ⟨fun h => ?_, congrArg (monus a)⟩
+  simpa only [monus_monus_cancel ha hb, monus_monus_cancel ha hc] using congrArg (monus a) h
 
-protected theorem sub_mul (h : 0 < b → b < a → c ≠ ∞) : (a - b) * c = a * c - b * c := by
-  rcases le_or_gt a b with hab | hab; · simp [hab, mul_left_mono hab, tsub_eq_zero_of_le]
-  rcases eq_zero_or_pos b with (rfl | hb); · simp
-  exact (cancel_of_ne <| mul_ne_top hab.ne_top (h hb hab)).tsub_mul
+protected theorem monus_mul (h : 0 < b → b < a → c ≠ ∞) :
+    monus a b * c = monus (a * c) (b * c) := by
+  rcases le_or_gt a b with hab | hab
+  · simp [monus_eq_zero_of_le hab, monus_eq_zero_of_le (mul_left_mono hab)]
+  rcases eq_zero_or_pos b with rfl | hb
+  · simp
+  apply ENNReal.eq_monus_of_add_eq (mul_ne_top hab.ne_top (h hb hab))
+  rw [← add_mul, monus_add_cancel_of_le hab.le]
 
-protected theorem mul_sub (h : 0 < c → c < b → a ≠ ∞) : a * (b - c) = a * b - a * c := by
+protected theorem mul_monus (h : 0 < c → c < b → a ≠ ∞) :
+    a * monus b c = monus (a * b) (a * c) := by
   simp only [mul_comm a]
-  exact ENNReal.sub_mul h
+  exact ENNReal.monus_mul h
 
-theorem sub_le_sub_iff_left (h : c ≤ a) (h' : a ≠ ∞) :
-    (a - b ≤ a - c) ↔ c ≤ b :=
-  (cancel_of_ne h').tsub_le_tsub_iff_left (cancel_of_ne (ne_top_of_le_ne_top h' h)) h
+theorem monus_le_monus_iff_left (h : c ≤ a) (ha : a ≠ ∞) :
+    monus a b ≤ monus a c ↔ c ≤ b :=
+  AddLECancellable.tsub_le_tsub_iff_left (α := WithTop ℝ≥0) (cancel_of_ne ha)
+    (cancel_of_ne (ne_top_of_le_ne_top ha h)) h
 
-theorem le_toReal_sub {a b : ℝ≥0∞} (hb : b ≠ ∞) : a.toReal - b.toReal ≤ (a - b).toReal := by
+theorem le_toReal_monus (hb : b ≠ ∞) : a.toReal - b.toReal ≤ (monus a b).toReal := by
   lift b to ℝ≥0 using hb
   induction a
   · simp
-  · simp only [← coe_sub, NNReal.sub_def, Real.coe_toNNReal', coe_toReal]
+  · simp only [← coe_monus, NNReal.sub_def, Real.coe_toNNReal', coe_toReal]
     exact le_max_left _ _
 
-@[simp]
-lemma toNNReal_sub (hb : b ≠ ∞) : (a - b).toNNReal = a.toNNReal - b.toNNReal := by
-  lift b to ℝ≥0 using hb; induction a <;> simp [← coe_sub]
+@[simp] lemma toNNReal_monus (hb : b ≠ ∞) :
+    (monus a b).toNNReal = a.toNNReal - b.toNNReal := by
+  lift b to ℝ≥0 using hb
+  induction a <;> simp [← coe_monus]
 
-@[simp]
-lemma toReal_sub_of_le (hba : b ≤ a) (ha : a ≠ ∞) : (a - b).toReal = a.toReal - b.toReal := by
+@[simp] lemma toReal_monus_of_le (hba : b ≤ a) (ha : a ≠ ∞) :
+    (monus a b).toReal = a.toReal - b.toReal := by
   simp [ENNReal.toReal, ne_top_of_le_ne_top ha hba, toNNReal_mono ha hba]
 
-theorem ofReal_sub (p : ℝ) {q : ℝ} (hq : 0 ≤ q) :
-    ENNReal.ofReal (p - q) = ENNReal.ofReal p - ENNReal.ofReal q := by
+theorem ofReal_monus (p : ℝ) {q : ℝ} (hq : 0 ≤ q) :
+    ENNReal.ofReal (p - q) = monus (ENNReal.ofReal p) (ENNReal.ofReal q) := by
   obtain h | h := le_total p q
-  · rw [ofReal_of_nonpos (sub_nonpos_of_le h), tsub_eq_zero_of_le (ofReal_le_ofReal h)]
-  refine ENNReal.eq_sub_of_add_eq ofReal_ne_top ?_
+  · rw [ofReal_of_nonpos (sub_nonpos_of_le h), monus_eq_zero_of_le (ofReal_le_ofReal h)]
+  refine ENNReal.eq_monus_of_add_eq ofReal_ne_top ?_
   rw [← ofReal_add (sub_nonneg_of_le h) hq, sub_add_cancel]
 
-lemma sub_sub_sub_cancel_left (ha : a ≠ ∞) (h : b ≤ a) : a - c - (a - b) = b - c := by
+lemma monus_monus_monus_cancel_left (ha : a ≠ ∞) (h : b ≤ a) :
+    monus (monus a c) (monus a b) = monus b c := by
   have hb : b ≠ ∞ := ne_top_of_le_ne_top ha h
   lift a to ℝ≥0 using ha
   lift b to ℝ≥0 using hb
   cases c
   · simp
-  · norm_cast
-    rw [tsub_tsub_tsub_cancel_left]
-    exact mod_cast h
+  · simp only [← coe_monus, coe_inj]
+    apply tsub_tsub_tsub_cancel_left
+    exact coe_le_coe.mp h
 
-end Sub
+end Monus
 
 section Interval
 
@@ -461,8 +515,9 @@ protected theorem Ico_eq_Iio : Ico 0 y = Iio y :=
 
 theorem mem_Iio_self_add : x ≠ ∞ → ε ≠ 0 → x ∈ Iio (x + ε) := fun xt ε0 => lt_add_right xt ε0
 
-theorem mem_Ioo_self_sub_add : x ≠ ∞ → x ≠ 0 → ε₁ ≠ 0 → ε₂ ≠ 0 → x ∈ Ioo (x - ε₁) (x + ε₂) :=
-  fun xt x0 ε0 ε0' => ⟨ENNReal.sub_lt_self xt x0 ε0, lt_add_right xt ε0'⟩
+theorem mem_Ioo_self_monus_add : x ≠ ∞ → x ≠ 0 → ε₁ ≠ 0 → ε₂ ≠ 0 →
+    x ∈ Ioo (monus x ε₁) (x + ε₂) :=
+  fun xt x0 ε0 ε0' => ⟨ENNReal.monus_lt_self xt x0 ε0, lt_add_right xt ε0'⟩
 
 @[simp]
 theorem image_coe_Iic (x : ℝ≥0) : (↑) '' Iic x = Iic (x : ℝ≥0∞) := WithTop.image_coe_Iic
@@ -537,13 +592,13 @@ theorem toReal_sInf (s : Set ℝ≥0∞) (hf : ∀ r ∈ s, r ≠ ∞) :
   · exact Real.iInf_nonneg h
 
 theorem iInf_add : iInf f + a = ⨅ i, f i + a :=
-  le_antisymm (le_iInf fun _ => add_le_add (iInf_le _ _) <| le_rfl)
-    (tsub_le_iff_right.1 <| le_iInf fun _ => tsub_le_iff_right.2 <| iInf_le _ _)
+  le_antisymm (le_iInf fun i => add_le_add_left (iInf_le f i) a)
+    (monus_le_iff.1 <| le_iInf fun i => monus_le_iff.2 <| iInf_le (fun j => f j + a) i)
 
-theorem sub_iInf : (a - ⨅ i, f i) = ⨆ i, a - f i := by
+theorem monus_iInf : monus a (iInf f) = ⨆ i, monus a (f i) := by
   refine eq_of_forall_ge_iff fun c => ?_
-  rw [tsub_le_iff_right, add_comm, iInf_add]
-  simp [tsub_le_iff_right, add_comm]
+  rw [monus_le_iff, add_comm, iInf_add]
+  simp [monus_le_iff, add_comm]
 
 theorem sInf_add {s : Set ℝ≥0∞} : sInf s + a = ⨅ b ∈ s, b + a := by simp [sInf_eq_iInf, iInf_add]
 
@@ -623,9 +678,9 @@ theorem toReal_sSup (s : Set ℝ≥0∞) (hf : ∀ r ∈ s, r ≠ ∞) :
     (sSup s).toReal = sSup (ENNReal.toReal '' s) := by
   simp only [ENNReal.toReal, toNNReal_sSup s hf, NNReal.coe_sSup, Set.image_image]
 
-theorem iSup_sub : (⨆ i, f i) - a = ⨆ i, f i - a :=
-  le_antisymm (tsub_le_iff_right.2 <| iSup_le fun i => tsub_le_iff_right.1 <| le_iSup (f · - a) i)
-    (iSup_le fun _ => tsub_le_tsub (le_iSup _ _) (le_refl a))
+theorem iSup_monus : monus (iSup f) a = ⨆ i, monus (f i) a := by
+  refine eq_of_forall_ge_iff fun q => ?_
+  simp only [monus_le_iff, iSup_le_iff]
 
 @[simp] lemma iSup_eq_zero : ⨆ i, f i = 0 ↔ ∀ i, f i = 0 := iSup_eq_bot
 
@@ -637,9 +692,11 @@ lemma iSup_natCast : ⨆ n : ℕ, (n : ℝ≥0∞) = ∞ :=
 lemma add_iSup [Nonempty ι] (f : ι → ℝ≥0∞) : a + ⨆ i, f i = ⨆ i, a + f i := by
   obtain rfl | ha := eq_or_ne a ∞
   · simp
-  refine le_antisymm ?_ <| iSup_le fun i ↦ by grw [← le_iSup]
-  refine add_le_of_le_tsub_left_of_le (le_iSup_of_le (Classical.arbitrary _) le_self_add) ?_
-  exact iSup_le fun i ↦ ENNReal.le_sub_of_add_le_left ha <| le_iSup (a + f ·) i
+  refine le_antisymm ?_ (iSup_le fun i => add_le_add_right (le_iSup f i) a)
+  have h : a ≤ ⨆ i, a + f i :=
+    le_iSup_of_le (Classical.arbitrary ι) le_self_add
+  apply (le_monus_iff_add_le_left ha h).1
+  exact iSup_le fun i => le_monus_of_add_le_left ha (le_iSup (fun j => a + f j) i)
 
 lemma iSup_add [Nonempty ι] (f : ι → ℝ≥0∞) : (⨆ i, f i) + a = ⨆ i, f i + a := by
   simp [add_comm, add_iSup]
@@ -689,17 +746,24 @@ lemma iSup_add_iSup_of_monotone {ι : Type*} [Preorder ι] [IsDirectedOrder ι] 
     (hf : Monotone f) (hg : Monotone g) : iSup f + iSup g = ⨆ a, f a + g a :=
   iSup_add_iSup fun i j ↦ (exists_ge_ge i j).imp fun _k ⟨hi, hj⟩ ↦ by gcongr <;> apply_rules
 
-lemma sub_iSup [Nonempty ι] (ha : a ≠ ∞) : a - ⨆ i, f i = ⨅ i, a - f i := by
-  obtain ⟨i, hi⟩ | h := em (∃ i, a < f i)
-  · rw [tsub_eq_zero_iff_le.2 <| le_iSup_of_le _ hi.le, iInf_eq_bot.2, bot_eq_zero]
-    exact fun x hx ↦ ⟨i, by simpa [hi.le, tsub_eq_zero_of_le]⟩
-  simp_rw [not_exists, not_lt] at h
-  refine le_antisymm (le_iInf fun i ↦ tsub_le_tsub_left (le_iSup ..) _) <|
-    ENNReal.le_sub_of_add_le_left (ne_top_of_le_ne_top ha <| iSup_le h) <|
-    add_le_of_le_tsub_right_of_le (iInf_le_of_le (Classical.arbitrary _) tsub_le_self) <|
-    iSup_le fun i ↦ ?_
-  rw [← sub_sub_cancel ha (h _)]
-  exact tsub_le_tsub_left (iInf_le (a - f ·) i) _
+lemma monus_iSup [Nonempty ι] (ha : a ≠ ∞) :
+    monus a (iSup f) = ⨅ i, monus a (f i) := by
+  refine le_antisymm (le_iInf fun i => monus_le_monus le_rfl (le_iSup f i)) ?_
+  by_cases h : ∃ i, a < f i
+  · obtain ⟨i, hi⟩ := h
+    exact (iInf_le (fun j => monus a (f j)) i).trans
+      ((monus_eq_zero_of_le hi.le).le.trans zero_le)
+  simp only [not_exists, not_lt] at h
+  let q := ⨅ i, monus a (f i)
+  have hqa : q ≤ a :=
+    (iInf_le (fun i => monus a (f i)) (Classical.arbitrary ι)).trans monus_le_self
+  have hsum : iSup f ≤ monus a q := by
+    refine iSup_le fun i => ?_
+    calc
+      f i = monus a (monus a (f i)) := (monus_monus_cancel ha (h i)).symm
+      _ ≤ monus a q := monus_le_monus le_rfl (iInf_le _ i)
+  exact le_monus_of_add_le_left (ne_top_of_le_ne_top ha (iSup_le h))
+    ((le_monus_iff_add_le_right (ne_top_of_le_ne_top ha hqa) hqa).1 hsum)
 
 @[simp] lemma iSup_lt_eq_self (a : ℝ≥0∞) : ⨆ b, ⨆ _ : b < a, b = a := by
   refine le_antisymm (iSup₂_le fun b hb ↦ hb.le) ?_

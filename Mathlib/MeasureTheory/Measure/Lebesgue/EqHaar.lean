@@ -546,7 +546,7 @@ theorem addHaar_sphere_of_ne_zero (x : E) {r : ℝ} (hr : r ≠ 0) : μ (sphere 
   · rw [← closedBall_sdiff_ball,
       measure_sdiff ball_subset_closedBall measurableSet_ball.nullMeasurableSet
         measure_ball_lt_top.ne,
-      addHaar_ball_of_pos μ _ h, addHaar_closedBall μ _ h.le, tsub_self]
+      addHaar_ball_of_pos μ _ h, addHaar_closedBall μ _ h.le, ENNReal.monus_self]
 
 theorem addHaar_sphere [Nontrivial E] (x : E) (r : ℝ) : μ (sphere x r) = 0 := by
   rcases eq_or_ne r 0 with (rfl | h)
@@ -554,23 +554,16 @@ theorem addHaar_sphere [Nontrivial E] (x : E) (r : ℝ) : μ (sphere x r) = 0 :=
   · exact addHaar_sphere_of_ne_zero μ x h
 
 theorem addHaar_singleton_add_smul_div_singleton_add_smul {r : ℝ} (hr : r ≠ 0) (x y : E)
-    (s t : Set E) : μ ({x} + r • s) / μ ({y} + r • t) = μ s / μ t :=
-  calc
-    μ ({x} + r • s) / μ ({y} + r • t) = ENNReal.ofReal (|r| ^ finrank ℝ E) * μ s *
-        (ENNReal.ofReal (|r| ^ finrank ℝ E) * μ t)⁻¹ := by
-      simp only [ENNReal.div_eq_mul_inv, addHaar_smul, image_add_left,
-        measure_preimage_add, abs_pow,
-        singleton_add]
-    _ = ENNReal.ofReal (|r| ^ finrank ℝ E) * (ENNReal.ofReal (|r| ^ finrank ℝ E))⁻¹ *
-          (μ s * (μ t)⁻¹) := by
-      rw [ENNReal.mul_inv]
-      · ring
-      · simp only [pow_pos (abs_pos.mpr hr), ENNReal.ofReal_eq_zero, not_le, Ne, true_or]
-      · simp only [ENNReal.ofReal_ne_top, true_or, Ne, not_false_iff]
-    _ = μ s / μ t := by
-      rw [ENNReal.mul_inv_cancel, one_mul, ENNReal.div_eq_mul_inv]
-      · simp only [pow_pos (abs_pos.mpr hr), ENNReal.ofReal_eq_zero, not_le, Ne]
-      · simp only [ENNReal.ofReal_ne_top, Ne, not_false_iff]
+    (s t : Set E) :
+    ENNReal.divInf (μ ({x} + r • s)) (μ ({y} + r • t)) = ENNReal.divInf (μ s) (μ t) := by
+  let k := ENNReal.ofReal (|r| ^ finrank ℝ E)
+  have hk : k ≠ 0 := (ENNReal.ofReal_pos.2 (pow_pos (abs_pos.2 hr) _)).ne'
+  have hkt : k ≠ ∞ := ENNReal.ofReal_ne_top
+  simp only [ENNReal.divInf, singleton_add, image_add_left, measure_preimage_add,
+    addHaar_smul, abs_pow]
+  change (k * μ s) * (k * μ t)⁻¹ = μ s * (μ t)⁻¹
+  rw [ENNReal.mul_inv (.inl hk) (.inl hkt), mul_mul_mul_comm,
+    ENNReal.mul_inv_cancel hk hkt, one_mul]
 
 instance (priority := 100) isUnifLocDoublingMeasureOfIsAddHaarMeasure :
     IsUnifLocDoublingMeasure μ := by
@@ -627,14 +620,15 @@ end
 
 Besicovitch covering theorem ensures that, for any locally finite measure on a finite-dimensional
 real vector space, almost every point of a set `s` is a density point, i.e.,
-`μ (s ∩ closedBall x r) / μ (closedBall x r)` tends to `1` as `r` tends to `0`
+`ENNReal.divInf (μ (s ∩ closedBall x r)) (μ (closedBall x r))` tends to `1` as `r` tends to `0`
 (see `Besicovitch.ae_tendsto_measure_inter_div`).
 When `μ` is a Haar measure, one can deduce the same property for any rescaling sequence of sets,
 of the form `{x} + r • t` where `t` is a set with positive finite measure, instead of the sequence
 of closed balls.
 
 We argue first for the dual property, i.e., if `s` has density `0` at `x`, then
-`μ (s ∩ ({x} + r • t)) / μ ({x} + r • t)` tends to `0`. First when `t` is contained in the ball
+`ENNReal.divInf (μ (s ∩ ({x} + r • t))) (μ ({x} + r • t))` tends to `0`. First when `t` is
+contained in the ball
 of radius `1`, in `tendsto_addHaar_inter_smul_zero_of_density_zero_aux1`,
 (by arguing by inclusion). Then when `t` is bounded, reducing to the previous one by rescaling, in
 `tendsto_addHaar_inter_smul_zero_of_density_zero_aux2`.
@@ -647,22 +641,25 @@ the measurable hull `toMeasurable μ s`
 -/
 
 theorem tendsto_addHaar_inter_smul_zero_of_density_zero_aux1 (s : Set E) (x : E)
-    (h : Tendsto (fun r => μ (s ∩ closedBall x r) / μ (closedBall x r)) (𝓝[>] 0) (𝓝 0))
+    (h : Tendsto (fun r => ENNReal.divInf (μ (s ∩ closedBall x r)) (μ (closedBall x r)))
+      (𝓝[>] 0) (𝓝 0))
     (t : Set E)
     (u : Set E) (h'u : μ u ≠ 0) (t_bound : t ⊆ closedBall 0 1) :
-    Tendsto (fun r : ℝ => μ (s ∩ ({x} + r • t)) / μ ({x} + r • u)) (𝓝[>] 0) (𝓝 0) := by
-  have A : Tendsto (fun r : ℝ => μ (s ∩ ({x} + r • t)) / μ (closedBall x r))
+    Tendsto (fun r : ℝ => ENNReal.divInf (μ (s ∩ ({x} + r • t))) (μ ({x} + r • u)))
+      (𝓝[>] 0) (𝓝 0) := by
+  have A : Tendsto (fun r : ℝ => ENNReal.divInf (μ (s ∩ ({x} + r • t))) (μ (closedBall x r)))
       (𝓝[>] 0) (𝓝 0) := by
     apply
       tendsto_of_tendsto_of_tendsto_of_le_of_le' tendsto_const_nhds h
         (Eventually.of_forall fun b => zero_le)
     filter_upwards [self_mem_nhdsWithin]
     rintro r (rpos : 0 < r)
+    simp only [ENNReal.divInf]
     grw [t_bound]
     rw [← vadd_eq_add, singleton_vadd, affinity_unitClosedBall rpos.le]
   have B :
-    Tendsto (fun r : ℝ => μ (closedBall x r) / μ ({x} + r • u)) (𝓝[>] 0)
-      (𝓝 (μ (closedBall x 1) / μ ({x} + u))) := by
+    Tendsto (fun r : ℝ => ENNReal.divInf (μ (closedBall x r)) (μ ({x} + r • u))) (𝓝[>] 0)
+      (𝓝 (ENNReal.divInf (μ (closedBall x 1)) (μ ({x} + u)))) := by
     apply tendsto_const_nhds.congr' _
     filter_upwards [self_mem_nhdsWithin]
     rintro r (rpos : 0 < r)
@@ -672,35 +669,38 @@ theorem tendsto_addHaar_inter_smul_zero_of_density_zero_aux1 (s : Set E) (x : E)
     simp only [this, addHaar_singleton_add_smul_div_singleton_add_smul μ rpos.ne']
     simp only [addHaar_closedBall_center, image_add_left, measure_preimage_add, singleton_add]
   have C : Tendsto (fun r : ℝ =>
-        μ (s ∩ ({x} + r • t)) / μ (closedBall x r) *
-          (μ (closedBall x r) / μ ({x} + r • u)))
-      (𝓝[>] 0) (𝓝 (0 * (μ (closedBall x 1) / μ ({x} + u)))) := by
+        ENNReal.divInf (μ (s ∩ ({x} + r • t))) (μ (closedBall x r)) *
+          (ENNReal.divInf (μ (closedBall x r)) (μ ({x} + r • u))))
+      (𝓝[>] 0) (𝓝 (0 * (ENNReal.divInf (μ (closedBall x 1)) (μ ({x} + u))))) := by
     apply ENNReal.Tendsto.mul A _ B (Or.inr ENNReal.zero_ne_top)
-    simp [ENNReal.div_eq_top, h'u, measure_closedBall_lt_top.ne]
+    simp [ENNReal.divInf_eq_top, singleton_add, image_add_left, measure_preimage_add,
+      h'u, measure_closedBall_lt_top.ne]
   simp only [zero_mul] at C
   apply C.congr' _
   filter_upwards [self_mem_nhdsWithin]
   rintro r (rpos : 0 < r)
-  calc μ (s ∩ ({x} + r • t)) / μ (closedBall x r) *
-          (μ (closedBall x r) / μ ({x} + r • u))
+  calc ENNReal.divInf (μ (s ∩ ({x} + r • t))) (μ (closedBall x r)) *
+          (ENNReal.divInf (μ (closedBall x r)) (μ ({x} + r • u)))
     _ = μ (closedBall x r) * (μ (closedBall x r))⁻¹ *
-        (μ (s ∩ ({x} + r • t)) / μ ({x} + r • u)) := by
-          simp only [ENNReal.div_eq_mul_inv]
+        (ENNReal.divInf (μ (s ∩ ({x} + r • t))) (μ ({x} + r • u))) := by
+          simp only [ENNReal.divInf]
           ring
-    _ = μ (s ∩ ({x} + r • t)) / μ ({x} + r • u) := by
+    _ = ENNReal.divInf (μ (s ∩ ({x} + r • t))) (μ ({x} + r • u)) := by
       rw [ENNReal.mul_inv_cancel (measure_closedBall_pos μ x rpos).ne'
           measure_closedBall_lt_top.ne,
         one_mul]
 
 theorem tendsto_addHaar_inter_smul_zero_of_density_zero_aux2 (s : Set E) (x : E)
-    (h : Tendsto (fun r => μ (s ∩ closedBall x r) / μ (closedBall x r)) (𝓝[>] 0) (𝓝 0))
+    (h : Tendsto (fun r => ENNReal.divInf (μ (s ∩ closedBall x r)) (μ (closedBall x r)))
+      (𝓝[>] 0) (𝓝 0))
     (t : Set E)
     (u : Set E) (h'u : μ u ≠ 0) (R : ℝ) (Rpos : 0 < R) (t_bound : t ⊆ closedBall 0 R) :
-    Tendsto (fun r : ℝ => μ (s ∩ ({x} + r • t)) / μ ({x} + r • u)) (𝓝[>] 0) (𝓝 0) := by
+    Tendsto (fun r : ℝ => ENNReal.divInf (μ (s ∩ ({x} + r • t))) (μ ({x} + r • u)))
+      (𝓝[>] 0) (𝓝 0) := by
   set t' := R⁻¹ • t with ht'
   set u' := R⁻¹ • u with hu'
   have hR_inv : 0 < R⁻¹ := inv_pos_of_pos Rpos
-  have A : Tendsto (fun r : ℝ => μ (s ∩ ({x} + r • t')) / μ ({x} + r • u'))
+  have A : Tendsto (fun r : ℝ => ENNReal.divInf (μ (s ∩ ({x} + r • t'))) (μ ({x} + r • u')))
       (𝓝[>] 0) (𝓝 0) := by
     apply tendsto_addHaar_inter_smul_zero_of_density_zero_aux1 μ s x h t' u'
     · rw [hu', addHaar_smul]
@@ -730,15 +730,17 @@ theorem tendsto_addHaar_inter_smul_zero_of_density_zero_aux2 (s : Set E) (x : E)
 also has density zero with respect to any measurable set `t`: the proportion of points in `s`
 belonging to a rescaled copy `{x} + r • t` of `t` tends to zero as `r` tends to zero. -/
 theorem tendsto_addHaar_inter_smul_zero_of_density_zero (s : Set E) (x : E)
-    (h : Tendsto (fun r => μ (s ∩ closedBall x r) / μ (closedBall x r)) (𝓝[>] 0) (𝓝 0))
+    (h : Tendsto (fun r => ENNReal.divInf (μ (s ∩ closedBall x r)) (μ (closedBall x r)))
+      (𝓝[>] 0) (𝓝 0))
     (t : Set E)
     (ht : MeasurableSet t) (h''t : μ t ≠ ∞) :
-    Tendsto (fun r : ℝ => μ (s ∩ ({x} + r • t)) / μ ({x} + r • t)) (𝓝[>] 0) (𝓝 0) := by
+    Tendsto (fun r : ℝ => ENNReal.divInf (μ (s ∩ ({x} + r • t))) (μ ({x} + r • t)))
+      (𝓝[>] 0) (𝓝 0) := by
   refine tendsto_order.2 ⟨fun a' ha' => (ENNReal.not_lt_zero ha').elim, fun ε (εpos : 0 < ε) => ?_⟩
   rcases eq_or_ne (μ t) 0 with (h't | h't)
   · filter_upwards with r
     suffices H : μ (s ∩ ({x} + r • t)) = 0 by
-      rw [H]; simpa only [ENNReal.zero_div] using εpos
+      simpa only [H, ENNReal.divInf, zero_mul] using εpos
     rw [← nonpos_iff_eq_zero]
     calc
       μ (s ∩ ({x} + r • t)) ≤ μ ({x} + r • t) := measure_mono inter_subset_right
@@ -761,7 +763,8 @@ theorem tendsto_addHaar_inter_smul_zero_of_density_zero (s : Set E) (x : E)
     have I : 0 < ε / 2 * μ t := ENNReal.mul_pos (ENNReal.half_pos εpos.ne').ne' h't
     exact (Eventually.and (Ioi_mem_atTop 0) ((tendsto_order.1 A).2 _ I)).exists
   have L :
-    Tendsto (fun r : ℝ => μ (s ∩ ({x} + r • (t ∩ closedBall 0 n))) / μ ({x} + r • t)) (𝓝[>] 0)
+    Tendsto (fun r : ℝ =>
+      ENNReal.divInf (μ (s ∩ ({x} + r • (t ∩ closedBall 0 n)))) (μ ({x} + r • t))) (𝓝[>] 0)
       (𝓝 0) :=
     tendsto_addHaar_inter_smul_zero_of_density_zero_aux2 μ s x h _ t h't n (Nat.cast_pos.2 npos)
       inter_subset_right
@@ -779,41 +782,48 @@ theorem tendsto_addHaar_inter_smul_zero_of_density_zero (s : Set E) (x : E)
       _ ≤ μ (s ∩ ({x} + r • (t ∩ closedBall 0 n))) + μ ({x} + r • (t \ closedBall 0 n)) := by
         gcongr; apply inter_subset_right
   calc
-    μ (s ∩ ({x} + r • t)) / μ ({x} + r • t) ≤
-        (μ (s ∩ ({x} + r • (t ∩ closedBall 0 n))) + μ ({x} + r • (t \ closedBall 0 n))) /
-          μ ({x} + r • t) := by gcongr
+    ENNReal.divInf (μ (s ∩ ({x} + r • t))) (μ ({x} + r • t)) ≤
+      ENNReal.divInf
+        (μ (s ∩ ({x} + r • (t ∩ closedBall 0 n))) + μ ({x} + r • (t \ closedBall 0 n)))
+        (μ ({x} + r • t)) := by
+          simp only [ENNReal.divInf]
+          gcongr
     _ < ε / 2 + ε / 2 := by
-      rw [ENNReal.add_div]
-      apply ENNReal.add_lt_add hr _
-      rwa [addHaar_singleton_add_smul_div_singleton_add_smul μ rpos.ne',
-        ENNReal.div_lt_iff (Or.inl h't) (Or.inl h''t)]
+      rw [show ∀ a b d : ℝ≥0∞, ENNReal.divInf (a + b) d =
+          ENNReal.divInf a d + ENNReal.divInf b d from fun a b d => add_mul a b d⁻¹]
+      apply ENNReal.add_lt_add hr
+      rw [addHaar_singleton_add_smul_div_singleton_add_smul μ rpos.ne']
+      exact (ENNReal.div_lt_iff ⟨h't, Or.inr h''t⟩).2 hn
     _ = ε := ENNReal.add_halves _
 
 theorem tendsto_addHaar_inter_smul_one_of_density_one_aux (s : Set E) (hs : MeasurableSet s)
     (x : E)
-    (h : Tendsto (fun r => μ (s ∩ closedBall x r) / μ (closedBall x r)) (𝓝[>] 0) (𝓝 1))
+    (h : Tendsto (fun r => ENNReal.divInf (μ (s ∩ closedBall x r)) (μ (closedBall x r)))
+      (𝓝[>] 0) (𝓝 1))
     (t : Set E) (ht : MeasurableSet t) (h't : μ t ≠ 0) (h''t : μ t ≠ ∞) :
-    Tendsto (fun r : ℝ => μ (s ∩ ({x} + r • t)) / μ ({x} + r • t)) (𝓝[>] 0) (𝓝 1) := by
+    Tendsto (fun r : ℝ => ENNReal.divInf (μ (s ∩ ({x} + r • t))) (μ ({x} + r • t)))
+      (𝓝[>] 0) (𝓝 1) := by
   have I : ∀ u v, μ u ≠ 0 → μ u ≠ ∞ → MeasurableSet v →
-    μ u / μ u - μ (vᶜ ∩ u) / μ u = μ (v ∩ u) / μ u := by
+      ENNReal.monus (ENNReal.divInf (μ u) (μ u)) (ENNReal.divInf (μ (vᶜ ∩ u)) (μ u)) =
+        ENNReal.divInf (μ (v ∩ u)) (μ u) := by
     intro u v uzero utop vmeas
-    simp_rw [ENNReal.div_eq_mul_inv]
-    rw [← ENNReal.sub_mul]; swap
-    · simp only [uzero, ENNReal.inv_eq_top, imp_true_iff, Ne, not_false_iff]
+    simp only [ENNReal.divInf]
+    rw [← ENNReal.monus_mul (fun _ _ => ENNReal.inv_ne_top.2 uzero)]
     congr 1
     rw [inter_comm _ u, inter_comm _ u, eq_comm]
-    exact ENNReal.eq_sub_of_add_eq' utop (measure_inter_add_sdiff u vmeas)
-  have L : Tendsto (fun r => μ (sᶜ ∩ closedBall x r) / μ (closedBall x r))
+    exact ENNReal.eq_monus_of_add_eq' utop (measure_inter_add_sdiff u vmeas)
+  have L : Tendsto (fun r => ENNReal.divInf (μ (sᶜ ∩ closedBall x r)) (μ (closedBall x r)))
       (𝓝[>] 0) (𝓝 0) := by
-    have A : Tendsto (fun r => μ (closedBall x r) / μ (closedBall x r)) (𝓝[>] 0) (𝓝 1) := by
+    have A : Tendsto (fun r => ENNReal.divInf (μ (closedBall x r)) (μ (closedBall x r)))
+      (𝓝[>] 0) (𝓝 1) := by
       apply tendsto_const_nhds.congr' _
       filter_upwards [self_mem_nhdsWithin]
       intro r hr
-      rw [ENNReal.div_eq_mul_inv, ENNReal.mul_inv_cancel]
+      rw [ENNReal.divInf, ENNReal.mul_inv_cancel]
       · exact (measure_closedBall_pos μ _ hr).ne'
       · exact measure_closedBall_lt_top.ne
-    have B := ENNReal.Tendsto.sub A h (Or.inl ENNReal.one_ne_top)
-    simp only [tsub_self] at B
+    have B := ENNReal.Tendsto.monus A h (Or.inl ENNReal.one_ne_top)
+    simp only [ENNReal.monus_self] at B
     apply B.congr' _
     filter_upwards [self_mem_nhdsWithin]
     rintro r (rpos : 0 < r)
@@ -821,15 +831,18 @@ theorem tendsto_addHaar_inter_smul_one_of_density_one_aux (s : Set E) (hs : Meas
       I (closedBall x r) sᶜ (measure_closedBall_pos μ _ rpos).ne' measure_closedBall_lt_top.ne
         hs.compl
     rw [compl_compl]
-  have L' : Tendsto (fun r : ℝ => μ (sᶜ ∩ ({x} + r • t)) / μ ({x} + r • t)) (𝓝[>] 0) (𝓝 0) :=
+  have L' : Tendsto (fun r : ℝ => ENNReal.divInf (μ (sᶜ ∩ ({x} + r • t))) (μ ({x} + r • t)))
+    (𝓝[>] 0) (𝓝 0) :=
     tendsto_addHaar_inter_smul_zero_of_density_zero μ sᶜ x L t ht h''t
-  have L'' : Tendsto (fun r : ℝ => μ ({x} + r • t) / μ ({x} + r • t)) (𝓝[>] 0) (𝓝 1) := by
+  have L'' : Tendsto (fun r : ℝ => ENNReal.divInf (μ ({x} + r • t)) (μ ({x} + r • t)))
+    (𝓝[>] 0) (𝓝 1) := by
     apply tendsto_const_nhds.congr' _
     filter_upwards [self_mem_nhdsWithin]
     rintro r (rpos : 0 < r)
-    rw [addHaar_singleton_add_smul_div_singleton_add_smul μ rpos.ne', ENNReal.div_self h't h''t]
-  have := ENNReal.Tendsto.sub L'' L' (Or.inl ENNReal.one_ne_top)
-  simp only [tsub_zero] at this
+    rw [addHaar_singleton_add_smul_div_singleton_add_smul μ rpos.ne']
+    exact (ENNReal.div_self h't h''t).symm
+  have := ENNReal.Tendsto.monus L'' L' (Or.inl ENNReal.one_ne_top)
+  simp only [ENNReal.monus_zero] at this
   apply this.congr' _
   filter_upwards [self_mem_nhdsWithin]
   rintro r (rpos : 0 < r)
@@ -845,22 +858,26 @@ a Lebesgue density point of `s`). Then `s` has also density one at `x` with resp
 measurable set `t`: the proportion of points in `s` belonging to a rescaled copy `{x} + r • t`
 of `t` tends to one as `r` tends to zero. -/
 theorem tendsto_addHaar_inter_smul_one_of_density_one (s : Set E) (x : E)
-    (h : Tendsto (fun r => μ (s ∩ closedBall x r) / μ (closedBall x r)) (𝓝[>] 0) (𝓝 1))
+    (h : Tendsto (fun r => ENNReal.divInf (μ (s ∩ closedBall x r)) (μ (closedBall x r)))
+      (𝓝[>] 0) (𝓝 1))
     (t : Set E)
     (ht : MeasurableSet t) (h't : μ t ≠ 0) (h''t : μ t ≠ ∞) :
-    Tendsto (fun r : ℝ => μ (s ∩ ({x} + r • t)) / μ ({x} + r • t)) (𝓝[>] 0) (𝓝 1) := by
-  have : Tendsto (fun r : ℝ => μ (toMeasurable μ s ∩ ({x} + r • t)) / μ ({x} + r • t))
+    Tendsto (fun r : ℝ => ENNReal.divInf (μ (s ∩ ({x} + r • t))) (μ ({x} + r • t)))
+      (𝓝[>] 0) (𝓝 1) := by
+  have : Tendsto
+      (fun r : ℝ => ENNReal.divInf (μ (toMeasurable μ s ∩ ({x} + r • t))) (μ ({x} + r • t)))
     (𝓝[>] 0) (𝓝 1) := by
     apply
       tendsto_addHaar_inter_smul_one_of_density_one_aux μ _ (measurableSet_toMeasurable _ _) _ _
         t ht h't h''t
     apply tendsto_of_tendsto_of_tendsto_of_le_of_le' h tendsto_const_nhds
     · refine Eventually.of_forall fun r ↦ ?_
+      simp only [ENNReal.divInf]
       gcongr
       apply subset_toMeasurable
     · filter_upwards [self_mem_nhdsWithin]
       rintro r -
-      apply ENNReal.div_le_of_le_mul
+      apply ENNReal.mul_inv_le_of_le_mul
       rw [one_mul]
       exact measure_mono inter_subset_right
   refine this.congr fun r => ?_
@@ -873,7 +890,8 @@ theorem tendsto_addHaar_inter_smul_one_of_density_one (s : Set E) (x : E)
 a Lebesgue density point of `s`). Then `s` intersects the rescaled copies `{x} + r • t` of a given
 set `t` with positive measure, for any small enough `r`. -/
 theorem eventually_nonempty_inter_smul_of_density_one (s : Set E) (x : E)
-    (h : Tendsto (fun r => μ (s ∩ closedBall x r) / μ (closedBall x r)) (𝓝[>] 0) (𝓝 1))
+    (h : Tendsto (fun r => ENNReal.divInf (μ (s ∩ closedBall x r)) (μ (closedBall x r)))
+      (𝓝[>] 0) (𝓝 1))
     (t : Set E)
     (ht : MeasurableSet t) (h't : μ t ≠ 0) :
     ∀ᶠ r in 𝓝[>] (0 : ℝ), (s ∩ ({x} + r • t)).Nonempty := by
@@ -884,7 +902,8 @@ theorem eventually_nonempty_inter_smul_of_density_one (s : Set E) (x : E)
       0 zero_lt_one]
   intro r hr
   have : μ (s ∩ ({x} + r • t')) ≠ 0 := fun h' => by
-    simp only [ENNReal.not_lt_zero, ENNReal.zero_div, h'] at hr
+    rw [ENNReal.divInf, h', zero_mul] at hr
+    exact (lt_irrefl _) hr
   have : (s ∩ ({x} + r • t')).Nonempty := nonempty_of_measure_ne_zero this
   apply this.mono (inter_subset_inter Subset.rfl _)
   exact add_subset_add Subset.rfl (smul_set_mono t't)

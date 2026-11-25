@@ -137,14 +137,27 @@ section congr
 
 variable {f f₁ f₂ : α → E} {g g₁ g₂ : α → F} {l : Filter α}
 
-theorem isLittleOTVS_iff_tendsto_div :
+private theorem divInf_le_coe_iff {a b : ℝ≥0∞} {ε : ℝ≥0} (hε : ε ≠ 0) :
+    ENNReal.divInf a b ≤ (ε : ℝ≥0∞) ↔ a ≤ (ε : ℝ≥0∞) * b := by
+  by_cases h₀ : b = 0
+  · subst b
+    by_cases ha : a = 0
+    · simp [ha, ENNReal.divInf]
+    · simp [ENNReal.divInf, ha, ENNReal.mul_top ha]
+  by_cases htop : b = ∞
+  · subst b
+    simp [ENNReal.divInf, ENNReal.mul_top (ENNReal.coe_ne_zero.2 hε)]
+  exact ENNReal.mul_inv_le_iff_le_mul (.inl h₀) (.inl htop)
+
+theorem isLittleOTVS_iff_tendsto_divInf :
     f =o[𝕜; l] g ↔ ∀ U ∈ 𝓝 0, ∃ V ∈ 𝓝 0,
-      Tendsto (fun x ↦ (egauge 𝕜 U (f x) / egauge 𝕜 V (g x))) l (𝓝 0) := by
+      Tendsto (fun x ↦ ENNReal.divInf (egauge 𝕜 U (f x)) (egauge 𝕜 V (g x))) l (𝓝 0) := by
   simp only [isLittleOTVS_iff, ← ENNReal.coe_zero, ENNReal.nhds_coe, ← NNReal.bot_eq_zero,
     (nhds_bot_basis_Iic.map _).tendsto_right_iff]
-  simp +contextual [ENNReal.div_le_iff_le_mul, pos_iff_ne_zero, EventuallyLE]
+  simp +contextual [divInf_le_coe_iff, pos_iff_ne_zero, EventuallyLE]
 
-alias ⟨IsLittleOTVS.tendsto_div, IsLittleOTVS.of_tendsto_div⟩ := isLittleOTVS_iff_tendsto_div
+alias ⟨IsLittleOTVS.tendsto_divInf, IsLittleOTVS.of_tendsto_divInf⟩ :=
+  isLittleOTVS_iff_tendsto_divInf
 
 /-- A version of `IsLittleOTVS.exists_eventuallyLE_mul`
 where `ε` is quantified over `ℝ≥0∞` instead of `ℝ≥0`. -/
@@ -158,9 +171,9 @@ theorem IsLittleOTVS.exists_eventuallyLE_mul_ennreal (h : f =o[𝕜; l] g) {U : 
 
 theorem isLittleOTVS_congr (hf : f₁ =ᶠ[l] f₂) (hg : g₁ =ᶠ[l] g₂) :
     f₁ =o[𝕜; l] g₁ ↔ f₂ =o[𝕜; l] g₂ := by
-  simp only [isLittleOTVS_iff_tendsto_div]
+  simp only [isLittleOTVS_iff_tendsto_divInf]
   congr! 5 with U hU V hV
-  exact tendsto_congr' (hf.comp₂ (fun a b => (egauge _ _ a / egauge _ _ b)) hg)
+  exact tendsto_congr' (hf.comp₂ (fun a b ↦ ENNReal.divInf (egauge _ _ a) (egauge _ _ b)) hg)
 
 /-- A stronger version of `IsLittleOTVS.congr` that requires the functions only agree along the
 filter. -/
@@ -366,9 +379,10 @@ theorem IsBigOTVS.of_egauge_le_mul [ContinuousConstSMul 𝕜 F] {ι} {p : ι →
   have hc₀ : c ≠ 0 := by rintro rfl; simp at hc
   refine ⟨c⁻¹ • V, (set_smul_mem_nhds_zero_iff <| inv_ne_zero).mpr hV₀, ?_⟩
   refine hV.trans <| .of_forall fun x ↦ ?_
-  simp only
+  simp only [id_eq]
   grw [hc]
-  simp [egauge_smul_left, enorm_eq_nnnorm, ENNReal.div_eq_inv_mul]
+  rw [egauge_smul_left (inv_ne_zero (ha := hc₀.isUnit)), ENNReal.div_eq_inv_mul, enorm_inv,
+      inv_inv, enorm_eq_nnnorm]
 
 theorem isLittleOTVS_iff_smallSets :
     f =o[𝕜; l] g ↔ ∀ U ∈ 𝓝 0, ∀ᶠ V in (𝓝 0).smallSets, ∀ ε ≠ (0 : ℝ≥0),
@@ -679,17 +693,19 @@ lemma isLittleOTVS_one [ContinuousSMul 𝕜 E] : f =o[𝕜; l] (1 : α → 𝕜)
     lift r to ℝ≥0 using hr₀.le
     norm_cast at hr₀
     rcases NormedField.exists_one_lt_norm 𝕜 with ⟨c, hc⟩
-    obtain ⟨ε, hε₀, hε⟩ : ∃ ε : ℝ≥0, 0 < ε ∧ (((ε : ℝ≥0∞) * ‖c‖₊) / r) < 1 := by
+    have hrfin : (r : ℝ≥0∞)⁻¹ ≠ ∞ := ENNReal.inv_ne_top.2 (ENNReal.coe_ne_zero.2 hr₀.ne')
+    obtain ⟨ε, hε₀, hε⟩ : ∃ ε : ℝ≥0, 0 < ε ∧ (ε : ℝ≥0∞) * ‖c‖₊ * (r : ℝ≥0∞)⁻¹ < 1 := by
       apply Eventually.exists_gt
       refine Continuous.tendsto' ?_ _ _ (by simp) |>.eventually_lt_const zero_lt_one
-      fun_prop (disch := intros; first | apply ENNReal.coe_ne_top | positivity)
+      fun_prop (disch := intros; first | exact hrfin | apply ENNReal.coe_ne_top | positivity)
     filter_upwards [hr ε hε₀.ne'] with x hx
     refine mem_of_egauge_lt_one hUb (hx.trans_lt ?_)
     calc
-      (ε : ℝ≥0∞) * egauge 𝕜 (ball (0 : 𝕜) r) 1 ≤ (((ε : ℝ≥0∞) * ‖c‖₊) / r) := by
-        rw [ENNReal.mul_div_assoc]
-        gcongr
-        simpa using! egauge_ball_le_of_one_lt_norm (r := r) (x := (1 : 𝕜)) hc (by simp)
+      (ε : ℝ≥0∞) * egauge 𝕜 (ball (0 : 𝕜) r) 1 ≤ (ε : ℝ≥0∞) * ‖c‖₊ * (r : ℝ≥0∞)⁻¹ := by
+        rw [mul_assoc]
+        apply mul_le_mul_right
+        simpa [ENNReal.extendedDiv_eq_mul_inv, enorm_eq_nnnorm] using
+          egauge_ball_le_of_one_lt_norm (r := r) (x := (1 : 𝕜)) hc (.inl hr₀.ne')
       _ < 1 := ‹_›
   · simp only [isLittleOTVS_iff]
     intro hf U hU
@@ -760,7 +776,8 @@ lemma Filter.Tendsto.isBigOTVS_one [ContinuousAdd E] [ContinuousSMul 𝕜 E] {x 
       · refine (egauge_le_one _ ha).trans ?_
         simp [hr₁]
       · rwa [ENNReal.le_inv_iff_le_inv]
-    _ ≤ egauge 𝕜 (ball (0 : 𝕜) _) 1 := by simpa using div_le_egauge_ball 𝕜 r (1 : 𝕜)
+    _ ≤ egauge 𝕜 (ball (0 : 𝕜) _) 1 := by
+      simpa [ENNReal.divInf] using divInf_le_egauge_ball 𝕜 r (1 : 𝕜)
 
 end TopologicalSpace
 
@@ -778,43 +795,49 @@ lemma isLittleOTVS_iff_isLittleO : f =o[𝕜; l] g ↔ f =o[l] g := by
   · rcases h ε hε with ⟨δ, hδ₀, hδ⟩
     lift ε to ℝ≥0 using hε.le; lift δ to ℝ≥0 using hδ₀.le; norm_cast at hε hδ₀
     filter_upwards [hδ (δ / ‖c‖₊) (div_pos hδ₀ hc₀).ne'] with x hx
-    suffices ((‖f x‖₊ : ℝ≥0∞) / ε) ≤ ‖g x‖₊ by
-      have hnn : ‖f x‖₊ / ε ≤ ‖g x‖₊ := ENNReal.coe_le_coe.mp <| by
-        simpa only [ENNReal.coe_div] using this
-      exact_mod_cast (div_le_iff₀' hε).mp hnn
+    have hcₑ : (‖c‖₊ : ℝ≥0∞) ≠ 0 := ENNReal.coe_ne_zero.2 hc₀.ne'
+    have hδₑ : (δ : ℝ≥0∞) ≠ 0 := ENNReal.coe_ne_zero.2 hδ₀.ne'
+    have hεₑ : (ε : ℝ≥0∞) ≠ 0 := ENNReal.coe_ne_zero.2 hε.ne'
+    suffices (‖f x‖₊ : ℝ≥0∞) * (ε : ℝ≥0∞)⁻¹ ≤ ‖g x‖₊ by
+      have hmul : (‖f x‖₊ : ℝ≥0∞) ≤ (‖g x‖₊ : ℝ≥0∞) * ε :=
+        (ENNReal.mul_inv_le_iff_le_mul (.inl hεₑ) (.inl ENNReal.coe_ne_top)).1 this
+      rw [mul_comm] at hmul
+      exact_mod_cast hmul
     calc
-      ((‖f x‖₊ : ℝ≥0∞) / ε) ≤ egauge 𝕜 (ball 0 ε) (f x) := div_le_egauge_ball 𝕜 _ _
+      (‖f x‖₊ : ℝ≥0∞) * (ε : ℝ≥0∞)⁻¹ ≤ egauge 𝕜 (ball 0 ε) (f x) := divInf_le_egauge_ball 𝕜 _ _
       _ ≤ ↑(δ / ‖c‖₊) * egauge 𝕜 (ball 0 ↑δ) (g x) := hx
-      _ ≤ (δ / (‖c‖₊ : ℝ≥0∞)) * (((‖c‖₊ : ℝ≥0∞) * ‖g x‖₊) / δ) := by
-        gcongr
-        exacts [le_of_eq (ENNReal.coe_div (hr := hc₀.ne'.isUnit)),
-          egauge_ball_le_of_one_lt_norm hc (.inl <| ne_of_gt hδ₀)]
-      _ = ((δ : ℝ≥0∞) / δ) * ((‖c‖₊ : ℝ≥0∞) / (‖c‖₊ : ℝ≥0∞)) * ‖g x‖₊ := by
-        simp only [ENNReal.div_eq_mul_inv]
+      _ ≤ ↑(δ / ‖c‖₊) * ((‖c‖₊ : ℝ≥0∞) * ‖g x‖₊ * (δ : ℝ≥0∞)⁻¹) := by
+        apply mul_le_mul_right
+        simpa only [ENNReal.extendedDiv_eq_mul_inv, enorm_eq_nnnorm] using
+          egauge_ball_le_of_one_lt_norm hc (.inl hδ₀.ne')
+      _ = ((δ : ℝ≥0∞) * (δ : ℝ≥0∞)⁻¹) * ((‖c‖₊ : ℝ≥0∞) * (‖c‖₊ : ℝ≥0∞)⁻¹) * ‖g x‖₊ := by
+        rw [ENNReal.coe_div (hr := hc₀.ne'.isUnit), ENNReal.div_eq_mul_inv]
         ring
-      _ ≤ 1 * 1 * ‖g x‖₊ := by
-        gcongr <;> exact ENNReal.div_self_le_one
-      _ = ‖g x‖₊ := by simp
+      _ = ‖g x‖₊ := by
+        rw [ENNReal.mul_inv_cancel hδₑ ENNReal.coe_ne_top,
+          ENNReal.mul_inv_cancel hcₑ ENNReal.coe_ne_top, one_mul, one_mul]
   · have hcn : (‖c‖₊ : ℝ) ≠ 0 := by exact_mod_cast hc₀.ne'
     filter_upwards [@h (ε * δ / (‖c‖₊ : ℝ)) (by positivity)] with x
       (hx : (‖f x‖₊ : ℝ) ≤ ε * δ / (‖c‖₊ : ℝ) * ‖g x‖₊)
     lift ε to ℝ≥0 using hε.le
+    have hε₀ : 0 < ε := by exact_mod_cast hε
+    have hcₑ : (‖c‖₊ : ℝ≥0∞) ≠ 0 := ENNReal.coe_ne_zero.2 hc₀.ne'
+    have hεₑ : (ε : ℝ≥0∞) ≠ 0 := ENNReal.coe_ne_zero.2 hε₀.ne'
     calc
-      egauge 𝕜 (ball 0 ε) (f x) ≤ (((‖c‖₊ : ℝ≥0∞) * ‖f x‖₊) / ε) := by
-        simpa only [enorm_eq_nnnorm] using
-          egauge_ball_le_of_one_lt_norm hc (.inl <| ne_of_gt hε)
-      _ ≤ (((‖c‖₊ : ℝ≥0∞) * (↑(ε * δ / ‖c‖₊) * ‖g x‖₊)) / ε) := by
+      egauge 𝕜 (ball 0 ε) (f x) ≤ (‖c‖₊ : ℝ≥0∞) * ‖f x‖₊ * (ε : ℝ≥0∞)⁻¹ := by
+        simpa only [ENNReal.extendedDiv_eq_mul_inv, enorm_eq_nnnorm] using
+          egauge_ball_le_of_one_lt_norm hc (.inl hε₀.ne')
+      _ ≤ (‖c‖₊ : ℝ≥0∞) * (↑(ε * δ / ‖c‖₊) * ‖g x‖₊) * (ε : ℝ≥0∞)⁻¹ := by
         gcongr
         apply ENNReal.coe_le_coe.2
         apply NNReal.coe_le_coe.1
         simpa only [NNReal.coe_mul, NNReal.coe_div, coe_nnnorm] using hx
-      _ = ((‖c‖₊ : ℝ≥0∞) / (‖c‖₊ : ℝ≥0∞)) * ((ε : ℝ≥0∞) / ε) * δ * ‖g x‖₊ := by
-        simp only [ENNReal.coe_div, ENNReal.coe_mul,
-          ENNReal.div_eq_mul_inv]
+      _ = ((‖c‖₊ : ℝ≥0∞) * (‖c‖₊ : ℝ≥0∞)⁻¹) * ((ε : ℝ≥0∞) * (ε : ℝ≥0∞)⁻¹) * δ * ‖g x‖₊ := by
+        simp only [ENNReal.coe_div (hr := hc₀.ne'.isUnit), ENNReal.coe_mul, ENNReal.div_eq_mul_inv]
         ring
-      _ ≤ 1 * 1 * δ * ‖g x‖₊ := by
-        gcongr <;> exact ENNReal.div_self_le_one
-      _ = δ * ‖g x‖₊ := by simp
+      _ = δ * ‖g x‖₊ := by
+        rw [ENNReal.mul_inv_cancel hcₑ ENNReal.coe_ne_top,
+          ENNReal.mul_inv_cancel hεₑ ENNReal.coe_ne_top, one_mul, one_mul]
       _ ≤ δ * egauge 𝕜 (ball 0 1) (g x) := by gcongr; apply le_egauge_ball_one
 
 alias ⟨isLittleOTVS.isLittleO, IsLittleO.isLittleOTVS⟩ := isLittleOTVS_iff_isLittleO
@@ -834,11 +857,11 @@ lemma isBigOTVS_iff_isBigO : f =O[𝕜; l] g ↔ f =O[l] g := by
     calc
       ‖f x‖ₑ ≤ egauge 𝕜 (ball 0 1) (f x) := le_egauge_ball_one ..
       _ ≤ egauge 𝕜 (ball 0 r) (g x) := hx
-      _ ≤ ((‖c‖ₑ * ‖g x‖ₑ) / r) :=
+      _ ≤ ‖c‖ₑ * ‖g x‖ₑ * (r : ℝ≥0∞)⁻¹ :=
         egauge_ball_le_of_one_lt_norm hc (.inl hr₀.ne')
       _ = (‖c‖₊ / r : ℝ≥0) * ‖g x‖ₑ := by
-        simp only [ENNReal.mul_div_right_comm, enorm_eq_nnnorm,
-          ENNReal.coe_div]
+        simp only [enorm_eq_nnnorm, ENNReal.coe_div (hr := hr₀.ne'.isUnit), ENNReal.div_eq_mul_inv]
+        ac_rfl
   · rw [nhds_basis_ball.isBigOTVS_iff nhds_basis_ball, isBigO_iff']
     have hc₀ : 0 < ‖c‖₊ := one_pos.trans hc
     rintro ⟨C, hC₀, hC⟩ r hr₀
@@ -852,21 +875,20 @@ lemma isBigOTVS_iff_isBigO : f =O[𝕜; l] g ↔ f =O[l] g := by
     have hr' : 0 < r' := div_pos hr₀ hprod
     refine ⟨(r' : ℝ), NNReal.coe_pos.mpr hr', hC.mono fun x hx ↦ ?_⟩
     calc
-      egauge 𝕜 (ball 0 r) (f x) ≤ ((‖c‖ₑ * ‖f x‖ₑ) / r) :=
+      egauge 𝕜 (ball 0 r) (f x) ≤ ‖c‖ₑ * ‖f x‖ₑ * (r : ℝ≥0∞)⁻¹ :=
         egauge_ball_le_of_one_lt_norm hc (.inl hr₀.ne')
-      _ ≤ ((‖c‖ₑ * (C * ‖g x‖ₑ)) / r) := by
+      _ ≤ ‖c‖ₑ * (C * ‖g x‖ₑ) * (r : ℝ≥0∞)⁻¹ := by
         gcongr
         simp only [enorm_eq_nnnorm, ← coe_nnnorm] at hx ⊢
         exact mod_cast hx
-      _ = (‖g x‖ₑ / r') := by
-        simp only [ENNReal.div_eq_mul_inv]
+      _ = ‖g x‖ₑ * (r' : ℝ≥0∞)⁻¹ := by
         rw [← ENNReal.coe_inv (hr := hru), ← ENNReal.coe_inv (hr := hr'.ne'.isUnit)]
         dsimp only [r']
         rw [inv_div₀]
-        simp only [ENNReal.coe_div, ENNReal.coe_mul, ENNReal.coe_inv, ENNReal.div_eq_mul_inv,
-          enorm_eq_nnnorm]
+        simp only [ENNReal.coe_div (hr := hru), ENNReal.coe_mul, ENNReal.coe_inv,
+          ENNReal.div_eq_mul_inv, enorm_eq_nnnorm]
         ac_rfl
-      _ ≤ _ := div_le_egauge_ball 𝕜 r' (g x)
+      _ ≤ _ := divInf_le_egauge_ball 𝕜 r' (g x)
 
 alias ⟨IsBigOTVS.isBigO, IsBigO.isBigOTVS⟩ := isBigOTVS_iff_isBigO
 

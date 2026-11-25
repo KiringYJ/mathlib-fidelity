@@ -160,7 +160,7 @@ lemma exists_extension_of_isSetRing_of_le_measure_of_dense [IsFiniteMeasure μ]
       exact eq_bot_iff.2 (le_of_forall_gt this)
     intro ε εpos
     obtain ⟨δ, δpos, hδ⟩ : ∃ δ, 0 < δ ∧ 8 * δ = ε := by
-      exact ⟨ε / 8, ENNReal.div_pos εpos.ne' ENNReal.ofNat_ne_top,
+      exact ⟨ε / 8, ENNReal.div_pos εpos.ne' (by simp) ENNReal.ofNat_ne_top,
         ENNReal.mul_div_cancel (by simp) ENNReal.ofNat_ne_top⟩
     -- approximate `s` and `t` up to `δ` by sets `s'` and `t'` in `C`.
     obtain ⟨s', s'C, hs'⟩ : ∃ s' ∈ C, μ (s' ∆ s) < δ := h'C _ _ s.2 δpos

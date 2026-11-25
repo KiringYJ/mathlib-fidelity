@@ -54,33 +54,36 @@ open Set
 
 theorem toLipschitzWith (hf : ContractingWith K f) : LipschitzWith K f := hf.2
 
-theorem one_sub_K_pos' (hf : ContractingWith K f) : (0 : ℝ≥0∞) < 1 - K := by simp [hf.1]
+theorem one_monus_K_pos (hf : ContractingWith K f) : 0 < ENNReal.monus 1 (K : ℝ≥0∞) :=
+  ENNReal.monus_pos_of_lt (ENNReal.coe_lt_one_iff.2 hf.1)
 
-theorem one_sub_K_ne_zero (hf : ContractingWith K f) : (1 : ℝ≥0∞) - K ≠ 0 :=
-  ne_of_gt hf.one_sub_K_pos'
+theorem one_monus_K_ne_zero (hf : ContractingWith K f) : ENNReal.monus 1 (K : ℝ≥0∞) ≠ 0 :=
+  ne_of_gt hf.one_monus_K_pos
 
-theorem one_sub_K_ne_top : (1 : ℝ≥0∞) - K ≠ ∞ := by
-  norm_cast
-  exact ENNReal.coe_ne_top
+theorem one_monus_K_ne_top : ENNReal.monus 1 (K : ℝ≥0∞) ≠ ∞ :=
+  ENNReal.monus_ne_top ENNReal.one_ne_top
 
 theorem edist_inequality (hf : ContractingWith K f) {x y} (h : edist x y ≠ ∞) :
-    edist x y ≤ (edist x (f x) + edist y (f y)) / (1 - (K : ℝ≥0∞)) :=
+    edist x y ≤ ENNReal.div (edist x (f x) + edist y (f y)) (ENNReal.monus 1 K)
+      ⟨hf.one_monus_K_ne_zero, .inr one_monus_K_ne_top⟩ :=
   suffices edist x y ≤ edist x (f x) + edist y (f y) + K * edist x y by
-    rwa [ENNReal.le_div_iff_mul_le (Or.inl hf.one_sub_K_ne_zero) (Or.inl one_sub_K_ne_top),
-      mul_comm, ENNReal.sub_mul fun _ _ ↦ h, one_mul, tsub_le_iff_right]
+    rwa [ENNReal.le_div_iff_mul_le, mul_comm, ENNReal.monus_mul fun _ _ ↦ h, one_mul,
+      ENNReal.monus_le_iff]
   calc
     edist x y ≤ edist x (f x) + edist (f x) (f y) + edist (f y) y := edist_triangle4 _ _ _ _
     _ = edist x (f x) + edist y (f y) + edist (f x) (f y) := by rw [edist_comm y, add_right_comm]
     _ ≤ edist x (f x) + edist y (f y) + K * edist x y := add_le_add le_rfl (hf.2 _ _)
 
 theorem edist_le_of_fixedPoint (hf : ContractingWith K f) {x y} (h : edist x y ≠ ∞)
-    (hy : IsFixedPt f y) : edist x y ≤ edist x (f x) / (1 - (K : ℝ≥0∞)) := by
+    (hy : IsFixedPt f y) : edist x y ≤ ENNReal.div (edist x (f x)) (ENNReal.monus 1 K)
+      ⟨hf.one_monus_K_ne_zero, .inr one_monus_K_ne_top⟩ := by
   simpa only [hy.eq, edist_self, add_zero] using hf.edist_inequality h
 
 theorem eq_or_edist_eq_top_of_fixedPoints (hf : ContractingWith K f) {x y} (hx : IsFixedPt f x)
     (hy : IsFixedPt f y) : x = y ∨ edist x y = ∞ := by
   refine or_iff_not_imp_right.2 fun h ↦ edist_le_zero.1 ?_
-  simpa only [hx.eq, edist_self, add_zero, ENNReal.zero_div] using hf.edist_le_of_fixedPoint h hy
+  simpa only [hx.eq, edist_self, add_zero, ENNReal.zero_div hf.one_monus_K_ne_zero]
+    using hf.edist_le_of_fixedPoint h hy
 
 /-- If a map `f` is `ContractingWith K`, and `s` is a forward-invariant set, then
 restriction of `f` to `s` is `ContractingWith K` as well. -/
@@ -100,7 +103,8 @@ and lemmas about these functions. -/
 @[wikidata Q220680]
 theorem exists_fixedPoint (hf : ContractingWith K f) (x : α) (hx : edist x (f x) ≠ ∞) :
     ∃ y, IsFixedPt f y ∧ Tendsto (fun n ↦ f^[n] x) atTop (𝓝 y) ∧
-      ∀ n : ℕ, edist (f^[n] x) y ≤ edist x (f x) * (K : ℝ≥0∞) ^ n / (1 - (K : ℝ≥0∞)) :=
+      ∀ n : ℕ, edist (f^[n] x) y ≤ ENNReal.div (edist x (f x) * (K : ℝ≥0∞) ^ n) (ENNReal.monus 1 K)
+      ⟨hf.one_monus_K_ne_zero, .inr one_monus_K_ne_top⟩ :=
   have : CauchySeq fun n ↦ f^[n] x :=
     cauchySeq_of_edist_le_geometric K (edist x (f x)) (ENNReal.coe_lt_one_iff.2 hf.1) hx
       (hf.toLipschitzWith.edist_iterate_succ_le_geometric x)
@@ -128,18 +132,21 @@ theorem tendsto_iterate_efixedPoint (hf : ContractingWith K f) {x : α} (hx : ed
 
 theorem apriori_edist_iterate_efixedPoint_le (hf : ContractingWith K f) {x : α}
     (hx : edist x (f x) ≠ ∞) (n : ℕ) :
-    edist (f^[n] x) (efixedPoint f hf x hx) ≤ edist x (f x) * (K : ℝ≥0∞) ^ n / (1 - (K : ℝ≥0∞)) :=
+    edist (f^[n] x) (efixedPoint f hf x hx) ≤
+      ENNReal.div (edist x (f x) * (K : ℝ≥0∞) ^ n) (ENNReal.monus 1 K)
+      ⟨hf.one_monus_K_ne_zero, .inr one_monus_K_ne_top⟩ :=
   (Classical.choose_spec <| hf.exists_fixedPoint x hx).2.2 n
 
 theorem edist_efixedPoint_le (hf : ContractingWith K f) {x : α} (hx : edist x (f x) ≠ ∞) :
-    edist x (efixedPoint f hf x hx) ≤ edist x (f x) / (1 - (K : ℝ≥0∞)) := by
+    edist x (efixedPoint f hf x hx) ≤ ENNReal.div (edist x (f x)) (ENNReal.monus 1 K)
+      ⟨hf.one_monus_K_ne_zero, .inr one_monus_K_ne_top⟩ := by
   convert! hf.apriori_edist_iterate_efixedPoint_le hx 0
   simp only [pow_zero, mul_one]
 
 theorem edist_efixedPoint_lt_top (hf : ContractingWith K f) {x : α} (hx : edist x (f x) ≠ ∞) :
     edist x (efixedPoint f hf x hx) < ∞ :=
   (hf.edist_efixedPoint_le hx).trans_lt
-    (ENNReal.mul_ne_top hx <| ENNReal.inv_ne_top.2 hf.one_sub_K_ne_zero).lt_top
+    (ENNReal.mul_ne_top hx <| ENNReal.inv_ne_top.2 hf.one_monus_K_ne_zero).lt_top
 
 theorem efixedPoint_eq_of_edist_lt_top (hf : ContractingWith K f) {x : α} (hx : edist x (f x) ≠ ∞)
     {y : α} (hy : edist y (f y) ≠ ∞) (h : edist x y ≠ ∞) :
@@ -159,7 +166,8 @@ end
 theorem exists_fixedPoint' {s : Set α} (hsc : IsComplete s) (hsf : MapsTo f s s)
     (hf : ContractingWith K <| hsf.restrict f s s) {x : α} (hxs : x ∈ s) (hx : edist x (f x) ≠ ∞) :
     ∃ y ∈ s, IsFixedPt f y ∧ Tendsto (fun n ↦ f^[n] x) atTop (𝓝 y) ∧
-      ∀ n : ℕ, edist (f^[n] x) y ≤ edist x (f x) * (K : ℝ≥0∞) ^ n / (1 - (K : ℝ≥0∞)) := by
+      ∀ n : ℕ, edist (f^[n] x) y ≤ ENNReal.div (edist x (f x) * (K : ℝ≥0∞) ^ n) (ENNReal.monus 1 K)
+      ⟨hf.one_monus_K_ne_zero, .inr one_monus_K_ne_top⟩ := by
   have := hsc.completeSpace_coe
   rcases hf.exists_fixedPoint ⟨x, hxs⟩ hx with ⟨y, hfy, h_tendsto, hle⟩
   refine ⟨y, y.2, Subtype.ext_iff.1 hfy, ?_, fun n ↦ ?_⟩
@@ -198,12 +206,14 @@ theorem apriori_edist_iterate_efixedPoint_le' {s : Set α} (hsc : IsComplete s) 
     (hf : ContractingWith K <| hsf.restrict f s s) {x : α} (hxs : x ∈ s) (hx : edist x (f x) ≠ ∞)
     (n : ℕ) :
     edist (f^[n] x) (efixedPoint' f hsc hsf hf x hxs hx) ≤
-      edist x (f x) * (K : ℝ≥0∞) ^ n / (1 - (K : ℝ≥0∞)) :=
+      ENNReal.div (edist x (f x) * (K : ℝ≥0∞) ^ n) (ENNReal.monus 1 K)
+      ⟨hf.one_monus_K_ne_zero, .inr one_monus_K_ne_top⟩ :=
   (Classical.choose_spec <| hf.exists_fixedPoint' hsc hsf hxs hx).2.2.2 n
 
 theorem edist_efixedPoint_le' {s : Set α} (hsc : IsComplete s) (hsf : MapsTo f s s)
     (hf : ContractingWith K <| hsf.restrict f s s) {x : α} (hxs : x ∈ s) (hx : edist x (f x) ≠ ∞) :
-    edist x (efixedPoint' f hsc hsf hf x hxs hx) ≤ edist x (f x) / (1 - (K : ℝ≥0∞)) := by
+    edist x (efixedPoint' f hsc hsf hf x hxs hx) ≤ ENNReal.div (edist x (f x)) (ENNReal.monus 1 K)
+      ⟨hf.one_monus_K_ne_zero, .inr one_monus_K_ne_top⟩ := by
   convert! hf.apriori_edist_iterate_efixedPoint_le' hsc hsf hxs hx 0
   rw [pow_zero, mul_one]
 
@@ -211,7 +221,7 @@ theorem edist_efixedPoint_lt_top' {s : Set α} (hsc : IsComplete s) (hsf : MapsT
     (hf : ContractingWith K <| hsf.restrict f s s) {x : α} (hxs : x ∈ s) (hx : edist x (f x) ≠ ∞) :
     edist x (efixedPoint' f hsc hsf hf x hxs hx) < ∞ :=
   (hf.edist_efixedPoint_le' hsc hsf hxs hx).trans_lt
-    (ENNReal.mul_ne_top hx <| ENNReal.inv_ne_top.2 hf.one_sub_K_ne_zero).lt_top
+    (ENNReal.mul_ne_top hx <| ENNReal.inv_ne_top.2 hf.one_monus_K_ne_zero).lt_top
 
 /-- If a globally contracting map `f` has two complete forward-invariant sets `s`, `t`,
 and `x ∈ s` is at a finite distance from `y ∈ t`, then the `efixedPoint'` constructed by `x`

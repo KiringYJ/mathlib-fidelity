@@ -116,7 +116,9 @@ private theorem one_div_sub_pow_of_one {𝕜 : Type*} [NontriviallyNormedField �
   have hp : HasFPowerSeriesOnBall p.sum p (u 0) 1 := by
     rw [map_zero]
     exact (p.hasFPowerSeriesOnBall (hunit.r_pos.trans_le hunit.r_le)).mono hunit.r_pos hunit.r_le
-  have hrad : (1 / ‖u‖ₑ) = ‖z‖ₑ := by simp [u, enorm_smul, enorm_inv]
+  have hrad : Quantale.leftMulResiduation ‖u‖ₑ 1 = ‖z‖ₑ := by
+    rw [ENNReal.leftMulResiduation_eq_extendedDiv ⟨Or.inl one_ne_zero, Or.inr enorm_ne_top⟩]
+    simp [ENNReal.extendedDiv_eq_mul_inv, u, enorm_smul, enorm_inv]
   have hcomp := hp.compContinuousLinearMap (u := u) (x := (0 : 𝕜))
   have hscaled := hcomp.const_smul (c := (z ^ (a + 1))⁻¹)
   have hcoeff : (z ^ (a + 1))⁻¹ • p.compContinuousLinearMap u =
@@ -160,6 +162,11 @@ private theorem one_div_sub_pow_of_one {𝕜 : Type*} [NontriviallyNormedField �
         rw [← mul_pow, heq, mul_comm _ z, ← mul_assoc, mul_inv_cancel₀, one_mul])
   have hsum := hscaled.hasSum (y := w.1) (by simpa only [id_eq] using hw)
   simpa only [Pi.smul_apply, smul_eq_mul, Function.comp_def, hlim, id_eq] using hsum
+
+private theorem one_leftMulResiduation (r : ENNReal) :
+    Quantale.leftMulResiduation 1 r = r := by
+  rw [ENNReal.leftMulResiduation_eq_extendedDiv ⟨Or.inr one_ne_zero, Or.inr ENNReal.one_ne_top⟩]
+  simp [ENNReal.extendedDiv_eq_mul_inv]
 
 namespace Complex
 
@@ -224,7 +231,7 @@ theorem one_div_one_sub_cpow_hasFPowerSeriesOnBall_zero (a : ℂ) :
     simpa using one_add_cpow_hasFPowerSeriesOnBall_zero
   have hs : HasFPowerSeriesOnBall (fun x : ℂ ↦ (1 - x) ^ (-a))
       (.ofScalars ℂ fun n ↦ Ring.choose (a + n - 1) n) 0 1 := by
-    simpa [Function.comp_def, ← sub_eq_add_neg, H] using
+    simpa [Function.comp_def, ← sub_eq_add_neg, H, one_leftMulResiduation] using
       this.compContinuousLinearMap (u := -1) (x := (0 : ℂ))
   refine ⟨hs.r_le, hs.r_pos, ?_⟩
   intro y hy
@@ -331,7 +338,7 @@ theorem one_add_rpow_hasFPowerSeriesOnBall_zero {a : ℝ} :
     Complex.ofRealCLM.map_zero ▸ H ▸ Complex.one_add_cpow_hasFPowerSeriesOnBall_zero.restrictScalars
   convert! (Complex.reCLM.comp_hasFPowerSeriesOnBall this.compContinuousLinearMap).congr ?_
   · ext; simp [Function.comp_def]
-  · simp
+  · simp [one_leftMulResiduation]
   · intro x hx; simp_all; norm_cast
 
 theorem one_add_rpow_hasFPowerSeriesAt_zero {a : ℝ} :
@@ -350,7 +357,7 @@ theorem one_div_one_sub_rpow_hasFPowerSeriesOnBall_zero (a : ℝ) :
     simpa using one_add_rpow_hasFPowerSeriesOnBall_zero
   have hs : HasFPowerSeriesOnBall (fun x : ℝ ↦ (1 - x) ^ (-a))
       (.ofScalars ℝ fun n ↦ Ring.choose (a + n - 1) n) 0 1 := by
-    simpa [Function.comp_def, ← sub_eq_add_neg, H] using
+    simpa [Function.comp_def, ← sub_eq_add_neg, H, one_leftMulResiduation] using
       hneg.compContinuousLinearMap (u := -1) (x := (0 : ℝ))
   refine ⟨hs.r_le, hs.r_pos, ?_⟩
   intro y hy

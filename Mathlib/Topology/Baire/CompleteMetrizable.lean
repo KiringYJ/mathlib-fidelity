@@ -26,10 +26,10 @@ variable {X : Type*} [TopologicalSpace X] [IsCompletelyPseudoMetrizableSpace X]
 instance (priority := 100) BaireSpace.of_completelyPseudoMetrizable : BaireSpace X := by
   let _ := upgradeIsCompletelyPseudoMetrizable X
   refine ⟨fun f ho hd => ?_⟩
-  let B : ℕ → ℝ≥0∞ := fun n => 1 / (2 : ℝ≥0∞) ^ n
+  let B : ℕ → ℝ≥0∞ := fun n => (2⁻¹ : ℝ≥0∞) ^ n
   have Bpos (n : ℕ) : 0 < B n := by
     dsimp only [B]
-    exact ENNReal.div_pos one_ne_zero (by finiteness)
+    exact ENNReal.pow_pos (ENNReal.inv_pos.2 ENNReal.ofNat_ne_top) _
   /- Translate the density assumption into two functions `center` and `radius` associating
     to any n, x, δ, δpos a center and a positive radius such that
     `closedEBall center radius` is included both in `f n` and in `closedEBall x δ`.
@@ -93,7 +93,8 @@ instance (priority := 100) BaireSpace.of_completelyPseudoMetrizable : BaireSpace
           Subset.trans (incl n) inter_subset_left
         _ ⊆ closedEBall (c n) (B n) := closedEBall_subset_closedEBall (rB n)
     exact I A
-  have : CauchySeq c := cauchySeq_of_edist_le_geometric_two _ ENNReal.one_ne_top cdist
+  have : CauchySeq c := cauchySeq_of_edist_le_geometric 2⁻¹ 1 ENNReal.one_half_lt_one
+    ENNReal.one_ne_top (by simpa only [one_mul] using cdist)
   -- as the sequence `c n` is Cauchy in a complete space, it converges to a limit `y`.
   rcases cauchySeq_tendsto_of_complete this with ⟨y, ylim⟩
   -- this point `y` will be the desired point. We will check that it belongs to all

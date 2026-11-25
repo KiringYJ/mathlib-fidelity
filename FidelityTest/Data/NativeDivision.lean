@@ -255,7 +255,9 @@ example (I : Submodule R A) : I / ⊥ = ⊤ := Submodule.div_bot I
 
 end SubmoduleResidual
 
-example (a : ENNReal) (ha : a ≠ 0) : a / 0 = ⊤ := ENNReal.div_zero ha
+example (a : ENNReal) (ha : a ≠ 0) :
+    ENNReal.extendedDiv a 0 ⟨Or.inl ha, Or.inr ENNReal.zero_ne_top⟩ = ⊤ := by
+  simp [ENNReal.extendedDiv, ha]
 
 example (a b : Ordinal) (hb : b ≠ 0) :
     b * Ordinal.quotient a b hb + a % b = a :=

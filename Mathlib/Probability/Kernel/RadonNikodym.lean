@@ -32,9 +32,12 @@ in general because we might not have `κ ≤ η`, but if we could, we would get 
 `f` with the property `κ = withDensity η f`, which is the decomposition we want for `κ ≤ η`.
 To circumvent that difficulty, we take `η' = κ + η` and thus define `rnDerivAux κ η`.
 Finally, `rnDeriv κ η a x` is given by
-`ENNReal.ofReal (rnDerivAux κ (κ + η) a x) / ENNReal.ofReal (1 - rnDerivAux κ (κ + η) a x)`.
+the extended quotient of `ENNReal.ofReal (rnDerivAux κ (κ + η) a x)` by
+`ENNReal.ofReal (1 - rnDerivAux κ (κ + η) a x)`. These two masses cannot both vanish.
 Up to some conversions between `ℝ` and `ℝ≥0`, the singular part is
-`withDensity (κ + η) (rnDerivAux κ (κ + η) - (1 - rnDerivAux κ (κ + η)) * rnDeriv κ η)`.
+weighting `κ + η` by the nonnegative remainder after removing
+`ENNReal.ofReal (1 - rnDerivAux κ (κ + η) a x) * rnDeriv κ η a x`
+from `ENNReal.ofReal (rnDerivAux κ (κ + η) a x)`.
 
 The countably generated measurable space assumption is not needed to have a decomposition for
 measures, but the additional difficulty with kernels is to obtain joint measurability of the
@@ -168,8 +171,8 @@ lemma withDensity_one_sub_rnDerivAux (κ η : Kernel α γ) [IsFiniteKernel κ] 
       simp
     simp only [FunLike.coe_add, Pi.add_apply, Measure.coe_add] at h
     rwa [withDensity_rnDerivAux, add_comm, ENNReal.add_right_inj (measure_ne_top _ _)] at h
-  simp_rw [ofNNReal_toNNReal, ENNReal.ofReal_sub _ (rnDerivAux_nonneg h_le), ENNReal.ofReal_one]
-  rw [withDensity_sub_add_cancel
+  simp_rw [ofNNReal_toNNReal, ENNReal.ofReal_monus _ (rnDerivAux_nonneg h_le), ENNReal.ofReal_one]
+  rw [withDensity_monus_add_cancel
     (f := fun _ _ ↦ (1 : ℝ≥0∞))
     (g := fun a x ↦ ENNReal.ofReal (rnDerivAux κ (κ + η) a x))
     (fun _ ↦ by fun_prop)]
@@ -222,22 +225,33 @@ lemma measure_mutuallySingularSetSlice (κ η : Kernel α γ) [IsFiniteKernel κ
   simp only [mem_ofPred_eq] at hx
   simp [hx]
 
+/-- The nonnegative projections of `r` and `1 - r` form a valid extended quotient. -/
+lemma rnDeriv_ratio_domain (r : ℝ) :
+    (ENNReal.ofReal r ≠ 0 ∨ ENNReal.ofReal (1 - r) ≠ 0) ∧
+      (ENNReal.ofReal r ≠ ⊤ ∨ ENNReal.ofReal (1 - r) ≠ ⊤) := by
+  refine ⟨?_, Or.inl ENNReal.ofReal_ne_top⟩
+  by_cases hr : 0 < r
+  · exact Or.inl (ENNReal.ofReal_pos.mpr hr).ne'
+  · exact Or.inr (ENNReal.ofReal_pos.mpr (sub_pos.mpr
+      ((le_of_not_gt hr).trans_lt zero_lt_one))).ne'
+
 /-- Radon-Nikodym derivative of the kernel `κ` with respect to the kernel `η`. -/
 noncomputable
 irreducible_def rnDeriv (κ η : Kernel α γ) (a : α) (x : γ) : ℝ≥0∞ :=
-  (ENNReal.ofReal (rnDerivAux κ (κ + η) a x) / ENNReal.ofReal (1 - rnDerivAux κ (κ + η) a x))
+  ENNReal.extendedDiv (ENNReal.ofReal (rnDerivAux κ (κ + η) a x))
+    (ENNReal.ofReal (1 - rnDerivAux κ (κ + η) a x)) (rnDeriv_ratio_domain _)
 
 lemma rnDeriv_def' (κ η : Kernel α γ) :
     rnDeriv κ η = fun a x ↦
-      ENNReal.ofReal (rnDerivAux κ (κ + η) a x) /
-        ENNReal.ofReal (1 - rnDerivAux κ (κ + η) a x) := by
+      ENNReal.extendedDiv (ENNReal.ofReal (rnDerivAux κ (κ + η) a x))
+        (ENNReal.ofReal (1 - rnDerivAux κ (κ + η) a x)) (rnDeriv_ratio_domain _) := by
   ext
   rw [rnDeriv_def]
 
 @[fun_prop]
 lemma measurable_rnDeriv (κ η : Kernel α γ) :
     Measurable (fun p : α × γ ↦ rnDeriv κ η p.1 p.2) := by
-  simp_rw [rnDeriv_def, ENNReal.div_eq_mul_inv]
+  simp_rw [rnDeriv_def, ENNReal.extendedDiv_eq_mul_inv]
   fun_prop
 
 @[fun_prop]
@@ -246,10 +260,15 @@ lemma measurable_rnDeriv_right (κ η : Kernel α γ) (a : α) :
 
 lemma rnDeriv_eq_top_iff (κ η : Kernel α γ) (a : α) (x : γ) :
     rnDeriv κ η a x = ∞ ↔ (a, x) ∈ mutuallySingularSet κ η := by
-  simp only [rnDeriv, ENNReal.div_eq_top, ne_eq, ENNReal.ofReal_eq_zero, not_le,
-    tsub_le_iff_right, zero_add, ENNReal.ofReal_ne_top, not_false_eq_true, and_true, or_false,
-    mutuallySingularSet, mem_ofPred_eq, and_iff_right_iff_imp]
-  exact fun h ↦ zero_lt_one.trans_le h
+  rw [rnDeriv_def, ENNReal.extendedDiv_eq_mul_inv, ENNReal.mul_eq_top,
+    mutuallySingularSet, mem_ofPred_eq]
+  constructor
+  · rintro (⟨_, h⟩ | ⟨h, _⟩)
+    · exact sub_nonpos.mp (ENNReal.ofReal_eq_zero.mp (ENNReal.inv_eq_top.mp h))
+    · exact (ENNReal.ofReal_ne_top h).elim
+  · intro h
+    exact Or.inl ⟨(ENNReal.ofReal_pos.mpr (zero_lt_one.trans_le h)).ne',
+      ENNReal.inv_eq_top.mpr (ENNReal.ofReal_eq_zero.mpr (sub_nonpos.mpr h))⟩
 
 lemma rnDeriv_eq_top_iff' (κ η : Kernel α γ) (a : α) (x : γ) :
     rnDeriv κ η a x = ∞ ↔ x ∈ mutuallySingularSetSlice κ η a := by
@@ -259,19 +278,19 @@ lemma rnDeriv_eq_top_iff' (κ η : Kernel α γ) (a : α) (x : γ) :
 noncomputable
 irreducible_def singularPart (κ η : Kernel α γ) [IsSFiniteKernel κ] [IsSFiniteKernel η] :
     Kernel α γ :=
-  withDensity (κ + η) (fun a x ↦ Real.toNNReal (rnDerivAux κ (κ + η) a x)
-    - Real.toNNReal (1 - rnDerivAux κ (κ + η) a x) * rnDeriv κ η a x)
+  withDensity (κ + η) (fun a x ↦ ENNReal.monus (ENNReal.ofReal (rnDerivAux κ (κ + η) a x))
+    (ENNReal.ofReal (1 - rnDerivAux κ (κ + η) a x) * rnDeriv κ η a x))
 
 lemma measurable_singularPart_fun (κ η : Kernel α γ) :
-    Measurable (fun p : α × γ ↦ Real.toNNReal (rnDerivAux κ (κ + η) p.1 p.2)
-      - Real.toNNReal (1 - rnDerivAux κ (κ + η) p.1 p.2) * rnDeriv κ η p.1 p.2) := by fun_prop
+    Measurable (fun p : α × γ ↦ ENNReal.monus (ENNReal.ofReal (rnDerivAux κ (κ + η) p.1 p.2))
+      (ENNReal.ofReal (1 - rnDerivAux κ (κ + η) p.1 p.2) * rnDeriv κ η p.1 p.2)) := by fun_prop
 
 lemma measurable_singularPart_fun_right (κ η : Kernel α γ) (a : α) :
-    Measurable (fun x : γ ↦ Real.toNNReal (rnDerivAux κ (κ + η) a x)
-      - Real.toNNReal (1 - rnDerivAux κ (κ + η) a x) * rnDeriv κ η a x) := by
-  change Measurable ((Function.uncurry fun a b ↦
-    ENNReal.ofReal (rnDerivAux κ (κ + η) a b)
-    - ENNReal.ofReal (1 - rnDerivAux κ (κ + η) a b) * rnDeriv κ η a b) ∘ (fun b ↦ (a, b)))
+    Measurable (fun x : γ ↦ ENNReal.monus (ENNReal.ofReal (rnDerivAux κ (κ + η) a x))
+      (ENNReal.ofReal (1 - rnDerivAux κ (κ + η) a x) * rnDeriv κ η a x)) := by
+  change Measurable
+    ((fun p : α × γ ↦ ENNReal.monus (ENNReal.ofReal (rnDerivAux κ (κ + η) p.1 p.2))
+      (ENNReal.ofReal (1 - rnDerivAux κ (κ + η) p.1 p.2) * rnDeriv κ η p.1 p.2)) ∘ Prod.mk a)
   exact (measurable_singularPart_fun κ η).comp measurable_prodMk_left
 
 lemma singularPart_compl_mutuallySingularSetSlice (κ η : Kernel α γ) [IsSFiniteKernel κ]
@@ -279,16 +298,15 @@ lemma singularPart_compl_mutuallySingularSetSlice (κ η : Kernel α γ) [IsSFin
     singularPart κ η a (mutuallySingularSetSlice κ η a)ᶜ = 0 := by
   rw [singularPart, Kernel.withDensity_apply', lintegral_eq_zero_iff, EventuallyEq,
     ae_restrict_iff]
-  all_goals simp_rw [ofNNReal_toNNReal]
   rotate_left
   · exact measurableSet_preimage (measurable_singularPart_fun_right κ η a)
       (measurableSet_singleton _)
   · exact measurable_singularPart_fun_right κ η a
   refine ae_of_all _ (fun x hx ↦ ?_)
   simp only [mem_compl_iff, mutuallySingularSetSlice, mem_ofPred, not_le] at hx
-  simp_rw [rnDeriv]
-  rw [ENNReal.mul_div_cancel (ENNReal.ofReal_pos.mpr (sub_pos.mpr hx)).ne'
-    ENNReal.ofReal_ne_top, tsub_self, Pi.zero_apply]
+  rw [rnDeriv_def, ENNReal.extendedDiv_eq_mul_inv, mul_left_comm,
+    ENNReal.mul_inv_cancel (ENNReal.ofReal_pos.mpr (sub_pos.mpr hx)).ne' ENNReal.ofReal_ne_top,
+    mul_one, ENNReal.monus_self, Pi.zero_apply]
 
 lemma singularPart_of_subset_compl_mutuallySingularSetSlice [IsSFiniteKernel κ]
     [IsFiniteKernel η] {a : α} {s : Set γ} (hs : s ⊆ (mutuallySingularSetSlice κ η a)ᶜ) :
@@ -302,9 +320,8 @@ lemma singularPart_of_subset_mutuallySingularSetSlice [IsFiniteKernel κ]
   have hs' : ∀ x ∈ s, 1 ≤ rnDerivAux κ (κ + η) a x := fun _ hx ↦ hs hx
   rw [singularPart, Kernel.withDensity_apply']
   calc
-    ∫⁻ x in s, ↑(Real.toNNReal (rnDerivAux κ (κ + η) a x)) -
-      ↑(Real.toNNReal (1 - rnDerivAux κ (κ + η) a x)) * rnDeriv κ η a x
-      ∂(κ + η) a
+    ∫⁻ x in s, ENNReal.monus (ENNReal.ofReal (rnDerivAux κ (κ + η) a x))
+      (ENNReal.ofReal (1 - rnDerivAux κ (κ + η) a x) * rnDeriv κ η a x) ∂(κ + η) a
     = ∫⁻ _ in s, 1 ∂(κ + η) a := by
         refine setLIntegral_congr_fun_ae hsm ?_
         have h_le : κ ≤ κ + η := le_add_of_nonneg_right bot_le
@@ -351,19 +368,16 @@ lemma withDensity_rnDeriv_of_subset_compl_mutuallySingularSetSlice
     exact congrArg (fun m : Measure γ ↦ m.withDensity (rnDeriv κ η a)) ha.symm
   rw [this, ← withDensity_mul (hf := h₁) (hg := h₂)
       (fun _ ↦ by fun_prop) (fun _ ↦ by fun_prop), Kernel.withDensity_apply']
-  simp_rw [rnDeriv]
   have hs' : ∀ x ∈ s, rnDerivAux κ (κ + η) a x < 1 := by
     simp_rw [← notMem_mutuallySingularSetSlice]
     exact fun x hx hx_mem ↦ hs hx hx_mem
   calc
-    ∫⁻ x in s, ↑(Real.toNNReal (1 - rnDerivAux κ (κ + η) a x)) *
-      (ENNReal.ofReal (rnDerivAux κ (κ + η) a x) /
-        ENNReal.ofReal (1 - rnDerivAux κ (κ + η) a x)) ∂(κ + η) a
+    ∫⁻ x in s, ↑(Real.toNNReal (1 - rnDerivAux κ (κ + η) a x)) * rnDeriv κ η a x ∂(κ + η) a
   _ = ∫⁻ x in s, ENNReal.ofReal (rnDerivAux κ (κ + η) a x) ∂(κ + η) a := by
       refine setLIntegral_congr_fun hsm (fun x hx ↦ ?_)
-      rw [ofNNReal_toNNReal,
-        ENNReal.mul_div_cancel (ENNReal.ofReal_pos.mpr (sub_pos.mpr (hs' x hx))).ne'
-          ENNReal.ofReal_ne_top]
+      rw [ofNNReal_toNNReal, rnDeriv_def, ENNReal.extendedDiv_eq_mul_inv, mul_left_comm,
+        ENNReal.mul_inv_cancel (ENNReal.ofReal_pos.mpr (sub_pos.mpr (hs' x hx))).ne'
+          ENNReal.ofReal_ne_top, mul_one]
   _ = κ a s := setLIntegral_rnDerivAux κ η a hsm
 
 /-- The singular part of `κ` with respect to `η` is mutually singular with `η`. -/

@@ -723,7 +723,7 @@ theorem eLpNorm_le_eLpNorm_fderiv_of_le [FiniteDimensional ℝ F]
         convert! eLpNorm_le_eLpNorm_mul_rpow_measure_univ hqp' hu.continuous.aestronglyMeasurable
         rw [ENNReal.coe_rpow_of_nonneg]
         · simp only [ENNReal.coe_toNNReal hs.measure_lt_top.ne, Measure.restrict_apply_univ,
-            ENNReal.one_div, one_div₀, ENNReal.toReal_inv (q : ℝ≥0∞) (ha := hqR),
+            one_div₀, ENNReal.toReal_inv (q : ℝ≥0∞) (ha := hqR),
             ENNReal.toReal_inv (p' : ℝ≥0∞) (ha := hp'R), ENNReal.coe_toReal]
         · simpa only [one_div₀, hp', sub_nonneg] using hpq
     _ = eLpNorm u p' μ * t := by rw [eLpNorm_restrict_eq_of_support_subset h2u]

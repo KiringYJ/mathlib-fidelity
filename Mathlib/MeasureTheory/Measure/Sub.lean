@@ -70,13 +70,13 @@ protected theorem sub_zero : μ - 0 = μ := by
 /-- This application lemma only works in special circumstances. Given knowledge of
 when `μ ≤ ν` and `ν ≤ μ`, a more general application lemma can be written. -/
 theorem sub_apply [IsFiniteMeasure ν] (h₁ : MeasurableSet s) (h₂ : ν ≤ μ) :
-    (μ - ν) s = μ s - ν s := by
+    (μ - ν) s = ENNReal.monus (μ s) (ν s) := by
   -- We begin by defining `measure_sub`, which will be equal to `(μ - ν)`.
   let measure_sub : Measure α := MeasureTheory.Measure.ofMeasurable
-    (fun (t : Set α) (_ : MeasurableSet t) => μ t - ν t) (by simp)
+    (fun (t : Set α) (_ : MeasurableSet t) => ENNReal.monus (μ t) (ν t)) (by simp)
     (fun g h_meas h_disj ↦ by
       simp only [measure_iUnion h_disj h_meas]
-      rw [ENNReal.tsum_sub _ (h₂ <| g ·)]
+      rw [ENNReal.tsum_monus _ (h₂ <| g ·)]
       rw [← measure_iUnion h_disj h_meas]
       apply measure_ne_top)
   -- Now, we demonstrate `μ - ν = measure_sub`, and apply it.
@@ -84,7 +84,7 @@ theorem sub_apply [IsFiniteMeasure ν] (h₁ : MeasurableSet s) (h₂ : ν ≤ �
     ext1 t h_t_measurable_set
     simp only [Pi.add_apply, coe_add]
     rw [MeasureTheory.Measure.ofMeasurable_apply _ h_t_measurable_set, add_comm,
-      tsub_add_cancel_of_le (h₂ t)]
+      ENNReal.monus_add_cancel_of_le (h₂ t)]
   have h_measure_sub_eq : μ - ν = measure_sub := by
     rw [MeasureTheory.Measure.sub_def]
     apply le_antisymm
@@ -99,13 +99,13 @@ theorem sub_apply [IsFiniteMeasure ν] (h₁ : MeasurableSet s) (h₂ : ν ≤ �
 
 theorem sub_add_cancel_of_le [IsFiniteMeasure ν] (h₁ : ν ≤ μ) : μ - ν + ν = μ := by
   ext1 s h_s_meas
-  rw [add_apply, sub_apply h_s_meas h₁, tsub_add_cancel_of_le (h₁ s)]
+  rw [add_apply, sub_apply h_s_meas h₁, ENNReal.monus_add_cancel_of_le (h₁ s)]
 
 @[simp]
 protected lemma add_sub_cancel [IsFiniteMeasure ν] : μ + ν - ν = μ := by
   ext1 s hs
   rw [sub_apply hs (Measure.le_add_left (le_refl _)), add_apply,
-    ENNReal.add_sub_cancel_right (measure_ne_top ν s)]
+    ENNReal.add_monus_cancel_right (measure_ne_top ν s)]
 
 theorem restrict_sub_eq_restrict_sub_restrict (h_meas_s : MeasurableSet s) :
     (μ - ν).restrict s = μ.restrict s - ν.restrict s := by

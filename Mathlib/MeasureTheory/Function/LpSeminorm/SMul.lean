@@ -98,8 +98,10 @@ theorem eLpNorm'_const_smul {f : α → F} (c : 𝕜) (hq_pos : 0 < q) :
     eLpNorm' (c • f) q μ = ‖c‖ₑ * eLpNorm' f q μ := by
   obtain rfl | hc := eq_or_ne c 0
   · simp [eLpNorm'_eq_lintegral_enorm, hq_pos]
-  refine le_antisymm (eLpNorm'_const_smul_le hq_pos) <| ENNReal.mul_le_of_le_div' ?_
-  simpa [enorm_inv, hc, ENNReal.div_eq_inv_mul]
+  refine le_antisymm (eLpNorm'_const_smul_le hq_pos) <| ?_
+  rw [mul_comm]
+  apply ENNReal.mul_le_of_le_mul_inv
+  simpa [enorm_inv, hc, mul_comm]
     using eLpNorm'_const_smul_le (c := c⁻¹) (f := c • f) hq_pos
 
 theorem eLpNormEssSup_const_smul (c : 𝕜) (f : α → F) :
@@ -111,8 +113,10 @@ theorem eLpNorm_const_smul (c : 𝕜) (f : α → F) (p : ℝ≥0∞) (μ : Meas
     eLpNorm (c • f) p μ = ‖c‖ₑ * eLpNorm f p μ := by
   obtain rfl | hc := eq_or_ne c 0
   · simp
-  refine le_antisymm eLpNorm_const_smul_le <| ENNReal.mul_le_of_le_div' ?_
-  simpa [enorm_inv, hc, ENNReal.div_eq_inv_mul]
+  refine le_antisymm eLpNorm_const_smul_le <| ?_
+  rw [mul_comm]
+  apply ENNReal.mul_le_of_le_mul_inv
+  simpa [enorm_inv, hc, mul_comm]
     using eLpNorm_const_smul_le (c := c⁻¹) (f := c • f)
 
 lemma eLpNorm_nsmul [NormedSpace ℝ F] (n : ℕ) (f : α → F) :

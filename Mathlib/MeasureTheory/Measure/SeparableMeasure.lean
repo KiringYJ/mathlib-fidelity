@@ -153,17 +153,18 @@ theorem Measure.MeasureDense.indicatorConstLp_subset_closure (h𝒜 : μ.Measure
     obtain ⟨t, ht, hμt, hμst⟩ := h𝒜.fin_meas_approx ms hμs ((ε / ‖c‖) ^ p.toReal) aux
     refine ⟨indicatorConstLp p (h𝒜.measurable t ht) hμt c,
       ⟨t, ht, hμt, rfl⟩, ?_⟩
-    rw [dist_indicatorConstLp_eq_norm, norm_indicatorConstLp p_pos.ne.symm p_ne_top.elim,
-      toReal_div 1 p (hb := hp_real.ne'.isUnit), toReal_one]
+    rw [dist_indicatorConstLp_eq_norm, norm_indicatorConstLp p_pos.ne.symm p_ne_top.elim]
     calc
-      ‖c‖ * μ.real (s ∆ t) ^ (1 / p.toReal)
-        < ‖c‖ * (ENNReal.ofReal ((ε / ‖c‖) ^ p.toReal)).toReal ^ (1 / p.toReal) := by
+      ‖c‖ * μ.real (s ∆ t) ^ (p⁻¹).toReal
+        < ‖c‖ * (ENNReal.ofReal ((ε / ‖c‖) ^ p.toReal)).toReal ^ (p⁻¹).toReal := by
           rw [measureReal_def]
           gcongr
-          exact ofReal_ne_top
+          · rw [ENNReal.toReal_inv p (ha := hp_real.ne'.isUnit)]
+            positivity
+          · exact ofReal_ne_top
       _ = ε := by
-        rw [toReal_ofReal (by positivity),
-          one_div₀, Real.rpow_rpow_inv (by positivity) hp_real.ne', mul_div_cancel₀]
+        rw [toReal_ofReal (by positivity), ENNReal.toReal_inv p (ha := hp_real.ne'.isUnit),
+          Real.rpow_rpow_inv (by positivity) hp_real.ne', mul_div_cancel₀]
 
 /-- If a family of sets `𝒜` is measure-dense in `X`, then it is also the case for the sets in `𝒜`
 with finite measure. -/
@@ -234,7 +235,7 @@ theorem Measure.MeasureDense.of_generateFrom_isSetAlgebra_finite [IsFiniteMeasur
                 rw [← add_halves ε]
                 apply _root_.add_lt_add
                 · rw [measure_sdiff (h_fin := measure_ne_top _ _),
-                    toReal_sub_of_le (ha := measure_ne_top _ _)]
+                    toReal_monus_of_le (ha := measure_ne_top _ _)]
                   · apply lt_of_le_of_lt (sub_le_dist ..)
                     simp only [Finset.mem_range, Nat.lt_add_one_iff]
                     exact (dist_comm (α := ℝ) .. ▸ hN N (le_refl N))
@@ -313,8 +314,8 @@ theorem Measure.MeasureDense.of_generateFrom_isSetAlgebra_sigmaFinite (h𝒜 : I
                       (MeasurableSet.inter ms
                         (hgen ▸ SigmaAlgebra.mem_generateFrom (T_mem N))))
                     (ne_top_of_le_ne_top hμs (measure_mono (inter_subset_left ..))),
-                  lt_ofReal_iff_toReal_lt (sub_ne_top hμs),
-                  toReal_sub_of_le (measure_mono (inter_subset_left ..)) hμs]
+                  lt_ofReal_iff_toReal_lt (ENNReal.monus_ne_top hμs),
+                  toReal_monus_of_le (measure_mono (inter_subset_left ..)) hμs]
                 apply lt_of_le_of_lt (sub_le_dist ..)
                 nth_rw 1 [← univ_inter s]
                 rw [inter_comm s, dist_comm, ← T_spanning, iUnion_inter _ T]
@@ -436,7 +437,6 @@ instance Lp.SecondCountableTopology [IsSeparable μ] [TopologicalSpace.Separable
   have count_𝒜₀ : 𝒜₀.Countable := count_𝒜.mono fun _ ⟨h, _⟩ ↦ h
   -- `1 ≤ p` so `p ≠ 0`, we prove it now as it is often needed.
   have p_ne_zero : p ≠ 0 := ne_of_gt <| lt_of_lt_of_le (by simp) one_le_p.elim
-  have hp_real : 0 < p.toReal := toReal_pos p_ne_zero p_ne_top.elim
   -- `E` is second-countable, therefore separable and admits a countable and dense subset `u`.
   rcases exists_countable_dense E with ⟨u, countable_u, dense_u⟩
   -- The countable and dense subset of `Lᵖ` we are going to build is the set of finite sums of
@@ -467,9 +467,9 @@ instance Lp.SecondCountableTopology [IsSeparable μ] [TopologicalSpace.Separable
       apply ne_of_lt at hμs
       rw [SeminormedAddCommGroup.mem_closure_iff]
       intro ε ε_pos
-      have μs_pow_nonneg : 0 ≤ μ.real s ^ (1 / p.toReal) := by positivity
+      have μs_pow_nonneg : 0 ≤ μ.real s ^ (p⁻¹).toReal := by positivity
       -- To do so, we first pick `b ∈ u` such that `‖a - b‖ < ε / (3 * (1 + (μ s)^(1/p)))`.
-      have approx_a_pos : 0 < ε / (3 * (1 + μ.real s ^ (1 / p.toReal))) :=
+      have approx_a_pos : 0 < ε / (3 * (1 + μ.real s ^ (p⁻¹).toReal)) :=
         div_pos ε_pos (by linarith [μs_pow_nonneg])
       have ⟨b, b_mem, hb⟩ := SeminormedAddCommGroup.mem_closure_iff.1 (dense_u a) _ approx_a_pos
       -- Then we pick `t ∈ 𝒜₀` such that `‖b • 𝟙ₛ - b • 𝟙ₜ‖ < ε / 3`.
@@ -489,11 +489,10 @@ instance Lp.SecondCountableTopology [IsSeparable μ] [TopologicalSpace.Separable
       rw [Lp.simpleFunc.coe_indicatorConst,
         ← sub_add_sub_cancel _ (indicatorConstLp p ms hμs b), ← add_halves ε]
       refine lt_of_le_of_lt (b := ε / 3 + ε / 3) (norm_add_le_of_le ?_ hst.le) (by linarith [ε_pos])
-      rw [indicatorConstLp_sub, norm_indicatorConstLp p_ne_zero p_ne_top.elim,
-        toReal_div 1 p (hb := hp_real.ne'.isUnit), toReal_one]
+      rw [indicatorConstLp_sub, norm_indicatorConstLp p_ne_zero p_ne_top.elim]
       calc
-        ‖a - b‖ * μ.real s ^ (1 / p.toReal)
-          ≤ (ε / (3 * (1 + μ.real s ^ (1 / p.toReal)))) * μ.real s ^ (1 / p.toReal) :=
+        ‖a - b‖ * μ.real s ^ (p⁻¹).toReal
+          ≤ (ε / (3 * (1 + μ.real s ^ (p⁻¹).toReal))) * μ.real s ^ (p⁻¹).toReal :=
               mul_le_mul_of_nonneg_right (le_of_lt hb) μs_pow_nonneg
         _ ≤ ε / 3 := by
             rw [div_mul_eq_div_div₀, div_mul_eq_mul_div₀, mul_div_assoc₀]

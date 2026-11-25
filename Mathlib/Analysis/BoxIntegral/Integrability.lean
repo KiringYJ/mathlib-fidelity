@@ -84,12 +84,12 @@ theorem hasIntegralIndicatorConst (l : IntegrationParams) (hl : l.bRiemann = fal
     refine fun J hJ hJs x hx => ⟨hrsU _ ⟨hJs, π.tag_mem_Icc J⟩ ?_, π.le_of_mem' J hJ hx⟩
     simpa only [r, s.piecewise_eq_of_mem _ _ hJs] using hπ.1 J hJ (Box.coe_subset_Icc hx)
   refine abs_sub_le_iff.2 ⟨?_, ?_⟩
-  · refine (ENNReal.le_toReal_sub B).trans (ENNReal.toReal_le_coe_of_le_coe ?_)
-    refine (tsub_le_tsub (measure_mono htU) le_rfl).trans (le_measure_sdiff.trans ?_)
+  · refine (ENNReal.le_toReal_monus B).trans (ENNReal.toReal_le_coe_of_le_coe ?_)
+    refine (ENNReal.monus_le_monus (measure_mono htU) le_rfl).trans (le_measure_sdiff.trans ?_)
     refine (measure_mono fun x hx => ?_).trans hμU.le
     exact ⟨hx.1.1, fun hx' => hx.2 ⟨hx'.1, hx.1.2⟩⟩
   · have hμt : μ t ≠ ∞ := ((measure_mono (htU.trans inter_subset_left)).trans_lt hUt).ne
-    refine (ENNReal.le_toReal_sub hμt).trans (ENNReal.toReal_le_coe_of_le_coe ?_)
+    refine (ENNReal.le_toReal_monus hμt).trans (ENNReal.toReal_le_coe_of_le_coe ?_)
     refine le_measure_sdiff.trans ((measure_mono ?_).trans hμF.le)
     rintro x ⟨⟨hxs, hxI⟩, hxt⟩
     refine ⟨⟨hxs, Box.coe_subset_Icc hxI⟩, fun hxF => hxt ?_⟩
@@ -115,13 +115,15 @@ theorem HasIntegral.of_aeEq_zero {l : IntegrationParams} {I : Box ι} {f : (ι �
   set N : (ι → ℝ) → ℕ := fun x => ⌈‖f x‖⌉₊
   have N0 : ∀ {x}, N x = 0 ↔ f x = 0 := by simp [N]
   have : ∀ n, ∃ U, N ⁻¹' {n} ⊆ U ∧ IsOpen U ∧
-      μ.restrict I U < ((δ n : ℝ≥0∞) / (n : ℝ≥0∞)) := fun n ↦ by
+      μ.restrict I U < ENNReal.extendedDiv (δ n) (n : ℝ≥0∞)
+        ⟨Or.inl (ENNReal.coe_pos.2 (δ0 n)).ne', Or.inr (ENNReal.natCast_ne_top n)⟩ := fun n ↦ by
     refine (N ⁻¹' {n}).exists_isOpen_lt_of_lt _ ?_
     rcases n with - | n
-    · simp [ENNReal.div_zero (ENNReal.coe_pos.2 (δ0 _)).ne']
+    · simp [ENNReal.extendedDiv_zero (ENNReal.coe_pos.2 (δ0 _)).ne']
     · refine (measure_mono_null ?_ hf).le.trans_lt ?_
       · exact fun x hxN hxf => n.succ_ne_zero ((Eq.symm hxN).trans <| N0.2 hxf)
-      · exact ENNReal.div_pos (ENNReal.coe_pos.2 (δ0 _)).ne' (ENNReal.natCast_ne_top _)
+      · exact ENNReal.mul_pos (ENNReal.coe_pos.2 (δ0 _)).ne'
+          (ENNReal.inv_pos.2 (ENNReal.natCast_ne_top _)).ne'
   choose U hNU hUo hμU using this
   have : ∀ x, ∃ r : Ioi (0 : ℝ), closedBall x r ⊆ U (N x) := fun x => by
     obtain ⟨r, hr₀, hr⟩ := nhds_basis_closedBall.mem_iff.1 ((hUo _).mem_nhds (hNU _ rfl))
@@ -143,7 +145,8 @@ theorem HasIntegral.of_aeEq_zero {l : IntegrationParams} {I : Box ι} {f : (ι �
   rw [← sum_mul, ← Prepartition.measure_iUnion_toReal]
   let m := μ (π.filter fun J => N (π.tag J) = n).iUnion
   change m.toReal * ↑n ≤ ↑(δ n)
-  have : m < ((δ n : ℝ≥0∞) / (n : ℝ≥0∞)) := by
+  have : m < ENNReal.extendedDiv (δ n) (n : ℝ≥0∞)
+        ⟨Or.inl (ENNReal.coe_pos.2 (δ0 n)).ne', Or.inr (ENNReal.natCast_ne_top n)⟩ := by
     simp only [Measure.restrict_apply (hUo _).measurableSet] at hμU
     refine (measure_mono ?_).trans_lt (hμU _)
     simp only [Set.subset_def, TaggedPrepartition.mem_iUnion, TaggedPrepartition.mem_filter]
@@ -152,7 +155,8 @@ theorem HasIntegral.of_aeEq_zero {l : IntegrationParams} {I : Box ι} {f : (ι �
   clear_value m
   lift m to ℝ≥0 using ne_top_of_lt this
   grw [ENNReal.coe_toReal, ← NNReal.coe_natCast, ← NNReal.coe_mul, NNReal.coe_le_coe, ←
-    ENNReal.coe_le_coe, ENNReal.coe_mul, ENNReal.coe_natCast, mul_comm, this, ENNReal.mul_div_le]
+    ENNReal.coe_le_coe, ENNReal.coe_mul, ENNReal.coe_natCast, mul_comm, this,
+    ENNReal.extendedDiv_eq_mul_inv, ENNReal.mul_mul_inv_le]
 
 /-- If `f` has integral `y` on a box `I` with respect to a locally finite measure `μ` and `g` is
 a.e. equal to `f` on `I`, then `g` has the same integral on `I`. -/

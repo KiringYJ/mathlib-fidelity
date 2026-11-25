@@ -233,26 +233,35 @@ theorem ballot_total_isUnit (p q : ℕ) (h : 0 < p + q) : IsUnit ((p : ℝ≥0�
   refine ENNReal.isUnit_iff.2 ⟨?_, by finiteness⟩
   exact_mod_cast h.ne'
 
+/-- A positive total vote count is a valid denominator for every nonnegative numerator. -/
+theorem ballot_div_domain (s : ℝ≥0∞) (p q : ℕ) (h : 0 < p + q) :
+    (p : ℝ≥0∞) + q ≠ 0 ∧ (s ≠ ⊤ ∨ (p : ℝ≥0∞) + q ≠ ⊤) :=
+  let hunit := ENNReal.isUnit_iff.1 (ballot_total_isUnit p q h)
+  ⟨hunit.1, Or.inr hunit.2⟩
+
 theorem first_vote_pos :
-    ∀ (p q : ℕ), 0 < p + q →
+    ∀ (p q : ℕ) (h : 0 < p + q),
       uniformOn (countedSequence p q : Set (List ℤ)) (isConditionable_countedSequence p q)
-        {l | l.headI = 1} = (p : ℝ≥0∞) / ((p : ℝ≥0∞) + q)
+        {l | l.headI = 1} = ENNReal.div p ((p : ℝ≥0∞) + q) (ballot_div_domain _ p q h)
   | p + 1, 0, _ => by
     simp only [counted_right_zero]
     rw [uniformOn_singleton]
-    simp [ENNReal.div_self, List.replicate_succ]
+    simp [ENNReal.div_eq_mul_inv, ENNReal.mul_inv_cancel, List.replicate_succ]
   | 0, q + 1, _ => by
     simp only [counted_left_zero]
     rw [uniformOn_singleton]
     simp [List.replicate]
-  | p + 1, q + 1, _ => by
+  | p + 1, q + 1, h => by
     rw [uniformOn, cond_apply (isConditionable_countedSequence _ _),
       countedSequence_int_pos_counted_succ_succ, count_injective_image List.cons_injective,
-      count_countedSequence, count_countedSequence, Nat.cast_add, Nat.cast_one, mul_comm,
-      ← ENNReal.div_eq_mul_inv, ENNReal.div_eq_div_iff]
-    · norm_cast
-      rw [mul_comm _ (p + 1), add_right_comm, Nat.add_one_mul_choose_eq, mul_comm]
-    all_goals simp [(Nat.choose_pos <| le_add_of_nonneg_right zero_le).ne']
+      count_countedSequence, count_countedSequence]
+    have hcard : ((p + 1 + (q + 1)).choose (p + 1) : ℝ≥0∞) ≠ 0 := by
+      exact Nat.cast_ne_zero.2 (Nat.choose_pos (by omega)).ne'
+    obtain ⟨h₀, ht⟩ := ENNReal.isUnit_iff.1 (ballot_total_isUnit (p + 1) (q + 1) h)
+    rw [← ENNReal.div_eq_inv_mul _ _ ⟨hcard, Or.inr (ENNReal.natCast_ne_top _)⟩,
+      ENNReal.div_eq_div_iff h₀ ht hcard (ENNReal.natCast_ne_top _)]
+    norm_cast
+    rw [add_right_comm p 1 (q + 1), Nat.add_one_mul_choose_eq]
 
 theorem headI_mem_of_nonempty {α : Type*} [Inhabited α] : ∀ {l : List α} (_ : l ≠ []), l.headI ∈ l
   | [], h => (h rfl).elim
@@ -260,13 +269,14 @@ theorem headI_mem_of_nonempty {α : Type*} [Inhabited α] : ∀ {l : List α} (_
 
 theorem first_vote_neg (p q : ℕ) (h : 0 < p + q) :
     uniformOn (countedSequence p q) (isConditionable_countedSequence p q) {l | l.headI = 1}ᶜ =
-      (q : ℝ≥0∞) / ((p : ℝ≥0∞) + q) := by
-  have h' : (p + q : ℝ≥0∞) ≠ 0 := mod_cast h.ne'
-  have := uniformOn_compl {l : List ℤ | l.headI = 1}ᶜ (isConditionable_countedSequence p q)
-  rw [compl_compl, first_vote_pos _ _ h] at this
-  rw [ENNReal.eq_sub_of_add_eq _ this, ENNReal.eq_div_iff, ENNReal.mul_sub, mul_one,
-    ENNReal.mul_div_cancel, ENNReal.add_sub_cancel_left]
-  all_goals simp_all [ENNReal.div_eq_top]
+      ENNReal.div q ((p : ℝ≥0∞) + q) (ballot_div_domain _ p q h) := by
+  obtain ⟨h₀, ht⟩ := ENNReal.isUnit_iff.1 (ballot_total_isUnit p q h)
+  have hcompl := uniformOn_compl {l : List ℤ | l.headI = 1}ᶜ (isConditionable_countedSequence p q)
+  rw [compl_compl, first_vote_pos _ _ h] at hcompl
+  apply (ENNReal.add_left_inj (ENNReal.div_ne_top (ENNReal.natCast_ne_top p) h₀)).1
+  rw [hcompl]
+  simp only [ENNReal.div_eq_mul_inv, ← add_mul]
+  rw [add_comm (q : ℝ≥0∞) p, ENNReal.mul_inv_cancel h₀ ht]
 
 theorem ballot_same (p : ℕ) :
     uniformOn (countedSequence (p + 1) (p + 1)) (isConditionable_countedSequence _ _)
@@ -335,7 +345,7 @@ private theorem ballot_den_unit (p q : ℕ) (h : 0 < p + q) : IsUnit ((p : ℝ) 
   exact_mod_cast h.ne'
 
 private theorem ballot_toReal_div (s : ℝ≥0∞) (p q : ℕ) (h : 0 < p + q) :
-    (s / ((p : ℝ≥0∞) + q)).toReal =
+    (ENNReal.div s ((p : ℝ≥0∞) + q) (ballot_div_domain s p q h)).toReal =
       Checked.div s.toReal ((p : ℝ) + q) (ballot_den_unit p q h) := by
   have hd : ((p : ℝ≥0∞) + q).toReal = (p : ℝ) + q := by
     rw [← Nat.cast_add, ENNReal.toReal_natCast, Nat.cast_add]
@@ -367,7 +377,9 @@ private theorem ballot_ratio_ind :
       simp only [Nat.cast_add, Nat.cast_one]
       field
     all_goals
-      exact ENNReal.mul_ne_top (by finiteness) (by simp [Ne, ENNReal.div_eq_top])
+      exact ENNReal.mul_ne_top (by finiteness)
+        (ENNReal.div_ne_top (ENNReal.natCast_ne_top _)
+          (ballot_total_isUnit (p + 1) (q + 1) h₃).ne_zero)
 
 theorem ballot_problem' (q p : ℕ) (qp : q < p) :
     (uniformOn (countedSequence p q) (isConditionable_countedSequence p q) staysPositive).toReal =
@@ -378,23 +390,21 @@ theorem ballot_problem' (q p : ℕ) (qp : q < p) :
 
 /-- The ballot problem. -/
 theorem ballot_problem :
-    ∀ (q p : ℕ), q < p →
+    ∀ (q p : ℕ) (qp : q < p),
       uniformOn (countedSequence p q) (isConditionable_countedSequence p q) staysPositive =
-        ((p : ℝ≥0∞) - q) / ((p : ℝ≥0∞) + q) := by
+        ENNReal.div (p - q : ℕ) ((p : ℝ≥0∞) + q) (ballot_div_domain _ p q (by omega)) := by
   intro q p qp
   have hd : 0 < p + q := by omega
-  have hs : ((p : ℝ≥0∞) - q).toReal = (p : ℝ) - q := by
-    rw [ENNReal.toReal_sub_of_le, ENNReal.toReal_natCast, ENNReal.toReal_natCast]
-    exacts [Nat.cast_le.2 qp.le, ENNReal.natCast_ne_top _]
+  have hs : ((p - q : ℕ) : ℝ≥0∞).toReal = (p : ℝ) - q := by
+    rw [ENNReal.toReal_natCast, Nat.cast_sub qp.le]
   have he :
       (uniformOn (countedSequence p q) (isConditionable_countedSequence p q)
-        staysPositive).toReal = (((p : ℝ≥0∞) - q) / ((p : ℝ≥0∞) + q)).toReal := by
+        staysPositive).toReal =
+          (ENNReal.div (p - q : ℕ) ((p : ℝ≥0∞) + q) (ballot_div_domain _ p q hd)).toReal := by
     rw [ballot_toReal_div _ p q hd]
     simpa only [hs] using ballot_problem' q p qp
-  have hzero : (p : ℝ≥0∞) + q ≠ 0 := by exact_mod_cast hd.ne'
-  have hnum : (p : ℝ≥0∞) - q ≠ ⊤ :=
-    (tsub_le_self.trans_lt (ENNReal.natCast_ne_top p).lt_top).ne
+  have hnum : ((p - q : ℕ) : ℝ≥0∞) ≠ ⊤ := ENNReal.natCast_ne_top _
   exact (ENNReal.toReal_eq_toReal_iff' (measure_lt_top _ _).ne
-    (ENNReal.div_ne_top hnum hzero)).mp he
+    (ENNReal.div_ne_top hnum (ballot_total_isUnit p q hd).ne_zero)).mp he
 
 end Ballot

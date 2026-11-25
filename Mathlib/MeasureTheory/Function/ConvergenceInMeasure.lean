@@ -293,7 +293,8 @@ theorem TendstoInMeasure.exists_seq_tendsto_ae (hfg : TendstoInMeasure μ f atTo
   set s := Filter.atTop.limsup S with hs
   have hμs : μ s = 0 := by
     refine measure_limsup_atTop_eq_zero (ne_top_of_le_ne_top ?_ (ENNReal.tsum_le_tsum hμS_le))
-    simpa only [ENNReal.tsum_geometric, ENNReal.one_sub_inv_two, inv_inv] using ENNReal.ofNat_ne_top
+    simpa only [ENNReal.tsum_geometric, ENNReal.one_monus_inv_two, inv_inv] using
+      ENNReal.ofNat_ne_top
   have h_tendsto : ∀ x ∈ sᶜ, Tendsto (fun i => f (ns i) x) atTop (𝓝 (g x)) := by
     refine fun x hx => EMetric.tendsto_atTop.mpr fun ε hε => ?_
     rw [hs, limsup_eq_iInf_iSup_of_nat] at hx
@@ -448,7 +449,7 @@ theorem tendstoInMeasure_of_tendsto_eLpNorm_top {E} [SeminormedAddCommGroup E] {
   simp only [eLpNorm_exponent_top, eLpNormEssSup] at hfg
   rw [ENNReal.tendsto_nhds_zero] at hfg ⊢
   intro ε hε
-  specialize hfg (δ / 2) (ENNReal.div_pos_iff.2 ⟨hδ.ne', ENNReal.ofNat_ne_top⟩)
+  specialize hfg (δ / 2) (ENNReal.half_pos hδ.ne')
   refine hfg.mono fun n hn => ?_
   simp only [Pi.sub_apply] at *
   have : essSup (fun x : α => ‖f n x - g x‖ₑ) μ < δ :=

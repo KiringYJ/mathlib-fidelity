@@ -90,7 +90,7 @@ theorem _root_.Measurable.measure_of_isPiSystem {μ : α → Measure β} [∀ a,
   | basic s hs => exact h_basic s hs
   | compl s hsm ihs =>
     simp only [measure_compl hsm (measure_ne_top _ _)]
-    exact h_univ.sub ihs
+    exact h_univ.ennreal_monus ihs
   | iUnion f hfd hfm ihf =>
     simpa only [measure_iUnion hfd hfm] using .tsum ihf
 

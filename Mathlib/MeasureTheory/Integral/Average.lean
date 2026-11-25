@@ -19,7 +19,9 @@ For `0 < μ univ < ∞` it is the integral divided by the real total measure, `a
 For the average on a set, we use `⨍ x in s, f x ∂μ` (notation for `⨍ x, f x ∂(μ.restrict s)`). For
 average w.r.t. the volume, one can omit `∂volume`.
 
-Both have a version for the Lebesgue integral rather than Bochner.
+Both have a version for the Lebesgue integral. The normalized measure gives
+`laverage_eq` and `setLAverage_eq` in terms of `ENNReal.divInf`, including when the total mass
+is zero or infinite.
 
 We prove several versions of the first moment method: An integrable function is below/above its
 average on a set of positive measure:
@@ -51,11 +53,10 @@ variable {α E F : Type*} {m0 : SigmaAlgebra α} [NormedAddCommGroup E] [NormedS
 /-!
 ### Average value of a function w.r.t. a measure
 
-The (Bochner, Lebesgue) average value of a function `f` w.r.t. a measure `μ` (notation:
-`⨍ x, f x ∂μ`, `⨍⁻ x, f x ∂μ`) is defined as the (Bochner, Lebesgue) integral divided by the total
-measure, so it is equal to zero if `μ` is an infinite measure, and (typically) equal to infinity if
-`f` is not integrable. If `μ` is a probability measure, then the average of any function is equal to
-its integral.
+The Bochner and Lebesgue averages of a function `f` with respect to `μ` (notation
+`⨍ x, f x ∂μ` and `⨍⁻ x, f x ∂μ`) are the corresponding integrals with respect to
+`(μ univ)⁻¹ • μ`. This measure is zero if the mass of `μ` is zero or infinite, and equals
+`μ` if `μ` is a probability measure.
 -/
 
 namespace MeasureTheory
@@ -112,21 +113,24 @@ theorem laverage_zero_measure (f : α → ℝ≥0∞) : ⨍⁻ x, f x ∂(0 : Me
 
 theorem laverage_eq' (f : α → ℝ≥0∞) : ⨍⁻ x, f x ∂μ = ∫⁻ x, f x ∂(μ univ)⁻¹ • μ := rfl
 
-theorem laverage_eq (f : α → ℝ≥0∞) : ⨍⁻ x, f x ∂μ = ((∫⁻ x, f x ∂μ) / μ univ) := by
-  rw [laverage_eq', lintegral_smul_measure, ENNReal.div_eq_inv_mul, smul_eq_mul]
+theorem laverage_eq (f : α → ℝ≥0∞) :
+    ⨍⁻ x, f x ∂μ = ENNReal.divInf (∫⁻ x, f x ∂μ) (μ univ) := by
+  rw [laverage_eq', lintegral_smul_measure, smul_eq_mul, ENNReal.divInf]
+  exact mul_comm _ _
 
 theorem laverage_eq_lintegral [IsProbabilityMeasure μ] (f : α → ℝ≥0∞) :
-    ⨍⁻ x, f x ∂μ = ∫⁻ x, f x ∂μ := by rw [laverage, measure_univ, inv_one, one_smul]
+    ⨍⁻ x, f x ∂μ = ∫⁻ x, f x ∂μ := by rw [laverage, measure_univ, ENNReal.inv_one, one_smul]
 
 @[simp]
 theorem measure_mul_laverage [IsFiniteMeasure μ] (f : α → ℝ≥0∞) :
     μ univ * ⨍⁻ x, f x ∂μ = ∫⁻ x, f x ∂μ := by
   rcases eq_or_ne μ 0 with hμ | hμ
   · rw [hμ, lintegral_zero_measure, laverage_zero_measure, mul_zero]
-  · rw [laverage_eq, ENNReal.mul_div_cancel (measure_univ_ne_zero.2 hμ) (measure_ne_top _ _)]
+  · rw [mul_comm, laverage_eq, ENNReal.divInf,
+      ENNReal.inv_mul_cancel_right (measure_univ_ne_zero.2 hμ) (measure_ne_top _ _)]
 
 theorem setLAverage_eq (f : α → ℝ≥0∞) (s : Set α) :
-    ⨍⁻ x in s, f x ∂μ = ((∫⁻ x in s, f x ∂μ) / μ s) := by
+    ⨍⁻ x in s, f x ∂μ = ENNReal.divInf (∫⁻ x in s, f x ∂μ) (μ s) := by
   rw [laverage_eq, restrict_apply_univ]
 
 theorem setLAverage_eq' (f : α → ℝ≥0∞) (s : Set α) :
@@ -153,23 +157,28 @@ theorem laverage_lt_top (hf : ∫⁻ x, f x ∂μ ≠ ∞) : ⨍⁻ x, f x ∂μ
   obtain rfl | hμ := eq_or_ne μ 0
   · simp
   · rw [laverage_eq]
-    finiteness [measure_univ_ne_zero.2 hμ]
+    exact ENNReal.div_lt_top hf (measure_univ_ne_zero.2 hμ)
 
 theorem setLAverage_lt_top : ∫⁻ x in s, f x ∂μ ≠ ∞ → ⨍⁻ x in s, f x ∂μ < ∞ :=
   laverage_lt_top
 
 theorem laverage_add_measure :
     ⨍⁻ x, f x ∂(μ + ν) =
-      (μ univ / (μ univ + ν univ)) * ⨍⁻ x, f x ∂μ +
-        (ν univ / (μ univ + ν univ)) * ⨍⁻ x, f x ∂ν := by
+      ENNReal.divInf (μ univ) (μ univ + ν univ) * ⨍⁻ x, f x ∂μ +
+        ENNReal.divInf (ν univ) (μ univ + ν univ) * ⨍⁻ x, f x ∂ν := by
   by_cases hμ : IsFiniteMeasure μ; swap
   · rw [not_isFiniteMeasure_iff] at hμ
-    simp [laverage_eq, hμ]
+    simp [laverage_eq, ENNReal.divInf, hμ]
   by_cases hν : IsFiniteMeasure ν; swap
   · rw [not_isFiniteMeasure_iff] at hν
-    simp [laverage_eq, hν]
-  simp only [← ENNReal.mul_div_right_comm, measure_mul_laverage, ← ENNReal.add_div,
-    ← lintegral_add_measure, ← Measure.add_apply, ← laverage_eq]
+    simp [laverage_eq, ENNReal.divInf, hν]
+  calc
+    _ = ((∫⁻ x, f x ∂μ) + ∫⁻ x, f x ∂ν) * (μ univ + ν univ)⁻¹ := by
+      rw [laverage_eq, ENNReal.divInf, lintegral_add_measure, Measure.add_apply]
+    _ = _ := by
+      rw [← measure_mul_laverage μ f, ← measure_mul_laverage ν f]
+      simp only [ENNReal.divInf, add_mul]
+      ac_rfl
 
 theorem measure_mul_setLAverage (f : α → ℝ≥0∞) (h : μ s ≠ ∞) :
     μ s * ⨍⁻ x in s, f x ∂μ = ∫⁻ x in s, f x ∂μ := by
@@ -178,19 +187,18 @@ theorem measure_mul_setLAverage (f : α → ℝ≥0∞) (h : μ s ≠ ∞) :
 
 theorem laverage_union (hd : AEDisjoint μ s t) (ht : NullMeasurableSet t μ) :
     ⨍⁻ x in s ∪ t, f x ∂μ =
-      (μ s / (μ s + μ t)) * ⨍⁻ x in s, f x ∂μ +
-        (μ t / (μ s + μ t)) * ⨍⁻ x in t, f x ∂μ := by
+      ENNReal.divInf (μ s) (μ s + μ t) * ⨍⁻ x in s, f x ∂μ +
+        ENNReal.divInf (μ t) (μ s + μ t) * ⨍⁻ x in t, f x ∂μ := by
   rw [restrict_union₀ hd ht, laverage_add_measure, restrict_apply_univ, restrict_apply_univ]
 
 theorem laverage_union_mem_openSegment (hd : AEDisjoint μ s t) (ht : NullMeasurableSet t μ)
     (hs₀ : μ s ≠ 0) (ht₀ : μ t ≠ 0) (hsμ : μ s ≠ ∞) (htμ : μ t ≠ ∞) :
     ⨍⁻ x in s ∪ t, f x ∂μ ∈ openSegment ℝ≥0∞ (⨍⁻ x in s, f x ∂μ) (⨍⁻ x in t, f x ∂μ) := by
-  refine
-    ⟨(μ s / (μ s + μ t)), (μ t / (μ s + μ t)),
-      ENNReal.div_pos hs₀ <| add_ne_top.2 ⟨hsμ, htμ⟩,
-      ENNReal.div_pos ht₀ <| add_ne_top.2 ⟨hsμ, htμ⟩, ?_, (laverage_union hd ht).symm⟩
-  rw [← ENNReal.add_div,
-    ENNReal.div_self (add_eq_zero.not.2 fun h => hs₀ h.1) (add_ne_top.2 ⟨hsμ, htμ⟩)]
+  have h₀ : μ s + μ t ≠ 0 := add_eq_zero.not.2 fun h => hs₀ h.1
+  have hfin : μ s + μ t ≠ ∞ := ENNReal.add_ne_top.2 ⟨hsμ, htμ⟩
+  refine ⟨μ s / (μ s + μ t), μ t / (μ s + μ t),
+    ENNReal.div_pos hs₀ h₀ hfin, ENNReal.div_pos ht₀ h₀ hfin, ?_, (laverage_union hd ht).symm⟩
+  simp only [ENNReal.div_eq_mul_inv, ← add_mul, ENNReal.mul_inv_cancel h₀ hfin]
 
 theorem laverage_union_mem_segment (hd : AEDisjoint μ s t) (ht : NullMeasurableSet t μ)
     (hsμ : μ s ≠ ∞) (htμ : μ t ≠ ∞) :
@@ -199,11 +207,11 @@ theorem laverage_union_mem_segment (hd : AEDisjoint μ s t) (ht : NullMeasurable
   · rw [← ae_eq_empty] at hs₀
     rw [restrict_congr_set (hs₀.union EventuallyEq.rfl), empty_union]
     exact right_mem_segment _ _ _
-  · refine
-      ⟨(μ s / (μ s + μ t)), (μ t / (μ s + μ t)), zero_le, zero_le,
-        ?_, (laverage_union hd ht).symm⟩
-    rw [← ENNReal.add_div,
-      ENNReal.div_self (add_eq_zero.not.2 fun h => hs₀ h.1) (add_ne_top.2 ⟨hsμ, htμ⟩)]
+  · have h₀ : μ s + μ t ≠ 0 := add_eq_zero.not.2 fun h => hs₀ h.1
+    have hfin : μ s + μ t ≠ ∞ := ENNReal.add_ne_top.2 ⟨hsμ, htμ⟩
+    refine ⟨μ s / (μ s + μ t), μ t / (μ s + μ t), zero_le, zero_le,
+      ?_, (laverage_union hd ht).symm⟩
+    simp only [ENNReal.div_eq_mul_inv, ← add_mul, ENNReal.mul_inv_cancel h₀ hfin]
 
 theorem laverage_mem_openSegment_compl_self [IsFiniteMeasure μ] (hs : NullMeasurableSet s μ)
     (hs₀ : μ s ≠ 0) (hsc₀ : μ sᶜ ≠ 0) :
@@ -219,7 +227,7 @@ theorem laverage_const (μ : Measure α) [IsFiniteMeasure μ] [h : NeZero μ] (c
 
 theorem setLAverage_const (hs₀ : μ s ≠ 0) (hs : μ s ≠ ∞) (c : ℝ≥0∞) : ⨍⁻ _x in s, c ∂μ = c := by
   simp only [setLAverage_eq, lintegral_const, Measure.restrict_apply, MeasurableSet.univ,
-    univ_inter, ENNReal.mul_div_cancel_right hs₀ hs]
+    univ_inter, ENNReal.divInf, ENNReal.mul_inv_cancel_right hs₀ hs]
 
 theorem laverage_one [IsFiniteMeasure μ] [NeZero μ] : ⨍⁻ _x, (1 : ℝ≥0∞) ∂μ = 1 :=
   laverage_const _ _
@@ -232,7 +240,8 @@ theorem laverage_mul_measure_univ (μ : Measure α) [IsFiniteMeasure μ] (f : α
     (⨍⁻ (a : α), f a ∂μ) * μ univ = ∫⁻ x, f x ∂μ := by
   obtain rfl | hμ := eq_or_ne μ 0
   · simp
-  · rw [laverage_eq, ENNReal.div_mul_cancel (measure_univ_ne_zero.2 hμ) (measure_ne_top _ _)]
+  · rw [laverage_eq, ENNReal.divInf,
+      ENNReal.inv_mul_cancel_right (measure_univ_ne_zero.2 hμ) (measure_ne_top _ _)]
 
 theorem lintegral_laverage (μ : Measure α) [IsFiniteMeasure μ] (f : α → ℝ≥0∞) :
     ∫⁻ _x, ⨍⁻ a, f a ∂μ ∂μ = ∫⁻ x, f x ∂μ := by
@@ -397,7 +406,7 @@ theorem average_eq {hμ : IsUnit (μ.real univ)} :
 
 variable (μ f) in
 theorem average_eq_integral [IsProbabilityMeasure μ] : ⨍ x, f x ∂μ = ∫ x, f x ∂μ := by
-  rw [average, measure_univ, inv_one, one_smul]
+  rw [average, measure_univ, ENNReal.inv_one, one_smul]
 
 variable (μ f) in
 @[simp]
@@ -558,15 +567,16 @@ theorem setIntegral_setAverage_sub (hs : μ s ≠ ∞) (hf : IntegrableOn f s μ
 end NormedAddCommGroup
 
 theorem ofReal_average {f : α → ℝ} (hf : Integrable f μ) (hf₀ : 0 ≤ᵐ[μ] f) :
-    ENNReal.ofReal (⨍ x, f x ∂μ) = ((∫⁻ x, ENNReal.ofReal (f x) ∂μ) / μ univ) := by
+    ENNReal.ofReal (⨍ x, f x ∂μ) = ENNReal.divInf (∫⁻ x, ENNReal.ofReal (f x) ∂μ) (μ univ) := by
   obtain rfl | hμ := eq_or_ne μ 0
-  · simp
+  · simp [ENNReal.divInf]
   · rw [average_eq', integral_smul_measure, smul_eq_mul, ofReal_mul toReal_nonneg,
       ofReal_toReal (inv_ne_top.2 <| measure_univ_ne_zero.2 hμ),
-      ofReal_integral_eq_lintegral_ofReal hf hf₀, ENNReal.div_eq_inv_mul]
+      ofReal_integral_eq_lintegral_ofReal hf hf₀, ENNReal.divInf, mul_comm]
 
 theorem ofReal_setAverage {f : α → ℝ} (hf : IntegrableOn f s μ) (hf₀ : 0 ≤ᵐ[μ.restrict s] f) :
-    ENNReal.ofReal (⨍ x in s, f x ∂μ) = ((∫⁻ x in s, ENNReal.ofReal (f x) ∂μ) / μ s) := by
+    ENNReal.ofReal (⨍ x in s, f x ∂μ) =
+      ENNReal.divInf (∫⁻ x in s, ENNReal.ofReal (f x) ∂μ) (μ s) := by
   simpa using ofReal_average hf hf₀
 
 theorem toReal_laverage {f : α → ℝ≥0∞} (hf : AEMeasurable f μ) (hf' : ∀ᵐ x ∂μ, f x ≠ ∞) :
@@ -717,7 +727,9 @@ measure. -/
 theorem measure_le_setLAverage_pos (hμ : μ s ≠ 0) (hμ₁ : μ s ≠ ∞)
     (hf : AEMeasurable f (μ.restrict s)) : 0 < μ {x ∈ s | f x ≤ ⨍⁻ a in s, f a ∂μ} := by
   obtain h | h := eq_or_ne (∫⁻ a in s, f a ∂μ) ∞
-  · simpa [mul_top, hμ₁, laverage, h, top_div_of_ne_top hμ₁, pos_iff_ne_zero] using hμ
+  · have havg : ⨍⁻ a in s, f a ∂μ = ∞ := by
+      rw [setLAverage_eq, h, ENNReal.divInf, ENNReal.top_mul (ENNReal.inv_ne_zero.2 hμ₁)]
+    simpa [havg, pos_iff_ne_zero] using hμ
   have := measure_le_setAverage_pos hμ hμ₁ (integrable_toReal_of_lintegral_ne_top hf h)
   rw [← ofPred_inter_eq_sep, ← Measure.restrict_apply₀
     (hf.aestronglyMeasurable.nullMeasurableSet_le aestronglyMeasurable_const)]
@@ -736,7 +748,7 @@ measure. -/
 theorem measure_setLAverage_le_pos (hμ : μ s ≠ 0) (hs : NullMeasurableSet s μ)
     (hint : ∫⁻ a in s, f a ∂μ ≠ ∞) : 0 < μ {x ∈ s | ⨍⁻ a in s, f a ∂μ ≤ f x} := by
   obtain hμ₁ | hμ₁ := eq_or_ne (μ s) ∞
-  · simp [setLAverage_eq, hμ₁]
+  · simp [setLAverage_eq, ENNReal.divInf, hμ₁]
   obtain ⟨g, hg, hgf, hfg⟩ := exists_measurable_le_lintegral_eq (μ.restrict s) f
   have hfg' : ⨍⁻ a in s, f a ∂μ = ⨍⁻ a in s, g a ∂μ := by simp_rw [laverage_eq, hfg]
   rw [hfg] at hint

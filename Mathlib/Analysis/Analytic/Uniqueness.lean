@@ -208,7 +208,7 @@ theorem eqOn_zero_of_preconnected_of_eventuallyEq_zero_aux [CompleteSpace F] {f 
     have := hp.changeOrigin (A.trans_le hle)
     simp only [add_sub_cancel] at this
     apply this.mono hpos
-    apply ENNReal.le_sub_of_add_le_left ENNReal.coe_ne_top
+    apply ENNReal.le_monus_of_add_le_left ENNReal.coe_ne_top
     exact (add_le_add_left A.le (r / 2)).trans_eq hadd
   have M : Metric.eball y (r / 2) ∈ 𝓝 x := Metric.isOpen_eball.mem_nhds hxy
   filter_upwards [M] with z hz

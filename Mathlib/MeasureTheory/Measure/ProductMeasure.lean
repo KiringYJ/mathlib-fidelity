@@ -47,7 +47,7 @@ theorem measurable_measure_prodMk_left_finite [IsFiniteMeasure ν] {s : Set (α 
       using measurable_const.indicator hs
   | compl s hs ihs =>
     simp_rw [preimage_compl, measure_compl (measurable_prodMk_left hs) (measure_ne_top ν _)]
-    exact ihs.const_sub _
+    exact measurable_const.ennreal_monus ihs
   | iUnion f hfd hfm ihf =>
     have (a : α) : ν (Prod.mk a ⁻¹' ⋃ i, f i) = ∑' i, ν (Prod.mk a ⁻¹' f i) := by
       rw [preimage_iUnion, measure_iUnion]

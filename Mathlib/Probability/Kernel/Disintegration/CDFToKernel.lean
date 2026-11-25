@@ -700,16 +700,16 @@ lemma setLIntegral_toKernel_prod [IsFiniteKernel κ] (hf : IsCondKernelCDF f κ 
     exact setLIntegral_toKernel_Iic hf a _ hs
   | compl t ht iht =>
     calc ∫⁻ b in s, hf.toKernel f (a, b) tᶜ ∂(ν a)
-      = ∫⁻ b in s, hf.toKernel f (a, b) univ - hf.toKernel f (a, b) t ∂(ν a) := by
+      = ∫⁻ b in s, ENNReal.monus (hf.toKernel f (a, b) univ) (hf.toKernel f (a, b) t) ∂(ν a) := by
           congr with x; rw [measure_compl ht (measure_ne_top (hf.toKernel f (a, x)) _)]
-    _ = ∫⁻ b in s, hf.toKernel f (a, b) univ ∂(ν a)
-          - ∫⁻ b in s, hf.toKernel f (a, b) t ∂(ν a) := by
-        rw [lintegral_sub]
+    _ = ENNReal.monus (∫⁻ b in s, hf.toKernel f (a, b) univ ∂(ν a))
+          (∫⁻ b in s, hf.toKernel f (a, b) t ∂(ν a)) := by
+        rw [lintegral_monus]
         · exact (Kernel.measurable_coe (hf.toKernel f) ht).comp measurable_prodMk_left
         · rw [iht]
           exact measure_ne_top _ _
         · exact Eventually.of_forall fun a ↦ measure_mono (subset_univ _)
-    _ = κ a (s ×ˢ univ) - κ a (s ×ˢ t) := by
+    _ = ENNReal.monus (κ a (s ×ˢ univ)) (κ a (s ×ˢ t)) := by
         rw [setLIntegral_toKernel_univ hf a hs, iht]
     _ = κ a (s ×ˢ tᶜ) := by
         rw [← measure_sdiff _ (hs.prod ht).nullMeasurableSet (measure_ne_top _ _)]
@@ -758,22 +758,22 @@ lemma lintegral_toKernel_mem [IsFiniteKernel κ] (hf : IsCondKernelCDF f κ ν)
   | compl t ht ht_eq =>
     calc ∫⁻ b, hf.toKernel f (a, b) (Prod.mk b ⁻¹' tᶜ) ∂(ν a)
       = ∫⁻ b, hf.toKernel f (a, b) (Prod.mk b ⁻¹' t)ᶜ ∂(ν a) := rfl
-    _ = ∫⁻ b, hf.toKernel f (a, b) univ
-          - hf.toKernel f (a, b) (Prod.mk b ⁻¹' t) ∂(ν a) := by
+    _ = ∫⁻ b, ENNReal.monus (hf.toKernel f (a, b) univ)
+          (hf.toKernel f (a, b) (Prod.mk b ⁻¹' t)) ∂(ν a) := by
         congr with x : 1
         exact measure_compl (measurable_prodMk_left ht)
           (measure_ne_top (hf.toKernel f (a, x)) _)
-    _ = ∫⁻ x, hf.toKernel f (a, x) univ ∂(ν a) -
-          ∫⁻ x, hf.toKernel f (a, x) (Prod.mk x ⁻¹' t) ∂(ν a) := by
+    _ = ENNReal.monus (∫⁻ x, hf.toKernel f (a, x) univ ∂(ν a))
+          (∫⁻ x, hf.toKernel f (a, x) (Prod.mk x ⁻¹' t) ∂(ν a)) := by
         have h_le : (fun x ↦ hf.toKernel f (a, x) (Prod.mk x ⁻¹' t))
               ≤ᵐ[ν a] fun x ↦ hf.toKernel f (a, x) univ :=
           Eventually.of_forall fun _ ↦ measure_mono (subset_univ _)
-        rw [lintegral_sub _ _ h_le]
+        rw [lintegral_monus _ _ h_le]
         · exact Kernel.measurable_kernel_prodMk_left' ht a
         refine ((lintegral_mono_ae h_le).trans_lt ?_).ne
         rw [lintegral_toKernel_univ hf]
         exact measure_lt_top _ univ
-    _ = κ a univ - κ a t := by rw [ht_eq, lintegral_toKernel_univ hf]
+    _ = ENNReal.monus (κ a univ) (κ a t) := by rw [ht_eq, lintegral_toKernel_univ hf]
     _ = κ a tᶜ := (measure_compl ht (measure_ne_top _ _)).symm
   | iUnion f' hf_disj hf_meas hf_eq =>
     have h_eq : ∀ a, Prod.mk a ⁻¹' ⋃ i, f' i = ⋃ i, Prod.mk a ⁻¹' f' i := by

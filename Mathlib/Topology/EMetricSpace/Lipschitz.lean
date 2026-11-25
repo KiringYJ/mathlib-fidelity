@@ -160,8 +160,8 @@ theorem edist_lt_top (hf : LipschitzWith K f) {x y : α} (h : edist x y ≠ ⊤)
 
 theorem mul_edist_le (h : LipschitzWith K f) (x y : α) :
     (K⁻¹ : ℝ≥0∞) * edist (f x) (f y) ≤ edist x y := by
-  rw [mul_comm, ← ENNReal.div_eq_mul_inv]
-  exact ENNReal.div_le_of_le_mul' (h x y)
+  rw [mul_comm]
+  exact ENNReal.mul_inv_le_of_le_mul (by simpa only [mul_comm] using h x y)
 
 protected theorem of_edist_le (h : ∀ x y, edist (f x) (f y) ≤ edist x y) : LipschitzWith 1 f :=
   fun x y => by simp only [ENNReal.coe_one, one_mul, h]
@@ -175,17 +175,17 @@ theorem ediam_image_le (hf : LipschitzWith K f) (s : Set α) :
   rintro _ ⟨x, hx, rfl⟩ _ ⟨y, hy, rfl⟩
   exact hf.edist_le_mul_of_le (Metric.edist_le_ediam_of_mem hx hy)
 
-theorem edist_lt_of_edist_lt_div (hf : LipschitzWith K f) {x y : α} {d : ℝ≥0∞}
-    (h : edist x y < d / (K : ℝ≥0∞)) : edist (f x) (f y) < d :=
+theorem edist_lt_of_edist_lt_divInf (hf : LipschitzWith K f) {x y : α} {d : ℝ≥0∞}
+    (h : edist x y < ENNReal.divInf d K) : edist (f x) (f y) < d :=
   calc
     edist (f x) (f y) ≤ K * edist x y := hf x y
-    _ < d := ENNReal.mul_lt_of_lt_div' h
+    _ < d := by rw [mul_comm]; exact ENNReal.mul_lt_of_lt_mul_inv h
 
 /-- A Lipschitz function is uniformly continuous. -/
 protected theorem uniformContinuous (hf : LipschitzWith K f) : UniformContinuous f :=
   EMetric.uniformContinuous_iff.2 fun ε εpos =>
-    ⟨ε / (K : ℝ≥0∞), ENNReal.div_pos_iff.2 ⟨ne_of_gt εpos, ENNReal.coe_ne_top⟩,
-      hf.edist_lt_of_edist_lt_div⟩
+    ⟨ENNReal.divInf ε K, ENNReal.mul_pos εpos.ne' (ENNReal.inv_ne_zero.2 ENNReal.coe_ne_top),
+      hf.edist_lt_of_edist_lt_divInf⟩
 
 /-- A Lipschitz function is continuous. -/
 protected theorem continuous (hf : LipschitzWith K f) : Continuous f :=
@@ -319,10 +319,11 @@ theorem edist_le_mul_of_le (h : LipschitzOnWith K f s) {x y : α} (hx : x ∈ s)
     edist (f x) (f y) ≤ K * r :=
   (h hx hy).trans <| mul_right_mono hr
 
-theorem edist_lt_of_edist_lt_div (hf : LipschitzOnWith K f s) {x y : α} (hx : x ∈ s) (hy : y ∈ s)
-    {d : ℝ≥0∞} (hd : edist x y < d / (K : ℝ≥0∞)) : edist (f x) (f y) < d :=
-  hf.to_restrict.edist_lt_of_edist_lt_div <|
-    show edist (⟨x, hx⟩ : s) ⟨y, hy⟩ < d / (K : ℝ≥0∞) from hd
+theorem edist_lt_of_edist_lt_divInf (hf : LipschitzOnWith K f s) {x y : α}
+    (hx : x ∈ s) (hy : y ∈ s) {d : ℝ≥0∞} (hd : edist x y < ENNReal.divInf d K) :
+    edist (f x) (f y) < d :=
+  hf.to_restrict.edist_lt_of_edist_lt_divInf <|
+    show edist (⟨x, hx⟩ : s) ⟨y, hy⟩ < ENNReal.divInf d K from hd
 
 protected theorem comp {g : β → γ} {t : Set β} {Kg : ℝ≥0} (hg : LipschitzOnWith Kg g t)
     (hf : LipschitzOnWith K f s) (hmaps : MapsTo f s t) : LipschitzOnWith (Kg * K) (g ∘ f) s :=

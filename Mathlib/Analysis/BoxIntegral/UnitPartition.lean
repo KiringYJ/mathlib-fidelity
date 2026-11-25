@@ -185,16 +185,16 @@ theorem diam_boxIcc (ν : ι → ℤ) :
 
 @[simp]
 theorem volume_box (ν : ι → ℤ) :
-    volume (box n ν : Set (ι → ℝ)) = (1 / ((n : ENNReal) ^ card ι)) := by
+    volume (box n ν : Set (ι → ℝ)) = ((n : ENNReal) ^ card ι)⁻¹ := by
   simp_rw [volume_pi, BoxIntegral.Box.coe_eq_pi, Measure.pi_pi, Real.volume_Ioc,
     box.upper_sub_lower, Finset.prod_const, ENNReal.ofReal_div_of_pos (Nat.cast_pos.mpr
-    n.pos_of_neZero), ENNReal.ofReal_one, ENNReal.ofReal_natCast, ENNReal.one_div, ENNReal.inv_pow,
-    Finset.card_univ]
+    n.pos_of_neZero), ENNReal.ofReal_one, ENNReal.ofReal_natCast, ENNReal.div_eq_mul_inv, one_mul,
+    ENNReal.inv_pow, Finset.card_univ]
 
 theorem setFinite_index {s : Set (ι → ℝ)} (hs₁ : NullMeasurableSet s) (hs₂ : volume s ≠ ⊤) :
     Set.Finite {ν : ι → ℤ | ↑(box n ν) ⊆ s} := by
   refine (Measure.finite_const_le_meas_of_disjoint_iUnion₀ volume
-    (ε := (1 / ((n : ENNReal) ^ card ι)))
+    (ε := ((n : ENNReal) ^ card ι)⁻¹)
     (by simp) (As := fun ν : ι → ℤ ↦ (box n ν) ∩ s) (fun ν ↦ ?_) (fun _ _ h ↦ ?_) ?_).subset
       (fun _ hν ↦ ?_)
   · refine NullMeasurableSet.inter ?_ hs₁
@@ -411,9 +411,9 @@ theorem integralSum_eq_tsum_div {B : Box ι} (hB : hasIntegralVertices B) (hs₀
       exact (pow_pos (Nat.cast_pos.mpr n.pos_of_neZero) _).ne'.isUnit
     simp only [measureReal_def, volume_box,
       prepartition_tag n (mem_admissibleIndex_of_mem_box n hB (hs₀ hx.1)),
-      tag_index_eq_self_of_mem_smul_span n hx.2, ENNReal.toReal_div _ _ (hb := hden),
-      ENNReal.toReal_one, ENNReal.toReal_pow, ENNReal.toReal_natCast]
-    rw [mul_comm_div₀, one_mul]
+      tag_index_eq_self_of_mem_smul_span n hx.2, ENNReal.toReal_inv _ (ha := hden),
+      ENNReal.toReal_pow, ENNReal.toReal_natCast]
+    rw [div_eq_mul_inv₀, mul_comm]
 
 open Filter
 

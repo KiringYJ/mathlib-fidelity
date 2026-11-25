@@ -590,11 +590,12 @@ nonrec theorem _root_.IsClosed.cthickening_eq_biUnion_closedBall {α : Type*} [P
 theorem infEDist_le_infEDist_cthickening_add :
     infEDist x s ≤ infEDist x (cthickening δ s) + ENNReal.ofReal δ := by
   refine le_of_forall_gt fun r h => ?_
-  simp_rw [← lt_tsub_iff_right, infEDist_lt_iff, mem_cthickening_iff] at h
+  simp_rw [← ENNReal.lt_monus_iff_add_lt_right, infEDist_lt_iff, mem_cthickening_iff] at h
   obtain ⟨y, hy, hxy⟩ := h
   exact infEDist_le_edist_add_infEDist.trans_lt
     ((ENNReal.add_lt_add_of_lt_of_le (hy.trans_lt ENNReal.ofReal_lt_top).ne hxy hy).trans_eq
-      (tsub_add_cancel_of_le <| le_self_add.trans (lt_tsub_iff_left.1 hxy).le))
+      (ENNReal.monus_add_cancel_of_le <|
+        le_self_add.trans (ENNReal.lt_monus_iff_add_lt_left.1 hxy).le))
 
 /-- For the equality, see `infEDist_thickening`. -/
 theorem infEDist_le_infEDist_thickening_add :

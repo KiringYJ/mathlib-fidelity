@@ -200,9 +200,11 @@ theorem covolume_div_covolume_eq_relIndex' {E : Type*} [NormedAddCommGroup E]
 theorem volume_image_eq_volume_div_covolume {ι : Type*} [Fintype ι] (L : Submodule ℤ (ι → ℝ))
     [DiscreteTopology L] [IsZLattice ℝ L] (b : Basis ι ℤ L) {s : Set (ι → ℝ)} :
     volume ((b.ofZLatticeBasis ℝ L).equivFun '' s) =
-      (volume s / ENNReal.ofReal (covolume L)) := by
-  rw [LinearEquiv.image_eq_preimage_symm, Measure.addHaar_preimage_linearEquiv,
-    LinearEquiv.symm_symm, covolume_eq_det_inv L b, ENNReal.div_eq_inv_mul,
+      ENNReal.div (volume s) (ENNReal.ofReal (covolume L))
+        ⟨ENNReal.ofReal_ne_zero_iff.mpr (covolume_pos L volume),
+          Or.inr ENNReal.ofReal_ne_top⟩ := by
+  rw [ENNReal.div_eq_inv_mul, LinearEquiv.image_eq_preimage_symm,
+    Measure.addHaar_preimage_linearEquiv, LinearEquiv.symm_symm, covolume_eq_det_inv L b,
     ENNReal.ofReal_inv_of_pos (abs_pos.2 (LinearEquiv.det _).ne_zero), inv_inv, LinearEquiv.coe_det]
 
 set_option backward.isDefEq.respectTransparency.types false in
@@ -213,7 +215,9 @@ theorem volume_image_eq_volume_div_covolume' {E : Type*} [NormedAddCommGroup E]
     (L : Submodule ℤ E) [DiscreteTopology L] [IsZLattice ℝ L] {ι : Type*} [Fintype ι]
     (b : Basis ι ℤ L) {s : Set E} (hs : NullMeasurableSet s) :
     volume ((b.ofZLatticeBasis ℝ).equivFun '' s) =
-      (volume s / ENNReal.ofReal (covolume L)) := by
+      ENNReal.div (volume s) (ENNReal.ofReal (covolume L))
+        ⟨ENNReal.ofReal_ne_zero_iff.mpr (covolume_pos L volume),
+          Or.inr ENNReal.ofReal_ne_top⟩ := by
   let e : Fin (finrank ℝ E) ≃ ι :=
     Fintype.equivOfCardEq (by rw [Fintype.card_fin, finrank_eq_card_basis (b.ofZLatticeBasis ℝ)])
   let f := (EuclideanSpace.equiv ι ℝ).symm.trans
@@ -221,10 +225,12 @@ theorem volume_image_eq_volume_div_covolume' {E : Type*} [NormedAddCommGroup E]
   have hf : MeasurePreserving f :=
     ((stdOrthonormalBasis ℝ E).reindex e).measurePreserving_repr_symm.comp
       (PiLp.volume_preserving_toLp ι)
+  have himage := volume_image_eq_volume_div_covolume
+    (ZLattice.comap ℝ L f.toLinearMap) (b.ofZLatticeComap ℝ L f.toLinearEquiv)
+    (s := f ⁻¹' s)
+  rw [ENNReal.div_eq_inv_mul] at himage ⊢
   rw [← hf.measure_preimage hs, ← (covolume_comap L volume volume hf),
-    ← volume_image_eq_volume_div_covolume (ZLattice.comap ℝ L f.toLinearMap)
-    (b.ofZLatticeComap ℝ L f.toLinearEquiv), Basis.ofZLatticeBasis_comap,
-    ← f.image_symm_eq_preimage, ← Set.image_comp]
+    ← himage, Basis.ofZLatticeBasis_comap, ← f.image_symm_eq_preimage, ← Set.image_comp]
   simp
 
 end Basic
@@ -232,7 +238,9 @@ end Basic
 namespace covolume
 
 private theorem toReal_div_ofReal_pos (a : ENNReal) {b : ℝ} (hb : 0 < b) :
-    (a / ENNReal.ofReal b).toReal = Checked.div a.toReal b hb.ne'.isUnit := by
+    (ENNReal.div a (ENNReal.ofReal b)
+      ⟨ENNReal.ofReal_ne_zero_iff.mpr hb, Or.inr ENNReal.ofReal_ne_top⟩).toReal =
+      Checked.div a.toReal b hb.ne'.isUnit := by
   have h := ENNReal.toReal_ofReal hb.le
   have hu : IsUnit (ENNReal.ofReal b).toReal := h.symm ▸ hb.ne'.isUnit
   rw [ENNReal.toReal_div _ _ (hb := hu)]
@@ -369,7 +377,8 @@ theorem tendsto_card_div_pow (b : Basis ι ℤ L) {s : Set (ι → ℝ)} (hs₁ 
   convert! tendsto_card_div_pow'' b hs₁ hs₂ ?_
   · simp only [measureReal_def]
     rw [volume_image_eq_volume_div_covolume L b, toReal_div_ofReal_pos _ (covolume_pos L volume)]
-  · rw [frontier_equivFun, volume_image_eq_volume_div_covolume, hs₃, ENNReal.zero_div]
+  · rw [frontier_equivFun, volume_image_eq_volume_div_covolume L b,
+      ENNReal.div_eq_mul_inv, hs₃, zero_mul]
 
 theorem tendsto_card_le_div {X : Set (ι → ℝ)} (hX : ∀ ⦃x⦄ ⦃r : ℝ⦄, x ∈ X → 0 < r → r • x ∈ X)
     {F : (ι → ℝ) → ℝ} (h₁ : ∀ x ⦃r : ℝ⦄, 0 ≤ r → F (r • x) = r ^ card ι * (F x))
@@ -387,7 +396,8 @@ theorem tendsto_card_le_div {X : Set (ι → ℝ)} (hX : ∀ ⦃x⦄ ⦃r : ℝ�
   convert! tendsto_card_le_div'' b hX h₁ h₂ h₃ ?_
   · simp only [measureReal_def]
     rw [volume_image_eq_volume_div_covolume L b, toReal_div_ofReal_pos _ (covolume_pos L volume)]
-  · rw [frontier_equivFun, volume_image_eq_volume_div_covolume, h₄, ENNReal.zero_div]
+  · rw [frontier_equivFun, volume_image_eq_volume_div_covolume L b,
+      ENNReal.div_eq_mul_inv, h₄, zero_mul]
 
 end Pi
 
@@ -416,8 +426,9 @@ theorem tendsto_card_div_pow' {s : Set E} (hs₁ : IsBounded s) (hs₂ : Measura
   · simp only [measureReal_def]
     rw [volume_image_eq_volume_div_covolume' L b hs₂.nullMeasurableSet,
       toReal_div_ofReal_pos _ (covolume_pos L volume)]
-  · rw [frontier_equivFun, volume_image_eq_volume_div_covolume', hs₃, ENNReal.zero_div]
-    exact NullMeasurableSet.of_null hs₃
+  · rw [frontier_equivFun,
+      volume_image_eq_volume_div_covolume' L b (NullMeasurableSet.of_null hs₃),
+      ENNReal.div_eq_mul_inv, hs₃, zero_mul]
 
 /-- A version of `ZLattice.covolume.tendsto_card_le_div` for the `InnerProductSpace` case;
 see the `Naming convention` section in the introduction. -/
@@ -439,8 +450,9 @@ theorem tendsto_card_le_div' [Nontrivial E] {X : Set E} {F : E → ℝ}
   · have : Nontrivial L := nontrivial_of_finrank_pos <| (ZLattice.rank ℝ L).symm ▸ finrank_pos
     infer_instance
   · rwa [← finrank_eq_card_chooseBasisIndex, ZLattice.rank ℝ L]
-  · rw [frontier_equivFun, volume_image_eq_volume_div_covolume', h₄, ENNReal.zero_div]
-    exact NullMeasurableSet.of_null h₄
+  · rw [frontier_equivFun,
+      volume_image_eq_volume_div_covolume' L b (NullMeasurableSet.of_null h₄),
+      ENNReal.div_eq_mul_inv, h₄, zero_mul]
 
 end InnerProductSpace
 

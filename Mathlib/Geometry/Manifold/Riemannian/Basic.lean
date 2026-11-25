@@ -373,16 +373,18 @@ lemma eventually_riemannianEDist_le_edist_extChartAt (x : M) :
 lemma eventually_riemannianEDist_lt (x : M) {c : ℝ≥0∞} (hc : 0 < c) :
     ∀ᶠ y in 𝓝 x, riemannianEDist I x y < c := by
   rcases eventually_riemannianEDist_le_edist_extChartAt I x with ⟨C, C_pos, hC⟩
-  have : (extChartAt I x) ⁻¹' (Metric.eball (extChartAt I x x) (c / C)) ∈ 𝓝 x := by
+  have hC₀ : (C : ℝ≥0∞) ≠ 0 := ENNReal.coe_ne_zero.mpr C_pos.ne'
+  have hCt : (C : ℝ≥0∞) ≠ ⊤ := ENNReal.coe_ne_top
+  let δ : ℝ≥0∞ := ENNReal.div c (C : ℝ≥0∞) ⟨hC₀, Or.inr hCt⟩
+  have hball : (extChartAt I x) ⁻¹' (Metric.eball (extChartAt I x x) δ) ∈ 𝓝 x := by
     apply (continuousAt_extChartAt x).preimage_mem_nhds
-    exact Metric.eball_mem_nhds _ (ENNReal.div_pos hc.ne' (by simp))
-  filter_upwards [this, hC] with y hy h'y
-  apply h'y.trans_lt
-  have : edist (extChartAt I x x) (extChartAt I x y) < (c / C) := by
+    exact Metric.eball_mem_nhds _ (ENNReal.div_pos hc.ne' hC₀ hCt)
+  filter_upwards [hball, hC] with y hy h'y
+  have hd : edist (extChartAt I x x) (extChartAt I x y) < δ := by
     simpa only [mem_preimage, Metric.mem_eball'] using hy
-  rwa [ENNReal.lt_div_iff_mul_lt, mul_comm] at this
-  · exact Or.inl (mod_cast C_pos.ne')
-  · simp
+  apply h'y.trans_lt
+  simpa only [mul_comm] using
+    (ENNReal.lt_div_iff_mul_lt ⟨hC₀, Or.inr hCt⟩ (Or.inl hC₀) (Or.inl hCt)).mp hd
 
 set_option backward.isDefEq.respectTransparency false in
 /-- Any neighborhood of `x` contains all the points which are close enough to `x` for the
@@ -427,7 +429,8 @@ lemma setOfPred_riemannianEDist_lt_subset_nhds [RegularSpace M] {x : M} {s : Set
   lift r to ℝ≥0 using r_pos.le
   simp only [gt_iff_lt, NNReal.coe_pos] at r_pos
   -- the desired constant will be `c := r / C`
-  refine ⟨r / C, by positivity, ?_⟩
+  have hCu : IsUnit C := C_pos.ne'.isUnit
+  refine ⟨Checked.div r C hCu, div_pos r_pos C_pos, ?_⟩
   intro y hy
   -- consider a path `γ` of length `< r / C` from `x` to a point `y`. We will show that `y` belongs
   -- to `u`.
@@ -483,12 +486,12 @@ lemma setOfPred_riemannianEDist_lt_subset_nhds [RegularSpace M] {x : M} {s : Set
           pathELength_eq_lintegral_mfderivWithin_Icc]
     _ ≤ C * pathELength I γ 0 1 := by
       gcongr
-    _ < C * (↑(r / C) : ℝ≥0∞) := by
+    _ < C * (↑(Checked.div r C hCu) : ℝ≥0∞) := by
       gcongr
       exact ENNReal.coe_ne_top
     _ = r := by
-      rw [ENNReal.coe_div]
-      exact (ENNReal.eq_div_iff (by simpa using C_pos.ne') ENNReal.coe_ne_top).mp rfl
+      rw [ENNReal.coe_div (hr := hCu)]
+      exact ENNReal.mul_div_cancel (ENNReal.coe_ne_zero.mpr C_pos.ne') ENNReal.coe_ne_top
   have : γ' t₁ ∈ (extChartAt I x).symm ⁻¹' v := by
     apply hr
     rw [← Metric.eball_coe, Metric.mem_eball, edist_eq_enorm_sub]

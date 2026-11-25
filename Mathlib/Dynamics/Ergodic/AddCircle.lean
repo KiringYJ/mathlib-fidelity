@@ -65,8 +65,8 @@ theorem ae_empty_or_univ_of_forall_vadd_ae_eq_self {s : Set <| AddCircle T}
   right
   obtain ⟨d, -, hd⟩ : ∃ d, d ∈ s ∧ ∀ {ι'} {l : Filter ι'} (w : ι' → AddCircle T) (δ : ι' → ℝ),
     Tendsto δ l (𝓝[>] 0) → (∀ᶠ j in l, d ∈ closedBall (w j) (1 * δ j)) →
-      Tendsto (fun j => (μ (s ∩ closedBall (w j) (δ j)) / μ (closedBall (w j) (δ j))))
-        l (𝓝 1) :=
+      Tendsto (fun j => ENNReal.divInf (μ (s ∩ closedBall (w j) (δ j)))
+        (μ (closedBall (w j) (δ j)))) l (𝓝 1) :=
     exists_mem_of_measure_ne_zero_of_ae h
       (IsUnifLocDoublingMeasure.ae_tendsto_measure_inter_div μ s 1)
   let D := {j : ι // 0 < n j}
@@ -80,7 +80,10 @@ theorem ae_empty_or_univ_of_forall_vadd_ae_eq_self {s : Set <| AddCircle T}
   let I (j : D) := closedBall d (δ j)
   have hδ (j : D) : 0 < δ j := div_pos hT₀ (mul_pos two_pos (hn j))
   have hδ_eq (j : D) : T / 2 / (n j : ℝ) = δ j := div_div₀
-  replace hd : Tendsto (fun j => (μ (s ∩ I j) / μ (I j))) l' (𝓝 1) := by
+  have hI₀ (j : D) : μ (I j) ≠ 0 := (measure_closedBall_pos _ d (hδ j)).ne.symm
+  have hI₁ (j : D) : μ (I j) ≠ ⊤ := measure_ne_top _ _
+  let ratio (j : D) := ENNReal.div (μ (s ∩ I j)) (μ (I j)) ⟨hI₀ j, Or.inr (hI₁ j)⟩
+  replace hd : Tendsto ratio l' (𝓝 1) := by
     have hδ₀ : ∀ᶠ j in l', 0 < δ j := .of_forall hδ
     have hδ₁ : Tendsto δ l' (𝓝[>] 0) := by
       refine tendsto_nhdsWithin_iff.mpr ⟨?_, hδ₀⟩
@@ -92,14 +95,13 @@ theorem ae_empty_or_univ_of_forall_vadd_ae_eq_self {s : Set <| AddCircle T}
       simp only [one_mul, mem_closedBall, dist_self]
       apply hj.le
     exact hd _ δ hδ₁ hw
-  suffices ∀ᶠ j in l', (μ (s ∩ I j) / μ (I j)) = (μ s / ENNReal.ofReal T) by
+  suffices ∀ᶠ j in l', ratio j =
+      ENNReal.div (μ s) (ENNReal.ofReal T) ⟨hT₁, Or.inr ENNReal.ofReal_ne_top⟩ by
     replace hd := hd.congr' this
     rwa [tendsto_const_nhds_iff, ENNReal.div_eq_one_iff hT₁ ENNReal.ofReal_ne_top] at hd
   refine .of_forall fun j ↦ ?_
   have huj : IsOfFinAddOrder (u j) := addOrderOf_pos_iff.mp j.property
   have huj' : 1 ≤ (n j : ℝ) := by exact_mod_cast j.property
-  have hI₀ : μ (I j) ≠ 0 := (measure_closedBall_pos _ d (hδ j)).ne.symm
-  have hI₁ : μ (I j) ≠ ⊤ := measure_ne_top _ _
   have hdiam : 2 * δ j = T / (n j : ℝ) := by
     rw [← hδ_eq j, ← mul_div_assoc₀, mul_div_cancel₀]
   have hI₂ : μ (I j) * ↑(n j) = ENNReal.ofReal T := by
@@ -108,7 +110,9 @@ theorem ae_empty_or_univ_of_forall_vadd_ae_eq_self {s : Set <| AddCircle T}
       nsmul_eq_mul, mul_div_cancel₀]
   have hsI : μ s = n j • μ (s ∩ I j) :=
     volume_of_add_preimage_eq s _ (u j) d huj (hu₁ j) closedBall_ae_eq_ball
-  rw [ENNReal.div_eq_div_iff hT₁ ENNReal.ofReal_ne_top hI₀ hI₁, hsI, nsmul_eq_mul, ← mul_assoc, hI₂]
+  dsimp only [ratio]
+  rw [ENNReal.div_eq_div_iff hT₁ ENNReal.ofReal_ne_top (hI₀ j) (hI₁ j),
+    hsI, nsmul_eq_mul, ← mul_assoc, hI₂]
 
 theorem ergodic_zsmul {n : ℤ} (hn : 1 < |n|) : Ergodic fun y : AddCircle T => n • y :=
   { measurePreserving_zsmul volume (abs_pos.mp <| lt_trans zero_lt_one hn) with

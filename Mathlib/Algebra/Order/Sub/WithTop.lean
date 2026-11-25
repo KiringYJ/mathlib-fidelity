@@ -12,8 +12,8 @@ public import Mathlib.Algebra.Order.Monoid.Unbundled.WithTop
 # Lemma about subtraction in ordered monoids with a top element adjoined.
 
 This file introduces a subtraction on `WithTop α` when `α` has a subtraction and a bottom element,
-given by `x - ⊤ = ⊥` and `⊤ - x = ⊤`. This will be instantiated mostly for `ℕ∞` and `ℝ≥0∞`, where
-the bottom element is zero.
+given by `x - ⊤ = ⊥` and `⊤ - x = ⊤` for `x ≠ ⊤`. It gives the subtraction on `ℕ∞`.
+On `ℝ≥0∞`, the same construction defines the named order residual `ENNReal.monus`.
 
 Note that there is another subtraction on objects of the form `WithTop α` in the file
 `Mathlib/Algebra/Order/AddGroupWithTop.lean`, setting `-⊤ = ⊤` as this corresponds to the

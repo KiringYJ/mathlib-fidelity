@@ -365,9 +365,9 @@ theorem exists_pos_setLIntegral_lt_of_measure_lt {f : α → ℝ≥0∞} (h : �
   rcases exists_between hε₂0 with ⟨ε₁, hε₁0, hε₁₂⟩
   rcases exists_simpleFunc_forall_lintegral_sub_lt_of_pos h hε₁0.ne' with ⟨φ, _, hφ⟩
   rcases φ.exists_forall_le with ⟨C, hC⟩
-  use ((ε₂ - ε₁) / (C : ℝ≥0∞)),
-    ENNReal.div_pos_iff.2 ⟨(tsub_pos_iff_lt.2 hε₁₂).ne', ENNReal.coe_ne_top⟩
-  refine fun s hs => lt_of_le_of_lt ?_ hε₂ε
+  obtain ⟨δ, hδ, hδC⟩ := ENNReal.exists_pos_mul_lt (a := (C : ℝ≥0∞))
+    ENNReal.coe_ne_top (ENNReal.monus_pos_of_lt hε₁₂).ne'
+  refine ⟨δ, hδ, fun s hs => lt_of_le_of_lt ?_ hε₂ε⟩
   simp only [lintegral_eq_nnreal, iSup_le_iff]
   intro ψ hψ
   calc
@@ -387,9 +387,11 @@ theorem exists_pos_setLIntegral_lt_of_measure_lt {f : α → ℝ≥0∞} (h : �
     _ = C * μ s + ε₁ := by
       simp only [← SimpleFunc.lintegral_eq_lintegral, coe_const, lintegral_const,
         Measure.restrict_apply, MeasurableSet.univ, univ_inter, Function.const]
-    _ ≤ C * ((ε₂ - ε₁) / (C : ℝ≥0∞)) + ε₁ := by gcongr
-    _ ≤ ε₂ - ε₁ + ε₁ := by gcongr; apply ENNReal.mul_div_le
-    _ = ε₂ := tsub_add_cancel_of_le hε₁₂.le
+    _ ≤ C * δ + ε₁ := add_le_add (mul_le_mul' le_rfl hs.le) le_rfl
+    _ ≤ ENNReal.monus ε₂ ε₁ + ε₁ := by
+      rw [mul_comm (C : ℝ≥0∞) δ]
+      exact add_le_add hδC.le le_rfl
+    _ = ε₂ := ENNReal.monus_add_cancel_of_le hε₁₂.le
 
 /-- If `f` has finite integral, then `∫⁻ x in s, f x ∂μ` is absolutely continuous in `s`: it tends
 to zero as `μ s` tends to zero. -/
@@ -662,8 +664,8 @@ lemma lintegral_piecewise (hs : MeasurableSet s) (f g : α → ℝ≥0∞) [∀ 
 
 theorem setLIntegral_compl {f : α → ℝ≥0∞} {s : Set α} (hsm : MeasurableSet s)
     (hfs : ∫⁻ x in s, f x ∂μ ≠ ∞) :
-    ∫⁻ x in sᶜ, f x ∂μ = ∫⁻ x, f x ∂μ - ∫⁻ x in s, f x ∂μ := by
-  rw [← lintegral_add_compl (μ := μ) f hsm, ENNReal.add_sub_cancel_left hfs]
+    ∫⁻ x in sᶜ, f x ∂μ = ENNReal.monus (∫⁻ x, f x ∂μ) (∫⁻ x in s, f x ∂μ) := by
+  rw [← lintegral_add_compl (μ := μ) f hsm, ENNReal.add_monus_cancel_left hfs]
 
 theorem setLIntegral_iUnion_of_directed {ι : Type*} [Countable ι]
     (f : α → ℝ≥0∞) {s : ι → Set α} (hd : Directed (· ⊆ ·) s) :

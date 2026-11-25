@@ -23,8 +23,8 @@ divergences.
 
 ## Main definitions
 
-* `riskIncrease ℓ P π`: the increase in risk that results from discarding the observation in
-  a Bayesian estimation problem, equal to `bayesRisk ℓ (Kernel.discard 𝓧 ∘ₖ P) π - bayesRisk ℓ P π`.
+* `riskIncrease ℓ P π`: the least nonnegative amount that, when added to the Bayes risk,
+  bounds the Bayes risk after discarding the observation.
 
 ## Main statements
 
@@ -52,16 +52,16 @@ variable {Θ 𝓧 𝓧' 𝓨 : Type*} {mΘ : SigmaAlgebra Θ} {m𝓧 : SigmaAlge
 problem. -/
 noncomputable
 def riskIncrease (ℓ : Θ → 𝓨 → ℝ≥0∞) (P : Kernel Θ 𝓧) (π : Measure Θ) : ℝ≥0∞ :=
-  bayesRisk ℓ (Kernel.discard 𝓧 ∘ₖ P : Kernel Θ Unit) π - bayesRisk ℓ P π
+  ENNReal.monus (bayesRisk ℓ (Kernel.discard 𝓧 ∘ₖ P : Kernel Θ Unit) π) (bayesRisk ℓ P π)
 
-lemma riskIncrease_eq_iInf_sub' [Nonempty 𝓨] (hℓ : Measurable (uncurry ℓ)) (P : Kernel Θ 𝓧)
+lemma riskIncrease_eq_iInf_monus' [Nonempty 𝓨] (hℓ : Measurable (uncurry ℓ)) (P : Kernel Θ 𝓧)
     (π : Measure Θ) [SFinite π] :
-    riskIncrease ℓ P π = (⨅ z : 𝓨, ∫⁻ θ, P θ univ * ℓ θ z ∂π) - bayesRisk ℓ P π := by
+    riskIncrease ℓ P π = ENNReal.monus (⨅ z : 𝓨, ∫⁻ θ, P θ univ * ℓ θ z ∂π) (bayesRisk ℓ P π) := by
   simp [riskIncrease, bayesRisk_of_subsingleton' hℓ, mul_comm, Kernel.comp_discard']
 
-lemma riskIncrease_eq_iInf_sub (hℓ : Measurable (uncurry ℓ)) (P : Kernel Θ 𝓧) [IsMarkovKernel P]
+lemma riskIncrease_eq_iInf_monus (hℓ : Measurable (uncurry ℓ)) (P : Kernel Θ 𝓧) [IsMarkovKernel P]
     (π : Measure Θ) [SFinite π] :
-    riskIncrease ℓ P π = (⨅ z : 𝓨, ∫⁻ θ, ℓ θ z ∂π) - bayesRisk ℓ P π := by
+    riskIncrease ℓ P π = ENNReal.monus (⨅ z : 𝓨, ∫⁻ θ, ℓ θ z ∂π) (bayesRisk ℓ P π) := by
   simp_rw [riskIncrease, Kernel.comp_discard, bayesRisk_discard hℓ]
 
 @[simp] lemma riskIncrease_of_isEmpty_of_isEmpty [IsEmpty 𝓧] [IsEmpty 𝓨] :
@@ -82,11 +82,11 @@ lemma riskIncrease_eq_iInf_sub (hℓ : Measurable (uncurry ℓ)) (P : Kernel Θ 
 
 lemma riskIncrease_le_iInf' [Nonempty 𝓨] (hℓ : Measurable (uncurry ℓ)) [SFinite π] :
     riskIncrease ℓ P π ≤ ⨅ z : 𝓨, ∫⁻ θ, P θ univ * ℓ θ z ∂π :=
-  riskIncrease_eq_iInf_sub' hℓ P π ▸ tsub_le_self
+  riskIncrease_eq_iInf_monus' hℓ P π ▸ ENNReal.monus_le_self
 
 lemma riskIncrease_le_iInf (hℓ : Measurable (uncurry ℓ)) [IsMarkovKernel P] [SFinite π] :
     riskIncrease ℓ P π ≤ ⨅ z : 𝓨, ∫⁻ θ, ℓ θ z ∂π :=
-  riskIncrease_eq_iInf_sub hℓ P π ▸ tsub_le_self
+  riskIncrease_eq_iInf_monus hℓ P π ▸ ENNReal.monus_le_self
 
 lemma riskIncrease_lt_top' [Nonempty 𝓨] (hℓ : Measurable (uncurry ℓ))
     [IsFiniteMeasure π] {y : 𝓨} (h_finite : ∫⁻ θ, P θ univ * ℓ θ y ∂π ≠ ∞) :
@@ -102,7 +102,7 @@ lemma riskIncrease_lt_top (hℓ : Measurable (uncurry ℓ)) [IsMarkovKernel P] [
 lemma riskIncrease_comp_le (ℓ : Θ → 𝓨 → ℝ≥0∞) (P : Kernel Θ 𝓧) (π : Measure Θ)
     (η : Kernel 𝓧 𝓧') [IsMarkovKernel η] :
     riskIncrease ℓ (η ∘ₖ P) π ≤ riskIncrease ℓ P π := by
-  refine tsub_le_tsub ?_ (bayesRisk_le_bayesRisk_comp _ _ _ _)
+  refine ENNReal.monus_le_monus ?_ (bayesRisk_le_bayesRisk_comp _ _ _ _)
   simp [← Kernel.comp_assoc]
 
 /-- **Data processing inequality** for the risk increase. -/

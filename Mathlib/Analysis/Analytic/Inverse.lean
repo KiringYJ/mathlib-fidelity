@@ -788,8 +788,9 @@ theorem radius_leftInv_pos_of_radius_pos
   have hQ_pos : 0 < ((r.compFormalMultilinearSeries p).rightInv (ContinuousLinearMap.id 𝕜 E)
       (fun v ↦ hr v) x).radius :=
     radius_rightInv_pos_of_radius_pos (hp.trans_le (p.radius_le_radius_continuousLinearMap_comp r))
-  exact (ENNReal.div_pos hQ_pos.ne' enorm_ne_top).trans_le
-    (div_le_radius_compContinuousLinearMap _ r)
+  refine lt_of_lt_of_le ?_ (leftMulResiduation_le_radius_compContinuousLinearMap _ r)
+  rw [ENNReal.leftMulResiduation_eq_extendedDiv ⟨Or.inl hQ_pos.ne', Or.inr enorm_ne_top⟩]
+  exact ENNReal.mul_pos hQ_pos.ne' (ENNReal.inv_pos.2 enorm_ne_top).ne'
 
 end FormalMultilinearSeries
 

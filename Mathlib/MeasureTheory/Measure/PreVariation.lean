@@ -133,12 +133,12 @@ lemma exists_Finpartition_sum_ge {s : Set X} (hs : MeasurableSet s) {ε : ℝ≥
   · have : 0 < ε' := by
       simp only [lt_inf_iff, ε']
       exact ⟨hε, toNNReal_pos hw h⟩
-    let a := preVariationFun f s - ε'
-    have ha : a < preVariationFun f s := ENNReal.sub_lt_self h hw (by positivity)
+    let a := ENNReal.monus (preVariationFun f s) ε'
+    have ha : a < preVariationFun f s := ENNReal.monus_lt_self h hw (by positivity)
     obtain ⟨P, hP⟩ := exists_Finpartition_sum_gt f hs ha
     use P
     calc preVariationFun f s
-      _ = a + ε' := (tsub_add_cancel_of_le hε').symm
+      _ = a + ε' := (ENNReal.monus_add_cancel_of_le hε').symm
       _ ≤ ∑ p ∈ P.parts, f p + ε' := by
         exact (ENNReal.add_le_add_iff_right coe_ne_top).mpr (le_of_lt hP)
       _ ≤ ∑ p ∈ P.parts, f p + ε := by gcongr

@@ -69,7 +69,9 @@ namespace ENNReal
 private theorem lintegral_rpow_div_add_rpow_div_eq_one_of_lintegral_rpow_eq_one {p q : ℝ}
     (hpq : p.HolderConjugate q) {f g : α → ℝ≥0∞} (hf : AEMeasurable f μ)
     (hf_norm : ∫⁻ a, f a ^ p ∂μ = 1) (hg_norm : ∫⁻ a, g a ^ q ∂μ = 1) :
-    ∫⁻ a, ((f a ^ p) / (.ofReal p)) + ((g a ^ q) / (.ofReal q)) ∂μ = 1 := by
+    ∫⁻ a, ENNReal.div (f a ^ p) (.ofReal p) ⟨(ofReal_pos.2 hpq.pos).ne', .inr ofReal_ne_top⟩ +
+      ENNReal.div (g a ^ q) (.ofReal q) ⟨(ofReal_pos.2 hpq.symm.pos).ne', .inr ofReal_ne_top⟩
+        ∂μ = 1 := by
   simp_rw [ENNReal.div_eq_mul_inv]
   rw [lintegral_add_left' (by fun_prop), lintegral_mul_const'' _ (hf.pow_const p),
     lintegral_mul_const', hf_norm, hg_norm, one_mul, one_mul, hpq.inv_add_inv_ennreal]
@@ -89,7 +91,8 @@ theorem lintegral_mul_eq_one_iff_of_lintegral_rpow_eq_one {p q : ℝ} (hpq : p.H
     ∫⁻ a, (f * g) a ∂μ = 1 ↔ f ^ p =ᵐ[μ] g ^ q := by
   rw [← lintegral_rpow_div_add_rpow_div_eq_one_of_lintegral_rpow_eq_one hpq hf hf_norm hg_norm]
   have hle := lintegral_mul_le_one_of_lintegral_rpow_eq_one hpq hf hf_norm hg_norm
-  have heqiff := lintegral_eq_iff_ae_eq_of_ae_le (hle.trans_lt one_lt_top |>.ne_top) (by fun_prop)
+  have heqiff := lintegral_eq_iff_ae_eq_of_ae_le (hle.trans_lt one_lt_top |>.ne_top)
+    (by first | fun_prop | simp only [ENNReal.div_eq_mul_inv]; fun_prop)
     (ae_of_all μ fun _ ↦ young_inequality _ _ hpq)
   rw [heqiff]
   have := ae_lt_top' (.mul hf hg) (hle.trans_lt one_lt_top).ne |>.ne_of_lt

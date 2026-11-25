@@ -20,7 +20,7 @@ This file contains API for analytic functions `∑ cᵢ • xⁱ` defined in ter
 * `FormalMultilinearSeries.ofScalars_radius_eq_(zero/inv/top)_of_tendsto`:
   the ratio test for an analytic function defined in terms of a formal power series `∑ cᵢ • xⁱ`.
 * `FormalMultilinearSeries.ofScalars_radius_eq_inv_of_tendsto_ENNReal`:
-  the ratio test for an analytic function using `ENNReal` division for all values `ℝ≥0∞`.
+  the ratio test for an analytic function using `ENNReal.divInf` to include zero coefficients.
 -/
 
 @[expose] public section
@@ -372,17 +372,17 @@ theorem ofScalars_radius_eq_zero_of_tendsto [NormOneClass E]
         _ ≤ ‖c (n + 1)‖ * (r : ℝ) ^ (n + 1) :=
           mul_le_mul_of_nonneg_right hineq (pow_nonneg r.coe_nonneg _)
 
-/-- The intrinsic extended-nonnegative ratio combines the finite, zero, and infinite
-cases, including sequences which are eventually zero. -/
+/-- The limit of the coefficient ratios defined by `ENNReal.divInf` determines the radius.
+A pair of zero coefficients has ratio zero. -/
 theorem ofScalars_radius_eq_inv_of_tendsto_ENNReal [NormOneClass E] {r : ℝ≥0∞}
-    (hc' : Tendsto (fun n ↦ (ENNReal.ofReal ‖c n.succ‖ / ENNReal.ofReal ‖c n‖))
+    (hc' : Tendsto (fun n ↦ ENNReal.divInf (ENNReal.ofReal ‖c n.succ‖) (ENNReal.ofReal ‖c n‖))
       atTop (𝓝 r)) :
       (ofScalars E c).radius = r⁻¹ := by
   have hce (hr : r ≠ 0) : ∀ᶠ n in atTop, c n ≠ 0 := by
     have hn := hc'.eventually_ne hr
     have hnext : ∀ᶠ n in atTop, c (n + 1) ≠ 0 := by
       filter_upwards [hn] with n hn he
-      simp [he] at hn
+      simp [ENNReal.divInf, he] at hn
     obtain ⟨N, hN⟩ := eventually_atTop.mp hnext
     refine eventually_atTop.mpr ⟨N + 1, fun n hn => ?_⟩
     cases n with
@@ -397,8 +397,9 @@ theorem ofScalars_radius_eq_inv_of_tendsto_ENNReal [NormOneClass E] {r : ℝ≥0
       convert ht using 1
       · funext n
         have hn : (ENNReal.ofReal ‖c n.1‖).toReal ≠ 0 := by simpa using n.2
-        simp only [Function.comp_def, ENNReal.toReal_div _ _ (hb := hn.isUnit),
-          ENNReal.toReal_ofReal (norm_nonneg _)]
+        simp only [Function.comp_def, ENNReal.divInf, ENNReal.toReal_mul,
+          ENNReal.toReal_inv _ (ha := hn.isUnit), ENNReal.toReal_ofReal (norm_nonneg _),
+          div_eq_mul_inv₀]
       · simp
     · apply (ofScalars E c).radius_eq_top_of_eventually_eq_zero
       simp only [eventually_atTop, not_exists, not_forall, not_not] at h ⊢
@@ -408,7 +409,7 @@ theorem ofScalars_radius_eq_inv_of_tendsto_ENNReal [NormOneClass E] {r : ℝ≥0
       nontriviality E
       simp only [ofScalars_eq_zero] at a ⊢
       contrapose! hti
-      exact ⟨n, hzi.trans hmn, ENNReal.div_eq_top.mpr (by simp [a, hti])⟩
+      exact ⟨n, hzi.trans hmn, ENNReal.divInf_eq_top.mpr (by simp [a, hti])⟩
   · have hne := hce (by simpa only [hr] using (top_ne_zero : (∞ : ℝ≥0∞) ≠ 0))
     simp_rw [hr, inv_top] at hc' ⊢
     apply ofScalars_radius_eq_zero_of_tendsto E c hne.frequently
@@ -427,8 +428,9 @@ theorem ofScalars_radius_eq_inv_of_tendsto_ENNReal [NormOneClass E] {r : ℝ≥0
       convert ht using 1
       · funext n
         have hn : (ENNReal.ofReal ‖c n.1‖).toReal ≠ 0 := by simpa using n.2
-        simp only [Function.comp_def, ENNReal.toReal_div _ _ (hb := hn.isUnit),
-          ENNReal.toReal_ofReal (norm_nonneg _)]
+        simp only [Function.comp_def, ENNReal.divInf, ENNReal.toReal_mul,
+          ENNReal.toReal_inv _ (ha := hn.isUnit), ENNReal.toReal_ofReal (norm_nonneg _),
+          div_eq_mul_inv₀]
       · rfl
     rw [ofScalars_radius_eq_inv_of_tendsto E c hr'' (hce hr'.1).frequently hlim,
       ENNReal.coe_inv, ENNReal.coe_toNNReal hr'.2]

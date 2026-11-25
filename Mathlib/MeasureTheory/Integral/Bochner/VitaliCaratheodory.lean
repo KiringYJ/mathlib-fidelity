@@ -117,8 +117,9 @@ theorem SimpleFunc.exists_le_lowerSemicontinuous_lintegral_ge (f : α →ₛ ℝ
         lintegral_indicator, ENNReal.coe_eq_zero, Ne, not_false_iff,
         SimpleFunc.coe_zero, Set.piecewise_eq_indicator, SimpleFunc.coe_piecewise,
         restrict_apply] using h
+    have hc₀ : (c : ℝ≥0∞) ≠ 0 := ENNReal.coe_ne_zero.2 hc
     have : μ s < μ s + ε / (c : ℝ≥0∞) := by
-      have : 0 < ε / (c : ℝ≥0∞) := ENNReal.div_pos_iff.2 ⟨ε0, ENNReal.coe_ne_top⟩
+      have : 0 < ε / (c : ℝ≥0∞) := ENNReal.div_pos ε0 hc₀ ENNReal.coe_ne_top
       simpa using ENNReal.add_lt_add_left ne_top this
     obtain ⟨u, su, u_open, μu⟩ : ∃ (u : _), u ⊇ s ∧ IsOpen u ∧ μ u < μ s + ε / (c : ℝ≥0∞) :=
       s.exists_isOpen_lt_of_lt _ this
@@ -134,9 +135,7 @@ theorem SimpleFunc.exists_le_lowerSemicontinuous_lintegral_ge (f : α →ₛ ℝ
       calc
         (c : ℝ≥0∞) * μ u ≤ c * (μ s + ε / (c : ℝ≥0∞)) := by grw [μu]
         _ = c * μ s + ε := by
-          simp_rw [mul_add]
-          rw [ENNReal.mul_div_cancel _ ENNReal.coe_ne_top]
-          simpa using hc
+          rw [mul_add, ENNReal.mul_div_cancel hc₀ ENNReal.coe_ne_top]
   | @add f₁ f₂ _ h₁ h₂ =>
     rcases h₁ (ENNReal.half_pos ε0).ne' with ⟨g₁, f₁_le_g₁, g₁cont, g₁int⟩
     rcases h₂ (ENNReal.half_pos ε0).ne' with ⟨g₂, f₂_le_g₂, g₂cont, g₂int⟩
@@ -313,7 +312,8 @@ theorem SimpleFunc.exists_upperSemicontinuous_le_lintegral_le (f : α →ₛ ℝ
     by_cases hc : c = 0
     · exact ⟨fun _ => 0, by simp [hc, upperSemicontinuous_const]⟩
     have μs_lt_top : μ s < ∞ := by simpa [hs, hc, ENNReal.mul_eq_top, lt_top_iff_ne_top] using int_f
-    have : 0 < ε / (c : ℝ≥0∞) := ENNReal.div_pos_iff.2 ⟨ε0, ENNReal.coe_ne_top⟩
+    have hc₀ : (c : ℝ≥0∞) ≠ 0 := ENNReal.coe_ne_zero.2 hc
+    have : 0 < ε / (c : ℝ≥0∞) := ENNReal.div_pos ε0 hc₀ ENNReal.coe_ne_top
     obtain ⟨F, Fs, F_closed, μF⟩ : ∃ (F : _), F ⊆ s ∧ IsClosed F ∧ μ s < μ F + ε / (c : ℝ≥0∞) :=
       hs.exists_isClosed_lt_add μs_lt_top.ne this.ne'
     refine
@@ -330,9 +330,7 @@ theorem SimpleFunc.exists_upperSemicontinuous_le_lintegral_le (f : α →ₛ ℝ
       calc
         (c : ℝ≥0∞) * μ s ≤ c * (μ F + ε / (c : ℝ≥0∞)) := by grw [μF]
         _ = c * μ F + ε := by
-          simp_rw [mul_add]
-          rw [ENNReal.mul_div_cancel _ ENNReal.coe_ne_top]
-          simpa using hc
+          rw [mul_add, ENNReal.mul_div_cancel hc₀ ENNReal.coe_ne_top]
   | @add f₁ f₂ _ h₁ h₂ =>
     have A : ((∫⁻ x : α, f₁ x ∂μ) + ∫⁻ x : α, f₂ x ∂μ) ≠ ⊤ := by
       rwa [← lintegral_add_left f₁.measurable.coe_nnreal_ennreal]
@@ -436,10 +434,12 @@ theorem exists_lt_lowerSemicontinuous_integral_lt [SigmaFinite μ] (f : α → �
   have int_fm : Integrable (fun x => (fm x : ℝ)) μ := hf.neg.real_toNNReal
   rcases exists_upperSemicontinuous_le_integral_le fm int_fm δpos with
     ⟨gm, gm_le_fm, gmcont, gm_integrable, gmint⟩
-  let g : α → EReal := fun x => (gp x : EReal) - gm x
+  let g : α → EReal := fun x =>
+    EReal.sub (gp x : EReal) (gm x : EReal) ⟨.inr (by simp), .inr (by simp)⟩
   have ae_g : ∀ᵐ x ∂μ, (g x).toReal = (gp x : EReal).toReal - (gm x : EReal).toReal := by
-    filter_upwards [gp_lt_top] with _ hx
-    rw [EReal.toReal_sub] <;> simp [hx.ne]
+    filter_upwards [gp_lt_top] with x hx
+    dsimp only [g]
+    apply EReal.toReal_sub <;> simp [hx.ne]
   refine ⟨g, ?lt, ?lsc, ?int, ?aelt, ?intlt⟩
   case int =>
     show Integrable (fun x => EReal.toReal (g x)) μ
@@ -468,18 +468,18 @@ theorem exists_lt_lowerSemicontinuous_integral_lt [SigmaFinite μ] (f : α → �
           exact mul_div_cancel₀ ε
   case aelt =>
     show ∀ᵐ x : α ∂μ, g x < ⊤
-    filter_upwards [gp_lt_top] with ?_ hx
-    simp only [g, sub_eq_add_neg, Ne, (EReal.add_lt_top _ _).ne, lt_top_iff_ne_top,
-      lt_top_iff_ne_top.1 hx, EReal.coe_ennreal_eq_top_iff, not_false_iff, EReal.neg_eq_top_iff,
-      EReal.coe_ennreal_ne_bot]
+    filter_upwards [gp_lt_top] with x hx
+    change (gp x : EReal) + -(gm x : EReal) < ⊤
+    exact EReal.add_lt_top (by simpa using hx.ne) (by simp)
   case lt =>
     show ∀ x, (f x : EReal) < g x
     intro x
-    rw [EReal.coe_real_ereal_eq_coe_toNNReal_sub_coe_toNNReal (f x)]
+    refine (EReal.coe_real_ereal_eq_coe_toNNReal_sub_coe_toNNReal (f x)).trans_lt ?_
     refine EReal.sub_lt_sub_of_lt_of_le ?_ ?_ ?_ ?_
-    · simp only [EReal.coe_ennreal_lt_coe_ennreal_iff]; exact fp_lt_gp x
-    · simp only [ENNReal.coe_le_coe, EReal.coe_ennreal_le_coe_ennreal_iff]
-      exact gm_le_fm x
+    · simpa only [fp, EReal.coe_nnreal_eq_coe_real] using
+        (EReal.coe_ennreal_lt_coe_ennreal_iff.2 (fp_lt_gp x))
+    · simpa only [fm, EReal.coe_nnreal_eq_coe_real] using
+        (EReal.coe_ennreal_le_coe_ennreal_iff.2 (ENNReal.coe_le_coe.2 (gm_le_fm x)))
     · simp
     · simp
   case lsc =>

@@ -42,12 +42,13 @@ def binomial (p : ℝ≥0) (h : p ≤ 1) (n : ℕ) : PMF (Fin (n + 1)) :=
 
 @[deprecated ProbabilityTheory.binomial_real_singleton (since := "2026-04-07")]
 theorem binomial_apply (p : ℝ≥0) (h : p ≤ 1) (n : ℕ) (i : Fin (n + 1)) :
-    binomial p h n i = p ^ (i : ℕ) * (1 - p) ^ ((Fin.last n - i) : ℕ) * (n.choose i : ℕ) := by
+    binomial p h n i =
+      p ^ (i : ℕ) * ENNReal.monus 1 p ^ ((Fin.last n - i) : ℕ) * (n.choose i : ℕ) := by
   simp [binomial]
 
 @[deprecated ProbabilityTheory.binomial_real_zero (since := "2026-04-07")]
 theorem binomial_apply_zero (p : ℝ≥0) (h : p ≤ 1) (n : ℕ) :
-    binomial p h n 0 = (1 - p) ^ n := by
+    binomial p h n 0 = ENNReal.monus 1 p ^ n := by
   simp [binomial_apply]
 
 @[deprecated ProbabilityTheory.binomial_real_self (since := "2026-04-07")]
@@ -70,7 +71,8 @@ theorem binomial_apply_of_le {k b : ℕ} (hb : k ≤ b) {x : ℝ≥0} (h : x ≤
     ENNReal.ofReal ((b.choose k) * x ^ k * (1 - x) ^ (b - k))
     = PMF.binomial x h b (Fin.ofNat (b + 1) k) := by
   have eq0 : k % (b + 1) = k := by simpa using Order.lt_add_one_iff.mpr hb
-  have eq1 : 1 - (x : ℝ≥0∞) = ENNReal.ofReal (1 - x : ℝ) := by norm_cast
+  have eq1 : ENNReal.monus 1 x = ENNReal.ofReal (1 - x : ℝ) := by
+    rw [ENNReal.ofReal_monus _ (NNReal.coe_nonneg x), ENNReal.ofReal_one, ENNReal.ofReal_coe_nnreal]
   have : (1 - (x : ℝ)) ≥ 0 := by simpa
   rwa [Fin.ofNat_eq_cast, PMF.binomial_apply, Fin.val_natCast, Fin.val_last, eq0, eq1,
     coe_nnreal_eq x, mul_rotate, ofReal_mul, ofReal_mul, ofReal_pow, ofReal_pow, ofReal_natCast]

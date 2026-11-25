@@ -278,7 +278,7 @@ theorem tendsto_setIntegral_of_monotone₀
   set ν := μ.withDensity (‖f ·‖ₑ) with hν
   refine Metric.nhds_basis_closedBall.tendsto_right_iff.2 fun ε ε0 => ?_
   lift ε to ℝ≥0 using ε0.le
-  have : ∀ᶠ i in atTop, ν (s i) ∈ Icc (ν S - ε) (ν S + ε) :=
+  have : ∀ᶠ i in atTop, ν (s i) ∈ Icc (ENNReal.monus (ν S) ε) (ν S + ε) :=
     tendsto_measure_iUnion_atTop h_mono (ENNReal.Icc_mem_nhds hfi'.ne (ENNReal.coe_pos.2 ε0).ne')
   filter_upwards [this] with i hi
   rw [mem_closedBall_iff_norm', ← setIntegral_sdiff₀ (hsm i) hfi hsub, ← coe_nnnorm,
@@ -286,8 +286,8 @@ theorem tendsto_setIntegral_of_monotone₀
   refine (enorm_integral_le_lintegral_enorm _).trans ?_
   have hsm' : NullMeasurableSet (s i) ν := (hsm i).mono_ac (withDensity_absolutelyContinuous ..)
   rw [← withDensity_apply₀ _ (hSm.diff (hsm _)), ← hν, measure_sdiff hsub hsm']
-  exacts [tsub_le_iff_tsub_le.mp hi.1,
-    (hi.2.trans_lt <| ENNReal.add_lt_top.2 ⟨hfi', ENNReal.coe_lt_top⟩).ne]
+  · exact ENNReal.monus_le_iff.2 <| (ENNReal.monus_le_iff.1 hi.1).trans_eq (add_comm _ _)
+  · exact (hi.2.trans_lt <| ENNReal.add_lt_top.2 ⟨hfi', ENNReal.coe_lt_top⟩).ne
 
 theorem tendsto_setIntegral_of_monotone
     {ι : Type*} [Preorder ι] [(atTop : Filter ι).IsCountablyGenerated]

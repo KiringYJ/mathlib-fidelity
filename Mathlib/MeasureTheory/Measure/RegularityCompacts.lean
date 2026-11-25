@@ -72,15 +72,15 @@ theorem innerRegularWRT_of_exists_compl_lt {p q : Set α → Prop} (hpq : ∀ A 
     (hμ : ∀ ε, 0 < ε → ∃ K, p K ∧ μ Kᶜ < ε) :
     μ.InnerRegularWRT p q := by
   intro A hA r hr
-  obtain ⟨K, hK, hK_subset, h_lt⟩ : ∃ K, p K ∧ K ⊆ A ∧ μ (A \ K) < μ A - r := by
-    obtain ⟨K', hpK', hK'_lt⟩ := hμ (μ A - r) (tsub_pos_of_lt hr)
+  obtain ⟨K, hK, hK_subset, h_lt⟩ : ∃ K, p K ∧ K ⊆ A ∧ μ (A \ K) < ENNReal.monus (μ A) r := by
+    obtain ⟨K', hpK', hK'_lt⟩ := hμ (ENNReal.monus (μ A) r) (ENNReal.monus_pos_of_lt hr)
     refine ⟨K' ∩ A, hpq K' A hpK' hA, inter_subset_right, ?_⟩
     · refine (measure_mono fun x ↦ ?_).trans_lt hK'_lt
       simp only [sdiff_inter_self_eq_sdiff, mem_sdiff, mem_compl_iff, and_imp, imp_self,
         imp_true_iff]
   refine ⟨K, hK_subset, hK, ?_⟩
-  have h_lt' : μ A - μ K < μ A - r := le_measure_sdiff.trans_lt h_lt
-  exact lt_of_tsub_lt_tsub_left h_lt'
+  have h_lt' : ENNReal.monus (μ A) (μ K) < ENNReal.monus (μ A) r := le_measure_sdiff.trans_lt h_lt
+  exact lt_of_not_ge fun h => h_lt'.not_ge (ENNReal.monus_le_monus le_rfl h)
 
 theorem innerRegularWRT_isCompact_closure_of_univ [TopologicalSpace α]
     (hμ : ∀ ε, 0 < ε → ∃ K, IsCompact (closure K) ∧ μ (Kᶜ) < ε) :

@@ -216,15 +216,15 @@ theorem borel_le_caratheodory (hm : IsMetric μ) : borel X ≤ μ.caratheodory :
   intro i j hj
   have A : ((↑(2 * j + r))⁻¹ : ℝ≥0∞) < (↑(2 * i + 1 + r))⁻¹ := by
     rw [ENNReal.inv_lt_inv, Nat.cast_lt]; lia
-  refine ⟨(↑(2 * i + 1 + r))⁻¹ - (↑(2 * j + r))⁻¹, by simpa [tsub_eq_zero_iff_le] using A,
-    fun x hx y hy => ?_⟩
+  refine ⟨ENNReal.monus (↑(2 * i + 1 + r))⁻¹ (↑(2 * j + r))⁻¹,
+    (ENNReal.monus_pos_of_lt A).ne', fun x hx y hy => ?_⟩
   have : infEDist y t < (↑(2 * j + r))⁻¹ := not_le.1 fun hle => hy.2 ⟨hy.1, hle⟩
   rcases infEDist_lt_iff.mp this with ⟨z, hzt, hyz⟩
   have hxz : (↑(2 * i + 1 + r))⁻¹ ≤ edist x z := le_infEDist.1 hx.2 _ hzt
   apply ENNReal.le_of_add_le_add_right hyz.ne_top
   refine le_trans ?_ (edist_triangle _ _ _)
   refine (add_le_add le_rfl hyz.le).trans (Eq.trans_le ?_ hxz)
-  rw [tsub_add_cancel_of_le A.le]
+  rw [ENNReal.monus_add_cancel_of_le A.le]
 
 theorem le_caratheodory [SigmaAlgebra X] [BorelSpace X] (hm : IsMetric μ) :
     ‹SigmaAlgebra X› ≤ μ.caratheodory := by
@@ -582,17 +582,21 @@ theorem hausdorffMeasure_zero_or_top {d₁ d₂ : ℝ} (h : d₁ < d₂) (s : Se
   filter_upwards [Ico_mem_nhdsGE this]
   rintro r ⟨hr₀, hrc⟩
   lift r to ℝ≥0 using ne_top_of_lt hrc
-  rw [Pi.smul_apply, smul_eq_mul,
-    ← ENNReal.div_le_iff_le_mul (Or.inr ENNReal.coe_ne_top) (Or.inr <| mt ENNReal.coe_eq_zero.1 hc)]
-  rcases eq_or_ne r 0 with (rfl | hr₀)
-  · rcases lt_or_ge 0 d₂ with (h₂ | h₂)
-    · simp only [h₂, ENNReal.zero_rpow_of_pos, zero_le, ENNReal.zero_div, ENNReal.coe_zero]
-    · simp only [h.trans_le h₂, ENNReal.div_top, zero_le, ENNReal.zero_rpow_of_neg,
-        ENNReal.coe_zero]
-  · have : (r : ℝ≥0∞) ≠ 0 := by simpa only [ENNReal.coe_eq_zero, Ne] using hr₀
-    rw [← ENNReal.rpow_sub _ _ this ENNReal.coe_ne_top]
-    refine (ENNReal.rpow_lt_rpow hrc (sub_pos.2 h)).le.trans ?_
-    rw [← ENNReal.rpow_mul, inv_mul_cancel₀ (ha := (sub_pos.2 h).ne'.isUnit), ENNReal.rpow_one]
+  rw [Pi.smul_apply, smul_eq_mul]
+  have hc' : (c : ℝ≥0∞) ≠ 0 := ENNReal.coe_ne_zero.2 hc
+  rcases eq_or_ne r 0 with rfl | hr
+  · rcases lt_or_ge 0 d₂ with hp | hn
+    · simp [ENNReal.zero_rpow_of_pos hp]
+    · simp [ENNReal.zero_rpow_of_neg (h.trans_le hn), ENNReal.mul_top hc']
+  · have hr' : (r : ℝ≥0∞) ≠ 0 := ENNReal.coe_ne_zero.2 hr
+    have hdif : (r : ℝ≥0∞) ^ (d₂ - d₁) ≤ (c : ℝ≥0∞) := by
+      refine (ENNReal.rpow_lt_rpow hrc (sub_pos.2 h)).le.trans ?_
+      rw [← ENNReal.rpow_mul, inv_mul_cancel₀ (ha := (sub_pos.2 h).ne'.isUnit),
+        ENNReal.rpow_one]
+    calc
+      (r : ℝ≥0∞) ^ d₂ = (r : ℝ≥0∞) ^ (d₂ - d₁) * (r : ℝ≥0∞) ^ d₁ := by
+        rw [← ENNReal.rpow_add _ _ hr' ENNReal.coe_ne_top, sub_add_cancel]
+      _ ≤ _ := by gcongr
 
 /-- Hausdorff measure `μH[d] s` is monotone in `d`. -/
 theorem hausdorffMeasure_mono {d₁ d₂ : ℝ} (h : d₁ ≤ d₂) (s : Set X) : μH[d₂] s ≤ μH[d₁] s := by
@@ -795,12 +799,14 @@ theorem hausdorffMeasure_preimage_le (hf : AntilipschitzWith K f) (hd : 0 ≤ d)
   simp only [hausdorffMeasure_apply, ENNReal.mul_iSup, ENNReal.mul_iInf_of_ne hKd0 hKd,
     ← ENNReal.tsum_mul_left]
   refine iSup₂_le fun ε ε0 => ?_
-  refine le_iSup₂_of_le (ε / K)
-    (ENNReal.div_pos_iff.mpr ⟨ε0.ne', ENNReal.coe_ne_top⟩) ?_
+  have hK : (K : ℝ≥0∞) ≠ 0 := ENNReal.coe_ne_zero.2 h0
+  refine le_iSup₂_of_le (ENNReal.div ε K ⟨hK, Or.inr ENNReal.coe_ne_top⟩)
+    (ENNReal.div_pos ε0.ne' hK ENNReal.coe_ne_top) ?_
   refine le_iInf₂ fun t hst => le_iInf fun htε => ?_
   replace hst : f ⁻¹' s ⊆ _ := preimage_mono hst; rw [preimage_iUnion] at hst
   refine iInf₂_le_of_le _ hst (iInf_le_of_le (fun n => ?_) ?_)
-  · exact (hf.ediam_preimage_le _).trans (ENNReal.mul_le_of_le_div' <| htε n)
+  · exact (hf.ediam_preimage_le _).trans
+      (ENNReal.mul_le_of_le_div' ⟨hK, Or.inr ENNReal.coe_ne_top⟩ (htε n))
   · refine ENNReal.tsum_le_tsum fun n => iSup_le_iff.2 fun hft => ?_
     simp only [nonempty_of_nonempty_preimage hft, ciSup_pos]
     rw [← ENNReal.mul_rpow_of_nonneg _ _ hd]
@@ -920,15 +926,16 @@ theorem hausdorffMeasure_pi_real {ι : Type*} [Fintype ι] :
     have hn := (npos n).ne'
     exact Set.pi univ fun i => Icc (a i + ((f i : ℕ) : ℝ) / ((n : ℕ) : ℝ))
       (a i + (((f i : ℕ) : ℝ) + 1) / ((n : ℕ) : ℝ))
-  let δ (n : ℕ+) := (1 / ((n : ℕ) : ℝ≥0∞))
+  let δ (n : ℕ+) := (((n : ℕ) : ℝ≥0∞))⁻¹
   have A : Tendsto δ atTop (𝓝 0) := by
-    simpa only [δ, ENNReal.one_div, Function.comp_def] using
+    simpa only [δ, Function.comp_def] using
       ENNReal.tendsto_inv_nat_nhds_zero.comp tendsto_PNat_val_atTop_atTop
   have B : ∀ᶠ n in atTop, ∀ i : γ n, ediam (t n i) ≤ δ n := by
     refine Eventually.of_forall fun n f => ?_
     refine ediam_pi_le_of_le fun b => ?_
     simp only [δ, Real.ediam_Icc, add_div, ENNReal.ofReal_div_of_pos (npos n), le_refl,
-      add_sub_add_left_eq_sub, add_sub_cancel_left, ENNReal.ofReal_one, ENNReal.ofReal_natCast]
+      add_sub_add_left_eq_sub, add_sub_cancel_left, ENNReal.ofReal_one, ENNReal.ofReal_natCast,
+      ENNReal.div_eq_mul_inv, one_mul]
   have C : ∀ᶠ n in atTop, (Set.pi univ fun i : ι => Ioo (a i : ℝ) (b i)) ⊆ ⋃ i : γ n, t n i := by
     refine Eventually.of_forall fun n => ?_
     have hn := npos n
@@ -972,9 +979,9 @@ theorem hausdorffMeasure_pi_real {ι : Type*} [Fintype ι] :
         exact pow_le_pow_left' (hn i) _
       · isBoundedDefault
     _ = liminf (fun n : ℕ+ => ∏ i : ι,
-        ((⌈((b i : ℝ) - a i) * (n : ℕ)⌉₊ : ℝ≥0∞) / ((n : ℕ) : ℝ≥0∞))) atTop := by
-      simp only [γ, Finset.card_univ, Nat.cast_prod, one_mul, Fintype.card_fin, Finset.sum_const,
-        nsmul_eq_mul, Fintype.card_pi, δ, ENNReal.div_eq_mul_inv, Finset.prod_mul_distrib,
+        (⌈((b i : ℝ) - a i) * (n : ℕ)⌉₊ : ℝ≥0∞) * δ n) atTop := by
+      simp only [γ, Finset.card_univ, Nat.cast_prod, Fintype.card_fin, Finset.sum_const,
+        nsmul_eq_mul, Fintype.card_pi, Finset.prod_mul_distrib,
         Finset.prod_const]
     _ = ∏ i : ι, volume (Ioo (a i : ℝ) (b i)) := by
       simp only [Real.volume_Ioo]
@@ -986,7 +993,7 @@ theorem hausdorffMeasure_pi_real {ι : Type*} [Fintype ι] :
               ((tendsto_nat_ceil_mul_div_atTop (I i)).comp hcast))
         refine Eventually.of_forall fun n ↦ ?_
         simp only [ENNReal.ofReal_div_of_pos (npos n), comp_apply,
-          ENNReal.ofReal_natCast]
+          ENNReal.ofReal_natCast, ENNReal.div_eq_mul_inv, δ]
       · simp only [ENNReal.ofReal_ne_top, Ne, not_false_iff]
 
 instance isAddHaarMeasure_hausdorffMeasure {E : Type*}

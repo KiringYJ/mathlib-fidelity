@@ -256,11 +256,34 @@ instance instMeasurableMul₂ : MeasurableMul₂ ℝ≥0∞ := by
   · simp only [ENNReal.mul_top', ENNReal.coe_eq_zero]
     exact measurable_const.piecewise (measurableSet_singleton _) measurable_const
 
-instance instMeasurableSub₂ : MeasurableSub₂ ℝ≥0∞ :=
-  ⟨measurable_of_measurable_nnreal_nnreal measurable_sub.coe_nnreal_ennreal (by simp) (by simp)⟩
+theorem measurable_monus : Measurable (fun p : ℝ≥0∞ × ℝ≥0∞ => monus p.1 p.2) := by
+  refine measurable_of_measurable_nnreal_nnreal ?_ (by simp) (by simp)
+  simpa only [← coe_monus] using measurable_sub.coe_nnreal_ennreal
+
+@[fun_prop]
+theorem _root_.Measurable.ennreal_monus {f g : α → ℝ≥0∞} (hf : Measurable f)
+    (hg : Measurable g) : Measurable (fun x => monus (f x) (g x)) :=
+  measurable_monus.comp (hf.prodMk hg)
+
+@[fun_prop]
+theorem _root_.AEMeasurable.ennreal_monus {f g : α → ℝ≥0∞} {μ : Measure α}
+    (hf : AEMeasurable f μ) (hg : AEMeasurable g μ) :
+    AEMeasurable (fun x => monus (f x) (g x)) μ :=
+  measurable_monus.comp_aemeasurable (hf.prodMk hg)
 
 instance instMeasurableInv : MeasurableInv ℝ≥0∞ :=
   ⟨continuous_inv.measurable⟩
+
+@[fun_prop]
+theorem _root_.Measurable.ennreal_divInf {f g : α → ℝ≥0∞} (hf : Measurable f)
+    (hg : Measurable g) : Measurable (fun x => divInf (f x) (g x)) :=
+  hf.mul hg.inv
+
+@[fun_prop]
+theorem _root_.AEMeasurable.ennreal_divInf {f g : α → ℝ≥0∞} {μ : Measure α}
+    (hf : AEMeasurable f μ) (hg : AEMeasurable g μ) :
+    AEMeasurable (fun x => divInf (f x) (g x)) μ :=
+  hf.mul hg.inv
 
 instance : MeasurableSMul ℝ≥0 ℝ≥0∞ where
   measurable_const_smul _ := by simp_rw [ENNReal.smul_def]; exact measurable_const_smul _

@@ -573,11 +573,11 @@ variable {𝓧 : Type*} {m𝓧 : SigmaAlgebra 𝓧} {μ : Measure 𝓧} [PseudoM
 lemma exists_measure_iUnion_gt_of_isCompact_closure
     (U : ℕ → Set 𝓧) (O : ∀ i, IsOpen (U i)) (Cov : ⋃ i, U i = univ) (hcomp : IsCompact (closure S))
     (ε : ℝ≥0∞) (hε : 0 < ε) (hεbound : ε ≤ 1) :
-    ∃ (k : ℕ), ∀ μ ∈ S, 1 - ε < μ (⋃ i ≤ k, U i) := by
+    ∃ (k : ℕ), ∀ μ ∈ S, ENNReal.monus 1 ε < μ (⋃ i ≤ k, U i) := by
   have εfin : ε ≠ ∞ := ne_top_of_le_ne_top (by simp) hεbound
   lift ε to ℝ≥0 using εfin
   obtain ⟨ε, hε', rfl⟩ : ∃ (ε' : ℝ) (hε' : 0 ≤ ε'), ε = .mk ε' hε' := ⟨↑ε, ε.2, rfl⟩
-  simp only [ENNReal.coe_pos, ← NNReal.coe_lt_coe, NNReal.coe_zero, coe_mk, coe_le_one_iff,
+  simp only [ENNReal.coe_pos, ← NNReal.coe_lt_coe, NNReal.coe_zero, NNReal.coe_mk, coe_le_one_iff,
       ← NNReal.coe_le_coe, NNReal.coe_one] at hε hεbound
   by_contra! nh
   choose μ hμInS hcontradiction using nh
@@ -615,7 +615,9 @@ lemma exists_measure_iUnion_gt_of_isCompact_closure
       refine (ofReal_le_ofReal_iff (by rw [sub_nonneg]; exact hεbound)).mp ?_
       rw [ofReal_coe_nnreal]
       apply le_trans (hcontradiction (sub c))
-      norm_cast
+      have hεcoe : ENNReal.ofNNReal (NNReal.mk ε hε') = ENNReal.ofReal ε :=
+        ENNReal.ofReal_coe_nnreal.symm
+      rw [ENNReal.ofReal_monus _ hε', ENNReal.ofReal_one, hεcoe]
   have accumulation : Tendsto (fun n ↦ μlim (⋃ i ≤ n, U i)) atTop (𝓝 (μlim (⋃ i, U i))) := by
     simp_rw [← Set.accumulate_def, ProbabilityMeasure.tendsto_measure_iUnion_accumulate]
   rw [Cov, coeFn_univ, ← NNReal.tendsto_coe] at accumulation
@@ -651,7 +653,7 @@ theorem isTightMeasureSet_of_isCompact_closure (hcomp : IsCompact (closure S)) :
     obtain ⟨μ', hμ', rfl⟩ := hμ
     rw [compl_empty, measure_univ]
     exact le_of_lt hεbound
-  have byclaim (m : ℕ) : ∃ k, ∀ μ ∈ S, 1 - (ε * 2 ^ (-m : ℤ) : ℝ≥0∞) <
+  have byclaim (m : ℕ) : ∃ k, ∀ μ ∈ S, ENNReal.monus 1 (ε * 2 ^ (-m : ℤ)) <
       μ (⋃ i ≤ k, ball (D i) (u m)) := by
     refine exists_measure_iUnion_gt_of_isCompact_closure
       (fun i ↦ ball (D i) (u m)) (fun _ ↦ isOpen_ball) (hcov m) hcomp (ε * 2 ^ (-m : ℤ)) ?_ ?_
@@ -665,12 +667,13 @@ theorem isTightMeasureSet_of_isCompact_closure (hcomp : IsCompact (closure S)) :
     _ = μ.toMeasure (⋃ m, (⋃ (i ≤ km (m + 1)), closure (ball (D i) (u m)))ᶜ) := by simp [bigK]
     _ ≤ ∑' m, μ.toMeasure (⋃ (i ≤ km (m + 1)), closure (ball (D i) (u m)))ᶜ :=
       measure_iUnion_le _
-    _ = ∑' m, (1 - μ.toMeasure (⋃ (i ≤ km (m + 1)), closure (ball (D i) (u m)))) := by
+    _ = ∑' m, ENNReal.monus 1 (μ.toMeasure (⋃ (i ≤ km (m + 1)), closure (ball (D i) (u m)))) := by
       congr! with m; rw [measure_compl (by measurability) (by simp)]; simp
     _ ≤ (∑' (m : ℕ), (ε : ℝ≥0∞) * 2 ^ (-(m + 1) : ℤ)) := by
-      refine ENNReal.tsum_le_tsum fun m ↦ tsub_le_iff_tsub_le.mp ?_
+      refine ENNReal.tsum_le_tsum fun m ↦
+        ENNReal.monus_le_iff_left.2 (ENNReal.monus_le_iff.1 ?_)
       replace hbound := (hbound (m + 1) μ hs).le
-      simp_all only [neg_add_rev, Int.reduceNeg, tsub_le_iff_right, Nat.cast_add, Nat.cast_one,
+      simp_all only [neg_add_rev, Int.reduceNeg, ENNReal.monus_le_iff, Nat.cast_add, Nat.cast_one,
           ← coe_ofNat, ← ProbabilityMeasure.ennreal_coeFn_eq_coeFn_toMeasure]
       grw [hbound]
       gcongr with i hi

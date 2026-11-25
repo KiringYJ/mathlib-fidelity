@@ -96,9 +96,10 @@ sigma-finite. `C` is finite since `ν` is a finite measure. Then there exists a 
 with `μ.restrict t` sigma-finite such that `ν t ≥ C - 1/n`. -/
 lemma exists_isSigmaFiniteSet_measure_ge (μ ν : Measure α) [IsFiniteMeasure ν] (n : ℕ) :
     ∃ t, MeasurableSet t ∧ SigmaFinite (μ.restrict t)
-      ∧ (⨆ (s) (_ : MeasurableSet s) (_ : SigmaFinite (μ.restrict s)), ν s) - 1 / (n : ℝ≥0∞)
+      ∧ ENNReal.monus (⨆ (s) (_ : MeasurableSet s) (_ : SigmaFinite (μ.restrict s)), ν s)
+          (n : ℝ≥0∞)⁻¹
         ≤ ν t := by
-  by_cases! hC_lt : 1 / (n : ℝ≥0∞) <
+  by_cases! hC_lt : (n : ℝ≥0∞)⁻¹ <
       ⨆ (s) (_ : MeasurableSet s) (_ : SigmaFinite (μ.restrict s)), ν s
   · have h_lt_top : ⨆ (s) (_ : MeasurableSet s) (_ : SigmaFinite (μ.restrict s)), ν s < ∞ := by
       refine (?_ : ⨆ (s) (_ : MeasurableSet s)
@@ -106,8 +107,9 @@ lemma exists_isSigmaFiniteSet_measure_ge (μ ν : Measure α) [IsFiniteMeasure �
       refine iSup_le (fun s ↦ ?_)
       exact iSup_le (fun _ ↦ iSup_le (fun _ ↦ measure_mono (Set.subset_univ s)))
     obtain ⟨t, ht⟩ := exists_lt_of_lt_ciSup
-      (ENNReal.sub_lt_self h_lt_top.ne hC_lt.ne_bot (by simp) :
-          (⨆ (s) (_ : MeasurableSet s) (_ : SigmaFinite (μ.restrict s)), ν s) - 1 / (n : ℝ≥0∞)
+      (ENNReal.monus_lt_self h_lt_top.ne hC_lt.ne_bot (by simp) :
+          ENNReal.monus (⨆ (s) (_ : MeasurableSet s) (_ : SigmaFinite (μ.restrict s)), ν s)
+            (n : ℝ≥0∞)⁻¹
         < ⨆ (s) (_ : MeasurableSet s) (_ : SigmaFinite (μ.restrict s)), ν s)
     have ht_meas : MeasurableSet t := by
       by_contra h_notMem
@@ -121,7 +123,7 @@ lemma exists_isSigmaFiniteSet_measure_ge (μ ν : Measure α) [IsFiniteMeasure �
     simp only [ht_meas, ht_mem, iSup_true] at ht
     exact ht.le
   · refine ⟨∅, MeasurableSet.empty, by rw [Measure.restrict_empty]; infer_instance, ?_⟩
-    rw [tsub_eq_zero_of_le hC_lt]
+    rw [ENNReal.monus_eq_zero_of_le hC_lt]
     exact zero_le
 
 /-- A measurable set such that `μ.restrict (μ.sigmaFiniteSetGE ν n)` is sigma-finite and
@@ -149,7 +151,7 @@ lemma measure_sigmaFiniteSetGE_le (μ ν : Measure α) [IsFiniteMeasure ν] (n :
     (measurableSet_sigmaFiniteSetGE n)
 
 lemma measure_sigmaFiniteSetGE_ge (μ ν : Measure α) [IsFiniteMeasure ν] (n : ℕ) :
-    (⨆ (s) (_ : MeasurableSet s) (_ : SigmaFinite (μ.restrict s)), ν s) - 1 / (n : ℝ≥0∞)
+    ENNReal.monus (⨆ (s) (_ : MeasurableSet s) (_ : SigmaFinite (μ.restrict s)), ν s) (n : ℝ≥0∞)⁻¹
       ≤ ν (μ.sigmaFiniteSetGE ν n) :=
   (exists_isSigmaFiniteSet_measure_ge μ ν n).choose_spec.2.2
 
@@ -158,9 +160,9 @@ lemma tendsto_measure_sigmaFiniteSetGE (μ ν : Measure α) [IsFiniteMeasure ν]
       (𝓝 (⨆ (s) (_ : MeasurableSet s) (_ : SigmaFinite (μ.restrict s)), ν s)) := by
   refine tendsto_of_tendsto_of_tendsto_of_le_of_le ?_
     tendsto_const_nhds (measure_sigmaFiniteSetGE_ge μ ν) (measure_sigmaFiniteSetGE_le μ ν)
-  nth_rewrite 2 [← tsub_zero (⨆ (s) (_ : MeasurableSet s) (_ : SigmaFinite (μ.restrict s)), ν s)]
-  refine ENNReal.Tendsto.sub tendsto_const_nhds ?_ (Or.inr ENNReal.zero_ne_top)
-  simp only [ENNReal.one_div]
+  nth_rewrite 2 [
+    ← ENNReal.monus_zero (⨆ (s) (_ : MeasurableSet s) (_ : SigmaFinite (μ.restrict s)), ν s)]
+  refine ENNReal.Tendsto.monus tendsto_const_nhds ?_ (Or.inr ENNReal.zero_ne_top)
   exact ENNReal.tendsto_inv_nat_nhds_zero
 
 /-- A measurable set such that `μ.restrict (μ.sigmaFiniteSetWRT' ν)` is sigma-finite and

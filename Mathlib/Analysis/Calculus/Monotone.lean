@@ -139,26 +139,30 @@ theorem StieltjesFunction.ae_hasDerivAt (f : StieltjesFunction ℝ) :
   have hright : ∀ᶠ y : D in kR, x < (y : ℝ) := hR.eventually self_mem_nhdsWithin
   have hleft : ∀ᶠ y : D in kL, (y : ℝ) < x := hL.eventually self_mem_nhdsWithin
   let a := (rnDeriv f.measure volume x).toReal
+  have divInf_ofReal {n d : ℝ} (hd : 0 < d) :
+      ENNReal.divInf (ENNReal.ofReal n) (ENNReal.ofReal d) = ENNReal.ofReal (n / d) :=
+    (ENNReal.ofReal_div_of_pos hd (x := n)).symm
   have L1 : Tendsto (q f (f x)) kR (𝓝 a) := by
     apply Tendsto.congr' _
       ((ENNReal.tendsto_toReal h'x.ne).comp
         (hx.comp (Real.tendsto_Icc_vitaliFamily_right x)) |>.comp hR)
     filter_upwards [hright] with y hxy
-    change (f.measure (Icc x y) / volume (Icc x y)).toReal = q f (f x) y
+    change (ENNReal.divInf (f.measure (Icc x y)) (volume (Icc x y))).toReal = q f (f x) y
     simp only [StieltjesFunction.measure_Icc, Real.volume_Icc,
       Classical.not_not.1 h''x]
-    rw [← ENNReal.ofReal_div_of_pos (sub_pos.2 hxy), ENNReal.toReal_ofReal]
+    rw [divInf_ofReal (sub_pos.2 hxy), ENNReal.toReal_ofReal]
     exact div_nonneg (sub_nonneg.2 (f.mono hxy.le)) (sub_pos.2 hxy).le
   have L2 : Tendsto (q (leftLim f) (f x)) kL (𝓝 a) := by
     apply Tendsto.congr' _
       ((ENNReal.tendsto_toReal h'x.ne).comp
         (hx.comp (Real.tendsto_Icc_vitaliFamily_left x)) |>.comp hL)
     filter_upwards [hleft] with y hxy
-    change (f.measure (Icc (y : ℝ) x) / volume (Icc (y : ℝ) x)).toReal =
+    change (ENNReal.divInf (f.measure (Icc (y : ℝ) x)) (volume (Icc (y : ℝ) x))).toReal =
       q (leftLim f) (f x) y
-    simp only [q, StieltjesFunction.measure_Icc, Real.volume_Icc]
-    rw [← ENNReal.ofReal_div_of_pos (sub_pos.2 hxy), ENNReal.toReal_ofReal
+    simp only [StieltjesFunction.measure_Icc, Real.volume_Icc]
+    rw [divInf_ofReal (sub_pos.2 hxy), ENNReal.toReal_ofReal
       (div_nonneg (sub_nonneg.2 (f.mono.leftLim_le hxy.le)) (sub_pos.2 hxy).le)]
+    dsimp only [q]
     field_simp [(sub_pos.2 hxy).ne', (sub_neg.2 hxy).ne]
     ring
   have L3 : Tendsto (q (fun y ↦ leftLim f (y + 1 * (y - x) ^ 2)) (f x)) kL (𝓝 a) :=

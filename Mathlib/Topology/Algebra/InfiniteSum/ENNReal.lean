@@ -243,10 +243,10 @@ protected theorem tsum_apply {ι α : Type*} {f : ι → α → ℝ≥0∞} {x :
     (∑' i, f i) x = ∑' i, f i x :=
   Pi.tsum_apply <| Pi.summable.mpr fun _ => ENNReal.summable
 
-theorem tsum_sub {f : ℕ → ℝ≥0∞} {g : ℕ → ℝ≥0∞} (h₁ : ∑' i, g i ≠ ∞) (h₂ : g ≤ f) :
-    ∑' i, (f i - g i) = ∑' i, f i - ∑' i, g i :=
-  have : ∀ i, f i - g i + g i = f i := fun i => tsub_add_cancel_of_le (h₂ i)
-  ENNReal.eq_sub_of_add_eq h₁ <| by simp only [← ENNReal.tsum_add, this]
+theorem tsum_monus {f : ℕ → ℝ≥0∞} {g : ℕ → ℝ≥0∞} (h₁ : ∑' i, g i ≠ ∞) (h₂ : g ≤ f) :
+    (∑' i, monus (f i) (g i)) = monus (∑' i, f i) (∑' i, g i) :=
+  have : ∀ i, monus (f i) (g i) + g i = f i := fun i => monus_add_cancel_of_le (h₂ i)
+  ENNReal.eq_monus_of_add_eq h₁ <| by simp only [← ENNReal.tsum_add, this]
 
 theorem tsum_comp_le_tsum_of_injective {f : α → β} (hf : Injective f) (g : β → ℝ≥0∞) :
     ∑' x, g (f x) ≤ ∑' y, g y :=
@@ -314,10 +314,10 @@ theorem finite_const_le_of_tsum_ne_top {ι : Type*} {a : ι → ℝ≥0∞} (tsu
 /-- Markov's inequality for `Finset.card` and `tsum` in `ℝ≥0∞`. -/
 theorem finset_card_const_le_le_of_tsum_le {ι : Type*} {a : ι → ℝ≥0∞} {c : ℝ≥0∞} (c_ne_top : c ≠ ∞)
     (tsum_le_c : ∑' i, a i ≤ c) {ε : ℝ≥0∞} (ε_ne_zero : ε ≠ 0) :
-    ∃ hf : { i : ι | ε ≤ a i }.Finite, #hf.toFinset ≤ (c / ε) := by
+    ∃ hf : { i : ι | ε ≤ a i }.Finite, #hf.toFinset ≤ div c ε ⟨ε_ne_zero, .inl c_ne_top⟩ := by
   have hf : { i : ι | ε ≤ a i }.Finite :=
     finite_const_le_of_tsum_ne_top (ne_top_of_le_ne_top c_ne_top tsum_le_c) ε_ne_zero
-  refine ⟨hf, (ENNReal.le_div_iff_mul_le (.inl ε_ne_zero) (.inr c_ne_top)).2 ?_⟩
+  refine ⟨hf, (ENNReal.le_div_iff_mul_le ⟨ε_ne_zero, .inl c_ne_top⟩).2 ?_⟩
   calc #hf.toFinset * ε = ∑ _i ∈ hf.toFinset, ε := by rw [Finset.sum_const, nsmul_eq_mul]
     _ ≤ ∑ i ∈ hf.toFinset, a i := Finset.sum_le_sum fun i => hf.mem_toFinset.1
     _ ≤ ∑' i, a i := ENNReal.sum_le_tsum _

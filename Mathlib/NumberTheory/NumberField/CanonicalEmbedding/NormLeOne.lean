@@ -719,8 +719,9 @@ theorem setLIntegral_paramSet_exp {n : ℕ} (hn : 0 < n) :
   simp_rw [Function.update_self, lmarginal, lintegral_const, Measure.pi_univ, ite_eq_right
     (Finset.ne_of_mem_erase (Subtype.prop _)), Measure.restrict_apply_univ, Real.volume_Ico,
     sub_zero, ofReal_one, prod_const_one, mul_one, mul_comm _ (n : ℝ)]
-  rw [← ofReal_integral_eq_lintegral_ofReal (integrableOn_exp_mul_Iic hn _), integral_exp_mul_Iic
-    hn, mul_zero, Real.exp_zero, ofReal_div_of_pos hn, ofReal_one, ofReal_natCast, one_div]
+  rw [← ofReal_integral_eq_lintegral_ofReal (integrableOn_exp_mul_Iic hn _),
+    integral_exp_mul_Iic hn, mul_zero, Real.exp_zero, ENNReal.ofReal_div_of_pos hn,
+    ENNReal.div_eq_mul_inv, ofReal_one, ofReal_natCast, one_mul]
   filter_upwards with _ using Real.exp_nonneg _
 
 end paramSet
@@ -885,7 +886,7 @@ theorem volume_interior_eq_volume_closure :
 open scoped Classical in
 theorem volume_frontier_normLeOne :
      volume (frontier (normLeOne K)) = 0 := by
-  rw [frontier, measure_sdiff, volume_interior_eq_volume_closure, tsub_self]
+  rw [frontier, measure_sdiff, volume_interior_eq_volume_closure, ENNReal.monus_self]
   · exact interior_subset_closure
   · exact measurableSet_interior.nullMeasurableSet
   · refine lt_top_iff_ne_top.mp <| lt_of_le_of_lt (measure_mono interior_subset) ?_

@@ -490,18 +490,18 @@ private lemma lipschitzWith_ofLp_aux : LipschitzWith 1 (@ofLp p (∀ i, β i)) :
     exact edist_apply_le_edist_aux _ _
 
 private lemma antilipschitzWith_ofLp_aux :
-    AntilipschitzWith ((Fintype.card ι : ℝ≥0) ^ (1 / p).toReal) (@ofLp p (∀ i, β i)) := by
+    AntilipschitzWith ((Fintype.card ι : ℝ≥0) ^ (p⁻¹).toReal) (@ofLp p (∀ i, β i)) := by
   intro x y
   rcases p.dichotomy with (rfl | h)
-  · simp only [edist_eq_iSup, ENNReal.div_top, ENNReal.toReal_zero, NNReal.rpow_zero,
+  · simp only [edist_eq_iSup, ENNReal.inv_top, ENNReal.toReal_zero, NNReal.rpow_zero,
       ENNReal.coe_one, one_mul, iSup_le_iff]
     -- Porting note: `Finset.le_sup` needed some help
     exact fun i => Finset.le_sup (f := fun i => edist (x i) (y i)) (Finset.mem_univ i)
   · have pos : 0 < p.toReal := zero_lt_one.trans_le h
     have nonneg : 0 ≤ 1 / p.toReal := one_div_nonneg.2 (le_of_lt pos)
     have cancel : p.toReal * (1 / p.toReal) = 1 := mul_one_div_cancel
-    rw [edist_eq_sum pos, ENNReal.toReal_div 1 p (hb := pos.ne'.isUnit)]
-    simp only [edist, ENNReal.toReal_one]
+    rw [edist_eq_sum pos, ENNReal.toReal_inv p (ha := pos.ne'.isUnit), ← one_div₀]
+    simp only [edist]
     calc
       (∑ i, edist (x i) (y i) ^ p.toReal) ^ (1 / p.toReal) ≤
           (∑ _i, edist (ofLp x) (ofLp y) ^ p.toReal) ^ (1 / p.toReal) := by
@@ -671,18 +671,18 @@ lemma antilipschitzWith_toLp [∀ i, PseudoEMetricSpace (β i)] :
   (lipschitzWith_ofLp p β).to_rightInverse (ofLp_toLp p)
 
 theorem antilipschitzWith_ofLp [∀ i, PseudoEMetricSpace (β i)] :
-    AntilipschitzWith ((Fintype.card ι : ℝ≥0) ^ (1 / p).toReal) (@ofLp p (∀ i, β i)) :=
+    AntilipschitzWith ((Fintype.card ι : ℝ≥0) ^ (p⁻¹).toReal) (@ofLp p (∀ i, β i)) :=
   antilipschitzWith_ofLp_aux p β
 
 lemma lipschitzWith_toLp [∀ i, PseudoEMetricSpace (β i)] :
-    LipschitzWith ((Fintype.card ι : ℝ≥0) ^ (1 / p).toReal) (@toLp p (∀ i, β i)) :=
+    LipschitzWith ((Fintype.card ι : ℝ≥0) ^ (p⁻¹).toReal) (@toLp p (∀ i, β i)) :=
   (antilipschitzWith_ofLp p β).to_rightInverse (ofLp_toLp p)
 
 lemma isometry_ofLp_infty [∀ i, PseudoEMetricSpace (β i)] :
     Isometry (@ofLp ∞ (∀ i, β i)) :=
   fun x y =>
   le_antisymm (by simpa only [ENNReal.coe_one, one_mul] using lipschitzWith_ofLp ∞ β x y)
-    (by simpa only [ENNReal.one_div, ENNReal.inv_top, ENNReal.toReal_zero, NNReal.rpow_zero,
+    (by simpa only [ENNReal.inv_top, ENNReal.toReal_zero, NNReal.rpow_zero,
       ENNReal.coe_one, one_mul] using antilipschitzWith_ofLp ∞ β x y)
 
 /-- seminormed group instance on the product of finitely many normed groups, using the `L^p`
@@ -1100,14 +1100,14 @@ the left-hand side simplifies to `0`, while the right-hand side simplifies to `�
 `Nonempty ι`. -/
 lemma nnnorm_toLp_const {β} [SeminormedAddCommGroup β] (hp : p ≠ ∞) (b : β) :
     ‖toLp p (Function.const ι b)‖₊ =
-      (Fintype.card ι : ℝ≥0) ^ (1 / p).toReal * ‖b‖₊ := by
+      (Fintype.card ι : ℝ≥0) ^ (p⁻¹).toReal * ‖b‖₊ := by
   rcases p.dichotomy with (h | h)
   · exact False.elim (hp h)
   · have ne_zero : p.toReal ≠ 0 := (zero_lt_one.trans_le h).ne'
     simp_rw [nnnorm_eq_sum hp, Function.const_apply, Finset.sum_const,
       Finset.card_univ, nsmul_eq_mul, NNReal.mul_rpow, ← NNReal.rpow_mul,
       mul_one_div_cancel, NNReal.rpow_one,
-      ENNReal.toReal_div (hb := ne_zero.isUnit), ENNReal.toReal_one]
+      ENNReal.toReal_inv (ha := ne_zero.isUnit), ← one_div₀]
 
 /-- When `IsEmpty ι`, this lemma does not hold without the additional assumption `p ≠ ∞` because
 the left-hand side simplifies to `0`, while the right-hand side simplifies to `‖b‖₊`. See
@@ -1115,9 +1115,9 @@ the left-hand side simplifies to `0`, while the right-hand side simplifies to `�
 for `p ≠ ∞`. -/
 lemma nnnorm_toLp_const' {β} [SeminormedAddCommGroup β] [Nonempty ι] (b : β) :
     ‖toLp p (Function.const ι b)‖₊ =
-      (Fintype.card ι : ℝ≥0) ^ (1 / p).toReal * ‖b‖₊ := by
+      (Fintype.card ι : ℝ≥0) ^ (p⁻¹).toReal * ‖b‖₊ := by
   rcases em <| p = ∞ with (rfl | hp)
-  · simp only [ENNReal.div_top, ENNReal.toReal_zero, NNReal.rpow_zero, one_mul,
+  · simp only [ENNReal.inv_top, ENNReal.toReal_zero, NNReal.rpow_zero, one_mul,
       nnnorm_eq_ciSup, Function.const_apply, ciSup_const]
   · exact nnnorm_toLp_const hp b
 
@@ -1127,7 +1127,7 @@ the left-hand side simplifies to `0`, while the right-hand side simplifies to `�
 `Nonempty ι`. -/
 lemma norm_toLp_const {β} [SeminormedAddCommGroup β] (hp : p ≠ ∞) (b : β) :
     ‖toLp p (Function.const ι b)‖ =
-      (Fintype.card ι : ℝ≥0) ^ (1 / p).toReal * ‖b‖ :=
+      (Fintype.card ι : ℝ≥0) ^ (p⁻¹).toReal * ‖b‖ :=
   (congr_arg ((↑) : ℝ≥0 → ℝ) <| nnnorm_toLp_const hp b).trans <| by simp
 
 /-- When `IsEmpty ι`, this lemma does not hold without the additional assumption `p ≠ ∞` because
@@ -1136,15 +1136,15 @@ the left-hand side simplifies to `0`, while the right-hand side simplifies to `�
 for `p ≠ ∞`. -/
 lemma norm_toLp_const' {β} [SeminormedAddCommGroup β] [Nonempty ι] (b : β) :
     ‖toLp p (Function.const ι b)‖ =
-      (Fintype.card ι : ℝ≥0) ^ (1 / p).toReal * ‖b‖ :=
+      (Fintype.card ι : ℝ≥0) ^ (p⁻¹).toReal * ‖b‖ :=
   (congr_arg ((↑) : ℝ≥0 → ℝ) <| nnnorm_toLp_const' b).trans <| by simp
 
 lemma nnnorm_toLp_one {β} [SeminormedAddCommGroup β] (hp : p ≠ ∞) [One β] :
-    ‖toLp p (1 : ι → β)‖₊ = (Fintype.card ι : ℝ≥0) ^ (1 / p).toReal * ‖(1 : β)‖₊ :=
+    ‖toLp p (1 : ι → β)‖₊ = (Fintype.card ι : ℝ≥0) ^ (p⁻¹).toReal * ‖(1 : β)‖₊ :=
   (nnnorm_toLp_const hp (1 : β)).trans rfl
 
 lemma norm_toLp_one {β} [SeminormedAddCommGroup β] (hp : p ≠ ∞) [One β] :
-    ‖toLp p (1 : ι → β)‖ = (Fintype.card ι : ℝ≥0) ^ (1 / p).toReal * ‖(1 : β)‖ :=
+    ‖toLp p (1 : ι → β)‖ = (Fintype.card ι : ℝ≥0) ^ (p⁻¹).toReal * ‖(1 : β)‖ :=
   (norm_toLp_const hp (1 : β)).trans rfl
 
 end Fintype

@@ -207,7 +207,7 @@ theorem hasLaw_indicator_bernoulliMeasure [IsProbabilityMeasure P] {M : Type*} [
   all_goals
     intro t ht h1 h2
     simp_all [map_apply ht h, Set.indicator_const_preimage_eq_union,
-      measure_compl₀ hs, ENNReal.coe_nnreal_eq, ENNReal.ofReal_sub]
+      measure_compl₀ hs, ENNReal.coe_nnreal_eq, ENNReal.ofReal_monus]
 
 /-- The constant indicator of a set follows a Bernoulli distribution. -/
 theorem hasLaw_indicator_one_bernoulliMeasure [IsProbabilityMeasure P] {M : Type*} [Zero M] [One M]

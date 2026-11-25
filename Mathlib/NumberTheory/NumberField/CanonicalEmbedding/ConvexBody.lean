@@ -404,15 +404,22 @@ theorem convexBodySum_volume :
       volume ((convexBodySumFun_eq_zero_iff 0).mpr rfl) convexBodySumFun_neg convexBodySumFun_add_le
       (fun hx => (convexBodySumFun_eq_zero_iff _).mp hx)
       (fun r x => le_of_eq (convexBodySumFun_smul r x)) zero_lt_one]
-    simp_rw [mixedEmbedding.finrank, div_one₀, Gamma_nat_eq_factorial, ofReal_div_of_pos
-      (Nat.cast_pos.mpr (Nat.factorial_pos _)), Real.rpow_one, ofReal_natCast]
+    have hfacR : 0 < ((finrank ℚ K).factorial : ℝ) :=
+      Nat.cast_pos.mpr (Nat.factorial_pos _)
+    have hfacNN : IsUnit ((finrank ℚ K).factorial : ℝ≥0) :=
+      (Nat.cast_ne_zero.mpr (Nat.factorial_pos _).ne').isUnit
+    have htwoNN : IsUnit (2 : ℝ≥0) :=
+      (two_ne_zero : (2 : ℝ≥0) ≠ 0).isUnit
+    simp_rw [mixedEmbedding.finrank, div_one₀, Gamma_nat_eq_factorial,
+      ENNReal.ofReal_div_of_pos hfacR, ENNReal.div_eq_mul_inv, Real.rpow_one,
+      ofReal_natCast]
     suffices ∫ x : mixedSpace K, exp (-convexBodySumFun x) =
         (2 : ℝ) ^ nrRealPlaces K * (π / 2) ^ nrComplexPlaces K by
       rw [this, convexBodySumFactor, ofReal_mul (by positivity), ofReal_pow zero_le_two,
-        ofReal_pow (by positivity), ofReal_div_of_pos zero_lt_two, ofReal_ofNat,
-        ← NNReal.coe_real_pi, ofReal_coe_nnreal, ENNReal.coe_div, coe_mul, coe_pow, coe_pow,
-        coe_ofNat, ENNReal.coe_div,
-        coe_ofNat, coe_natCast]
+        ofReal_pow (by positivity), ENNReal.ofReal_div_of_pos zero_lt_two,
+        ENNReal.div_eq_mul_inv, ofReal_ofNat, ← NNReal.coe_real_pi, ofReal_coe_nnreal]
+      simp only [ENNReal.coe_div (hr := hfacNN), ENNReal.coe_mul, ENNReal.coe_pow,
+        ENNReal.coe_div (hr := htwoNN), ENNReal.div_eq_mul_inv, coe_ofNat, coe_natCast]
     calc
       _ = (∫ x : {w : InfinitePlace K // IsReal w} → ℝ, ∏ w, exp (-‖x w‖)) *
               (∫ x : {w : InfinitePlace K // IsComplex w} → ℂ, ∏ w, exp (-2 * ‖x w‖)) := by

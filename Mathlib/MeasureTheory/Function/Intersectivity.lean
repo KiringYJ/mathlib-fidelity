@@ -68,10 +68,8 @@ lemma bergelson' {s : ℕ → Set α} (hs : ∀ n, MeasurableSet (s n)) (hr₀ :
   have hf n : Measurable (f n) := by fun_prop (disch := exact hs _)
   have hf₁ n : f n ≤ 1 := by
     rintro a
-    rw [hfapp, ← ENNReal.div_eq_inv_mul]
-    refine (ENNReal.div_le_iff_le_mul (Or.inl <| Nat.cast_ne_zero.2 n.succ_ne_zero) <|
-      Or.inr one_ne_zero).2 ?_
-    rw [mul_comm, ← nsmul_eq_mul, ← Finset.card_range n.succ]
+    rw [hfapp, ENNReal.inv_mul_le_iff (Nat.cast_ne_zero.2 n.succ_ne_zero)
+      (ENNReal.natCast_ne_top _), ← nsmul_eq_mul, ← Finset.card_range n.succ]
     exact Finset.sum_le_card_nsmul _ _ _ fun _ _ ↦ indicator_le (fun _ _ ↦ le_rfl) _
   -- By assumption, `f n` has integral at least `r`.
   have hrf n : r ≤ ∫⁻ a, f n a ∂μ := by
@@ -80,7 +78,8 @@ lemma bergelson' {s : ℕ → Set α} (hs : ∀ n, MeasurableSet (s n)) (hr₀ :
         fun _ _ ↦ measurable_one.indicator <| hs _,
       lintegral_finsetSum _ fun _ _ ↦ measurable_one.indicator (hs _)]
     simp only [lintegral_indicator_one (hs _)]
-    rw [← ENNReal.div_eq_inv_mul, ENNReal.le_div_iff_mul_le (by simp) (by simp), ← nsmul_eq_mul']
+    rw [← ENNReal.mul_le_iff_le_inv (Nat.cast_ne_zero.2 n.succ_ne_zero)
+      (ENNReal.natCast_ne_top _), ← nsmul_eq_mul]
     simpa using Finset.card_nsmul_le_sum (Finset.range (n + 1)) _ _ fun _ _ ↦ hr _
   -- Collect some basic fact
   have hμ : μ ≠ 0 := by rintro rfl; exact hr₀ <| le_bot_iff.1 <| hr 0
@@ -91,7 +90,9 @@ lemma bergelson' {s : ℕ → Set α} (hs : ∀ n, MeasurableSet (s n)) (hr₀ :
   -- By the first moment method, there exists some `x ∉ N` such that `limsup f n x` is at least `r`.
   obtain ⟨x, hxN, hx⟩ := exists_notMem_null_laverage_le hμ
     (ne_top_of_le_ne_top (by finiteness) this) hN₀
-  replace hx : r / μ univ ≤ limsup (f · x) atTop :=
+  have hmass (z : ℝ≥0∞) : μ univ ≠ 0 ∧ (z ≠ ∞ ∨ μ univ ≠ ∞) :=
+    ⟨Measure.measure_univ_ne_zero.2 hμ, .inr (measure_ne_top _ _)⟩
+  replace hx : ENNReal.div r (μ univ) (hmass r) ≤ limsup (f · x) atTop :=
     calc
       _ ≤ limsup (⨍⁻ x, f · x ∂μ) atTop := le_limsup_of_le ⟨1, eventually_map.2 ?_⟩ fun b hb ↦ ?_
       _ ≤ ⨍⁻ x, limsup (f · x) atTop ∂μ := limsup_lintegral_le 1 hf (ae_of_all _ <| hf₁ ·) (by simp)
@@ -101,7 +102,7 @@ lemma bergelson' {s : ℕ → Set α} (hs : ∀ n, MeasurableSet (s n)) (hr₀ :
     -- This next block proves that a set of strictly positive natural density is infinite, mixed
     -- with the fact that `{n | x ∈ s n}` has strictly positive natural density.
     -- TODO: Separate it out to a lemma once we have a natural density API.
-    · refine ENNReal.div_ne_zero.2 ⟨hr₀, by finiteness⟩ <| eq_bot_mono hx <|
+    · refine (ENNReal.div_ne_zero (hmass r)).2 ⟨hr₀, by finiteness⟩ <| eq_bot_mono hx <|
         Tendsto.limsup_eq <| tendsto_of_tendsto_of_tendsto_of_le_of_le tendsto_const_nhds
         (h := fun n ↦ (n.succ : ℝ≥0∞)⁻¹ * hxs.toFinset.card) ?_ bot_le fun n ↦ mul_le_mul_right ?_ _
       · simpa using ENNReal.Tendsto.mul_const (ENNReal.tendsto_inv_nat_nhds_zero.comp <|
@@ -118,7 +119,7 @@ lemma bergelson' {s : ℕ → Set α} (hs : ∀ n, MeasurableSet (s n)) (hr₀ :
       exact lintegral_mono (hf₁ _)
   · obtain ⟨n, hn⟩ := hb.exists
     rw [laverage_eq] at hn
-    exact (ENNReal.div_le_div_right (hrf _) _).trans hn
+    exact (ENNReal.div_le_div_right (hrf n) (μ univ) (hmass r) (hmass _)).trans hn
 
 /-- **Bergelson Intersectivity Lemma**: In a finite measure space, a sequence of events that have
 measure at least `r` has an infinite subset whose finite intersections all have positive volume. -/

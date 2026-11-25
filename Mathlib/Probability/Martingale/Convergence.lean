@@ -163,9 +163,10 @@ theorem tendsto_of_uncrossing_lt_top (hf₁ : liminf (fun n => (‖f n ω‖₊ 
 theorem Submartingale.upcrossings_ae_lt_top' [IsFiniteMeasure μ] (hf : Submartingale f ℱ μ)
     (hbdd : ∀ n, eLpNorm (f n) 1 μ ≤ R) (hab : a < b) : ∀ᵐ ω ∂μ, upcrossings a b f ω < ∞ := by
   refine ae_lt_top (hf.stronglyAdapted.measurable_upcrossings hab) ?_
+  have h₀ : ENNReal.ofReal (b - a) ≠ 0 := (ENNReal.ofReal_pos.mpr (sub_pos.mpr hab)).ne'
   have := hf.mul_lintegral_upcrossings_le_lintegral_pos_part a b
-  rw [mul_comm, ← ENNReal.le_div_iff_mul_le] at this
-  · refine (lt_of_le_of_lt this (ENNReal.div_lt_top ?_ ?_)).ne
+  rw [mul_comm, ← ENNReal.le_div_iff_mul_le ⟨h₀, Or.inr ENNReal.ofReal_ne_top⟩] at this
+  · refine (lt_of_le_of_lt this (ENNReal.div_lt_top ?_ h₀)).ne
     · have hR' : ∀ n, ∫⁻ ω, ‖f n ω - a‖₊ ∂μ ≤ R + ‖a‖₊ * μ Set.univ := by
         simp_rw [eLpNorm_one_eq_lintegral_enorm] at hbdd
         intro n
@@ -185,9 +186,6 @@ theorem Submartingale.upcrossings_ae_lt_top' [IsFiniteMeasure μ] (hf : Submarti
         · rw [posPart_eq_zero.2 hnonneg.le]
           exact norm_nonneg _
       · finiteness
-    · simp only [hab, Ne, ENNReal.ofReal_eq_zero, sub_nonpos, not_le]
-  · left; simp only [hab, Ne, ENNReal.ofReal_eq_zero, sub_nonpos, not_le]
-  · left; finiteness
 
 theorem Submartingale.upcrossings_ae_lt_top [IsFiniteMeasure μ] (hf : Submartingale f ℱ μ)
     (hbdd : ∀ n, eLpNorm (f n) 1 μ ≤ R) : ∀ᵐ ω ∂μ, ∀ a b : ℚ, a < b → upcrossings a b f ω < ∞ := by

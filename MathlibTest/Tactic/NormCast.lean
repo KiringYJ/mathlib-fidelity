@@ -135,7 +135,8 @@ lemma half_lt_self_bis {a : ℝ≥0∞} (hz : a ≠ 0) (ht : a ≠ ⊤) : (a / 2
   lift a to NNReal using ht
   norm_cast at hz
   calc
-    ((a : ℝ≥0∞) / 2) = ↑(a / (2 : NNReal)) := ENNReal.coe_div.symm
+    ((a : ℝ≥0∞) / 2) = ↑(a / (2 : NNReal)) :=
+      (ENNReal.coe_div (p := a) (hr := (two_ne_zero : (2 : NNReal) ≠ 0).isUnit)).symm
     _ < (a : ℝ≥0∞) := coe_lt_coe.mpr (NNReal.half_lt_self hz)
 
 example (x : NNReal) : ((x : ENNReal) / 3) = ↑(x / 3) := by

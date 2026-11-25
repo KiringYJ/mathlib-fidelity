@@ -189,72 +189,73 @@ theorem nhdsGT_ofNat_neBot (n : ℕ) [n.AtLeastTwo] : (𝓝[>] (OfNat.ofNat n : 
 theorem nhdsLT_neBot [NeZero x] : (𝓝[<] x).NeBot :=
   nhdsLT_neBot_of_exists_lt ⟨0, NeZero.pos x⟩
 
-/-- Closed intervals `Set.Icc (x - ε) (x + ε)`, `ε ≠ 0`, form a basis of neighborhoods of an
+/-- Closed intervals `Set.Icc (monus x ε) (x + ε)`, `ε ≠ 0`, form a basis of neighborhoods of an
 extended nonnegative real number `x ≠ ∞`. We use `Set.Icc` instead of `Set.Ioo` because this way the
 statement works for `x = 0`.
 -/
 theorem hasBasis_nhds_of_ne_top' (xt : x ≠ ∞) :
-    (𝓝 x).HasBasis (· ≠ 0) (fun ε => Icc (x - ε) (x + ε)) := by
+    (𝓝 x).HasBasis (· ≠ 0) (fun ε => Icc (monus x ε) (x + ε)) := by
   rcases eq_zero_or_pos x with rfl | x0
-  · simp_rw [zero_tsub, zero_add, ← bot_eq_zero, Icc_bot, ← bot_lt_iff_ne_bot]
+  · simp_rw [zero_monus, zero_add, ← bot_eq_zero, Icc_bot, ← bot_lt_iff_ne_bot]
     exact nhds_bot_basis_Iic
   · refine (nhds_basis_Ioo' ⟨_, x0⟩ ⟨_, xt.lt_top⟩).to_hasBasis ?_ fun ε ε0 => ?_
     · rintro ⟨a, b⟩ ⟨ha, hb⟩
-      rcases exists_between (tsub_pos_of_lt ha) with ⟨ε, ε0, hε⟩
+      rcases exists_between (monus_pos_of_lt ha) with ⟨ε, ε0, hε⟩
       rcases lt_iff_exists_add_pos_lt.1 hb with ⟨δ, δ0, hδ⟩
       refine ⟨min ε δ, (lt_min ε0 (coe_pos.2 δ0)).ne', Icc_subset_Ioo ?_ ?_⟩
-      · exact lt_tsub_comm.2 ((min_le_left _ _).trans_lt hε)
+      · exact lt_monus_comm.2 ((min_le_left _ _).trans_lt hε)
       · grw [min_le_right]
         exact hδ
-    · exact ⟨(x - ε, x + ε), ⟨ENNReal.sub_lt_self xt x0.ne' ε0,
+    · exact ⟨(monus x ε, x + ε), ⟨ENNReal.monus_lt_self xt x0.ne' ε0,
         lt_add_right xt ε0⟩, Ioo_subset_Icc_self⟩
 
 theorem hasBasis_nhds_of_ne_top (xt : x ≠ ∞) :
-    (𝓝 x).HasBasis (0 < ·) (fun ε => Icc (x - ε) (x + ε)) := by
+    (𝓝 x).HasBasis (0 < ·) (fun ε => Icc (monus x ε) (x + ε)) := by
   simpa only [pos_iff_ne_zero] using hasBasis_nhds_of_ne_top' xt
 
-theorem Icc_mem_nhds (xt : x ≠ ∞) (ε0 : ε ≠ 0) : Icc (x - ε) (x + ε) ∈ 𝓝 x :=
+theorem Icc_mem_nhds (xt : x ≠ ∞) (ε0 : ε ≠ 0) : Icc (monus x ε) (x + ε) ∈ 𝓝 x :=
   (hasBasis_nhds_of_ne_top' xt).mem_of_mem ε0
 
-theorem nhds_of_ne_top (xt : x ≠ ∞) : 𝓝 x = ⨅ ε > 0, 𝓟 (Icc (x - ε) (x + ε)) :=
+theorem nhds_of_ne_top (xt : x ≠ ∞) : 𝓝 x = ⨅ ε > 0, 𝓟 (Icc (monus x ε) (x + ε)) :=
   (hasBasis_nhds_of_ne_top xt).eq_biInf
 
-theorem biInf_le_nhds : ∀ x : ℝ≥0∞, ⨅ ε > 0, 𝓟 (Icc (x - ε) (x + ε)) ≤ 𝓝 x
+theorem biInf_le_nhds : ∀ x : ℝ≥0∞, ⨅ ε > 0, 𝓟 (Icc (monus x ε) (x + ε)) ≤ 𝓝 x
   | ∞ => iInf₂_le_of_le 1 one_pos <| by
-    simpa only [← coe_one, top_sub_coe, top_add, Icc_self, principal_singleton] using pure_le_nhds _
+    simpa only [← coe_one, top_monus_coe, top_add, Icc_self, principal_singleton] using
+      pure_le_nhds _
   | (x : ℝ≥0) => (nhds_of_ne_top coe_ne_top).ge
 
 protected theorem tendsto_nhds_of_Icc {f : Filter α} {u : α → ℝ≥0∞} {a : ℝ≥0∞}
-    (h : ∀ ε > 0, ∀ᶠ x in f, u x ∈ Icc (a - ε) (a + ε)) : Tendsto u f (𝓝 a) := by
+    (h : ∀ ε > 0, ∀ᶠ x in f, u x ∈ Icc (monus a ε) (a + ε)) : Tendsto u f (𝓝 a) := by
   refine Tendsto.mono_right ?_ (biInf_le_nhds _)
   simpa only [tendsto_iInf, tendsto_principal]
 
 /-- Characterization of neighborhoods for `ℝ≥0∞` numbers. See also `tendsto_order`
 for a version with strict inequalities. -/
 protected theorem tendsto_nhds {f : Filter α} {u : α → ℝ≥0∞} {a : ℝ≥0∞} (ha : a ≠ ∞) :
-    Tendsto u f (𝓝 a) ↔ ∀ ε > 0, ∀ᶠ x in f, u x ∈ Icc (a - ε) (a + ε) := by
+    Tendsto u f (𝓝 a) ↔ ∀ ε > 0, ∀ᶠ x in f, u x ∈ Icc (monus a ε) (a + ε) := by
   simp only [nhds_of_ne_top ha, tendsto_iInf, tendsto_principal]
 
 protected theorem tendsto_nhds_zero {f : Filter α} {u : α → ℝ≥0∞} :
     Tendsto u f (𝓝 0) ↔ ∀ ε > 0, ∀ᶠ x in f, u x ≤ ε :=
   nhds_zero_basis_Iic.tendsto_right_iff
 
-theorem tendsto_const_sub_nhds_zero_iff {l : Filter α} {f : α → ℝ≥0∞} {a : ℝ≥0∞} (ha : a ≠ ∞)
+theorem tendsto_const_monus_nhds_zero_iff {l : Filter α} {f : α → ℝ≥0∞} {a : ℝ≥0∞} (ha : a ≠ ∞)
     (hfa : ∀ n, f n ≤ a) :
-    Tendsto (fun n ↦ a - f n) l (𝓝 0) ↔ Tendsto (fun n ↦ f n) l (𝓝 a) := by
+    Tendsto (fun n ↦ monus a (f n)) l (𝓝 0) ↔ Tendsto (fun n ↦ f n) l (𝓝 a) := by
   rw [ENNReal.tendsto_nhds_zero, ENNReal.tendsto_nhds ha]
   refine ⟨fun h ε hε ↦ ?_, fun h ε hε ↦ ?_⟩
   · filter_upwards [h ε hε] with n hn
     refine ⟨?_, (hfa n).trans (le_add_right le_rfl)⟩
-    rw [tsub_le_iff_right] at hn ⊢
+    rw [monus_le_iff] at hn ⊢
     rwa [add_comm]
   · filter_upwards [h ε hε] with n hn
     have hN_left := hn.1
-    rw [tsub_le_iff_right] at hN_left ⊢
+    rw [monus_le_iff] at hN_left ⊢
     rwa [add_comm]
 
 protected theorem tendsto_atTop [Nonempty β] [SemilatticeSup β] {f : β → ℝ≥0∞} {a : ℝ≥0∞}
-    (ha : a ≠ ∞) : Tendsto f atTop (𝓝 a) ↔ ∀ ε > 0, ∃ N, ∀ n ≥ N, f n ∈ Icc (a - ε) (a + ε) :=
+    (ha : a ≠ ∞) : Tendsto f atTop (𝓝 a) ↔ ∀ ε > 0, ∃ N, ∀ n ≥ N, f n ∈ Icc (monus a ε) (a + ε) :=
   .trans (atTop_basis.tendsto_iff (hasBasis_nhds_of_ne_top ha)) (by simp only [true_and]; rfl)
 
 protected theorem tendsto_atTop_zero [Nonempty β] [SemilatticeSup β] {f : β → ℝ≥0∞} :
@@ -276,42 +277,35 @@ theorem tendsto_atTop_zero_iff_lt_of_antitone {β : Type*} [Nonempty β] [Semila
     Filter.Tendsto f Filter.atTop (𝓝 0) ↔ ∀ ε, 0 < ε → ∃ n : β, f n < ε := by
   rw [ENNReal.tendsto_atTop_zero_iff_le_of_antitone hf]
   constructor <;> intro h ε hε
-  · obtain ⟨n, hn⟩ := h (min 1 (ε / 2))
-      (lt_min_iff.mpr ⟨zero_lt_one, (ENNReal.div_pos_iff.mpr ⟨hε.ne', by finiteness⟩)⟩)
-    · refine ⟨n, hn.trans_lt ?_⟩
-      by_cases hε_top : ε = ∞
-      · simp [hε_top]
-      refine (min_le_right _ _).trans_lt ?_
-      rw [ENNReal.div_lt_iff (Or.inr hε.ne') (Or.inr hε_top)]
-      conv_lhs => rw [← mul_one ε]
-      gcongr; simp
+  · obtain ⟨δ, hδ, hδε⟩ := exists_between hε
+    obtain ⟨n, hn⟩ := h δ hδ
+    exact ⟨n, hn.trans_lt hδε⟩
   · obtain ⟨n, hn⟩ := h ε hε
     exact ⟨n, hn.le⟩
 
-theorem tendsto_sub : ∀ {a b : ℝ≥0∞}, (a ≠ ∞ ∨ b ≠ ∞) →
-    Tendsto (fun p : ℝ≥0∞ × ℝ≥0∞ => p.1 - p.2) (𝓝 (a, b)) (𝓝 (a - b))
+theorem tendsto_monus : ∀ {a b : ℝ≥0∞}, (a ≠ ∞ ∨ b ≠ ∞) →
+    Tendsto (fun p : ℝ≥0∞ × ℝ≥0∞ => monus p.1 p.2) (𝓝 (a, b)) (𝓝 (monus a b))
   | ∞, ∞, h => by simp only [ne_eq, not_true_eq_false, or_self] at h
   | ∞, (b : ℝ≥0), _ => by
-    rw [top_sub_coe, tendsto_nhds_top_iff_nnreal]
+    rw [top_monus_coe, tendsto_nhds_top_iff_nnreal]
     refine fun x => ((lt_mem_nhds <| @coe_lt_top (b + 1 + x)).prod_nhds
       (ge_mem_nhds <| coe_lt_coe.2 <| lt_add_one b)).mono fun y hy => ?_
-    grw [lt_tsub_iff_left, hy.2]
+    grw [lt_monus_iff_add_lt_left, hy.2]
     exact hy.1
   | (a : ℝ≥0), ∞, _ => by
-    rw [sub_top]
+    rw [monus_top]
     refine (tendsto_pure.2 ?_).mono_right (pure_le_nhds _)
     exact ((gt_mem_nhds <| coe_lt_coe.2 <| lt_add_one a).prod_nhds
       (lt_mem_nhds <| @coe_lt_top (a + 1))).mono fun x hx =>
-        tsub_eq_zero_iff_le.2 (hx.1.trans hx.2).le
+        monus_eq_zero_iff_le.2 (hx.1.trans hx.2).le
   | (a : ℝ≥0), (b : ℝ≥0), _ => by
-    simp only [nhds_coe_coe, tendsto_map'_iff, ← ENNReal.coe_sub, Function.comp_def, tendsto_coe]
+    simp only [nhds_coe_coe, tendsto_map'_iff, ← ENNReal.coe_monus, Function.comp_def, tendsto_coe]
     exact continuous_sub.tendsto (a, b)
 
-protected theorem Tendsto.sub {f : Filter α} {ma : α → ℝ≥0∞} {mb : α → ℝ≥0∞} {a b : ℝ≥0∞}
+protected theorem Tendsto.monus {f : Filter α} {ma : α → ℝ≥0∞} {mb : α → ℝ≥0∞} {a b : ℝ≥0∞}
     (hma : Tendsto ma f (𝓝 a)) (hmb : Tendsto mb f (𝓝 b)) (h : a ≠ ∞ ∨ b ≠ ∞) :
-    Tendsto (fun a => ma a - mb a) f (𝓝 (a - b)) :=
-  show Tendsto ((fun p : ℝ≥0∞ × ℝ≥0∞ => p.1 - p.2) ∘ fun a => (ma a, mb a)) f (𝓝 (a - b)) from
-    Tendsto.comp (ENNReal.tendsto_sub h) (hma.prodMk_nhds hmb)
+    Tendsto (fun a => monus (ma a) (mb a)) f (𝓝 (monus a b)) :=
+  Tendsto.comp (ENNReal.tendsto_monus h) (hma.prodMk_nhds hmb)
 
 protected theorem tendsto_mul (ha : a ≠ 0 ∨ b ≠ ∞) (hb : b ≠ 0 ∨ a ≠ ∞) :
     Tendsto (fun p : ℝ≥0∞ × ℝ≥0∞ => p.1 * p.2) (𝓝 (a, b)) (𝓝 (a * b)) := by
@@ -319,10 +313,17 @@ protected theorem tendsto_mul (ha : a ≠ 0 ∨ b ≠ ∞) (hb : b ≠ 0 ∨ a �
       Tendsto (fun p : ℝ≥0∞ × ℝ≥0∞ => p.1 * p.2) (𝓝 (∞, b)) (𝓝 ∞) := fun b hb => by
     refine tendsto_nhds_top_iff_nnreal.2 fun n => ?_
     rcases lt_iff_exists_nnreal_btwn.1 (pos_iff_ne_zero.2 hb) with ⟨ε, hε, hεb⟩
-    have : ∀ᶠ c : ℝ≥0∞ × ℝ≥0∞ in 𝓝 (∞, b), (n : ℝ≥0∞) / (ε : ℝ≥0∞) < c.1 ∧ ↑ε < c.2 :=
-      (lt_mem_nhds <| div_lt_top coe_ne_top hε.ne').prod_nhds (lt_mem_nhds hεb)
-    refine this.mono fun c hc => ?_
-    exact (ENNReal.div_mul_cancel hε.ne' coe_ne_top).symm.trans_lt (mul_lt_mul hc.1 hc.2)
+    have he₀ : (ε : ℝ≥0∞) ≠ 0 := hε.ne'
+    have hfin : (n : ℝ≥0∞) * (ε : ℝ≥0∞)⁻¹ ≠ ∞ :=
+      ENNReal.mul_ne_top coe_ne_top (ENNReal.inv_ne_top.2 he₀)
+    have hc : ∀ᶠ c : ℝ≥0∞ × ℝ≥0∞ in 𝓝 (∞, b),
+        (n : ℝ≥0∞) * (ε : ℝ≥0∞)⁻¹ < c.1 ∧ (ε : ℝ≥0∞) < c.2 :=
+      (lt_mem_nhds hfin.lt_top).prod_nhds (lt_mem_nhds hεb)
+    refine hc.mono fun c h => ?_
+    calc
+      (n : ℝ≥0∞) = ((n : ℝ≥0∞) * (ε : ℝ≥0∞)⁻¹) * ε := by
+        rw [mul_assoc, ENNReal.inv_mul_cancel he₀ coe_ne_top, mul_one]
+      _ < c.1 * c.2 := mul_lt_mul h.1 h.2
   induction a with
   | top => simp only [ne_eq, or_false, not_true_eq_false] at hb; simp [ht b hb, top_mul hb]
   | coe a =>
@@ -396,9 +397,14 @@ protected theorem continuous_mul_const {a : ℝ≥0∞} (ha : a ≠ ∞) : Conti
   continuous_iff_continuousAt.2 fun _ => ENNReal.continuousAt_mul_const (Or.inl ha)
 
 @[fun_prop]
-protected theorem continuous_div_const (c : ℝ≥0∞) (c_ne_zero : c ≠ 0) :
-    Continuous fun x : ℝ≥0∞ => x / c :=
-  ENNReal.continuous_mul_const <| ENNReal.inv_ne_top.2 c_ne_zero
+protected theorem continuous_div_const (c : ℝ≥0∞) (hc₀ : c ≠ 0) (hct : c ≠ ∞) :
+    Continuous fun x : ℝ≥0∞ => ENNReal.div x c ⟨hc₀, Or.inr hct⟩ :=
+  ENNReal.continuous_mul_const (ENNReal.inv_ne_top.2 hc₀)
+
+@[fun_prop]
+protected theorem continuous_divInf_const (c : ℝ≥0∞) (hc₀ : c ≠ 0) :
+    Continuous fun x : ℝ≥0∞ => ENNReal.divInf x c :=
+  ENNReal.continuous_mul_const (ENNReal.inv_ne_top.2 hc₀)
 
 @[continuity, fun_prop]
 protected theorem continuous_pow (n : ℕ) : Continuous fun a : ℝ≥0∞ => a ^ n := by
@@ -414,32 +420,32 @@ protected theorem continuous_pow (n : ℕ) : Continuous fun a : ℝ≥0∞ => a 
         not_false_iff, false_and]
     · simp only [H, true_or, Ne, not_false_iff]
 
-theorem continuousOn_sub :
-    ContinuousOn (fun p : ℝ≥0∞ × ℝ≥0∞ => p.fst - p.snd) { p : ℝ≥0∞ × ℝ≥0∞ | p ≠ ⟨∞, ∞⟩ } := by
+theorem continuousOn_monus :
+    ContinuousOn (fun p : ℝ≥0∞ × ℝ≥0∞ => monus p.fst p.snd) { p : ℝ≥0∞ × ℝ≥0∞ | p ≠ ⟨∞, ∞⟩ } := by
   rw [ContinuousOn]
   rintro ⟨x, y⟩ hp
   simp only [Ne, Set.mem_ofPred_eq, Prod.mk_inj] at hp
-  exact tendsto_nhdsWithin_of_tendsto_nhds (tendsto_sub (not_and_or.mp hp))
+  exact tendsto_nhdsWithin_of_tendsto_nhds (tendsto_monus (not_and_or.mp hp))
 
-theorem continuous_sub_left {a : ℝ≥0∞} (a_ne_top : a ≠ ∞) : Continuous (a - ·) := by
-  change Continuous (Function.uncurry Sub.sub ∘ (a, ·))
-  refine continuousOn_sub.comp_continuous (.prodMk_right a) fun x => ?_
+theorem continuous_monus_left {a : ℝ≥0∞} (a_ne_top : a ≠ ∞) : Continuous (monus a) := by
+  change Continuous (Function.uncurry monus ∘ (a, ·))
+  refine continuousOn_monus.comp_continuous (.prodMk_right a) fun x => ?_
   simp only [a_ne_top, Ne, mem_ofPred_eq, Prod.mk_inj, false_and, not_false_iff]
 
-theorem continuous_nnreal_sub {a : ℝ≥0} : Continuous fun x : ℝ≥0∞ => (a : ℝ≥0∞) - x :=
-  continuous_sub_left coe_ne_top
+theorem continuous_nnreal_monus {a : ℝ≥0} : Continuous fun x : ℝ≥0∞ => monus a x :=
+  continuous_monus_left coe_ne_top
 
-theorem continuousOn_sub_left (a : ℝ≥0∞) : ContinuousOn (a - ·) { x : ℝ≥0∞ | x ≠ ∞ } := by
-  rw [show (fun x => a - x) = (fun p : ℝ≥0∞ × ℝ≥0∞ => p.fst - p.snd) ∘ fun x => ⟨a, x⟩ by rfl]
-  apply continuousOn_sub.comp (by fun_prop)
+theorem continuousOn_monus_left (a : ℝ≥0∞) : ContinuousOn (monus a) { x : ℝ≥0∞ | x ≠ ∞ } := by
+  change ContinuousOn (Function.uncurry monus ∘ (a, ·)) _
+  apply continuousOn_monus.comp (by fun_prop)
   rintro _ h (_ | _)
   exact h none_eq_top
 
-theorem continuous_sub_right (a : ℝ≥0∞) : Continuous fun x : ℝ≥0∞ => x - a := by
+theorem continuous_monus_right (a : ℝ≥0∞) : Continuous fun x : ℝ≥0∞ => monus x a := by
   by_cases a_infty : a = ∞
-  · simp [a_infty, continuous_const, tsub_eq_zero_of_le]
-  · rw [show (fun x => x - a) = (fun p : ℝ≥0∞ × ℝ≥0∞ => p.fst - p.snd) ∘ fun x => ⟨x, a⟩ by rfl]
-    apply continuousOn_sub.comp_continuous (by fun_prop)
+  · simp [a_infty, continuous_const, monus_eq_zero_of_le]
+  · change Continuous (Function.uncurry monus ∘ (·, a))
+    apply continuousOn_monus.comp_continuous (by fun_prop)
     intro x
     simp only [a_infty, Ne, mem_ofPred_eq, Prod.mk_inj, and_false, not_false_iff]
 
@@ -463,33 +469,112 @@ theorem inv_liminf {ι : Sort _} {x : ι → ℝ≥0∞} {l : Filter ι} :
 
 @[fun_prop]
 protected theorem continuous_zpow : ∀ n : ℤ, Continuous (· ^ n : ℝ≥0∞ → ℝ≥0∞)
-  | (n : ℕ) => mod_cast ENNReal.continuous_pow n
-  | .negSucc n => by simpa using (ENNReal.continuous_pow _).fun_inv
+  | (n : ℕ) => by
+      simpa only [ENNReal.zpow_natCast] using ENNReal.continuous_pow n
+  | .negSucc n => by
+      simpa only [ENNReal.zpow_negSucc] using (ENNReal.continuous_pow (n + 1)).fun_inv
 
-protected theorem Tendsto.div {f : Filter α} {ma : α → ℝ≥0∞} {mb : α → ℝ≥0∞} {a b : ℝ≥0∞}
-    (hma : Tendsto ma f (𝓝 a)) (ha : a ≠ 0 ∨ b ≠ 0) (hmb : Tendsto mb f (𝓝 b))
-    (hb : b ≠ ∞ ∨ a ≠ ∞) :
-    Tendsto (fun a => ma a / mb a) f (𝓝 (a / b)) := by
-  apply Tendsto.mul hma _ (tendsto_inv_iff.2 hmb) _ <;> simp [ha, hb]
+protected theorem Tendsto.extendedDiv {f : Filter α} {u v : α → ℝ≥0∞} {a b : ℝ≥0∞}
+    (hu : Tendsto u f (𝓝 a)) (hv : Tendsto v f (𝓝 b))
+    (huv : ∀ i, (u i ≠ 0 ∨ v i ≠ 0) ∧ (u i ≠ ∞ ∨ v i ≠ ∞))
+    (hab : (a ≠ 0 ∨ b ≠ 0) ∧ (a ≠ ∞ ∨ b ≠ ∞)) :
+    Tendsto (fun i => extendedDiv (u i) (v i) (huv i)) f (𝓝 (extendedDiv a b hab)) := by
+  change Tendsto (fun i => u i * (v i)⁻¹) f (𝓝 (a * b⁻¹))
+  apply ENNReal.Tendsto.mul hu _ (tendsto_inv_iff.2 hv) _
+  · simpa using hab.1
+  · simpa only [ENNReal.inv_ne_zero] using hab.2.symm
 
-protected theorem Tendsto.const_div {f : Filter α} {m : α → ℝ≥0∞} {a b : ℝ≥0∞}
+protected theorem Tendsto.div {f : Filter α} {u v : α → ℝ≥0∞} {a b : ℝ≥0∞}
+    (hu : Tendsto u f (𝓝 a)) (hv : Tendsto v f (𝓝 b))
+    (huv : ∀ i, v i ≠ 0 ∧ (u i ≠ ∞ ∨ v i ≠ ∞)) (hab : b ≠ 0 ∧ (a ≠ ∞ ∨ b ≠ ∞)) :
+    Tendsto (fun i => ENNReal.div (u i) (v i) (huv i)) f (𝓝 (ENNReal.div a b hab)) :=
+  ENNReal.Tendsto.extendedDiv hu hv
+    (fun i => ⟨Or.inr (huv i).1, (huv i).2⟩) ⟨Or.inr hab.1, hab.2⟩
+
+@[fun_prop]
+protected theorem continuous_extendedDiv :
+    Continuous (fun p : {p : ℝ≥0∞ × ℝ≥0∞ //
+      (p.1 ≠ 0 ∨ p.2 ≠ 0) ∧ (p.1 ≠ ∞ ∨ p.2 ≠ ∞)} =>
+      extendedDiv p.val.1 p.val.2 p.property) := by
+  apply continuous_iff_continuousAt.2
+  intro p
+  exact ENNReal.Tendsto.extendedDiv
+    ((continuous_fst.comp continuous_subtype_val).tendsto p)
+    ((continuous_snd.comp continuous_subtype_val).tendsto p)
+    (fun q => q.property) p.property
+
+@[fun_prop]
+protected theorem continuous_div :
+    Continuous (fun p : {p : ℝ≥0∞ × ℝ≥0∞ // p.2 ≠ 0 ∧ (p.1 ≠ ∞ ∨ p.2 ≠ ∞)} =>
+      ENNReal.div p.val.1 p.val.2 p.property) := by
+  apply continuous_iff_continuousAt.2
+  intro p
+  exact ENNReal.Tendsto.div
+    ((continuous_fst.comp continuous_subtype_val).tendsto p)
+    ((continuous_snd.comp continuous_subtype_val).tendsto p)
+    (fun q => q.property) p.property
+
+/-- Any function agreeing with ordinary division on pairs of positive finite inputs fails to be
+continuous at `(0, 0)` and `(∞, ∞)`. The paths `(c * t, t)` have different limiting quotients
+as the positive finite multiplier `c` varies. -/
+theorem not_continuousAt_div_endpoint (F : ℝ≥0∞ × ℝ≥0∞ → ℝ≥0∞)
+    (hF : ∀ a b : ℝ≥0∞, 0 < a → a < ∞ → ∀ (hb : 0 < b) (hbt : b < ∞),
+      F (a, b) = div a b ⟨hb.ne', Or.inr hbt.ne⟩)
+    (x : ℝ≥0∞) (hx : x = 0 ∨ x = ∞) : ¬ ContinuousAt F (x, x) := by
+  let s := Ioo (0 : ℝ≥0∞) ∞
+  have : NeBot (𝓝[s] x) := by
+    rcases hx with rfl | rfl
+    · exact left_nhdsWithin_Ioo_neBot ENNReal.zero_lt_top
+    · exact right_nhdsWithin_Ioo_neBot ENNReal.zero_lt_top
+  intro hcont
+  have hlim (c : ℝ≥0∞) (hc₀ : c ≠ 0) (hct : c ≠ ∞) : F (x, x) = c := by
+    have hcx : c * x = x := by
+      rcases hx with rfl | rfl
+      · exact mul_zero _
+      · exact mul_top hc₀
+    have ht : Tendsto (fun t : ℝ≥0∞ => t) (𝓝[s] x) (𝓝 x) :=
+      tendsto_id.mono_left nhdsWithin_le_nhds
+    have hp : Tendsto (fun t => (c * t, t)) (𝓝[s] x) (𝓝 (x, x)) := by
+      simpa only [hcx] using
+        (((ENNReal.continuous_const_mul hct).tendsto x).mono_left
+          nhdsWithin_le_nhds).prodMk_nhds ht
+    have he : (fun _ : ℝ≥0∞ => c) =ᶠ[𝓝[s] x] fun t => F (c * t, t) :=
+      (show ∀ᶠ t in 𝓝[s] x, t ∈ s from self_mem_nhdsWithin).mono fun t ht => by
+        change c = F (c * t, t)
+        rw [hF _ _ (ENNReal.mul_pos hc₀ ht.1.ne') (mul_lt_top hct.lt_top ht.2) ht.1 ht.2,
+          ENNReal.mul_div_cancel_right ht.1.ne' ht.2.ne]
+    exact tendsto_nhds_unique (hcont.tendsto.comp hp) (tendsto_const_nhds.congr' he)
+  exact ENNReal.one_lt_two.ne <| (hlim 1 one_ne_zero one_ne_top).symm.trans
+    (hlim 2 two_ne_zero ofNat_ne_top)
+
+protected theorem Tendsto.divInf {f : Filter α} {u v : α → ℝ≥0∞} {a b : ℝ≥0∞}
+    (hu : Tendsto u f (𝓝 a)) (hv : Tendsto v f (𝓝 b)) (hab : (a ≠ 0 ∨ b ≠ 0) ∧ (a ≠ ∞ ∨ b ≠ ∞)) :
+    Tendsto (fun i => divInf (u i) (v i)) f (𝓝 (divInf a b)) := by
+  change Tendsto (fun i => u i * (v i)⁻¹) f (𝓝 (a * b⁻¹))
+  apply ENNReal.Tendsto.mul hu _ (tendsto_inv_iff.2 hv) _
+  · simpa using hab.1
+  · simpa only [ENNReal.inv_ne_zero] using hab.2.symm
+
+protected theorem Tendsto.const_divInf {f : Filter α} {m : α → ℝ≥0∞} {a b : ℝ≥0∞}
     (hm : Tendsto m f (𝓝 b)) (hb : b ≠ ∞ ∨ a ≠ ∞) :
-    Tendsto (fun b => a / m b) f (𝓝 (a / b)) := by
-  apply Tendsto.const_mul (tendsto_inv_iff.2 hm)
-  simp [hb]
+    Tendsto (fun i => divInf a (m i)) f (𝓝 (divInf a b)) := by
+  change Tendsto (fun i => a * (m i)⁻¹) f (𝓝 (a * b⁻¹))
+  apply ENNReal.Tendsto.const_mul (tendsto_inv_iff.2 hm)
+  simpa using hb
 
-protected theorem Tendsto.div_const {f : Filter α} {m : α → ℝ≥0∞} {a b : ℝ≥0∞}
+protected theorem Tendsto.divInf_const {f : Filter α} {m : α → ℝ≥0∞} {a b : ℝ≥0∞}
     (hm : Tendsto m f (𝓝 a)) (ha : a ≠ 0 ∨ b ≠ 0) :
-    Tendsto (fun x => m x / b) f (𝓝 (a / b)) := by
-  apply Tendsto.mul_const hm
-  simp [ha]
+    Tendsto (fun i => divInf (m i) b) f (𝓝 (divInf a b)) := by
+  change Tendsto (fun i => m i * b⁻¹) f (𝓝 (a * b⁻¹))
+  apply ENNReal.Tendsto.mul_const hm
+  simpa using ha
 
 protected theorem tendsto_inv_nat_nhds_zero : Tendsto (fun n : ℕ => (n : ℝ≥0∞)⁻¹) atTop (𝓝 0) :=
   ENNReal.inv_top ▸ tendsto_inv_iff.2 tendsto_nat_nhds_top
 
-protected theorem tendsto_coe_sub {b : ℝ≥0∞} :
-    Tendsto (fun b : ℝ≥0∞ => ↑r - b) (𝓝 b) (𝓝 (↑r - b)) :=
-  continuous_nnreal_sub.tendsto _
+protected theorem tendsto_coe_monus {b : ℝ≥0∞} :
+    Tendsto (fun b : ℝ≥0∞ => monus r b) (𝓝 b) (𝓝 (monus r b)) :=
+  continuous_nnreal_monus.tendsto _
 
 theorem exists_countable_dense_no_zero_top :
     ∃ s : Set ℝ≥0∞, s.Countable ∧ Dense s ∧ 0 ∉ s ∧ ∞ ∉ s := by
@@ -621,7 +706,8 @@ theorem continuous_of_le_add_edist {f : α → ℝ≥0∞} (C : ℝ≥0∞) (hC 
   rcases ENNReal.exists_nnreal_pos_mul_lt hC ε0.ne' with ⟨δ, δ0, hδ⟩
   rw [mul_comm] at hδ
   filter_upwards [Metric.closedEBall_mem_nhds x (ENNReal.coe_pos.2 δ0)] with y hy
-  refine ⟨tsub_le_iff_right.2 <| (h x y).trans ?_, (h y x).trans ?_⟩ <;> grw [← hδ.le] <;> gcongr
+  refine ⟨ENNReal.monus_le_iff.2 <| (h x y).trans ?_, (h y x).trans ?_⟩ <;>
+    grw [← hδ.le] <;> gcongr
   exacts [Metric.mem_closedEBall'.1 hy, Metric.mem_closedEBall.1 hy]
 
 theorem continuous_edist : Continuous fun p : α × α => edist p.1 p.2 := by
@@ -788,29 +874,29 @@ section LimsupLiminf
 
 variable {ι : Type*} {f : Filter ι} {u v : ι → ℝ≥0∞}
 
-lemma limsup_sub_const (F : Filter ι) (f : ι → ℝ≥0∞) (c : ℝ≥0∞) :
-    Filter.limsup (fun i ↦ f i - c) F = Filter.limsup f F - c := by
+lemma limsup_monus_const (F : Filter ι) (f : ι → ℝ≥0∞) (c : ℝ≥0∞) :
+    Filter.limsup (fun i ↦ monus (f i) c) F = monus (Filter.limsup f F) c := by
   rcases F.eq_or_neBot with rfl | _
   · simp
-  · exact (Monotone.map_limsSup_of_continuousAt (F := F.map f) (f := fun (x : ℝ≥0∞) ↦ x - c)
-    (fun _ _ h ↦ tsub_le_tsub_right h c) (continuous_sub_right c).continuousAt).symm
+  · exact (Monotone.map_limsSup_of_continuousAt (F := F.map f) (f := fun (x : ℝ≥0∞) ↦ monus x c)
+    (fun _ _ h ↦ monus_le_monus h le_rfl) (continuous_monus_right c).continuousAt).symm
 
-lemma liminf_sub_const (F : Filter ι) [NeBot F] (f : ι → ℝ≥0∞) (c : ℝ≥0∞) :
-    Filter.liminf (fun i ↦ f i - c) F = Filter.liminf f F - c :=
-  (Monotone.map_limsInf_of_continuousAt (F := F.map f) (f := fun (x : ℝ≥0∞) ↦ x - c)
-    (fun _ _ h ↦ tsub_le_tsub_right h c) (continuous_sub_right c).continuousAt).symm
+lemma liminf_monus_const (F : Filter ι) [NeBot F] (f : ι → ℝ≥0∞) (c : ℝ≥0∞) :
+    Filter.liminf (fun i ↦ monus (f i) c) F = monus (Filter.liminf f F) c :=
+  (Monotone.map_limsInf_of_continuousAt (F := F.map f) (f := fun (x : ℝ≥0∞) ↦ monus x c)
+    (fun _ _ h ↦ monus_le_monus h le_rfl) (continuous_monus_right c).continuousAt).symm
 
-lemma limsup_const_sub (F : Filter ι) (f : ι → ℝ≥0∞) {c : ℝ≥0∞} (c_ne_top : c ≠ ∞) :
-    Filter.limsup (fun i ↦ c - f i) F = c - Filter.liminf f F := by
+lemma limsup_const_monus (F : Filter ι) (f : ι → ℝ≥0∞) {c : ℝ≥0∞} (c_ne_top : c ≠ ∞) :
+    Filter.limsup (fun i ↦ monus c (f i)) F = monus c (Filter.liminf f F) := by
   rcases F.eq_or_neBot with rfl | _
   · simp
-  · exact (Antitone.map_limsInf_of_continuousAt (F := F.map f) (f := fun (x : ℝ≥0∞) ↦ c - x)
-    (fun _ _ h ↦ tsub_le_tsub_left h c) (continuous_sub_left c_ne_top).continuousAt).symm
+  · exact (Antitone.map_limsInf_of_continuousAt (F := F.map f) (f := fun (x : ℝ≥0∞) ↦ monus c x)
+    (fun _ _ h ↦ monus_le_monus le_rfl h) (continuous_monus_left c_ne_top).continuousAt).symm
 
-lemma liminf_const_sub (F : Filter ι) [NeBot F] (f : ι → ℝ≥0∞) {c : ℝ≥0∞} (c_ne_top : c ≠ ∞) :
-    Filter.liminf (fun i ↦ c - f i) F = c - Filter.limsup f F :=
-  (Antitone.map_limsSup_of_continuousAt (F := F.map f) (f := fun (x : ℝ≥0∞) ↦ c - x)
-    (fun _ _ h ↦ tsub_le_tsub_left h c) (continuous_sub_left c_ne_top).continuousAt).symm
+lemma liminf_const_monus (F : Filter ι) [NeBot F] (f : ι → ℝ≥0∞) {c : ℝ≥0∞} (c_ne_top : c ≠ ∞) :
+    Filter.liminf (fun i ↦ monus c (f i)) F = monus c (Filter.limsup f F) :=
+  (Antitone.map_limsSup_of_continuousAt (F := F.map f) (f := fun (x : ℝ≥0∞) ↦ monus c x)
+    (fun _ _ h ↦ monus_le_monus le_rfl h) (continuous_monus_left c_ne_top).continuousAt).symm
 
 lemma le_limsup_mul : limsup u f * liminf v f ≤ limsup (u * v) f :=
   mul_le_of_forall_lt fun a a_u b b_v ↦ (le_limsup_iff).2 fun c c_ab ↦
@@ -892,10 +978,10 @@ theorem liminf_add_of_right_tendsto_zero {u : Filter ι} {g : ι → ℝ≥0∞}
   refine liminf_le_of_le (by isBoundedDefault) fun b hb ↦ ?_
   rw [Filter.le_liminf_iff']
   rintro a hab
-  filter_upwards [hb, ENNReal.tendsto_nhds_zero.1 hg _ <| lt_min (tsub_pos_of_lt hab) one_pos]
+  filter_upwards [hb, ENNReal.tendsto_nhds_zero.1 hg _ <| lt_min (monus_pos_of_lt hab) one_pos]
     with i hfg hg
   exact ENNReal.le_of_add_le_add_right (hg.trans_lt <| by simp).ne <|
-    (add_le_of_le_tsub_left_of_le hab.le <| hg.trans <| min_le_left ..).trans hfg
+    (add_le_of_le_monus_left_of_le hab.le <| hg.trans <| min_le_left ..).trans hfg
 
 theorem liminf_add_of_left_tendsto_zero {u : Filter ι} {f : ι → ℝ≥0∞} (hf : u.Tendsto f (𝓝 0))
     (g : ι → ℝ≥0∞) : u.liminf (f + g) = u.liminf g := by
@@ -907,10 +993,10 @@ theorem limsup_add_of_right_tendsto_zero {u : Filter ι} {g : ι → ℝ≥0∞}
   refine le_limsup_of_le (by isBoundedDefault) fun b hb ↦ ?_
   rw [Filter.limsup_le_iff']
   rintro a hba
-  filter_upwards [hb, ENNReal.tendsto_nhds_zero.1 hg _ <| tsub_pos_of_lt hba] with i hf hg
+  filter_upwards [hb, ENNReal.tendsto_nhds_zero.1 hg _ <| monus_pos_of_lt hba] with i hf hg
   calc f i + g i
     _ ≤ b + g i := by gcongr
-    _ ≤ a := add_le_of_le_tsub_left_of_le hba.le hg
+    _ ≤ a := add_le_of_le_monus_left_of_le hba.le hg
 
 theorem limsup_add_of_left_tendsto_zero {u : Filter ι} {f : ι → ℝ≥0∞} (hf : u.Tendsto f (𝓝 0))
     (g : ι → ℝ≥0∞) : u.limsup (f + g) = u.limsup g := by

@@ -122,17 +122,20 @@ theorem le_measure_compl_liminf_of_limsup_measure_le {ι : Type*} {L : Filter ι
     μ Eᶜ ≤ L.liminf fun i ↦ μs i Eᶜ := by
   rcases L.eq_or_neBot with rfl | hne
   · simp only [liminf_bot, le_top]
-  have meas_Ec : μ Eᶜ = 1 - μ E := by
+  have meas_Ec : μ Eᶜ = ENNReal.monus 1 (μ E) := by
     simpa only [measure_univ] using measure_compl E_mble (measure_lt_top μ E).ne
-  have meas_i_Ec : ∀ i, μs i Eᶜ = 1 - μs i E := by
+  have meas_i_Ec : ∀ i, μs i Eᶜ = ENNReal.monus 1 (μs i E) := by
     intro i
     simpa only [measure_univ] using measure_compl E_mble (measure_lt_top (μs i) E).ne
   simp_rw [meas_Ec, meas_i_Ec]
-  rw [show (L.liminf fun i : ι ↦ 1 - μs i E) = L.liminf ((fun x ↦ 1 - x) ∘ fun i : ι ↦ μs i E)
+  rw [show (L.liminf fun i : ι ↦ ENNReal.monus 1 (μs i E)) =
+      L.liminf (ENNReal.monus 1 ∘ fun i : ι ↦ μs i E)
       from rfl]
-  have key := antitone_const_tsub.map_limsup_of_continuousAt (F := L)
-    (fun i ↦ μs i E) (ENNReal.continuous_sub_left ENNReal.one_ne_top).continuousAt
-  simpa [← key] using antitone_const_tsub h
+  have h_monus : Antitone (ENNReal.monus 1) :=
+    fun _ _ h ↦ ENNReal.monus_le_monus le_rfl h
+  have key := h_monus.map_limsup_of_continuousAt (F := L)
+    (fun i ↦ μs i E) (ENNReal.continuous_monus_left ENNReal.one_ne_top).continuousAt
+  simpa [← key] using h_monus h
 
 theorem le_measure_liminf_of_limsup_measure_compl_le {ι : Type*} {L : Filter ι} {μ : Measure Ω}
     {μs : ι → Measure Ω} [IsProbabilityMeasure μ] [∀ i, IsProbabilityMeasure (μs i)] {E : Set Ω}
@@ -146,17 +149,20 @@ theorem limsup_measure_compl_le_of_le_liminf_measure {ι : Type*} {L : Filter ι
     (L.limsup fun i ↦ μs i Eᶜ) ≤ μ Eᶜ := by
   rcases L.eq_or_neBot with rfl | hne
   · simp only [limsup_bot, bot_le]
-  have meas_Ec : μ Eᶜ = 1 - μ E := by
+  have meas_Ec : μ Eᶜ = ENNReal.monus 1 (μ E) := by
     simpa only [measure_univ] using measure_compl E_mble (measure_lt_top μ E).ne
-  have meas_i_Ec : ∀ i, μs i Eᶜ = 1 - μs i E := by
+  have meas_i_Ec : ∀ i, μs i Eᶜ = ENNReal.monus 1 (μs i E) := by
     intro i
     simpa only [measure_univ] using measure_compl E_mble (measure_lt_top (μs i) E).ne
   simp_rw [meas_Ec, meas_i_Ec]
-  rw [show (L.limsup fun i : ι ↦ 1 - μs i E) = L.limsup ((fun x ↦ 1 - x) ∘ fun i : ι ↦ μs i E)
+  rw [show (L.limsup fun i : ι ↦ ENNReal.monus 1 (μs i E)) =
+      L.limsup (ENNReal.monus 1 ∘ fun i : ι ↦ μs i E)
       from rfl]
-  have key := antitone_const_tsub.map_liminf_of_continuousAt (F := L)
-    (fun i ↦ μs i E) (ENNReal.continuous_sub_left ENNReal.one_ne_top).continuousAt
-  simpa [← key] using antitone_const_tsub h
+  have h_monus : Antitone (ENNReal.monus 1) :=
+    fun _ _ h ↦ ENNReal.monus_le_monus le_rfl h
+  have key := h_monus.map_liminf_of_continuousAt (F := L)
+    (fun i ↦ μs i E) (ENNReal.continuous_monus_left ENNReal.one_ne_top).continuousAt
+  simpa [← key] using h_monus h
 
 theorem limsup_measure_le_of_le_liminf_measure_compl {ι : Type*} {L : Filter ι} {μ : Measure Ω}
     {μs : ι → Measure Ω} [IsProbabilityMeasure μ] [∀ i, IsProbabilityMeasure (μs i)] {E : Set Ω}

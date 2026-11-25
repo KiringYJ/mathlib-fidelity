@@ -57,12 +57,13 @@ theorem eventually_nhds_zero_forall_closedEBall_subset (hK : ∀ i, IsClosed (K 
   rcases nhds_basis_closedEBall.mem_iff.1 ((hU i).mem_nhds <| hKU i hi) with ⟨R, hR₀, hR⟩
   rcases ENNReal.lt_iff_exists_nnreal_btwn.mp hR₀ with ⟨r, hr₀, hrR⟩
   filter_upwards [prod_mem_prod (eventually_lt_nhds hr₀)
-      (closedEBall_mem_nhds x (tsub_pos_iff_lt.2 hrR))] with p hp z hz
+      (closedEBall_mem_nhds x (ENNReal.monus_pos_of_lt hrR))] with p hp z hz
   apply hR
   calc
     edist z x ≤ edist z p.2 + edist p.2 x := edist_triangle _ _ _
-    _ ≤ p.1 + (R - p.1) := add_le_add hz <| le_trans hp.2 <| tsub_le_tsub_left hp.1.out.le _
-    _ = R := add_tsub_cancel_of_le (lt_trans (by exact hp.1) hrR).le
+    _ ≤ p.1 + ENNReal.monus R p.1 := add_le_add hz <|
+      hp.2.trans (ENNReal.monus_le_monus le_rfl hp.1.out.le)
+    _ = R := (add_comm _ _).trans (ENNReal.monus_add_cancel_of_le (lt_trans hp.1.out hrR).le)
 
 /-- Auxiliary lemma for `exists_continuous_real_forall_closedEBall_subset`
 and its smooth counterpart. -/

@@ -24,6 +24,13 @@ When tagging a release, move its notes under the Fidelity tag and release date a
 - **Signed extended-real division.** On `EReal`, `a / b` requires a nonzero denominator and at
   least one finite operand. This is the maximal domain of continuous extension. Finite numerators
   divided by either infinity give zero. Finite nonzero denominators give unit division.
+- **Extended-real differences.** Signed subtraction on `EReal` requires evidence that the operands
+  are neither both `⊤` nor both `⊥`. On `ENNReal`, `ENNReal.monus a b` is the least `q` such that
+  `a ≤ q + b`.
+- **Nonnegative extended-real division.** On `ENNReal`, slash requires a nonzero denominator and
+  at least one finite operand. `ENNReal.extendedDiv` also admits nonzero numerators over zero.
+  `ENNReal.divInf` is the infimum of the multipliers that make `b * q ≥ a`, while
+  `Quantale.leftMulResiduation b a` is the greatest multiplier with `q * b ≤ a`.
 - **Euclidean quotients.** Use `EuclideanDomain.quotient`, `Nat.euclideanDiv`, and `Int.euclideanDiv`
   with a nonzero divisor. `Int.exactQuotient` also requires divisibility. On `Nat` and `Int`, use
   the named quotients in place of `/`. The remainder law `a % 0 = a` continues to apply on these

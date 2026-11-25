@@ -145,16 +145,16 @@ lemma measurable_withDensity_mul {f g : α → β → ℝ≥0∞}
 
 /-- Recover the weighting domain from a difference and an almost everywhere smaller,
 sectionwise measurable density. -/
-lemma measurable_withDensity_of_sub_add {f g : α → β → ℝ≥0∞}
-    (hsub : Measurable fun a ↦ (κ a).withDensity (fun b ↦ f a b - g a b))
+lemma measurable_withDensity_of_monus_add {f g : α → β → ℝ≥0∞}
+    (hdiff : Measurable fun a ↦ (κ a).withDensity (fun b ↦ ENNReal.monus (f a b) (g a b)))
     (hg : Measurable fun a ↦ (κ a).withDensity (g a))
     (hg' : ∀ a, Measurable (g a)) (hfg : ∀ a, g a ≤ᵐ[κ a] f a) :
     Measurable fun a ↦ (κ a).withDensity (f a) := by
-  have h := measurable_withDensity_add_right hsub hg hg'
+  have h := measurable_withDensity_add_right hdiff hg hg'
   refine (measurable_withDensity_congr_ae ?_).mp h
   intro a
   filter_upwards [hfg a] with b hb
-  exact tsub_add_cancel_of_le hb
+  exact ENNReal.monus_add_cancel_of_le hb
 
 /-- Discharge the domain of a weighted kernel using a supplied proof, an elementary zero or one
 case, or the standard s-finite, jointly measurable sufficient condition. -/
@@ -288,18 +288,18 @@ lemma withDensity_add_right {f g : α → β → ℝ≥0∞}
   ext1 a
   exact MeasureTheory.withDensity_add_right (f a) (hg' a)
 
-lemma withDensity_sub_add_cancel {f g : α → β → ℝ≥0∞}
+lemma withDensity_monus_add_cancel {f g : α → β → ℝ≥0∞}
     {hg : Measurable fun a ↦ (κ a).withDensity (g a)}
-    {hsub : Measurable fun a ↦ (κ a).withDensity (fun b ↦ f a b - g a b)}
+    {hdiff : Measurable fun a ↦ (κ a).withDensity (fun b ↦ ENNReal.monus (f a b) (g a b))}
     (hg' : ∀ a, Measurable (g a)) (hfg : ∀ a, g a ≤ᵐ[κ a] f a) :
-    withDensity κ (fun a x ↦ f a x - g a x) hsub + withDensity κ g hg =
-      withDensity κ f (measurable_withDensity_of_sub_add hsub hg hg' hfg) := by
+    withDensity κ (fun a x ↦ ENNReal.monus (f a x) (g a x)) hdiff + withDensity κ g hg =
+      withDensity κ f (measurable_withDensity_of_monus_add hdiff hg hg' hfg) := by
   ext1 a
   rw [add_apply, Kernel.withDensity_apply, Kernel.withDensity_apply, Kernel.withDensity_apply,
     ← MeasureTheory.withDensity_add_right _ (hg' a)]
   apply MeasureTheory.withDensity_congr_ae
   filter_upwards [hfg a] with x hx
-  exact tsub_add_cancel_of_le hx
+  exact ENNReal.monus_add_cancel_of_le hx
 
 /-- A countable sum of sectionwise measurable densities commutes with weighting. -/
 theorem withDensity_tsum [Countable ι] (κ : Kernel α β) {f : ι → α → β → ℝ≥0∞}
@@ -327,7 +327,8 @@ theorem isFiniteKernel_withDensity_of_bounded (κ : Kernel α β) [IsFiniteKerne
 have infinite values. -/
 theorem isSFiniteKernel_withDensity_of_isFiniteKernel (κ : Kernel α β) [IsFiniteKernel κ]
     (hf : Measurable (Function.uncurry f)) : IsSFiniteKernel (withDensity κ f) := by
-  let fs : ℕ → α → β → ℝ≥0∞ := fun n a b ↦ min (f a b) (n + 1) - min (f a b) n
+  let fs : ℕ → α → β → ℝ≥0∞ := fun n a b ↦
+    ENNReal.monus (min (f a b) ((n : ℝ≥0∞) + 1)) (min (f a b) n)
   have hfs (n : ℕ) : Measurable (Function.uncurry (fs n)) := by fun_prop
   have hf_eq_tsum : f = ∑' n, fs n := by
     have h_sum_a : ∀ a, Summable fun n ↦ fs n a :=
@@ -340,7 +341,10 @@ theorem isSFiniteKernel_withDensity_of_isFiniteKernel (κ : Kernel α β) [IsFin
       | zero => simp
       | succ n hn =>
         rw [Finset.sum_range_succ, hn]
-        simp [fs]
+        rw [add_comm]
+        simpa only [fs, Nat.cast_succ] using
+          ENNReal.monus_add_cancel_of_le
+            (min_le_min_left (f a b) (le_self_add : (n : ℝ≥0∞) ≤ (n : ℝ≥0∞) + 1))
     simp_rw [h_finsetSum]
     refine (Filter.Tendsto.liminf_eq ?_).symm
     simpa using (tendsto_const_nhds.min ENNReal.tendsto_nat_nhds_top :
@@ -359,8 +363,8 @@ theorem isSFiniteKernel_withDensity_of_isFiniteKernel (κ : Kernel α β) [IsFin
   refine isSFiniteKernel_sum (hκs := fun n ↦ ?_)
   suffices IsFiniteKernel (withDensity κ (fs n) (measurable_withDensity (hfs n))) by
     infer_instance
-  refine isFiniteKernel_withDensity_of_bounded κ (B := n + 1) (by finiteness) fun a b ↦ ?_
-  exact (tsub_le_self.trans (min_le_right _ _))
+  refine isFiniteKernel_withDensity_of_bounded κ (B := (n : ℝ≥0∞) + 1) (by finiteness) fun a b ↦ ?_
+  exact (ENNReal.monus_le_self.trans (min_le_right _ _))
 
 /-- Jointly measurable densities preserve s-finiteness, including densities with infinite values.
 This is a sufficient condition; the constructor itself only requires measurability of the weighted

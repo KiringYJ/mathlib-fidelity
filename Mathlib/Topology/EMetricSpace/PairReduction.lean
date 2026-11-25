@@ -137,16 +137,16 @@ lemma card_le_logSizeRadius_le_pow_logSizeRadius (ha : 1 < a) :
 
 lemma pow_logSizeRadius_le_card_le_logSizeRadius (ha : 1 < a) (ht : t ∈ V) :
     a ^ (logSizeRadius t V a c - 1)
-      ≤ #(V.filter fun x ↦ edist t x ≤ (logSizeRadius t V a c - 1) * c) := by
+      ≤ #(V.filter fun x ↦ edist t x ≤ ENNReal.monus (logSizeRadius t V a c) 1 * c) := by
   by_cases h_one : logSizeRadius t V a c = 1
-  · simp only [h_one, tsub_self, pow_zero, Nat.cast_one, zero_mul, nonpos_iff_eq_zero,
-      Nat.one_le_cast, Finset.one_le_card]
+  · simp only [h_one, tsub_self, pow_zero, Nat.cast_one, ENNReal.monus_self, zero_mul,
+      nonpos_iff_eq_zero, Nat.one_le_cast, Finset.one_le_card]
     exact ⟨t, by simpa⟩
   rw [logSizeRadius, dite_eq_left ha] at h_one ⊢
   have : Nat.find (exists_radius_le t V ha c) - 1 < Nat.find (exists_radius_le t V ha c) := by
     simp
   have h := Nat.find_min (exists_radius_le t V ha c) this
-  simp only [ENNReal.natCast_sub, Nat.cast_one, not_and, not_le] at h
+  simp only [ENNReal.natCast_monus, Nat.cast_one, not_and, not_le] at h
   exact (h (by lia)).le
 
 /-- A structure for carrying the data of `logSizeBallSeq` -/
@@ -165,7 +165,7 @@ structure logSizeBallStruct (T : Type*) where
 noncomputable
 def logSizeBallStruct.smallBall (struct : logSizeBallStruct T) (c : ℝ≥0∞) :
     Finset T :=
-  struct.finset.filter fun x ↦ edist struct.point x ≤ (struct.radius - 1) * c
+  struct.finset.filter fun x ↦ edist struct.point x ≤ ENNReal.monus struct.radius 1 * c
 
 /-- If `(V, t, r)` is a `logSizeBallStruct` then `logSizeBallStruct.ball`
   is `{x ∈ V | d(t, x) ≤ rc}`. -/
@@ -434,7 +434,7 @@ lemma iSup_edist_pairSet {E : Type*} [TopologicalSpace E] [WeakPseudoEMetricSpac
     Finset.mem_filter, true_and, not_le, not_lt] at h
   have hsB : s ∈ (logSizeBallSeq J hJ a c l).ball c := by
     simp only [logSizeBallStruct.ball, Finset.mem_filter, hsV, true_and]
-    grw [h, tsub_le_self]
+    grw [h, ENNReal.monus_le_self]
   have htB : t ∈ (logSizeBallSeq J hJ a c l).ball c := by
     simp only [logSizeBallStruct.ball, Finset.mem_filter, htV, true_and]
     apply le_trans (edist_triangle _ s _)
@@ -442,11 +442,7 @@ lemma iSup_edist_pairSet {E : Type*} [TopologicalSpace E] [WeakPseudoEMetricSpac
     nth_rw 3 [← one_mul c]
     rw [← add_mul]
     congr
-    rw [ENNReal.sub_add_eq_add_sub _ (ENNReal.one_ne_top),
-      ENNReal.add_sub_cancel_right (ENNReal.one_ne_top)]
-    rw [← Nat.cast_one]
-    gcongr
-    exact one_le_radius_logSizeBallSeq hJ ha l
+    exact ENNReal.monus_add_cancel_of_le (by exact_mod_cast one_le_radius_logSizeBallSeq hJ ha l)
   have hsP : ((logSizeBallSeq J hJ a c l).point, s) ∈ pairSetSeq J a c l := by
     simp [pairSetSeq, hJ, hsB]
   have htP : ((logSizeBallSeq J hJ a c l).point, t) ∈ pairSetSeq J a c l := by

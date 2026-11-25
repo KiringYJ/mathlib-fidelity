@@ -208,12 +208,11 @@ theorem nnnorm_changeOrigin_le (k : ℕ) (h : (‖x‖₊ : ℝ≥0∞) < p.radi
   refine HasSum.sigma this.hasSum fun l => ?_
   exact ((NNReal.summable_sigma.1 this).1 l).hasSum
 
-/-- The radius of convergence of `p.changeOrigin x` is at least `p.radius - ‖x‖`. In other words,
-`p.changeOrigin x` is well defined on the largest ball contained in the original ball of
-convergence. -/
-theorem changeOrigin_radius : p.radius - ‖x‖₊ ≤ (p.changeOrigin x).radius := by
+/-- Changing the center to `x` gives a convergence radius of at least
+`ENNReal.monus p.radius ‖x‖₊`, the radius obtained from the triangle inequality. -/
+theorem changeOrigin_radius : ENNReal.monus p.radius ‖x‖₊ ≤ (p.changeOrigin x).radius := by
   refine ENNReal.le_of_forall_pos_nnreal_lt fun r _h0 hr => ?_
-  rw [lt_tsub_iff_right, add_comm] at hr
+  rw [ENNReal.lt_monus_iff_add_lt_right, add_comm] at hr
   have hr' : (‖x‖₊ : ℝ≥0∞) < p.radius := (le_add_right le_rfl).trans_lt hr
   apply le_radius_of_summable_nnnorm
   have (k : ℕ) :
@@ -261,7 +260,7 @@ theorem changeOrigin_eval (h : (‖x‖₊ + ‖y‖₊ : ℝ≥0∞) < p.radius
     mem_eball_zero_iff.2 ((le_add_right le_rfl).trans_lt h)
   have y_mem_ball : y ∈ Metric.eball (0 : E) (p.changeOrigin x).radius := by
     refine mem_eball_zero_iff.2 (lt_of_lt_of_le ?_ p.changeOrigin_radius)
-    rwa [lt_tsub_iff_right, add_comm]
+    rwa [ENNReal.lt_monus_iff_add_lt_right, add_comm]
   have x_add_y_mem_ball : x + y ∈ Metric.eball (0 : E) p.radius := by
     refine mem_eball_zero_iff.2 (lt_of_le_of_lt ?_ h)
     exact mod_cast nnnorm_add_le x y
@@ -312,15 +311,15 @@ it also admits a power series on any subball of this ball (even with a different
 it belongs to `s`), given by `p.changeOrigin`. -/
 theorem HasFPowerSeriesWithinOnBall.changeOrigin (hf : HasFPowerSeriesWithinOnBall f p s x r)
     (h : ‖y‖ₑ < r) (hy : x + y ∈ insert x s) :
-    HasFPowerSeriesWithinOnBall f (p.changeOrigin y) s (x + y) (r - ‖y‖ₑ) where
+    HasFPowerSeriesWithinOnBall f (p.changeOrigin y) s (x + y) (ENNReal.monus r ‖y‖ₑ) where
   r_le := by
     apply le_trans _ p.changeOrigin_radius
-    exact tsub_le_tsub hf.r_le le_rfl
+    exact ENNReal.monus_le_monus hf.r_le le_rfl
   r_pos := by simp [h]
   hasSum {z} h'z hz := by
     simp only [id_eq] at hz ⊢
     have hz' : ‖y‖ₑ + ‖z - (x + y)‖ₑ < r := by
-      simpa only [mem_eball_zero_iff, lt_tsub_iff_right, add_comm] using hz
+      simpa only [mem_eball_zero_iff, ENNReal.lt_monus_iff_add_lt_right, add_comm] using hz
     have hzmem : z ∈ insert x s :=
       (insert_subset_iff.2 ⟨hy, subset_insert x s⟩) h'z
     have hdist : z - x = y + (z - (x + y)) := by abel
@@ -333,13 +332,14 @@ theorem HasFPowerSeriesWithinOnBall.changeOrigin (hf : HasFPowerSeriesWithinOnBa
     rw [hsum]
     apply (p.changeOrigin y).hasSum
     refine Metric.eball_subset_eball (le_trans ?_ p.changeOrigin_radius) hz
-    exact tsub_le_tsub hf.r_le le_rfl
+    exact ENNReal.monus_le_monus hf.r_le le_rfl
 
 /-- If a function admits a power series expansion `p` on a ball `B (x, r)`, then it also admits a
 power series on any subball of this ball (even with a different center), given by `p.changeOrigin`.
 -/
 theorem HasFPowerSeriesOnBall.changeOrigin (hf : HasFPowerSeriesOnBall f p x r)
-    (h : (‖y‖₊ : ℝ≥0∞) < r) : HasFPowerSeriesOnBall f (p.changeOrigin y) (x + y) (r - ‖y‖₊) := by
+    (h : (‖y‖₊ : ℝ≥0∞) < r) :
+    HasFPowerSeriesOnBall f (p.changeOrigin y) (x + y) (ENNReal.monus r ‖y‖₊) := by
   rw [← hasFPowerSeriesWithinOnBall_univ] at hf ⊢
   exact hf.changeOrigin h (by simp)
 

@@ -5,7 +5,7 @@ Authors: Yury Kudryashov
 -/
 module
 
-public import Mathlib.Basic.ENNReal.Basic
+public import Mathlib.Basic.ENNReal.Operations
 public import Mathlib.Data.ENat.Monoid
 public import Mathlib.Order.Hom.WithTopBot
 
@@ -115,7 +115,12 @@ theorem toENNReal_max (m n : ℕ∞) : ↑(max m n) = (max m n : ℝ≥0∞) :=
   toENNReal_mono.map_max
 
 @[simp, norm_cast]
-theorem toENNReal_sub (m n : ℕ∞) : ↑(m - n) = (m - n : ℝ≥0∞) :=
-  WithTop.map_sub Nat.cast_tsub Nat.cast_zero m n
+theorem toENNReal_sub (m n : ℕ∞) : ↑(m - n) = ENNReal.monus m n := by
+  cases n with
+  | top => rw [tsub_eq_zero_of_le le_top, toENNReal_zero, toENNReal_top, ENNReal.monus_top]
+  | coe n =>
+    cases m with
+    | top => rfl
+    | coe m => exact ENNReal.natCast_monus m n
 
 end ENat

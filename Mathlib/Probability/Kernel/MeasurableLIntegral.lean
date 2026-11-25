@@ -55,19 +55,12 @@ theorem measurable_kernel_prodMk_left_of_finite {t : Set (α × β)} (ht : Measu
     rw [h_eq_ite]
     exact Measurable.ite ht₁ (Kernel.measurable_coe κ ht₂) measurable_const
   | compl t htm iht =>
-    have h_eq_sdiff : ∀ a, Prod.mk a ⁻¹' tᶜ = Set.univ \ Prod.mk a ⁻¹' t := by
-      intro a
-      ext1 b
-      simp only [mem_compl_iff, mem_preimage, Set.mem_sdiff, mem_univ, true_and]
-    simp_rw [h_eq_sdiff]
-    have : (fun a => κ a (Set.univ \ Prod.mk a ⁻¹' t)) =
-        fun a => κ a Set.univ - κ a (Prod.mk a ⁻¹' t) := by
+    have : (fun a => κ a (Prod.mk a ⁻¹' tᶜ)) =
+        fun a => ENNReal.monus (κ a Set.univ) (κ a (Prod.mk a ⁻¹' t)) := by
       ext1 a
-      rw [← Set.sdiff_inter_self_eq_sdiff, Set.inter_univ, measure_sdiff (Set.subset_univ _)]
-      · exact MeasurableSet.nullMeasurableSet (measurable_prodMk_left htm)
-      · exact measure_ne_top _ _
+      rw [preimage_compl, measure_compl (measurable_prodMk_left htm) (measure_ne_top _ _)]
     rw [this]
-    exact Measurable.sub (Kernel.measurable_coe κ MeasurableSet.univ) iht
+    exact (Kernel.measurable_coe κ MeasurableSet.univ).ennreal_monus iht
   | iUnion f h_disj hf_meas hf =>
     have (a : α) : κ a (Prod.mk a ⁻¹' ⋃ i, f i) = ∑' i, κ a (Prod.mk a ⁻¹' f i) := by
       rw [preimage_iUnion, measure_iUnion]

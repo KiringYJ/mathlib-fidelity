@@ -152,11 +152,11 @@ theorem innerContent_exists_compact {U : Opens G} (hU : μ.innerContent U ≠ �
   have h'ε := ENNReal.coe_ne_zero.2 hε
   rcases le_or_gt (μ.innerContent U) ε with h | h
   · exact ⟨⊥, empty_subset _, le_add_left h⟩
-  have h₂ := ENNReal.sub_lt_self hU h.ne_bot h'ε
+  have h₂ := ENNReal.monus_lt_self hU h.ne_bot h'ε
   conv at h₂ => rhs; rw [innerContent]
   simp only [lt_iSup_iff] at h₂
   rcases h₂ with ⟨U, h1U, h2U⟩; refine ⟨U, h1U, ?_⟩
-  rw [← tsub_le_iff_right]; exact le_of_lt h2U
+  rw [← ENNReal.monus_le_iff]; exact le_of_lt h2U
 
 /-- The inner content of a supremum of opens is at most the sum of the individual inner contents. -/
 theorem innerContent_iSup_nat [R1Space G] (U : ℕ → Opens G) :

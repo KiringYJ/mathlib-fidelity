@@ -503,15 +503,15 @@ protected lemma Real.HolderConjugate.toNNReal {p q : ℝ} (h : p.HolderConjugate
 
 namespace ENNReal
 
-/-- The conjugate exponent of `p` is `q = 1 + (p - 1)⁻¹`, so that `p⁻¹ + q⁻¹ = 1`. -/
-noncomputable def conjExponent (p : ℝ≥0∞) : ℝ≥0∞ := 1 + (p - 1)⁻¹
+/-- The conjugate exponent of `p` is `q = 1 + (monus p 1)⁻¹`, so that `p⁻¹ + q⁻¹ = 1`. -/
+noncomputable def conjExponent (p : ℝ≥0∞) : ℝ≥0∞ := 1 + (monus p 1)⁻¹
 
 lemma coe_conjExponent {p : ℝ≥0} (hp : 1 < p) :
     p.conjExponent hp = conjExponent p := by
   have hp' : p - 1 ≠ 0 := (tsub_pos_of_lt hp).ne'
   have h : p / (p - 1) = 1 + (p - 1)⁻¹ := by
     rw [div_eq_iff, add_mul, one_mul, inv_mul_cancel₀, tsub_add_cancel_of_le hp.le]
-  rw [NNReal.conjExponent, conjExponent, h, coe_add, coe_one, coe_inv, coe_sub, coe_one]
+  rw [NNReal.conjExponent, conjExponent, h, coe_add, coe_one, coe_inv, coe_monus, coe_one]
 
 
 variable {a b p q r : ℝ≥0∞}
@@ -647,21 +647,24 @@ lemma toNNReal (hp : 1 < p.toNNReal) [HolderConjugate p q] :
   toNNReal_iff hp |>.mpr ‹_›
 
 protected lemma conjExponent {p : ℝ≥0∞} (hp : 1 ≤ p) : p.HolderConjugate (conjExponent p) := by
-  have : p ≠ 0 := (zero_lt_one.trans_le hp).ne'
-  rw [HolderConjugate, holderTriple_iff, conjExponent, add_comm]
-  refine (AddLECancellable.eq_tsub_iff_add_eq_of_le (α := ℝ≥0∞) (by simpa) (by simpa)).1 ?_
-  rw [inv_eq_iff_eq_inv]
+  have hp₀ : p ≠ 0 := (zero_lt_one.trans_le hp).ne'
+  rw [holderConjugate_iff, conjExponent, add_comm p⁻¹]
+  suffices h : (1 + (monus p 1)⁻¹)⁻¹ = monus 1 p⁻¹ by
+    rw [h, monus_add_cancel_of_le (ENNReal.inv_le_one.mpr hp)]
   obtain rfl | hp₁ := hp.eq_or_lt
   · simp
-  obtain rfl | hp := eq_or_ne p ∞
+  obtain rfl | hpt := eq_or_ne p ∞
   · simp
-  calc
-    1 + (p - 1)⁻¹ = ((p - 1 + 1) / (p - 1)) := by
-      rw [ENNReal.add_div, ENNReal.div_self ((tsub_pos_of_lt hp₁).ne') (sub_ne_top hp),
-        ENNReal.one_div]
-    _ = (1⁻¹ - p⁻¹)⁻¹ := by
-      rw [tsub_add_cancel_of_le, ← inv_eq_iff_eq_inv, ENNReal.div_eq_mul_inv,
-        ENNReal.mul_inv, inv_inv, ENNReal.mul_sub, ENNReal.inv_mul_cancel, mul_one] <;> simp [*]
+  have hm₀ : monus p 1 ≠ 0 := (monus_pos_of_lt hp₁).ne'
+  have hmt : monus p 1 ≠ ∞ := monus_ne_top hpt
+  have hquot : 1 + (monus p 1)⁻¹ = div p (monus p 1) ⟨hm₀, .inr hmt⟩ := by
+    calc
+      1 + (monus p 1)⁻¹ = (monus p 1 + 1) * (monus p 1)⁻¹ := by
+        rw [add_mul, ENNReal.mul_inv_cancel hm₀ hmt, one_mul]
+      _ = _ := by rw [monus_add_cancel_of_le hp]; rfl
+  rw [hquot, ENNReal.inv_div hp₀ hm₀ (.inl hpt), ENNReal.div_eq_mul_inv,
+    ENNReal.monus_mul (fun _ _ => ENNReal.inv_ne_top.mpr hp₀),
+    ENNReal.mul_inv_cancel hp₀ hpt, one_mul]
 
 instance {p : ℝ≥0∞} [Fact (1 ≤ p)] : p.HolderConjugate (conjExponent p) := .conjExponent Fact.out
 
@@ -673,7 +676,7 @@ lemma conjExponent_eq : conjExponent p = q :=
   have : Fact (1 ≤ p) := ⟨one_le p q⟩
   unique p (conjExponent p) q
 
-lemma conj_eq : q = 1 + (p - 1)⁻¹ := conjExponent_eq.symm
+lemma conj_eq : q = 1 + (monus p 1)⁻¹ := conjExponent_eq.symm
 
 lemma mul_eq_add : p * q = p + q := by
   obtain rfl | hp := eq_or_ne p ∞
@@ -683,26 +686,34 @@ lemma mul_eq_add : p * q = p + q := by
   simpa [add_comm p, mul_add, add_mul, hp, hq, ne_zero p q, ne_zero q p, ENNReal.mul_inv_cancel,
     ENNReal.inv_mul_cancel_right] using congr(p * $((inv_add_inv_eq_one p q).symm) * q)
 
-lemma div_conj_eq_sub_one : (p / q) = p - 1 := by
+lemma div_conj_eq_monus_one :
+    div p q ⟨ne_zero q p, by
+      by_cases hq : q = ∞
+      · exact .inl (by rw [(eq_top_iff_eq_one q p).mp hq]; exact one_ne_top)
+      · exact .inr hq⟩ = monus p 1 := by
   obtain rfl | hq := eq_or_ne q ∞
   · obtain rfl := unique ∞ p 1
     simp
-  refine ENNReal.eq_sub_of_add_eq one_ne_top ?_
-  rw [← ENNReal.div_self (ne_zero q p) hq, ← ENNReal.add_div, ← h.mul_eq_add, ENNReal.mul_div_assoc,
-    ENNReal.div_self (ne_zero q p) hq, mul_one]
+  rw [ENNReal.div_eq_mul_inv]
+  apply ENNReal.eq_monus_of_add_eq one_ne_top
+  calc
+    p * q⁻¹ + 1 = (p + q) * q⁻¹ := by
+      rw [add_mul, ENNReal.mul_inv_cancel (ne_zero q p) hq]
+    _ = p := by rw [← h.mul_eq_add, ENNReal.mul_inv_cancel_right (ne_zero q p) hq]
 
 end
 
 protected lemma inv_inv (hab : a + b = 1) : a⁻¹.HolderConjugate b⁻¹ where
   inv_add_inv_eq_inv := by simpa [inv_inv] using hab
 
-lemma inv_one_sub_inv (ha : a ≤ 1) : a⁻¹.HolderConjugate (1 - a)⁻¹ :=
-  .inv_inv <| add_tsub_cancel_of_le ha
+lemma inv_one_monus_inv (ha : a ≤ 1) : a⁻¹.HolderConjugate (monus 1 a)⁻¹ :=
+  .inv_inv <| (add_comm _ _).trans (monus_add_cancel_of_le ha)
 
-lemma inv_one_sub_inv' (ha : 1 ≤ a) : a.HolderConjugate (1 - a⁻¹)⁻¹ := by
-  simpa using inv_one_sub_inv (ENNReal.inv_le_one.mpr ha)
+lemma inv_one_monus_inv' (ha : 1 ≤ a) : a.HolderConjugate (monus 1 a⁻¹)⁻¹ := by
+  simpa using inv_one_monus_inv (ENNReal.inv_le_one.mpr ha)
 
-lemma one_sub_inv_inv (ha : a ≤ 1) : (1 - a)⁻¹.HolderConjugate a⁻¹ := (inv_one_sub_inv ha).symm
+lemma one_monus_inv_inv (ha : a ≤ 1) : (monus 1 a)⁻¹.HolderConjugate a⁻¹ :=
+  (inv_one_monus_inv ha).symm
 
 lemma top_one : HolderConjugate ∞ 1 := ⟨by simp⟩
 lemma one_top : HolderConjugate 1 ∞ := ⟨by simp⟩
@@ -711,7 +722,8 @@ end HolderConjugate
 
 lemma isConjExponent_comm : p.HolderConjugate q ↔ q.HolderConjugate p := ⟨(·.symm), (·.symm)⟩
 
-lemma isConjExponent_iff_eq_conjExponent (hp : 1 ≤ p) : p.HolderConjugate q ↔ q = 1 + (p - 1)⁻¹ :=
+lemma isConjExponent_iff_eq_conjExponent (hp : 1 ≤ p) :
+    p.HolderConjugate q ↔ q = 1 + (monus p 1)⁻¹ :=
   ⟨fun h ↦ h.conj_eq, by rintro rfl; exact .conjExponent hp⟩
 
 end ENNReal

@@ -139,14 +139,16 @@ instance instCompleteSpace [CompleteSpace α] : CompleteSpace (Closeds α) := by
            This sequence is a Cauchy sequence, therefore converging as the space is complete, to
            a limit which satisfies the required properties. -/
     intro n x hx
+    let Bn (k : ℕ) : ℝ≥0∞ := ENNReal.div (B n) ((2 : ℝ≥0∞) ^ k)
+      ⟨(ENNReal.isUnit_two_pow k).ne_zero, .inl (B_ne_top n)⟩
     obtain ⟨z, hz₀, hz⟩ :
-      ∃ z : ∀ l, s (n + l), (z 0 : α) = x ∧ ∀ k, edist (z k : α) (z (k + 1) : α) ≤ B n / 2 ^ k := by
+      ∃ z : ∀ l, s (n + l), (z 0 : α) = x ∧ ∀ k, edist (z k : α) (z (k + 1) : α) ≤ Bn k := by
       -- We prove existence of the sequence by induction.
-      have : ∀ (l) (z : s (n + l)), ∃ z' : s (n + l + 1), edist (z : α) z' ≤ B n / 2 ^ l := by
+      have : ∀ (l) (z : s (n + l)), ∃ z' : s (n + l + 1), edist (z : α) z' ≤ Bn l := by
         intro l z
-        obtain ⟨z', z'_mem, hz'⟩ : ∃ z' ∈ s (n + l + 1), edist (z : α) z' < B n / 2 ^ l := by
+        obtain ⟨z', z'_mem, hz'⟩ : ∃ z' ∈ s (n + l + 1), edist (z : α) z' < Bn l := by
           refine exists_edist_lt_of_hausdorffEDist_lt (s := s (n + l)) z.2 ?_
-          simp only [div_eq_mul_inv, ENNReal.inv_pow]
+          simp only [Bn, ENNReal.div_eq_mul_inv, ENNReal.inv_pow]
           rw [← pow_add]
           apply hs <;> simp
         exact ⟨⟨z', z'_mem⟩, le_of_lt hz'⟩

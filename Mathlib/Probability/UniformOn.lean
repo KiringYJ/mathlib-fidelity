@@ -105,22 +105,24 @@ instance isProbabilityMeasure_uniformOn (hs : IsConditionable Measure.count s) :
 theorem uniformOn_empty (hs : IsConditionable Measure.count s) : uniformOn s hs ∅ = 0 := by simp
 
 theorem uniformOn_univ [Fintype Ω] [Nonempty Ω] {s : Set Ω} :
-    uniformOn Set.univ .univ s = Measure.count s / (Fintype.card Ω : ℝ≥0∞) := by
-  simp [uniformOn, cond_apply, div_eq_mul_inv, mul_comm]
+    uniformOn Set.univ .univ s = ENNReal.div (Measure.count s) (Fintype.card Ω)
+      ⟨Nat.cast_ne_zero.2 Fintype.card_ne_zero, Or.inr (ENNReal.natCast_ne_top _)⟩ := by
+  simp [uniformOn, cond_apply, ENNReal.div_eq_inv_mul]
 
 lemma uniformOn_apply_finset' {Ω : Type*} [DecidableEq Ω] {_ : SigmaAlgebra Ω} {s t : Finset Ω}
     (hs : IsConditionable Measure.count (s : Set Ω)) (ht : MeasurableSet (t : Set Ω)) :
-    uniformOn (s : Set Ω) hs (t : Set Ω) = (#(s ∩ t) : ℝ≥0∞) / (#s : ℝ≥0∞) := by
+    uniformOn (s : Set Ω) hs (t : Set Ω) = ENNReal.div (#(s ∩ t)) (#s)
+      ⟨hs.isUnit_card.ne_zero, Or.inr (ENNReal.natCast_ne_top _)⟩ := by
   rw [uniformOn, cond_apply hs, Measure.count_apply_finset' hs.measurableSet_of_count,
     ← coe_inter, Measure.count_apply_finset']
-  · exact ENNReal.div_eq_inv_mul.symm
+  · exact (ENNReal.div_eq_inv_mul _ _ _).symm
   rw [coe_inter]
   exact hs.measurableSet_of_count.inter ht
 
 theorem uniformOn_singleton (ω : Ω) (t : Set Ω) [Decidable (ω ∈ t)]
     (hω : IsConditionable Measure.count {ω}) :
     uniformOn {ω} hω t = if ω ∈ t then 1 else 0 := by
-  rw [uniformOn, cond_apply hω, Measure.count_singleton' hω.measurableSet_of_count, inv_one,
+  rw [uniformOn, cond_apply hω, Measure.count_singleton' hω.measurableSet_of_count, ENNReal.inv_one,
     one_mul]
   split_ifs
   · rw [(by simpa : ({ω} : Set Ω) ∩ t = {ω}), Measure.count_singleton' hω.measurableSet_of_count]
@@ -162,7 +164,8 @@ variable [MeasurableSingletonClass Ω]
 
 lemma uniformOn_apply_finset [DecidableEq Ω] {s t : Finset Ω}
     (hs : IsConditionable Measure.count (s : Set Ω)) :
-    uniformOn (s : Set Ω) hs (t : Set Ω) = (#(s ∩ t) : ℝ≥0∞) / (#s : ℝ≥0∞) :=
+    uniformOn (s : Set Ω) hs (t : Set Ω) = ENNReal.div (#(s ∩ t)) (#s)
+      ⟨hs.isUnit_card.ne_zero, Or.inr (ENNReal.natCast_ne_top _)⟩ :=
   uniformOn_apply_finset' hs t.measurableSet
 
 theorem pred_true_of_uniformOn_eq_one (hs : IsConditionable Measure.count s)
@@ -231,10 +234,11 @@ lemma uniformOn_pi [Finite Ω] {f : ι → Set Ω} (hf : ∀ i, (f i).Nonempty) 
   lift f to ι → Finset Ω using by simp [Set.toFinite]
   lift t to ι → Finset Ω using by simp [Set.toFinite]
   classical
-  simp only [← Fintype.coe_piFinset, uniformOn_apply_finset, ← Fintype.piFinset_inter,
+  simp only [← Fintype.coe_piFinset, uniformOn_apply_finset, ENNReal.div_eq_mul_inv,
+    ← Fintype.piFinset_inter,
     Fintype.card_piFinset, Nat.cast_prod]
-  symm
-  apply ENNReal.prod_div_distrib_of_ne_top
-  simp
+  rw [Finset.prod_mul_distrib, ENNReal.prod_inv_distrib]
+  intro i _ j _ _
+  exact Or.inr (ENNReal.natCast_ne_top _)
 
 end ProbabilityTheory

@@ -903,7 +903,7 @@ theorem haveLebesgueDecomposition_of_finiteMeasure [IsFiniteMeasure μ] [IsFinit
         specialize hE₃ A hA
         rw [lintegral_add_left measurable_const, lintegral_const, restrict_apply_univ]
         rw [Measure.sub_apply (hA.inter hE₁) hle, withDensity_apply _ (hA.inter hE₁)] at hE₃
-        refine add_le_of_le_tsub_right_of_le (hξle _ (hA.inter hE₁)) hE₃
+        refine ENNReal.add_le_of_le_monus_right_of_le (hξle _ (hA.inter hE₁)) hE₃
       -- from this, we can show `ξ + ε * E.indicator` is a function in `measurableLE` with
       -- integral greater than `ξ`
       have hξε : (ξ + E.indicator fun _ ↦ (ε : ℝ≥0∞)) ∈ measurableLE ν μ := by
@@ -927,8 +927,8 @@ theorem haveLebesgueDecomposition_of_finiteMeasure [IsFiniteMeasure μ] [IsFinit
     -- since `ν.withDensity ξ ≤ μ`, it is clear that `μ = μ₁ + ν.withDensity ξ`
     · rw [hμ₁]
       ext1 A hA
-      rw [Measure.coe_add, Pi.add_apply, Measure.sub_apply hA hle, add_comm,
-        add_tsub_cancel_of_le (hle A)]
+      rw [Measure.coe_add, Pi.add_apply, Measure.sub_apply hA hle,
+        ENNReal.monus_add_cancel_of_le (hle A)]
 
 /-- If any finite measure has a Lebesgue decomposition with respect to `ν`,
 then the same is true for any s-finite measure. -/

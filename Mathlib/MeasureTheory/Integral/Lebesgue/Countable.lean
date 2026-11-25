@@ -100,7 +100,7 @@ theorem _root_.ENNReal.count_const_le_le_of_tsum_le [MeasurableSingletonClass α
       (c / ε) := by
   rw [← lintegral_count] at tsum_le_c
   apply (MeasureTheory.meas_ge_le_lintegral_div a_mble.aemeasurable ε_ne_zero ε_ne_top).trans
-  exact ENNReal.div_le_div tsum_le_c rfl.le
+  exact ENNReal.div_le_div_right tsum_le_c ε ⟨ε_ne_zero, .inr ε_ne_top⟩ ⟨ε_ne_zero, .inr ε_ne_top⟩
 
 /-- Markov's inequality for the counting measure with hypothesis using `tsum` in `ℝ≥0`. -/
 theorem _root_.NNReal.count_const_le_le_of_tsum_le [MeasurableSingletonClass α] {a : α → ℝ≥0}
@@ -296,9 +296,9 @@ theorem SimpleFunc.exists_lt_lintegral_simpleFunc_of_lt_lintegral {m : SigmaAlge
     have c_ne_zero : c ≠ 0 := by
       intro hc
       simp only [hc, ENNReal.coe_zero, zero_mul, not_lt_zero] at hL
+    have hc₀ : (c : ℝ≥0∞) ≠ 0 := ENNReal.coe_ne_zero.2 c_ne_zero
     have hdiv {q : ℝ≥0∞} : (L / (c : ℝ≥0∞)) < q ↔ L < (c : ℝ≥0∞) * q := by
-      rw [ENNReal.div_lt_iff (Or.inl (ENNReal.coe_ne_zero.2 c_ne_zero))
-        (Or.inl ENNReal.coe_ne_top), mul_comm]
+      rw [ENNReal.div_lt_iff ⟨hc₀, .inr ENNReal.coe_ne_top⟩, mul_comm]
     obtain ⟨t, ht, ts, mlt, t_top⟩ :
       ∃ t : Set α, MeasurableSet t ∧ t ⊆ s ∧ (L / (c : ℝ≥0∞)) < μ t ∧ μ t < ∞ :=
       Measure.exists_subset_measure_lt_top hs (hdiv.2 hL)

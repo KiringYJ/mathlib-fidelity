@@ -232,12 +232,12 @@ open ENNReal
 
 @[simp]
 theorem infEDist_thickening (hδ : 0 < δ) (s : Set E) (x : E) :
-    infEDist x (thickening δ s) = infEDist x s - ENNReal.ofReal δ := by
+    infEDist x (thickening δ s) = monus (infEDist x s) (ENNReal.ofReal δ) := by
   obtain hs | hs := lt_or_ge (infEDist x s) (ENNReal.ofReal δ)
-  · rw [infEDist_zero_of_mem, tsub_eq_zero_of_le hs.le]
+  · rw [infEDist_zero_of_mem, monus_eq_zero_of_le hs.le]
     exact hs
-  refine (tsub_le_iff_right.2 infEDist_le_infEDist_thickening_add).antisymm' ?_
-  refine le_sub_of_add_le_right ofReal_ne_top ?_
+  refine (monus_le_iff.2 infEDist_le_infEDist_thickening_add).antisymm' ?_
+  refine le_monus_of_add_le_right ofReal_ne_top ?_
   refine le_infEDist.2 fun z hz => le_of_forall_gt fun r h => ?_
   cases r with
   | top =>
@@ -270,7 +270,7 @@ theorem cthickening_thickening (hε : 0 ≤ ε) (hδ : 0 < δ) (s : Set E) :
     cthickening ε (thickening δ s) = cthickening (ε + δ) s :=
   (cthickening_thickening_subset hε _ _).antisymm fun x => by
     simp_rw [mem_cthickening_iff, ENNReal.ofReal_add hε hδ.le, infEDist_thickening hδ]
-    exact tsub_le_iff_right.2
+    exact monus_le_iff.2
 
 -- Note: `interior (cthickening δ s) ≠ thickening δ s` in general
 @[simp]
@@ -280,9 +280,9 @@ theorem closure_thickening (hδ : 0 < δ) (s : Set E) :
 
 @[simp]
 theorem infEDist_cthickening (δ : ℝ) (s : Set E) (x : E) :
-    infEDist x (cthickening δ s) = infEDist x s - ENNReal.ofReal δ := by
+    infEDist x (cthickening δ s) = monus (infEDist x s) (ENNReal.ofReal δ) := by
   obtain hδ | hδ := le_or_gt δ 0
-  · rw [cthickening_of_nonpos hδ, infEDist_closure, ofReal_of_nonpos hδ, tsub_zero]
+  · rw [cthickening_of_nonpos hδ, infEDist_closure, ofReal_of_nonpos hδ, monus_zero]
   · rw [← closure_thickening hδ, infEDist_closure, infEDist_thickening hδ]
 
 @[simp]
@@ -297,7 +297,7 @@ theorem cthickening_cthickening (hε : 0 ≤ ε) (hδ : 0 ≤ δ) (s : Set E) :
     cthickening ε (cthickening δ s) = cthickening (ε + δ) s :=
   (cthickening_cthickening_subset hε hδ _).antisymm fun x => by
     simp_rw [mem_cthickening_iff, ENNReal.ofReal_add hε hδ, infEDist_cthickening]
-    exact tsub_le_iff_right.2
+    exact monus_le_iff.2
 
 @[simp]
 theorem thickening_ball (hε : 0 < ε) (hδ : 0 < δ) (x : E) :

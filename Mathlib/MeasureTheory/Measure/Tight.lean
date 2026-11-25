@@ -60,7 +60,7 @@ for all `μ ∈ S`, `μ Kᶜ ≤ ε`. -/
 lemma isTightMeasureSet_iff_exists_isCompact_measure_compl_le :
     IsTightMeasureSet S ↔ ∀ ε, 0 < ε → ∃ K : Set 𝓧, IsCompact K ∧ ∀ μ ∈ S, μ (Kᶜ) ≤ ε := by
   simp only [IsTightMeasureSet, ENNReal.tendsto_nhds ENNReal.zero_ne_top, gt_iff_lt, zero_add,
-    iSup_apply, mem_Icc, tsub_le_iff_right, zero_le, iSup_le_iff, true_and, eventually_smallSets,
+    iSup_apply, mem_Icc, ENNReal.monus_le_iff, zero_le, iSup_le_iff, true_and, eventually_smallSets,
     mem_cocompact]
   refine ⟨fun h ε hε ↦ ?_, fun h ε hε ↦ ?_⟩
   · obtain ⟨A, ⟨K, h1, h2⟩, hA⟩ := h ε hε
@@ -77,12 +77,13 @@ theorem isTightMeasureSet_singleton_of_innerRegularWRT [OpensSigmaAlgebra 𝓧] 
   let r := μ Set.univ
   cases lt_or_ge ε r with
   | inl hεr =>
-    have hεr' : r - ε < r := ENNReal.sub_lt_self (measure_ne_top μ _) hεr.ne_bot hε.ne'
-    obtain ⟨K, _, ⟨hK_compact, hK_closed⟩, hKμ⟩ := h .univ (r - ε) hεr'
+    have hεr' : ENNReal.monus r ε < r :=
+      ENNReal.monus_lt_self (measure_ne_top μ _) hεr.ne_bot hε.ne'
+    obtain ⟨K, _, ⟨hK_compact, hK_closed⟩, hKμ⟩ := h .univ (ENNReal.monus r ε) hεr'
     refine ⟨K, hK_compact, ?_⟩
     simp only [mem_singleton_iff, forall_eq]
-    rw [measure_compl hK_closed.measurableSet (measure_ne_top μ _), tsub_le_iff_right]
-    rw [ENNReal.sub_lt_iff_lt_right (ne_top_of_lt hεr) hεr.le, add_comm] at hKμ
+    rw [measure_compl hK_closed.measurableSet (measure_ne_top μ _), ENNReal.monus_le_iff]
+    rw [ENNReal.monus_lt_iff_lt_right (ne_top_of_lt hεr) hεr.le, add_comm] at hKμ
     exact hKμ.le
   | inr hεr => exact ⟨∅, isCompact_empty, by simpa⟩
 

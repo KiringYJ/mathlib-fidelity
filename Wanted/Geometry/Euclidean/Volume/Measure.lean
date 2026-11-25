@@ -14,5 +14,7 @@ open MeasureTheory Measure Module
 $\pi^{d/2} / (2^d \Gamma (d/2+1))$. -/
 proof_wanted MeasureTheory.Measure.addHaarScalarFactor_hausdorffMeasure_eq (d : ℕ) :
     (↑(addHaarScalarFactor (volume : Measure (EuclideanSpace ℝ (Fin d))) μH[d]) : ENNReal) =
-      volume (Metric.ball (0 : EuclideanSpace ℝ (Fin d)) 1) /
-        volume (Metric.ball (0 : Fin d → ℝ) 1)
+      ENNReal.div (volume (Metric.ball (0 : EuclideanSpace ℝ (Fin d)) 1))
+        (volume (Metric.ball (0 : Fin d → ℝ) 1))
+        ⟨(Metric.measure_ball_pos (volume : Measure (Fin d → ℝ)) 0 zero_lt_one).ne',
+          Or.inr measure_ball_ne_top⟩

@@ -671,6 +671,28 @@ lemma add_div_of_nonneg_right {hc : IsUnit c} (h : 0 ≤ c) :
   exact right_distrib_of_nonneg_of_ne_top
     (inv_nonneg_of_nonneg (ha := hc) h) (inv_lt_top c (hx := hc)).ne a b
 
+/-- Ordinary nonnegative division commutes with the embedding into the signed extended reals. -/
+theorem coe_ennreal_div (a b : ℝ≥0∞) (h : b ≠ 0 ∧ (a ≠ ⊤ ∨ b ≠ ⊤)) :
+    ((ENNReal.div a b h : ℝ≥0∞) : EReal) =
+      EReal.div (a : EReal) (b : EReal) (divDomain_coe_ennreal.2 h) := by
+  by_cases hb : b = ⊤
+  · subst b
+    change ((a * (⊤ : ℝ≥0∞)⁻¹ : ℝ≥0∞) : EReal) = EReal.div (a : EReal) ⊤ _
+    rw [ENNReal.inv_top, mul_zero, coe_ennreal_zero]
+    rfl
+  have hu : IsUnit (b : EReal) :=
+    isUnit_iff.2 ⟨coe_ennreal_ne_bot b, coe_ennreal_eq_top_iff.not.2 hb, coe_ennreal_ne_zero.2 h.1⟩
+  have hinv : ((b⁻¹ : ℝ≥0∞) : EReal) = Checked.inv (b : EReal) hu :=
+    eq_inv_of_mul_eq_one_left₀ (by
+      rw [← coe_ennreal_mul, ENNReal.inv_mul_cancel h.1 hb, coe_ennreal_one])
+  change ((a * b⁻¹ : ℝ≥0∞) : EReal) = _
+  rw [div_eq_mul_inv _ _ (hb := hu), coe_ennreal_mul, hinv]
+
+theorem div_coe_ennreal_nonneg (a b : ℝ≥0∞) (h : DivDomain (a : EReal) (b : EReal)) :
+    0 ≤ EReal.div (a : EReal) (b : EReal) h := by
+  rw [← coe_ennreal_div a b (divDomain_coe_ennreal.1 h)]
+  exact coe_ennreal_nonneg _
+
 end EReal
 
 namespace Mathlib.Meta.Positivity

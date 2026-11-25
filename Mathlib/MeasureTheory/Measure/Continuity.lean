@@ -104,8 +104,8 @@ theorem _root_.Directed.measure_iInter [Countable ι]
     μ (⋂ i, s i) = ⨅ i, μ (s i) := by
   rcases hfin with ⟨k, hk⟩
   have : ∀ t ⊆ s k, μ t ≠ ∞ := fun t ht => ne_top_of_le_ne_top hk (measure_mono ht)
-  rw [← ENNReal.sub_sub_cancel hk (iInf_le (fun i => μ (s i)) k), ENNReal.sub_iInf, ←
-    ENNReal.sub_sub_cancel hk (measure_mono (iInter_subset _ k)), ←
+  rw [← ENNReal.monus_monus_cancel hk (iInf_le (fun i => μ (s i)) k), ENNReal.monus_iInf, ←
+    ENNReal.monus_monus_cancel hk (measure_mono (iInter_subset _ k)), ←
     measure_sdiff (iInter_subset _ k) (.iInter h) (this _ (iInter_subset _ k)),
     sdiff_iInter, Directed.measure_iUnion]
   · congr 1

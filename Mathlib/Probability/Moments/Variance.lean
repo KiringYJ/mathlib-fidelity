@@ -362,16 +362,17 @@ theorem variance_le_expectation_sq [IsProbabilityMeasure μ] {X : Ω → ℝ}
   · exact (AEMeasurable.pow_const (hm.aemeasurable.sub_const _) _).aestronglyMeasurable
 
 theorem evariance_def' [IsProbabilityMeasure μ] {X : Ω → ℝ} (hX : AEStronglyMeasurable X μ) :
-    evariance X μ = (∫⁻ ω, ‖X ω‖ₑ ^ 2 ∂μ) - ENNReal.ofReal ((∫ ω, X ω ∂μ) ^ 2) := by
+    evariance X μ =
+      ENNReal.monus (∫⁻ ω, ‖X ω‖ₑ ^ 2 ∂μ) (ENNReal.ofReal ((∫ ω, X ω ∂μ) ^ 2)) := by
   by_cases hℒ : MemLp X 2 μ
-  · rw [← ofReal_variance hℒ, variance_eq_sub hℒ, ENNReal.ofReal_sub _ (sq_nonneg _)]
+  · rw [← ofReal_variance hℒ, variance_eq_sub hℒ, ENNReal.ofReal_monus _ (sq_nonneg _)]
     congr
     simp_rw [← enorm_pow, enorm]
     rw [lintegral_coe_eq_integral]
     · simp
     · simpa using hℒ.abs.integrable_sq
   · symm
-    rw [evariance_eq_top hX hℒ, ENNReal.sub_eq_top_iff]
+    rw [evariance_eq_top hX hℒ, ENNReal.monus_eq_top_iff]
     refine ⟨?_, ENNReal.ofReal_ne_top⟩
     rw [MemLp, not_and] at hℒ
     specialize hℒ hX
@@ -383,7 +384,8 @@ theorem evariance_def' [IsProbabilityMeasure μ] {X : Ω → ℝ} (hX : AEStrong
 /-- **Chebyshev's inequality** for `ℝ≥0∞`-valued variance. -/
 theorem meas_ge_le_evariance_div_sq {X : Ω → ℝ} (hX : AEStronglyMeasurable X μ) {c : ℝ≥0}
     (hc : c ≠ 0) : μ {ω | ↑c ≤ |X ω - ∫ x, X x ∂μ|} ≤
-      (evariance X μ / ((c : ℝ≥0∞) ^ 2)) := by
+      ENNReal.div (evariance X μ) ((c : ℝ≥0∞) ^ 2)
+        ⟨pow_ne_zero _ (ENNReal.coe_ne_zero.2 hc), Or.inr (by finiteness)⟩ := by
   have A : (c : ℝ≥0∞) ≠ 0 := by rwa [Ne, ENNReal.coe_eq_zero]
   have B : AEStronglyMeasurable (fun _ : Ω => ∫ ω, X ω ∂μ) μ := aestronglyMeasurable_const
   convert!
@@ -402,8 +404,11 @@ theorem meas_ge_le_evariance_div_sq {X : Ω → ℝ} (hX : AEStronglyMeasurable 
 from its expectation in terms of the variance. -/
 theorem meas_ge_le_variance_div_sq [IsFiniteMeasure μ] {X : Ω → ℝ} (hX : MemLp X 2 μ) {c : ℝ}
     (hc : 0 < c) : μ {ω | c ≤ |X ω - ∫ x, X x ∂μ|} ≤ ENNReal.ofReal (variance X μ / c ^ 2) := by
-  rw [ENNReal.ofReal_div_of_pos (sq_pos_of_ne_zero hc.ne.symm), hX.ofReal_variance_eq]
-  convert! @meas_ge_le_evariance_div_sq _ _ _ _ hX.1 c.toNNReal (by simp [hc]) using 1
+  rw [ENNReal.ofReal_div_of_pos (sq_pos_of_ne_zero hc.ne.symm), hX.ofReal_variance_eq,
+    ENNReal.div_eq_mul_inv]
+  have h := @meas_ge_le_evariance_div_sq _ _ _ _ hX.1 c.toNNReal (by simp [hc])
+  rw [ENNReal.div_eq_mul_inv] at h
+  convert! h using 1
   · simp
   · rw [ENNReal.ofReal_pow hc.le]
     rfl

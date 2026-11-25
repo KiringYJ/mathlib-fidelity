@@ -92,7 +92,7 @@ lemma distribHaarChar_mul (g : G) (s : Set A) : distribHaarChar A g * μ s = μ 
     ← this, ← Measure.smul_apply, ← isAddLeftInvariant_eq_smul_of_regular]
 
 lemma distribHaarChar_eq_div (hs₀ : μ s ≠ 0) (hs : μ s ≠ ∞) (g : G) :
-    distribHaarChar A g = μ (g • s) / μ s := by
+    distribHaarChar A g = ENNReal.div (μ (g • s)) (μ s) ⟨hs₀, Or.inr hs⟩ := by
   rw [← distribHaarChar_mul, ENNReal.mul_div_cancel_right hs₀ hs]
 
 lemma distribHaarChar_eq_of_measure_smul_eq_mul (hs₀ : μ s ≠ 0) (hs : μ s ≠ ∞) {r : ℝ≥0}

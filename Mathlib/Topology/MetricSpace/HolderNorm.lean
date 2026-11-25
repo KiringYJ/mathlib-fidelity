@@ -208,10 +208,13 @@ lemma eHolderNorm_eq_zero {r : ℝ≥0} {f : X → Y} :
     · rw [eHolderNorm, ← ENNReal.bot_eq_zero, iInf₂_eq_bot] at h
       rw [← edist_eq_zero, ← nonpos_iff_eq_zero]
       refine le_of_forall_gt fun b hb => ?_
-      obtain ⟨C, hC, hC'⟩ := h (b / (edist x₁ x₂ ^ (r : ℝ)))
-        (ENNReal.div_pos hb.ne.symm (ENNReal.rpow_lt_top_of_nonneg zero_le_coe
-          (edist_lt_top x₁ x₂).ne).ne)
-      exact lt_of_le_of_lt (hC x₁ x₂) <| ENNReal.mul_lt_of_lt_div hC'
+      have hz : edist x₁ x₂ ^ (r : ℝ) ≠ 0 :=
+        (ENNReal.rpow_pos (edist_pos.2 hx) (edist_lt_top x₁ x₂).ne).ne'
+      have ht : edist x₁ x₂ ^ (r : ℝ) ≠ ∞ :=
+        (ENNReal.rpow_lt_top_of_nonneg zero_le_coe (edist_lt_top x₁ x₂).ne).ne
+      obtain ⟨C, hC, hC'⟩ := h (ENNReal.div b _ ⟨hz, .inr ht⟩)
+        (ENNReal.div_pos hb.ne.symm hz ht)
+      exact lt_of_le_of_lt (hC x₁ x₂) <| ENNReal.mul_lt_of_lt_div ⟨hz, .inr ht⟩ hC'
   · intro h
     rcases isEmpty_or_nonempty X with hX | hX
     · exact eHolderNorm_of_isEmpty
@@ -303,14 +306,16 @@ lemma eHolderNorm_smul {α} [NormedRing α] [Module α Y] [NormSMulClass α Y] (
   · rw [nnnorm_eq_zero] at hc
     simp [hc]
   by_cases hf : MemHolder r f
-  · refine le_antisymm ((hf.holderWith.smul c).eHolderNorm_le.trans ?_) <| mul_le_of_le_div' ?_
+  · have h₀ := ENNReal.coe_ne_zero.2 hc
+    refine le_antisymm ((hf.holderWith.smul c).eHolderNorm_le.trans ?_) <|
+      mul_le_of_le_div' ⟨h₀, .inr coe_ne_top⟩ ?_
     · rw [coe_mul, hf.coe_nnHolderNorm_eq_eHolderNorm, mul_comm]
     · have hunit : IsUnit ‖c‖₊ := isUnit_iff_ne_zero.mpr hc
       rw [← (hf.holderWith.smul c).memHolder.coe_nnHolderNorm_eq_eHolderNorm,
         ← ENNReal.coe_div (hr := hunit)]
       refine HolderWith.eHolderNorm_le fun x₁ x₂ => ?_
-      rw [ENNReal.coe_div (hr := hunit), ← ENNReal.mul_div_right_comm,
-        ENNReal.le_div_iff_mul_le (Or.inl <| coe_ne_zero.2 hc) <| Or.inl coe_ne_top,
+      rw [ENNReal.coe_div (hr := hunit), ← ENNReal.mul_div_right_comm ⟨h₀, .inr coe_ne_top⟩,
+        ENNReal.le_div_iff_mul_le ⟨h₀, .inr coe_ne_top⟩,
         mul_comm, ← smul_eq_mul, ← ENNReal.smul_def, ← edist_smul₀, ← Pi.smul_apply,
         ← Pi.smul_apply]
       exact hf.smul.holderWith x₁ x₂

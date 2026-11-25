@@ -24,6 +24,11 @@ For signed extended reals, slash uses `EReal.div` with a nonzero denominator and
 finite operand. A finite numerator divided by either infinity gives zero. Inversion on signed
 extended reals still requires a unit.
 
+For nonnegative extended reals, slash uses `ENNReal.div` with a nonzero denominator and at
+least one finite operand. Use `ENNReal.extendedDiv` for the continuous quotient that also
+admits a nonzero numerator over zero, and `ENNReal.divInf` for the total infimum quotient.
+Reciprocals and integer powers use the standalone operations on `ENNReal`.
+
 ## Choosing a quotient
 
 Exact right division by a unit solves `q * b = a`. Under a multiplicative embedding into a
@@ -40,7 +45,7 @@ Euclidean structure. Ordinals and binary numerals use their named Euclidean oper
 Slash rejects a natural or integer operand, including a definitionally equal type. Use a named
 operation or explicitly cast the operands to a carrier supporting the intended quotient.
 When an installed operation has a different mathematical specification, follow its own laws.
-For instance, `ENNReal.div_eq_sInf` describes the current quotient on extended nonnegative
+For instance, `ENNReal.divInf_eq_sInf` states the infimum quotient on extended nonnegative
 reals.
 
 ## Implementation notes

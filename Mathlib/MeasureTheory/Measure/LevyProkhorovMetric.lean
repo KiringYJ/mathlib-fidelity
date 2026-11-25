@@ -132,7 +132,7 @@ lemma levyProkhorovEDist_triangle [OpensSigmaAlgebra Ω] (μ ν κ : Measure Ω)
   · simp [LPνκ_finite]
   apply levyProkhorovEDist_le_of_forall_add_pos_le
   intro ε B ε_pos ε_lt_top B_mble
-  have half_ε_pos : 0 < ε / 2 := ENNReal.div_pos ε_pos.ne' ofNat_ne_top
+  have half_ε_pos : 0 < ε / 2 := ENNReal.half_pos ε_pos.ne'
   have half_ε_finite : ε / 2 ≠ ∞ := ENNReal.div_ne_top ε_lt_top.ne two_ne_zero
   let r := levyProkhorovEDist μ ν + ε / 2
   let s := levyProkhorovEDist ν κ + ε / 2
@@ -234,9 +234,9 @@ lemma levyProkhorovEDist_le_of_forall_le
   specialize h ε (thickening ε.toReal B)ᶜ ε_gt ε_lt_top Tc_mble
   rw [prob_compl_eq_one_sub isOpen_thickening.measurableSet] at h
   have almost := add_le_add (c := μ (thickening ε.toReal B)) h rfl.le
-  rw [tsub_add_cancel_of_le prob_le_one, add_assoc] at almost
-  apply (tsub_le_tsub_right almost _).trans
-  rw [ENNReal.add_sub_cancel_left (measure_ne_top ν _), add_comm ε]
+  rw [ENNReal.monus_add_cancel_of_le prob_le_one, add_assoc] at almost
+  apply (ENNReal.monus_le_monus almost le_rfl).trans
+  rw [ENNReal.add_monus_cancel_left (measure_ne_top ν _), add_comm ε]
 
 /-- A simple sufficient condition for bounding `levyProkhorovDist` between probability measures
 from above. The condition involves only one of two natural bounds, the other bound is for free. -/
@@ -523,16 +523,17 @@ lemma ProbabilityMeasure.toMeasure_add_pos_gt_mem_nhds (P : ProbabilityMeasure �
   · exact Eventually.of_forall (fun _ ↦ lt_of_lt_of_le easy le_add_self)
   by_cases ε_top : ε = ∞
   · simp [ε_top, measure_lt_top]
-  have aux : P.toMeasure G - ε < liminf (fun Q ↦ Q.toMeasure G) (𝓝 P) := by
-    apply lt_of_lt_of_le (ENNReal.sub_lt_self (by finiteness) _ _)
+  have aux : ENNReal.monus (P.toMeasure G) ε < liminf (fun Q ↦ Q.toMeasure G) (𝓝 P) := by
+    apply lt_of_lt_of_le (ENNReal.monus_lt_self (by finiteness) _ _)
         <| ProbabilityMeasure.le_liminf_measure_open_of_tendsto tendsto_id G_open
     · exact (lt_of_lt_of_le ε_pos easy).ne.symm
     · exact ε_pos.ne.symm
   filter_upwards [gt_mem_sets_of_limsInf_gt (α := ℝ≥0∞) isBounded_ge_of_bot
-      (show P.toMeasure G - ε < limsInf ((𝓝 P).map (fun Q ↦ Q.toMeasure G)) from aux)] with Q hQ
+      (show ENNReal.monus (P.toMeasure G) ε <
+        limsInf ((𝓝 P).map (fun Q ↦ Q.toMeasure G)) from aux)] with Q hQ
   simp only [preimage_ofPred_eq, mem_ofPred_eq] at hQ
   convert! ENNReal.add_lt_add_right ε_top hQ
-  exact (tsub_add_cancel_of_le easy).symm
+  exact (ENNReal.monus_add_cancel_of_le easy).symm
 
 variable [SeparableSpace Ω]
 

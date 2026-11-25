@@ -452,11 +452,9 @@ theorem mul_le_addHaar_image_of_lt_det (A : E →L[ℝ] E) {m : ℝ≥0}
   -- the condition to be checked can be reformulated in terms of the inverse maps
   suffices H : μ (F.symm '' F.target) ≤ (m⁻¹ : ℝ≥0) * μ F.target by
     change (m : ℝ≥0∞) * μ F.source ≤ μ F.target
-    rwa [← F.symm_image_target_eq_source, mul_comm, ← ENNReal.le_div_iff_mul_le,
-      ENNReal.div_eq_mul_inv, mul_comm, ← ENNReal.coe_inv (hr := mpos.ne'.isUnit)]
-    · apply Or.inl
-      simpa only [ENNReal.coe_eq_zero, Ne] using mpos.ne'
-    · simp
+    rwa [← F.symm_image_target_eq_source,
+      ENNReal.mul_le_iff_le_inv (ENNReal.coe_ne_zero.2 mpos.ne') ENNReal.coe_ne_top,
+      ← ENNReal.coe_inv (hr := mpos.ne'.isUnit)]
   -- as `f⁻¹` is well approximated by `B⁻¹`, the conclusion follows from `hδ₀`
   -- and our choice of `δ`.
   apply hδ₀ _ _ ((hf'.to_inv hδ).mono_num ?_)
@@ -961,8 +959,8 @@ theorem lintegral_abs_det_fderiv_le_addHaar_image_aux1 (hs : MeasurableSet s)
         zero_le, abs_zero]
     let m : ℝ≥0 := Real.toNNReal |A.det| - ε
     have I : (m : ℝ≥0∞) < ENNReal.ofReal |A.det| := by
-      simp only [m, ENNReal.ofReal, ENNReal.coe_sub]
-      apply ENNReal.sub_lt_self ENNReal.coe_ne_top
+      simp only [m, ENNReal.ofReal, ENNReal.coe_monus]
+      apply ENNReal.monus_lt_self ENNReal.coe_ne_top
       · simpa only [abs_nonpos_iff, Real.toNNReal_eq_zero, ENNReal.coe_eq_zero, Ne] using hA
       · simp only [εpos.ne', ENNReal.coe_eq_zero, Ne, not_false_iff]
     rcases ((mul_le_addHaar_image_of_lt_det μ A I).and self_mem_nhdsWithin).exists with ⟨δ, h, δpos⟩
@@ -975,8 +973,7 @@ theorem lintegral_abs_det_fderiv_le_addHaar_image_aux1 (hs : MeasurableSet s)
       · simp only [ht, εpos.ne', ENNReal.mul_top, ENNReal.coe_eq_zero, le_top, Ne,
           not_false_iff, _root_.add_top]
       have := h t g (htg.mono_num (min_le_left _ _))
-      rwa [ENNReal.coe_sub, ENNReal.sub_mul, tsub_le_iff_right] at this
-      simp only [ht, imp_true_iff, Ne, not_false_iff]
+      rwa [ENNReal.coe_monus, ENNReal.monus_mul (fun _ _ => ht), ENNReal.monus_le_iff] at this
   choose δ hδ using this
   obtain ⟨t, A, t_disj, t_meas, t_cover, ht, -⟩ :
     ∃ (t : ℕ → Set E) (A : ℕ → E →L[ℝ] E),

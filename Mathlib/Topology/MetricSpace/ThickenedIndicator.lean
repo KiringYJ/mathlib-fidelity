@@ -52,21 +52,17 @@ these values using `infEDist _ E`.
 `thickenedIndicatorAux` is the unbundled `ℝ≥0∞`-valued function. See `thickenedIndicator`
 for the (bundled) bounded continuous function with `ℝ≥0`-values. -/
 def thickenedIndicatorAux (δ : ℝ) (E : Set α) : α → ℝ≥0∞ :=
-  fun x : α => (1 : ℝ≥0∞) - (infEDist x E / ENNReal.ofReal δ)
+  fun x : α => ENNReal.monus 1 (ENNReal.divInf (infEDist x E) (ENNReal.ofReal δ))
 
 theorem continuous_thickenedIndicatorAux {δ : ℝ} (δ_pos : 0 < δ) (E : Set α) :
     Continuous (thickenedIndicatorAux δ E) := by
-  unfold thickenedIndicatorAux
-  let f := fun x : α => (⟨1, (infEDist x E / ENNReal.ofReal δ)⟩ : ℝ≥0 × ℝ≥0∞)
-  let sub := fun p : ℝ≥0 × ℝ≥0∞ => (p.1 : ℝ≥0∞) - p.2
-  change Continuous (sub ∘ f)
-  apply (@ENNReal.continuous_nnreal_sub 1).comp
-  apply (ENNReal.continuous_div_const (ENNReal.ofReal δ) _).comp continuous_infEDist
-  norm_num [δ_pos]
+  exact (ENNReal.continuous_monus_left ENNReal.one_ne_top).comp
+    ((ENNReal.continuous_divInf_const (ENNReal.ofReal δ)
+      (ENNReal.ofReal_pos.2 δ_pos).ne').comp continuous_infEDist)
 
 theorem thickenedIndicatorAux_le_one (δ : ℝ) (E : Set α) (x : α) :
-    thickenedIndicatorAux δ E x ≤ 1 := by
-  apply tsub_le_self (α := ℝ≥0∞)
+    thickenedIndicatorAux δ E x ≤ 1 :=
+  ENNReal.monus_le_self
 
 @[aesop safe (rule_sets := [finiteness])]
 theorem thickenedIndicatorAux_lt_top {δ : ℝ} {E : Set α} {x : α} :
@@ -79,7 +75,7 @@ theorem thickenedIndicatorAux_closure_eq (δ : ℝ) (E : Set α) :
 
 theorem thickenedIndicatorAux_one (δ : ℝ) (E : Set α) {x : α} (x_in_E : x ∈ E) :
     thickenedIndicatorAux δ E x = 1 := by
-  simp [thickenedIndicatorAux, infEDist_zero_of_mem x_in_E, tsub_zero]
+  simp [thickenedIndicatorAux, ENNReal.divInf, infEDist_zero_of_mem x_in_E]
 
 theorem thickenedIndicatorAux_one_of_mem_closure (δ : ℝ) (E : Set α) {x : α}
     (x_mem : x ∈ closure E) : thickenedIndicatorAux δ E x = 1 := by
@@ -88,16 +84,16 @@ theorem thickenedIndicatorAux_one_of_mem_closure (δ : ℝ) (E : Set α) {x : α
 theorem thickenedIndicatorAux_zero {δ : ℝ} (δ_pos : 0 < δ) (E : Set α) {x : α}
     (x_out : x ∉ thickening δ E) : thickenedIndicatorAux δ E x = 0 := by
   rw [thickening, mem_ofPred_eq, not_lt] at x_out
-  unfold thickenedIndicatorAux
-  apply le_antisymm _ bot_le
-  have key := tsub_le_tsub
-    (@rfl _ (1 : ℝ≥0∞)).le (ENNReal.div_le_div x_out (@rfl _ (ENNReal.ofReal δ : ℝ≥0∞)).le)
-  rw [ENNReal.div_self (ne_of_gt (ENNReal.ofReal_pos.mpr δ_pos)) ofReal_ne_top] at key
-  simpa [tsub_self] using key
+  apply ENNReal.monus_eq_zero_of_le
+  calc
+    1 = ENNReal.ofReal δ * (ENNReal.ofReal δ)⁻¹ :=
+      (ENNReal.mul_inv_cancel (ENNReal.ofReal_pos.2 δ_pos).ne' ofReal_ne_top).symm
+    _ ≤ infEDist x E * (ENNReal.ofReal δ)⁻¹ := mul_left_mono x_out
 
 theorem thickenedIndicatorAux_mono {δ₁ δ₂ : ℝ} (hle : δ₁ ≤ δ₂) (E : Set α) :
     thickenedIndicatorAux δ₁ E ≤ thickenedIndicatorAux δ₂ E :=
-  fun _ => tsub_le_tsub (@rfl ℝ≥0∞ 1).le (ENNReal.div_le_div rfl.le (ofReal_le_ofReal hle))
+  fun _ => ENNReal.monus_le_monus le_rfl <|
+    mul_right_mono (ENNReal.inv_le_inv.2 (ofReal_le_ofReal hle))
 
 theorem indicator_le_thickenedIndicatorAux (δ : ℝ) (E : Set α) :
     (E.indicator fun _ => (1 : ℝ≥0∞)) ≤ thickenedIndicatorAux δ E := by
@@ -108,17 +104,12 @@ theorem indicator_le_thickenedIndicatorAux (δ : ℝ) (E : Set α) :
 
 theorem thickenedIndicatorAux_subset (δ : ℝ) {E₁ E₂ : Set α} (subset : E₁ ⊆ E₂) :
     thickenedIndicatorAux δ E₁ ≤ thickenedIndicatorAux δ E₂ :=
-  fun _ => tsub_le_tsub (@rfl ℝ≥0∞ 1).le (ENNReal.div_le_div (infEDist_anti subset) rfl.le)
+  fun _ => ENNReal.monus_le_monus le_rfl (mul_left_mono (infEDist_anti subset))
 
 lemma thickenedIndicatorAux_mono_infEDist (δ : ℝ) {E : Set α} {x y : α}
     (h : infEDist x E ≤ infEDist y E) :
-    thickenedIndicatorAux δ E y ≤ thickenedIndicatorAux δ E x := by
-  simp only [thickenedIndicatorAux]
-  rcases le_total (infEDist x E / ENNReal.ofReal δ) 1 with hle | hle
-  · rw [ENNReal.sub_le_sub_iff_left hle (by simp)]
-    gcongr
-  · rw [tsub_eq_zero_of_le hle, tsub_eq_zero_of_le]
-    exact hle.trans (by gcongr)
+    thickenedIndicatorAux δ E y ≤ thickenedIndicatorAux δ E x :=
+  ENNReal.monus_le_monus le_rfl (mul_left_mono h)
 
 /-- As the thickening radius δ tends to 0, the δ-thickened indicator of a set E (in α) tends
 pointwise (i.e., w.r.t. the product topology on `α → ℝ≥0∞`) to the indicator function of the
@@ -262,21 +253,23 @@ lemma lipschitzWith_thickenedIndicator {δ : ℝ} (δ_pos : 0 < δ) (E : Set α)
   · specialize this y x (le_of_not_ge h)
     rwa [edist_comm, edist_comm x]
   simp_rw [edist_dist, NNReal.dist_eq, thickenedIndicator_apply, coe_toNNReal_eq_toReal]
-  rw [← ENNReal.toReal_sub_of_le (thickenedIndicatorAux_mono_infEDist _ h) (by finiteness)]
-  simp only [thickenedIndicatorAux, abs_toReal, ne_eq, sub_eq_top_iff, one_ne_top, false_and,
-    not_false_eq_true, and_true, ofReal_toReal]
-  rw [ENNReal.coe_inv, ENNReal.ofReal, ENNReal.div_eq_mul_inv, ENNReal.div_eq_mul_inv]
+  rw [← ENNReal.toReal_monus_of_le (thickenedIndicatorAux_mono_infEDist _ h) (by finiteness)]
+  rw [abs_toReal, ofReal_toReal (ENNReal.monus_ne_top (thickenedIndicatorAux_lt_top.ne))]
+  simp only [thickenedIndicatorAux, ENNReal.divInf, ENNReal.ofReal]
+  rw [ENNReal.coe_inv (hr := (Real.toNNReal_pos.2 δ_pos).ne'.isUnit)]
   by_cases h_le : infEDist y E * (↑δ.toNNReal)⁻¹ ≤ 1
-  · calc 1 - infEDist x E * (↑δ.toNNReal)⁻¹ - (1 - infEDist y E * (↑δ.toNNReal)⁻¹)
-    _ ≤ infEDist y E * (↑δ.toNNReal)⁻¹ - infEDist x E * (↑δ.toNNReal)⁻¹ := by
-      rw [ENNReal.sub_sub_sub_cancel_left (by finiteness) h_le]
-    _ ≤ (↑δ.toNNReal)⁻¹ * edist x y := by
-      rw [← ENNReal.sub_mul (by simp [δ_pos]), mul_comm, edist_comm]
-      gcongr
-      simp only [tsub_le_iff_right]
-      exact infEDist_le_edist_add_infEDist
-  · simp only [tsub_le_iff_right]
-    rw [tsub_eq_zero_of_le (not_le.mp h_le).le, add_zero, mul_comm]
+  · calc
+      ENNReal.monus (ENNReal.monus 1 (infEDist x E * (↑δ.toNNReal)⁻¹))
+          (ENNReal.monus 1 (infEDist y E * (↑δ.toNNReal)⁻¹)) ≤
+          ENNReal.monus (infEDist y E * (↑δ.toNNReal)⁻¹) (infEDist x E * (↑δ.toNNReal)⁻¹) := by
+        rw [ENNReal.monus_monus_monus_cancel_left ENNReal.one_ne_top h_le]
+      _ ≤ (↑δ.toNNReal)⁻¹ * edist x y := by
+        rw [← ENNReal.monus_mul (by simp [δ_pos]), mul_comm, edist_comm]
+        gcongr
+        rw [ENNReal.monus_le_iff]
+        exact infEDist_le_edist_add_infEDist
+  · simp only [ENNReal.monus_le_iff]
+    rw [ENNReal.monus_eq_zero_of_le (not_le.mp h_le).le, add_zero, mul_comm]
     calc 1
     _ ≤ infEDist y E * (↑δ.toNNReal)⁻¹ := (not_le.mp h_le).le
     _ ≤ edist x y * (↑δ.toNNReal)⁻¹ + infEDist x E * (↑δ.toNNReal)⁻¹ := by

@@ -204,7 +204,7 @@ theorem MemLp.exists_hasCompactSupport_integral_rpow_sub_le
   change eLpNorm _ (ENNReal.ofReal p) _ ≤ _ at hg
   refine ⟨g, g_support, ?_, g_cont, g_mem⟩
   rw [(hf.sub g_mem).eLpNorm_eq_integral_rpow_norm B ENNReal.coe_ne_top,
-    ENNReal.ofReal_le_ofReal_iff I.le, ENNReal.one_div, ENNReal.toReal_inv (ha := hpUnit)] at hg
+    ENNReal.ofReal_le_ofReal_iff I.le, ENNReal.toReal_inv (ha := hpUnit)] at hg
   simp only [ENNReal.toReal_ofReal hp.le, one_div₀] at hg
   exact (Real.rpow_le_rpow_iff (by positivity) hε.le (inv_pos.2 hp)).mp hg
 
@@ -296,7 +296,7 @@ theorem MemLp.exists_boundedContinuous_integral_rpow_sub_le [μ.WeaklyRegular] {
   change eLpNorm _ (ENNReal.ofReal p) _ ≤ _ at hg
   refine ⟨g, ?_, g_mem⟩
   rw [(hf.sub g_mem).eLpNorm_eq_integral_rpow_norm B ENNReal.coe_ne_top,
-    ENNReal.ofReal_le_ofReal_iff I.le, ENNReal.one_div, ENNReal.toReal_inv (ha := hpUnit)] at hg
+    ENNReal.ofReal_le_ofReal_iff I.le, ENNReal.toReal_inv (ha := hpUnit)] at hg
   simp only [ENNReal.toReal_ofReal hp.le, one_div₀] at hg
   exact (Real.rpow_le_rpow_iff (by positivity) hε.le (inv_pos.2 hp)).mp hg
 

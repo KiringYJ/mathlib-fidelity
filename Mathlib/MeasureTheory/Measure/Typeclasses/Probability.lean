@@ -142,17 +142,17 @@ instance IsProbabilityMeasure_comap_equiv (f : β ≃ᵐ α) : IsProbabilityMeas
 /-- Note that this is not quite as useful as it looks because the measure takes values in `ℝ≥0∞`.
 Thus the subtraction appearing is the truncated subtraction of `ℝ≥0∞`, rather than the
 better-behaved subtraction of `ℝ`. -/
-lemma prob_compl_eq_one_sub₀ (h : NullMeasurableSet s μ) : μ sᶜ = 1 - μ s := by
+lemma prob_compl_eq_one_sub₀ (h : NullMeasurableSet s μ) : μ sᶜ = ENNReal.monus 1 (μ s) := by
   rw [measure_compl₀ h (measure_ne_top _ _), measure_univ]
 
 /-- Note that this is not quite as useful as it looks because the measure takes values in `ℝ≥0∞`.
 Thus the subtraction appearing is the truncated subtraction of `ℝ≥0∞`, rather than the
 better-behaved subtraction of `ℝ`. -/
-theorem prob_compl_eq_one_sub (hs : MeasurableSet s) : μ sᶜ = 1 - μ s :=
+theorem prob_compl_eq_one_sub (hs : MeasurableSet s) : μ sᶜ = ENNReal.monus 1 (μ s) :=
   prob_compl_eq_one_sub₀ hs.nullMeasurableSet
 
 @[simp] lemma prob_compl_eq_zero_iff₀ (hs : NullMeasurableSet s μ) : μ sᶜ = 0 ↔ μ s = 1 := by
-  rw [prob_compl_eq_one_sub₀ hs, tsub_eq_zero_iff_le, one_le_prob_iff]
+  rw [prob_compl_eq_one_sub₀ hs, ENNReal.monus_eq_zero_iff_le, one_le_prob_iff]
 
 lemma prob_compl_eq_zero_iff (hs : MeasurableSet s) : μ sᶜ = 0 ↔ μ s = 1 := by
   simp [hs]
@@ -221,19 +221,19 @@ instance {f : α → β} (hf : AEMeasurable f μ := by fun_prop) :
   · infer_instance
 
 lemma prob_compl_lt_one_sub_of_lt_prob {p : ℝ≥0∞} (hμs : p < μ s) (s_mble : MeasurableSet s) :
-    μ sᶜ < 1 - p := by
+    μ sᶜ < ENNReal.monus 1 p := by
   rcases eq_zero_or_isProbabilityMeasure μ with rfl | h
   · simp at hμs
   · rw [prob_compl_eq_one_sub s_mble]
-    apply ENNReal.sub_lt_of_sub_lt prob_le_one (Or.inl one_ne_top)
+    apply ENNReal.monus_lt_of_monus_lt prob_le_one (Or.inl one_ne_top)
     convert! hμs
-    exact ENNReal.sub_sub_cancel one_ne_top (lt_of_lt_of_le hμs prob_le_one).le
+    exact ENNReal.monus_monus_cancel one_ne_top (lt_of_lt_of_le hμs prob_le_one).le
 
 lemma prob_compl_le_one_sub_of_le_prob {p : ℝ≥0∞} (hμs : p ≤ μ s) (s_mble : MeasurableSet s) :
-    μ sᶜ ≤ 1 - p := by
+    μ sᶜ ≤ ENNReal.monus 1 p := by
   rcases eq_zero_or_isProbabilityMeasure μ with rfl | h
   · simp
-  · simpa [prob_compl_eq_one_sub s_mble] using tsub_le_tsub_left hμs 1
+  · simpa [prob_compl_eq_one_sub s_mble] using ENNReal.monus_le_monus le_rfl hμs
 
 @[simp]
 lemma inv_measure_univ_smul_eq_self : (μ univ)⁻¹ • μ = μ := by

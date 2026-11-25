@@ -55,13 +55,13 @@ lemma MeasuredSets.edist_def (s t : MeasuredSets μ) : edist s t = μ ((s : Set 
 /-- Measure on `MeasuredSets` is a 1-lipschitz function.
 
 We cannot state this in terms of `LipschitzWith`, because `ℝ≥0∞` is not a `PseudoEMetricSpace`. -/
-lemma MeasuredSets.sub_le_edist (s t : MeasuredSets μ) : μ s - μ t ≤ edist s t :=
-  le_measure_sdiff.trans <| measure_mono subset_union_left
+lemma MeasuredSets.monus_le_edist (s t : MeasuredSets μ) : ENNReal.monus (μ s) (μ t) ≤ edist s t :=
+  le_measure_symmDiff
 
 lemma MeasuredSets.continuous_measure : Continuous (fun (s : MeasuredSets μ) ↦ μ s) := by
   refine continuous_of_le_add_edist 1 ENNReal.one_ne_top fun s t ↦ ?_
-  rw [one_mul, ← tsub_le_iff_left]
-  exact sub_le_edist s t
+  rw [one_mul, ← ENNReal.monus_le_iff_left]
+  exact monus_le_edist s t
 
 noncomputable instance [IsFiniteMeasure μ] : PseudoMetricSpace (MeasuredSets μ) :=
   PseudoEMetricSpace.toPseudoMetricSpaceOfDist
@@ -73,8 +73,8 @@ lemma MeasuredSets.dist_def [IsFiniteMeasure μ] (s t : MeasuredSets μ) :
 
 lemma MeasuredSets.real_sub_real_le_dist [IsFiniteMeasure μ] (s t : MeasuredSets μ) :
     μ.real s - μ.real t ≤ dist s t := by
-  grw [dist_edist, ← sub_le_edist]
-  exacts [ENNReal.le_toReal_sub (measure_ne_top _ _), edist_ne_top _ _]
+  grw [dist_edist, ← monus_le_edist]
+  exacts [ENNReal.le_toReal_monus (measure_ne_top _ _), edist_ne_top _ _]
 
 lemma MeasuredSets.lipschitzWith_measureReal [IsFiniteMeasure μ] :
     LipschitzWith 1 (fun s : MeasuredSets μ ↦ μ.real s) :=

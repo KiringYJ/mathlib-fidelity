@@ -279,7 +279,8 @@ variable {C K r : ℝ≥0} {f : X → Y} {s : Set X}
 
 /-- If `f` is a Hölder continuous map with exponent `r > 0`, then `dimH (f '' s) ≤ dimH s / r`. -/
 theorem HolderOnWith.dimH_image_le (h : HolderOnWith C r f s) (hr : 0 < r) :
-    dimH (f '' s) ≤ dimH s / (r : ℝ≥0∞) := by
+    dimH (f '' s) ≤
+      ENNReal.div (dimH s) r ⟨ENNReal.coe_ne_zero.2 hr.ne', .inr ENNReal.coe_ne_top⟩ := by
   borelize X Y
   refine dimH_le fun d hd => ?_
   have := h.hausdorffMeasure_image_le hr d.coe_nonneg
@@ -288,21 +289,22 @@ theorem HolderOnWith.dimH_image_le (h : HolderOnWith C r f s) (hr : 0 < r) :
     contrapose this
     finiteness
   rw [ENNReal.le_div_iff_mul_le, mul_comm, ← ENNReal.coe_mul]
-  exacts [le_dimH_of_hausdorffMeasure_eq_top Hrd, Or.inl (mt ENNReal.coe_eq_zero.1 hr.ne'),
-    Or.inl ENNReal.coe_ne_top]
+  exact le_dimH_of_hausdorffMeasure_eq_top Hrd
 
 namespace HolderWith
 
 /-- If `f : X → Y` is Hölder continuous with a positive exponent `r`, then the Hausdorff dimension
 of the image of a set `s` is at most `dimH s / r`. -/
 theorem dimH_image_le (h : HolderWith C r f) (hr : 0 < r) (s : Set X) :
-    dimH (f '' s) ≤ dimH s / (r : ℝ≥0∞) :=
+    dimH (f '' s) ≤
+      ENNReal.div (dimH s) r ⟨ENNReal.coe_ne_zero.2 hr.ne', .inr ENNReal.coe_ne_top⟩ :=
   (h.holderOnWith s).dimH_image_le hr
 
 /-- If `f` is a Hölder continuous map with exponent `r > 0`, then the Hausdorff dimension of its
 range is at most the Hausdorff dimension of its domain divided by `r`. -/
 theorem dimH_range_le (h : HolderWith C r f) (hr : 0 < r) :
-    dimH (range f) ≤ dimH (univ : Set X) / (r : ℝ≥0∞) :=
+    dimH (range f) ≤
+      ENNReal.div (dimH (univ : Set X)) r ⟨ENNReal.coe_ne_zero.2 hr.ne', .inr ENNReal.coe_ne_top⟩ :=
   @image_univ _ _ f ▸ h.dimH_image_le hr univ
 
 end HolderWith
@@ -313,12 +315,13 @@ but possibly different coefficients, then the Hausdorff dimension of the image `
 the Hausdorff dimension of `s` divided by `r`. -/
 theorem dimH_image_le_of_locally_holder_on [SecondCountableTopology X] {r : ℝ≥0} {f : X → Y}
     (hr : 0 < r) {s : Set X} (hf : ∀ x ∈ s, ∃ C : ℝ≥0, ∃ t ∈ 𝓝[s] x, HolderOnWith C r f t) :
-    dimH (f '' s) ≤ dimH s / (r : ℝ≥0∞) := by
+    dimH (f '' s) ≤
+      ENNReal.div (dimH s) r ⟨ENNReal.coe_ne_zero.2 hr.ne', .inr ENNReal.coe_ne_top⟩ := by
   choose! C t htn hC using hf
   rcases countable_cover_nhdsWithin htn with ⟨u, hus, huc, huU⟩
   replace huU := inter_eq_self_of_subset_left huU; rw [inter_iUnion₂] at huU
   rw [← huU, image_iUnion₂, dimH_bUnion huc, dimH_bUnion huc]
-  simp only [ENNReal.iSup_div]
+  simp only [ENNReal.div_eq_mul_inv, ENNReal.iSup_mul]
   exact iSup₂_mono fun x hx => ((hC x (hus hx)).mono inter_subset_right).dimH_image_le hr
 
 /-- If `f : X → Y` is Hölder continuous in a neighborhood of every point `x : X` with the same
@@ -326,7 +329,9 @@ positive exponent `r` but possibly different coefficients, then the Hausdorff di
 of `f` is at most the Hausdorff dimension of `X` divided by `r`. -/
 theorem dimH_range_le_of_locally_holder_on [SecondCountableTopology X] {r : ℝ≥0} {f : X → Y}
     (hr : 0 < r) (hf : ∀ x : X, ∃ C : ℝ≥0, ∃ s ∈ 𝓝 x, HolderOnWith C r f s) :
-    dimH (range f) ≤ dimH (univ : Set X) / (r : ℝ≥0∞) := by
+    dimH (range f) ≤
+      ENNReal.div (dimH (univ : Set X)) r
+        ⟨ENNReal.coe_ne_zero.2 hr.ne', .inr ENNReal.coe_ne_top⟩ := by
   rw [← image_univ]
   refine dimH_image_le_of_locally_holder_on hr fun x _ => ?_
   simpa only [exists_prop, nhdsWithin_univ] using hf x
@@ -338,7 +343,7 @@ theorem dimH_range_le_of_locally_holder_on [SecondCountableTopology X] {r : ℝ�
 
 /-- If `f : X → Y` is Lipschitz continuous on `s`, then `dimH (f '' s) ≤ dimH s`. -/
 theorem LipschitzOnWith.dimH_image_le (h : LipschitzOnWith K f s) : dimH (f '' s) ≤ dimH s := by
-  simpa only [ENNReal.coe_one, ENNReal.div_eq_mul_inv, inv_one, mul_one]
+  simpa only [ENNReal.coe_one, ENNReal.div_one]
     using h.holderOnWith.dimH_image_le zero_lt_one
 
 namespace LipschitzWith
@@ -361,7 +366,7 @@ theorem dimH_image_le_of_locally_lipschitzOn [SecondCountableTopology X] {f : X 
     (hf : ∀ x ∈ s, ∃ C : ℝ≥0, ∃ t ∈ 𝓝[s] x, LipschitzOnWith C f t) : dimH (f '' s) ≤ dimH s := by
   have : ∀ x ∈ s, ∃ C : ℝ≥0, ∃ t ∈ 𝓝[s] x, HolderOnWith C 1 f t := by
     simpa only [holderOnWith_one] using hf
-  simpa only [ENNReal.coe_one, ENNReal.div_eq_mul_inv, inv_one, mul_one]
+  simpa only [ENNReal.coe_one, ENNReal.div_one]
     using dimH_image_le_of_locally_holder_on zero_lt_one this
 
 /-- If `f : X → Y` is Lipschitz in a neighborhood of each point `x : X`, then the Hausdorff

@@ -56,9 +56,10 @@ file `Mathlib/MeasureTheory/Integral/SetToL1.lean`).
    which is called `lintegral` and has the notation `∫⁻`.
 
   * `integral_eq_lintegral_pos_part_sub_lintegral_neg_part` :
-    `∫ x, f x ∂μ = ∫⁻ x, f⁺ x ∂μ - ∫⁻ x, f⁻ x ∂μ`,
+    `∫ x, f x ∂μ = (∫⁻ x, f⁺ x ∂μ).toReal - (∫⁻ x, f⁻ x ∂μ).toReal`,
     where `f⁺` is the positive part of `f` and `f⁻` is the negative part of `f`.
-  * `integral_eq_lintegral_of_nonneg_ae`          : `0 ≤ᵐ[μ] f → ∫ x, f x ∂μ = ∫⁻ x, f x ∂μ`
+  * `integral_eq_lintegral_of_nonneg_ae` :
+    `0 ≤ᵐ[μ] f → ∫ x, f x ∂μ = (∫⁻ x, ENNReal.ofReal (f x) ∂μ).toReal`.
 
 4. (In the file `Mathlib/MeasureTheory/Integral/DominatedConvergence.lean`)
   `tendsto_integral_of_dominated_convergence` : the Lebesgue dominated convergence theorem
@@ -80,21 +81,20 @@ One method is to use the theorem `Integrable.induction` in the file
 integrable function.
 
 Another method is using the following steps.
-See `integral_eq_lintegral_pos_part_sub_lintegral_neg_part` for a complicated example, which proves
-that `∫ f = ∫⁻ f⁺ - ∫⁻ f⁻`, with the first integral sign being the Bochner integral of a real-valued
-function `f : α → ℝ`, and the second and third integral signs being integrals on `ℝ≥0∞`-valued
-functions (called `lintegral`). The proof of `integral_eq_lintegral_pos_part_sub_lintegral_neg_part`
-is scattered in sections with the name `posPart`.
+For example, `integral_eq_lintegral_pos_part_sub_lintegral_neg_part` expresses the Bochner integral
+of a real-valued function as a real difference of the integrals of its positive and negative
+parts, after applying `ENNReal.toReal` to the two nonnegative integrals.
+Its proof uses the sections named `posPart`.
 
-Here are the usual steps of proving that a property `p`, say `∫ f = ∫⁻ f⁺ - ∫⁻ f⁻`, holds for all
-functions :
+To prove that a property `p` such as this equality holds for all integrable functions, use the
+following steps.
 
 1. First go to the `L¹` space.
 
    For example, if you see `ENNReal.toReal (∫⁻ a, ENNReal.ofReal <| ‖f a‖)`, that is the norm of
    `f` in `L¹` space. Rewrite using `L1.norm_of_fun_eq_lintegral_norm`.
 
-2. Show that the set `{f ∈ L¹ | ∫ f = ∫⁻ f⁺ - ∫⁻ f⁻}` is closed in `L¹` using `isClosed_eq`.
+2. Show that the set `{f ∈ L¹ | p f}` is closed in `L¹` using `isClosed_eq`.
 
 3. Show that the property holds for all simple functions `s` in `L¹` space.
 
@@ -104,9 +104,9 @@ functions :
 4. Since simple functions are dense in `L¹`,
    ```
    univ = closure {s simple}
-        = closure {s simple | ∫ s = ∫⁻ s⁺ - ∫⁻ s⁻} : the property holds for all simple functions
-        ⊆ closure {f | ∫ f = ∫⁻ f⁺ - ∫⁻ f⁻}
-        = {f | ∫ f = ∫⁻ f⁺ - ∫⁻ f⁻} : closure of a closed set is itself
+        = closure {s simple | p s} : the property holds for all simple functions
+        ⊆ closure {f | p f}
+        = {f | p f} : closure of a closed set is itself
    ```
    Use `isClosed_property` or `DenseRange.induction_on` for this argument.
 
@@ -918,12 +918,12 @@ theorem L1.norm_of_fun_eq_integral_norm {f : α → H} (hf : Integrable f μ) :
 
 theorem MemLp.eLpNorm_eq_integral_rpow_norm {f : α → H} {p : ℝ≥0∞} (hp1 : p ≠ 0) (hp2 : p ≠ ∞)
     (hf : MemLp f p μ) :
-    eLpNorm f p μ = ENNReal.ofReal ((∫ a, ‖f a‖ ^ p.toReal ∂μ) ^ (1 / p).toReal) := by
+    eLpNorm f p μ = ENNReal.ofReal ((∫ a, ‖f a‖ ^ p.toReal ∂μ) ^ (p⁻¹).toReal) := by
   have hpUnit : IsUnit p.toReal := (ENNReal.toReal_pos hp1 hp2).ne'.isUnit
   have A : ∫⁻ a : α, ENNReal.ofReal (‖f a‖ ^ p.toReal) ∂μ = ∫⁻ a : α, ‖f a‖ₑ ^ p.toReal ∂μ := by
     simp_rw [← ofReal_rpow_of_nonneg (norm_nonneg _) toReal_nonneg, ofReal_norm]
   simp only [eLpNorm_eq_lintegral_rpow_enorm_toReal hp1 hp2,
-    ENNReal.one_div, ENNReal.toReal_inv (ha := hpUnit), one_div₀]
+    ENNReal.toReal_inv (ha := hpUnit), one_div₀]
   rw [integral_eq_lintegral_of_nonneg_ae]; rotate_left
   · exact ae_of_all _ fun x => by positivity
   · exact (hf.aestronglyMeasurable.norm.aemeasurable.pow_const _).aestronglyMeasurable
@@ -1341,7 +1341,7 @@ theorem eLpNorm_one_le_of_le {r : ℝ≥0} (hfint : Integrable f μ) (hfint' : 0
   rw [MemLp.eLpNorm_eq_integral_rpow_norm one_ne_zero ENNReal.one_ne_top
       (memLp_one_iff_integrable.2 hfint),
     ENNReal.ofReal_le_iff_le_toReal (by finiteness)]
-  simp_rw [ENNReal.one_div, inv_one, ENNReal.toReal_one, Real.rpow_one, Real.norm_eq_abs, ←
+  simp_rw [ENNReal.inv_one, ENNReal.toReal_one, Real.rpow_one, Real.norm_eq_abs, ←
     max_zero_add_max_neg_zero_eq_abs_self, ← Real.coe_toNNReal']
   rw [integral_add hfint.real_toNNReal]
   · simp only [Real.coe_toNNReal', ENNReal.toReal_mul, ENNReal.coe_toReal,

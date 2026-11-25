@@ -75,12 +75,6 @@ lemma inv_eq : r⁻¹ = p⁻¹ + q⁻¹ := (inv_add_inv_eq_inv ..).symm
 lemma unique (r' : ℝ≥0∞) [hr' : HolderTriple p q r'] : r = r' := by
   rw [← inv_inj, inv_eq p q r, inv_eq p q r']
 
-lemma one_div_add_one_div : (1 / p) + (1 / q) = (1 / r) := by
-  simpa only [ENNReal.one_div] using inv_add_inv_eq_inv p q r
-
-lemma one_div_eq : (1 / r) = (1 / p) + (1 / q) :=
-  one_div_add_one_div p q r |>.symm
-
 lemma inv_inv_add_inv : (p⁻¹ + q⁻¹)⁻¹ = r := by
   simp [inv_add_inv_eq_inv p q r]
 
@@ -93,14 +87,14 @@ protected lemma inv_le_inv : p⁻¹ ≤ r⁻¹ := by
   simp [ENNReal.inv_le_inv, le p q r]
 
 variable {r} in
-lemma inv_sub_inv_eq_inv (hr : r ≠ 0) : r⁻¹ - q⁻¹ = p⁻¹ := by
-  apply ENNReal.sub_eq_of_eq_add (ne_of_lt ?_) (inv_eq p q r)
+lemma inv_monus_inv_eq_inv (hr : r ≠ 0) : monus r⁻¹ q⁻¹ = p⁻¹ := by
+  apply ENNReal.monus_eq_of_eq_add (ne_of_lt ?_) (inv_eq p q r)
   calc
     q⁻¹ ≤ r⁻¹ := HolderTriple.inv_le_inv q p r
     _ < ∞ := by simpa using pos_iff_ne_zero.mpr hr
 
 /-- assumes `q ≠ 0` instead of `r ≠ 0`. -/
-lemma inv_sub_inv_eq_inv' (hq : q ≠ 0) : r⁻¹ - q⁻¹ = p⁻¹ := by
+lemma inv_monus_inv_eq_inv' (hq : q ≠ 0) : monus r⁻¹ q⁻¹ = p⁻¹ := by
   obtain (rfl | hr) := eq_zero_or_pos r
   · suffices p = 0 by simpa [this]
     by_contra! hp
@@ -109,18 +103,22 @@ lemma inv_sub_inv_eq_inv' (hq : q ≠ 0) : r⁻¹ - q⁻¹ = p⁻¹ := by
       _ < ⊤ + ⊤ := by simp [hp, hq, pos_iff_ne_zero]
       _ = ⊤ := by simp
     simp_all
-  · exact inv_sub_inv_eq_inv p q hr.ne'
+  · exact inv_monus_inv_eq_inv p q hr.ne'
 
 variable {r} in
 lemma unique_of_ne_zero (q' : ℝ≥0∞) (hr : r ≠ 0) [HolderTriple p q' r] : q = q' := by
-  rw [← inv_inj, ← inv_sub_inv_eq_inv q p hr, ← inv_sub_inv_eq_inv q' p hr]
+  rw [← inv_inj, ← inv_monus_inv_eq_inv q p hr, ← inv_monus_inv_eq_inv q' p hr]
 
 lemma holderConjugate_div_div (hr₀ : r ≠ 0) (hr : r ≠ ∞) :
-    HolderConjugate (p / r) (q / r) where
+    HolderConjugate (div p r ⟨hr₀, Or.inr hr⟩) (div q r ⟨hr₀, Or.inr hr⟩) where
   inv_add_inv_eq_inv := by
-    rw [ENNReal.inv_div (.inl hr) (.inl hr₀), ENNReal.inv_div (.inl hr) (.inl hr₀),
+    have hrpos : 0 < r := pos_iff_ne_zero.mpr hr₀
+    have hp₀ : p ≠ 0 := (hrpos.trans_le (HolderTriple.le p q r)).ne'
+    have hq₀ : q ≠ 0 := (hrpos.trans_le (HolderTriple.le q p r)).ne'
+    rw [ENNReal.inv_div (a := p) (b := r) hp₀ hr₀ (Or.inr hr),
+      ENNReal.inv_div (a := q) (b := r) hq₀ hr₀ (Or.inr hr),
       ENNReal.div_eq_mul_inv, ENNReal.div_eq_mul_inv, ← mul_add, inv_add_inv_eq_inv p q r,
-      ENNReal.mul_inv_cancel hr₀ hr, inv_one]
+      ENNReal.mul_inv_cancel hr₀ hr, ENNReal.inv_one]
 
 end HolderTriple
 
@@ -152,10 +150,10 @@ lemma pos : 0 < p := zero_lt_one.trans_le (one_le p q)
 include q in
 lemma ne_zero : p ≠ 0 := pos p q |>.ne'
 
-lemma inv_add_inv_eq_one : p⁻¹ + q⁻¹ = 1 := @inv_one ℝ≥0∞ _ ▸ HolderTriple.inv_add_inv_eq_inv p q 1
+lemma inv_add_inv_eq_one : p⁻¹ + q⁻¹ = 1 := ENNReal.inv_one ▸ HolderTriple.inv_add_inv_eq_inv p q 1
 
-lemma one_sub_inv : 1 - p⁻¹ = q⁻¹ :=
-  @inv_one ℝ≥0∞ _ ▸ HolderTriple.inv_sub_inv_eq_inv q p one_ne_zero
+lemma one_monus_inv : monus 1 p⁻¹ = q⁻¹ :=
+  ENNReal.inv_one ▸ HolderTriple.inv_monus_inv_eq_inv q p one_ne_zero
 
 lemma unique (q' : ℝ≥0∞) [hq' : HolderConjugate p q'] : q = q' :=
   HolderTriple.unique_of_ne_zero p q q' one_ne_zero
@@ -163,11 +161,11 @@ lemma unique (q' : ℝ≥0∞) [hq' : HolderConjugate p q'] : q = q' :=
 lemma eq_top_iff_eq_one : p = ∞ ↔ q = 1 := by
   constructor
   · rintro rfl
-    rw [← inv_inv q, ← one_sub_inv ∞ q]
+    rw [← inv_inv q, ← one_monus_inv ∞ q]
     simp
   · rintro rfl
-    rw [← inv_inv p, ← one_sub_inv 1 p]
-    simp
+    rw [← inv_inv p, ← one_monus_inv 1 p]
+    simp [ENNReal.inv_one]
 
 lemma ne_top_iff_ne_one : p ≠ ∞ ↔ q ≠ 1 := by
   rw [not_iff_not, eq_top_iff_eq_one p q]
@@ -176,10 +174,10 @@ lemma lt_top_iff_one_lt : p < ∞ ↔ 1 < q := by
   rw [lt_top_iff_ne_top, ne_top_iff_ne_one _ q, ne_comm, lt_iff_le_and_ne]
   simp [one_le q p]
 
-lemma sub_one_mul_inv (hp : p ≠ ⊤) : (p - 1) * p⁻¹ = q⁻¹ := by
+lemma monus_one_mul_inv (hp : p ≠ ⊤) : monus p 1 * p⁻¹ = q⁻¹ := by
   have := pos p q |>.ne'
-  rw [ENNReal.sub_mul (by simp_all), ENNReal.mul_inv_cancel this (by lia)]
-  simp [one_sub_inv p q]
+  rw [ENNReal.monus_mul (by simp_all), ENNReal.mul_inv_cancel this (by lia)]
+  simp [one_monus_inv p q]
 
 end HolderConjugate
 

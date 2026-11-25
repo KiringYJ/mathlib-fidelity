@@ -327,11 +327,12 @@ theorem Integrable.uniformIntegrable_condExp {ι : Type*} [IsFiniteMeasure μ] {
         mul_meas_ge_le_pow_eLpNorm μ one_ne_zero one_ne_top
           ((hG'm n).mono (hℱ n)).aestronglyMeasurable C
       · rw [toReal_one, rpow_one, enorm_eq_nnnorm]
-    rw [toReal_one, rpow_one, mul_comm, ← ENNReal.le_div_iff_mul_le (.inl (coe_ne_zero.2 hCpos.ne'))
-        (.inl coe_lt_top.ne)] at this
+    have hc₀ : (C : ℝ≥0∞) ≠ 0 := coe_ne_zero.2 hCpos.ne'
+    rw [toReal_one, rpow_one, mul_comm, ← ENNReal.le_div_iff_mul_le
+        ⟨hc₀, .inr coe_ne_top⟩] at this
     simp_rw [coe_le_coe] at this
     refine this.trans ?_
-    rw [ENNReal.div_le_iff_le_mul (.inl (coe_ne_zero.2 hCpos.ne')) (.inl coe_lt_top.ne),
+    rw [ENNReal.div_le_iff hc₀ coe_ne_top,
       hC, ← toNNReal_mul, coe_toNNReal (mul_ne_top (inv_ne_top.2 hδ.ne') hg.2.ne),
       ← mul_assoc, ENNReal.mul_inv_cancel hδ.ne' hδ_top.ne, one_mul, rpow_one]
     exact (hG' n).eLpNorm_le le_rfl (hℱ n) hint

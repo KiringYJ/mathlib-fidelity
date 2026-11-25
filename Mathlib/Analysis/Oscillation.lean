@@ -65,7 +65,7 @@ theorem oscillationWithin_eq_zero [TopologicalSpace E] {f : E → F} {D : Set E}
   have hball : eball (f x) (ε / 2) ∈ (𝓝[D] x).map f :=
     hf (eball_mem_nhds _ (ENNReal.half_pos hε.ne'))
   refine (biInf_le ediam hball).trans (ediam_eball_le.trans_eq ?_)
-  exact ENNReal.mul_div_cancel (by simp) ENNReal.ofNat_ne_top
+  exact ENNReal.mul_div_cancel two_ne_zero ENNReal.ofNat_ne_top
 
 end ContinuousWithinAt
 

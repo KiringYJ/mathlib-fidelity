@@ -357,16 +357,33 @@ lemma nnnorm_compContinuousLinearMap_le (p : FormalMultilinearSeries 𝕜 F G)
     (u : E →L[𝕜] F) (n : ℕ) : ‖p.compContinuousLinearMap u n‖₊ ≤ ‖p n‖₊ * ‖u‖₊ ^ n :=
   norm_compContinuousLinearMap_le p u n
 
-theorem div_le_radius_compContinuousLinearMap (p : FormalMultilinearSeries 𝕜 F G) (u : E →L[𝕜] F) :
-    (p.radius / ‖u‖ₑ) ≤ (p.compContinuousLinearMap u).radius := by
+private theorem radius_compContinuousLinearMap_zero_eq_top
+    (p : FormalMultilinearSeries 𝕜 F G) :
+    (p.compContinuousLinearMap (0 : E →L[𝕜] F)).radius = ⊤ := by
+  apply radius_eq_top_of_forall_image_add_eq_zero _ 1
+  intro n
+  apply norm_eq_zero.mp
+  apply le_antisymm _ (norm_nonneg _)
+  simp
+
+/-- The residuated radius bound for precomposition, including by the zero map. -/
+theorem leftMulResiduation_le_radius_compContinuousLinearMap
+    (p : FormalMultilinearSeries 𝕜 F G) (u : E →L[𝕜] F) :
+    Quantale.leftMulResiduation ‖u‖ₑ p.radius ≤ (p.compContinuousLinearMap u).radius := by
   obtain (rfl | h_zero) := eq_zero_or_nnnorm_pos u
-  · simp
+  · rw [radius_compContinuousLinearMap_zero_eq_top]
+    exact le_top
   have huₑ : ‖u‖ₑ ≠ 0 := by
     rw [enorm_eq_nnnorm]
     exact ENNReal.coe_ne_zero.mpr h_zero.ne'
-  rw [ENNReal.div_le_iff huₑ (by simp)]
+  have hu_top : ‖u‖ₑ ≠ ∞ := enorm_ne_top
+  rw [ENNReal.leftMulResiduation_eq_extendedDiv ⟨Or.inr huₑ, Or.inr hu_top⟩]
+  change ENNReal.div p.radius ‖u‖ₑ ⟨huₑ, Or.inr hu_top⟩ ≤ _
+  rw [ENNReal.div_le_iff huₑ hu_top]
   refine le_of_forall_nnreal_lt fun r hr ↦ ?_
-  rw [← ENNReal.div_le_iff huₑ (by simp), enorm_eq_nnnorm, ← coe_div (hr := h_zero.ne'.isUnit)]
+  have hu_coe : (‖u‖₊ : ℝ≥0∞) ≠ 0 := ENNReal.coe_ne_zero.mpr h_zero.ne'
+  rw [enorm_eq_nnnorm, ← ENNReal.div_le_iff hu_coe ENNReal.coe_ne_top,
+    ← coe_div (hr := h_zero.ne'.isUnit)]
   have hu : ‖u‖ ≠ 0 := (show (0 : ℝ) < ‖u‖ from h_zero).ne'
   obtain ⟨C, hC_pos, hC⟩ := p.norm_mul_pow_le_of_lt_radius hr
   refine le_radius_of_bound _ C fun n ↦ ?_
@@ -382,22 +399,26 @@ theorem div_le_radius_compContinuousLinearMap (p : FormalMultilinearSeries 𝕜 
 theorem le_radius_compContinuousLinearMap (p : FormalMultilinearSeries 𝕜 F G) (u : E →ₗᵢ[𝕜] F) :
     p.radius ≤ (p.compContinuousLinearMap u.toContinuousLinearMap).radius := by
   obtain (h | h) := subsingleton_or_nontrivial E
-  · simp [Subsingleton.elim u.toContinuousLinearMap 0]
-  · simpa [u.norm_toContinuousLinearMap, ENNReal.div_eq_mul_inv]
-      using div_le_radius_compContinuousLinearMap p u.toContinuousLinearMap
+  · rw [Subsingleton.elim u.toContinuousLinearMap 0, radius_compContinuousLinearMap_zero_eq_top]
+    exact le_top
+  · refine le_trans (Quantale.leftMulResiduation_le_iff_mul_le.2 ?_)
+      (leftMulResiduation_le_radius_compContinuousLinearMap p u.toContinuousLinearMap)
+    simp
 
 theorem radius_compContinuousLinearMap_le [Nontrivial F]
     (p : FormalMultilinearSeries 𝕜 F G) (u : E ≃L[𝕜] F) :
     (p.compContinuousLinearMap u.toContinuousLinearMap).radius ≤
     ‖u.symm.toContinuousLinearMap‖ₑ * p.radius := by
-  have := (p.compContinuousLinearMap u.toContinuousLinearMap).div_le_radius_compContinuousLinearMap
-    u.symm.toContinuousLinearMap
+  have := leftMulResiduation_le_radius_compContinuousLinearMap
+    (p.compContinuousLinearMap u.toContinuousLinearMap) u.symm.toContinuousLinearMap
   simp only [compContinuousLinearMap_comp, ContinuousLinearEquiv.coe_comp_coe_symm,
     compContinuousLinearMap_id] at this
   have hu : ‖u.symm.toContinuousLinearMap‖ₑ ≠ 0 := by
     rw [enorm_eq_nnnorm]
     exact ENNReal.coe_ne_zero.mpr (NNReal.coe_ne_zero.mp u.symm.norm_pos.ne')
-  rwa [ENNReal.div_le_iff' hu (by simp)] at this
+  have ht : ‖u.symm.toContinuousLinearMap‖ₑ ≠ ∞ := enorm_ne_top
+  rw [ENNReal.leftMulResiduation_eq_extendedDiv ⟨Or.inr hu, Or.inr ht⟩] at this
+  exact (ENNReal.div_le_iff' hu ht).1 this
 
 @[simp]
 theorem radius_compContinuousLinearMap_linearIsometryEquiv_eq [Nontrivial E]

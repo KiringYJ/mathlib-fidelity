@@ -44,13 +44,15 @@ noncomputable instance measureSpace : MeasureSpace (Fin n → Fin m) :=
   ⟨uniformOn Set.univ .univ⟩
 
 theorem Fin.measure_apply {s : Set <| Fin n → Fin m} :
-    ℙ s = (|s.toFinite.toFinset| : ℝ≥0∞) / (‖Fin n → Fin m‖ : ℝ≥0∞) := by
-  rw [volume, measureSpace, uniformOn_univ, Measure.count_apply_finite s s.toFinite]
+    ℙ s = ENNReal.div (|s.toFinite.toFinset|) (‖Fin n → Fin m‖)
+      ⟨Nat.cast_ne_zero.2 Fintype.card_ne_zero, Or.inr (ENNReal.natCast_ne_top _)⟩ := by
+  rw [volume, measureSpace, uniformOn_univ]
+  simp only [ENNReal.div_eq_mul_inv, Measure.count_apply_finite s s.toFinite]
 
 /-- **Birthday Problem**: first probabilistic interpretation. -/
 theorem birthday_measure :
-    ℙ ({f | f.Injective} : Set (Fin 23 → Fin 365)) < (1 / 2 : ℝ≥0∞) := by
-  rw [Fin.measure_apply]
+    ℙ ({f | f.Injective} : Set (Fin 23 → Fin 365)) < (2 : ℝ≥0∞)⁻¹ := by
+  rw [Fin.measure_apply, ENNReal.div_lt_iff]
   generalize_proofs hfin
   have : |hfin.toFinset| = 42200819302092359872395663074908957253749760700776448000000 := by
     trans ‖Fin 23 ↪ Fin 365‖
@@ -60,7 +62,9 @@ theorem birthday_measure :
       exact Equiv.subtypeInjectiveEquivEmbedding _ _
     · rw [Fintype.card_embedding_eq, Fintype.card_fin, Fintype.card_fin]
       rfl
-  rw [this, ENNReal.lt_div_iff_mul_lt, mul_comm, ← ENNReal.mul_div_assoc, ENNReal.div_lt_iff]
+  rw [this, mul_comm (2 : ℝ≥0∞)⁻¹]
+  change _ < ENNReal.div (‖Fin 23 → Fin 365‖) 2 ⟨two_ne_zero, Or.inr ENNReal.ofNat_ne_top⟩
+  rw [ENNReal.lt_div_iff_mul_lt _ (Or.inl two_ne_zero) (Or.inl ENNReal.ofNat_ne_top)]
   all_goals
     simp only [Fintype.card_pi, Fintype.card_fin, Finset.prod_const, Finset.card_univ]
     norm_num

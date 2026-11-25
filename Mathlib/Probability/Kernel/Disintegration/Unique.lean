@@ -367,22 +367,26 @@ private lemma ae_apply_eq_zero_or_one_of_isCondKernel {ρ : Measure (α × Ω)}
       ρ.fst.restrict C t = 0 ∨ ρ.fst.restrict C t = ∞ := by
     rw [restrict_apply ht]
     exact hρB _ (inter_subset_right.trans inter_subset_left) (ht.inter hC)
+  let w (a : α) (ha : a ∈ C) : ℝ≥0∞ :=
+    ENNReal.div (ENNReal.monus 1 (η a s / 2)) (ENNReal.monus 1 (η a s))
+      ⟨(ENNReal.monus_pos_of_lt ha.2.2).ne', Or.inr (ENNReal.monus_ne_top ENNReal.one_ne_top)⟩
   set g : α → Ω → ℝ≥0∞ := fun a ω ↦
-    if a ∈ C then
-      (if ω ∈ s then 2⁻¹ else ((1 - (η a s / 2)) / (1 - η a s)))
-    else 1 with hg_def
+    if ha : a ∈ C then (if ω ∈ s then 2⁻¹ else w a ha) else 1 with hg_def
   have hg : Measurable (Function.uncurry g) := by
+    change Measurable (fun p : α × Ω ↦ if p.1 ∈ C then
+      if p.2 ∈ s then 2⁻¹ else
+        ENNReal.monus 1 (η p.1 s * 2⁻¹) * (ENNReal.monus 1 (η p.1 s))⁻¹ else 1)
     refine Measurable.ite (hC.preimage measurable_fst)
       (Measurable.ite (hs.preimage measurable_snd) measurable_const ?_) measurable_const
-    simp only [ENNReal.div_eq_mul_inv]
-    exact ((measurable_const.sub (hp.mul_const (2 : ℝ≥0∞)⁻¹)).mul
-      (measurable_const.sub hp).inv).comp measurable_fst
+    exact ((measurable_const.ennreal_monus (hp.mul_const (2 : ℝ≥0∞)⁻¹)).mul
+      (measurable_const.ennreal_monus hp).inv).comp measurable_fst
   have hg_ne (a : α) (ω : Ω) : g a ω ≠ 0 := by
     simp only [hg_def]
     split_ifs with ha hω
     · simp
-    · refine ENNReal.div_ne_zero.2 ⟨(tsub_pos_of_lt ?_).ne', ENNReal.sub_ne_top ENNReal.one_ne_top⟩
-      exact ENNReal.half_le_self.trans_lt ha.2.2
+    · exact (ENNReal.div_ne_zero _).2
+        ⟨(ENNReal.monus_pos_of_lt (ENNReal.half_le_self.trans_lt ha.2.2)).ne',
+          ENNReal.monus_ne_top ENNReal.one_ne_top⟩
     · simp
   set η' : Kernel α Ω := η.withDensity g
   have hη' (a : α) : η' a = (η a).withDensity (g a) := by
@@ -399,11 +403,14 @@ private lemma ae_apply_eq_zero_or_one_of_isCondKernel {ρ : Measure (α × Ω)}
       rw [← lintegral_add_compl _ hs,
         setLIntegral_congr_fun (g := fun _ ↦ 2⁻¹) hs (fun ω hω ↦ by simp [hg_def, ha, hω]),
         setLIntegral_congr_fun
-          (g := fun _ ↦ ((1 - (η a s / 2)) / (1 - η a s))) hs.compl
+          (g := fun _ ↦ w a ha) hs.compl
           (fun ω hω ↦ by simp [hg_def, ha, notMem_of_mem_compl hω]),
-        setLIntegral_const, setLIntegral_const, prob_compl_eq_one_sub hs,
-        ENNReal.div_mul_cancel (tsub_pos_of_lt h1).ne' (ENNReal.sub_ne_top ENNReal.one_ne_top),
-        ← ENNReal.div_eq_inv_mul, add_tsub_cancel_of_le (ENNReal.half_le_self.trans h1.le)]
+        setLIntegral_const, setLIntegral_const, prob_compl_eq_one_sub hs]
+      dsimp only [w]
+      rw [ENNReal.div_mul_cancel (ENNReal.monus_pos_of_lt h1).ne'
+          (ENNReal.monus_ne_top ENNReal.one_ne_top),
+        ← ENNReal.div_eq_inv_mul (η a s) 2 ⟨two_ne_zero, Or.inr ENNReal.ofNat_ne_top⟩, add_comm]
+      exact ENNReal.monus_add_cancel_of_le (ENNReal.half_le_self.trans h1.le)
     · simp [hg_def, ha]⟩⟩
   have h_null (a : α) {t : Set Ω} : η' a t = 0 ↔ η a t = 0 := by
     rw [hη', withDensity_apply_eq_zero' (hg_a a).aemeasurable]
@@ -435,7 +442,8 @@ private lemma ae_apply_eq_zero_or_one_of_isCondKernel {ρ : Measure (α × Ω)}
   have haC : a ∈ C := ⟨haB, pos_iff_ne_zero.2 fun h0 ↦ h (Or.inl h0),
     lt_of_le_of_ne h1 fun h1' ↦ h (Or.inr h1')⟩
   have h_eq := congrArg (fun ν : Measure Ω ↦ ν s) ha
-  rw [h_mass a haC, ← ENNReal.div_eq_inv_mul] at h_eq
+  rw [h_mass a haC, ← ENNReal.div_eq_inv_mul (η a s) 2
+    ⟨two_ne_zero, Or.inr ENNReal.ofNat_ne_top⟩] at h_eq
   exact (ENNReal.half_lt_self haC.2.1.ne' (ne_top_of_le_ne_top ENNReal.one_ne_top h1)).ne h_eq.symm
 
 /-- For a measure with a unique conditional kernel, every representative of the conditional kernel

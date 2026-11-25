@@ -289,19 +289,19 @@ lemma comp_parallelComp_comp_copy {γ : Type*} [SigmaAlgebra γ] {κ : Kernel α
         rw [← measure_univ (μ := η b)]
         exact measure_mono (by simp)
       _ = κ a t := by rw [setLIntegral_one]
-    refine le_antisymm integral_le_kernel <| tsub_eq_zero_iff_le.mp ?_
+    refine le_antisymm integral_le_kernel <| ENNReal.monus_eq_zero_iff_le.mp ?_
     rw [← nonpos_iff_eq_zero]
     calc
-    _ = ∫⁻ b in t, 1 ∂κ a - ∫⁻ b in t, (η b) s ∂κ a := by
+    _ = ENNReal.monus (∫⁻ b in t, 1 ∂κ a) (∫⁻ b in t, (η b) s ∂κ a) := by
       rw [setLIntegral_one]
-    _ = ∫⁻ b in t, 1 - (η b) s ∂κ a := by
-      rw [lintegral_sub]
+    _ = ∫⁻ b in t, ENNReal.monus 1 ((η b) s) ∂κ a := by
+      rw [lintegral_monus]
       · exact η.measurable_coe hs
       · exact ne_top_of_le_ne_top (by simp) integral_le_kernel
       · refine ae_of_all _ fun b ↦ ?_
         rw [← measure_univ (μ := η b)]
         exact measure_mono (by simp)
-    _ ≤ ∫⁻ b, 1 - (η b) s ∂κ a := setLIntegral_le_lintegral _ _
+    _ ≤ ∫⁻ b, ENNReal.monus 1 ((η b) s) ∂κ a := setLIntegral_le_lintegral _ _
     _ = ∫⁻ x, (η x) sᶜ ∂κ a := by
         congr with x
         rw [measure_compl hs (by simp)]
@@ -309,6 +309,6 @@ lemma comp_parallelComp_comp_copy {γ : Type*} [SigmaAlgebra γ] {κ : Kernel α
     _ = (η ∘ₖ κ) a sᶜ := by
         rw [η.comp_apply' _ _ hs.compl]
     _ = 0 := by
-      rw [measure_compl hs (by simp), measure_univ h₁, h₁, tsub_self]
+      rw [measure_compl hs (by simp), measure_univ h₁, h₁, ENNReal.monus_self]
 
 end ProbabilityTheory.Kernel

@@ -141,7 +141,8 @@ See also `Besicovitch.ae_tendsto_measure_inter_div`. -/
 theorem ae_tendsto_measure_inter_div (S : Set α) (K : ℝ) : ∀ᵐ x ∂μ.restrict S,
     ∀ {ι : Type*} {l : Filter ι} (w : ι → α) (δ : ι → ℝ) (_ : Tendsto δ l (𝓝[>] 0))
       (_ : ∀ᶠ j in l, x ∈ closedBall (w j) (K * δ j)),
-      Tendsto (fun j => (μ (S ∩ closedBall (w j) (δ j)) / μ (closedBall (w j) (δ j))))
+      Tendsto (fun j => ENNReal.divInf (μ (S ∩ closedBall (w j) (δ j)))
+        (μ (closedBall (w j) (δ j))))
         l (𝓝 1) := by
   filter_upwards [(vitaliFamily μ K).ae_tendsto_measure_inter_div S] with x hx ι l w δ δlim
     xmem using hx.comp (tendsto_closedBall_filterAt μ _ _ δlim xmem)

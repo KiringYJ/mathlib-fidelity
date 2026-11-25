@@ -498,29 +498,30 @@ theorem NNReal.tsum_geometric {r : ℝ≥0} (hr : r < 1) : ∑' n : ℕ, r ^ n =
 
 @[deprecated (since := "2026-03-18")] alias tsum_geometric_nnreal := NNReal.tsum_geometric
 
-/-- The series `pow r` converges to `(1-r)⁻¹`. For `r < 1` the RHS is a finite number,
-and for `1 ≤ r` the RHS equals `∞`. -/
+/-- The series `pow r` converges to the reciprocal of `ENNReal.monus 1 r`.
+It is finite when `r < 1` and equals `∞` when `1 ≤ r`. -/
 @[simp]
-theorem ENNReal.tsum_geometric (r : ℝ≥0∞) : ∑' n : ℕ, r ^ n = (1 - r)⁻¹ := by
+theorem ENNReal.tsum_geometric (r : ℝ≥0∞) : ∑' n : ℕ, r ^ n = (monus 1 r)⁻¹ := by
   rcases lt_or_ge r 1 with hr | hr
   · rcases ENNReal.lt_iff_exists_coe.1 hr with ⟨r, rfl, hr'⟩
     norm_cast at *
     convert! ENNReal.tsum_coe_eq (NNReal.hasSum_geometric hr)
-    rw [ENNReal.coe_inv (hr := (ne_of_gt <| tsub_pos_iff_lt.2 hr).isUnit), coe_sub, coe_one]
-  · rw [tsub_eq_zero_iff_le.mpr hr, ENNReal.inv_zero, ENNReal.tsum_eq_iSup_nat, iSup_eq_top]
+    rw [ENNReal.coe_inv (hr := (ne_of_gt <| tsub_pos_iff_lt.2 hr).isUnit), coe_monus, coe_one]
+  · rw [monus_eq_zero_of_le hr, ENNReal.inv_zero, ENNReal.tsum_eq_iSup_nat, iSup_eq_top]
     refine fun a ha ↦
       (ENNReal.exists_nat_gt (lt_top_iff_ne_top.1 ha)).imp fun n hn ↦ lt_of_lt_of_le hn ?_
     calc
       (n : ℝ≥0∞) = ∑ i ∈ range n, 1 := by rw [sum_const, nsmul_one, card_range]
       _ ≤ ∑ i ∈ range n, r ^ i := by gcongr; apply one_le_pow₀ hr
 
-theorem ENNReal.tsum_geometric_add_one (r : ℝ≥0∞) : ∑' n : ℕ, r ^ (n + 1) = r * (1 - r)⁻¹ := by
+theorem ENNReal.tsum_geometric_add_one (r : ℝ≥0∞) : ∑' n : ℕ, r ^ (n + 1) = r * (monus 1 r)⁻¹ := by
   simp only [_root_.pow_succ', ENNReal.tsum_mul_left, ENNReal.tsum_geometric]
 
 lemma ENNReal.tsum_two_zpow_neg_add_one :
     ∑' m : ℕ, 2 ^ (-1 - m : ℤ) = (1 : ℝ≥0∞) := by
-  simp_rw [neg_sub_left, ENNReal.zpow_neg, ← Nat.cast_one (R := ℤ), ← Nat.cast_add, zpow_natCast,
-    ENNReal.inv_pow, ENNReal.tsum_geometric_add_one, one_sub_inv_two, inv_inv]
+  simp_rw [neg_sub_left, ENNReal.zpow_neg, ← Nat.cast_one (R := ℤ), ← Nat.cast_add,
+    ENNReal.zpow_natCast, ENNReal.inv_pow, ENNReal.tsum_geometric_add_one,
+    one_monus_inv_two, inv_inv]
   exact ENNReal.inv_mul_cancel (Ne.symm (NeZero.ne' 2)) (Ne.symm top_ne_ofNat)
 
 open Encodable
@@ -560,7 +561,7 @@ then `f` is a Cauchy sequence. -/
 theorem cauchySeq_of_edist_le_geometric : CauchySeq f := by
   refine cauchySeq_of_edist_le_of_tsum_ne_top _ hu ?_
   rw [ENNReal.tsum_mul_left, ENNReal.tsum_geometric]
-  finiteness [(tsub_pos_iff_lt.2 hr).ne']
+  exact ENNReal.mul_ne_top hC (ENNReal.inv_ne_top.2 (ENNReal.monus_pos_of_lt hr).ne')
 
 include hu in
 /-- If `edist (f n) (f (n+1))` is bounded by `C * r^n`, then the distance from
@@ -585,7 +586,9 @@ theorem ENNReal.isUnit_two_pow (n : ℕ) : IsUnit ((2 : ℝ≥0∞) ^ n) :=
   (ENNReal.isUnit_iff.2 ⟨two_ne_zero, ENNReal.ofNat_ne_top⟩ : IsUnit (2 : ℝ≥0∞)).pow n
 
 variable [PseudoEMetricSpace α] (C : ℝ≥0∞) (hC : C ≠ ⊤) {f : ℕ → α}
-  (hu : ∀ n, edist (f n) (f (n + 1)) ≤ C / 2 ^ n)
+  (hu : ∀ n, edist (f n) (f (n + 1)) ≤ ENNReal.div C (2 ^ n)
+    ⟨(ENNReal.isUnit_iff.1 (ENNReal.isUnit_two_pow n)).1,
+      Or.inr (ENNReal.isUnit_iff.1 (ENNReal.isUnit_two_pow n)).2⟩)
   {a : α} (ha : Tendsto f atTop (𝓝 a))
 
 include hC hu in
@@ -599,7 +602,9 @@ include hu ha in
 /-- If `edist (f n) (f (n+1))` is bounded by `C * 2^-n`, then the distance from
 `f n` to the limit of `f` is bounded above by `2 * C * 2^-n`. -/
 theorem edist_le_of_edist_le_geometric_two_of_tendsto (n : ℕ) :
-    edist (f n) a ≤ 2 * C / 2 ^ n := by
+    edist (f n) a ≤ ENNReal.div (2 * C) (2 ^ n)
+      ⟨(ENNReal.isUnit_iff.1 (ENNReal.isUnit_two_pow n)).1,
+        Or.inr (ENNReal.isUnit_iff.1 (ENNReal.isUnit_two_pow n)).2⟩ := by
   simp only [ENNReal.div_eq_mul_inv, ENNReal.inv_pow] at hu
   calc
     _ ≤ C * (2⁻¹ : ℝ≥0∞) ^ n * ∑' m : ℕ, (2⁻¹ : ℝ≥0∞) ^ m :=
@@ -612,7 +617,7 @@ include hu ha in
 /-- If `edist (f n) (f (n+1))` is bounded by `C * 2^-n`, then the distance from
 `f 0` to the limit of `f` is bounded above by `2 * C`. -/
 theorem edist_le_of_edist_le_geometric_two_of_tendsto₀ : edist (f 0) a ≤ 2 * C := by
-  simpa only [_root_.pow_zero, ENNReal.div_eq_mul_inv, inv_one, mul_one] using
+  simpa only [_root_.pow_zero, ENNReal.div_one] using
     edist_le_of_edist_le_geometric_two_of_tendsto C hu ha 0
 
 end EDistLeGeometricTwo
@@ -768,8 +773,12 @@ theorem exists_pos_tsum_mul_lt_of_countable {ε : ℝ≥0∞} (hε : ε ≠ 0) {
   refine ⟨fun i ↦ δ' i / max 1 (w i), fun i ↦ div_pos (Hpos _) (this i), ?_⟩
   refine lt_of_le_of_lt (ENNReal.tsum_le_tsum fun i ↦ ?_) Hsum
   rw [coe_div (hr := (this i).ne'.isUnit)]
-  refine mul_le_of_le_div' ?_
-  grw [← le_max_right]
+  let b : ℝ≥0 := max 1 (w i)
+  have hwb : (w i : ℝ≥0∞) ≤ (b : ℝ≥0∞) := coe_le_coe.2 (le_max_right 1 (w i))
+  calc
+    _ ≤ (b : ℝ≥0∞) * ENNReal.div (δ' i) (b : ℝ≥0∞)
+        ⟨coe_ne_zero.2 (this i).ne', Or.inr coe_ne_top⟩ := mul_le_mul_left hwb _
+    _ ≤ _ := ENNReal.mul_div_le _
 
 end ENNReal
 

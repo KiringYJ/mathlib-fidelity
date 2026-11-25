@@ -627,7 +627,7 @@ lemma measure_Iio {l : ℝ} (hf : Tendsto f atBot (𝓝 l)) (x : R) :
     f.measure (Iio x) = ofReal (leftLim f x - l) := by
   have : Nonempty R := ⟨x⟩
   rw [← Iic_sdiff_right, measure_sdiff _ (nullMeasurableSet_singleton x), measure_singleton,
-    f.measure_Iic hf, ← ofReal_sub _ (sub_nonneg.mpr <| Monotone.leftLim_le f.mono' le_rfl)]
+    f.measure_Iic hf, ← ofReal_monus _ (sub_nonneg.mpr <| Monotone.leftLim_le f.mono' le_rfl)]
     <;> simp
 
 theorem measure_Ici {l : ℝ} (hf : Tendsto f atTop (𝓝 l)) (x : R) :
@@ -644,7 +644,7 @@ theorem measure_Ici {l : ℝ} (hf : Tendsto f atTop (𝓝 l)) (x : R) :
 lemma measure_Ioi {l : ℝ} (hf : Tendsto f atTop (𝓝 l)) (x : R) :
     f.measure (Ioi x) = ofReal (l - f x) := by
   rw [← Ici_sdiff_left, measure_sdiff _ (nullMeasurableSet_singleton x), measure_singleton,
-    f.measure_Ici hf, ← ofReal_sub _ (sub_nonneg.mpr <| Monotone.leftLim_le f.mono' le_rfl)]
+    f.measure_Ici hf, ← ofReal_monus _ (sub_nonneg.mpr <| Monotone.leftLim_le f.mono' le_rfl)]
     <;> simp
 
 lemma measure_Ioi_of_tendsto_atTop_atTop (hf : Tendsto f atTop atTop) (x : R) :

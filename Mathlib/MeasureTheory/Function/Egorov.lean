@@ -142,8 +142,8 @@ theorem measure_iUnionNotConvergentSeq (hε : 0 < ε)
     μ (iUnionNotConvergentSeq hε hf hsm hs hfg) ≤ ε := by
   refine (measure_iUnion_le _).trans (le_trans
     (ENNReal.tsum_le_tsum <| notConvergentSeqLTIndex_spec (ε.half_pos hε.ne') hf hsm hs hfg) ?_)
-  rw [ENNReal.tsum_mul_left, ENNReal.tsum_geometric_two, mul_comm]
-  exact mul_div_le
+  rw [ENNReal.tsum_mul_left, ENNReal.tsum_geometric_two]
+  exact (ENNReal.div_mul_cancel two_ne_zero ENNReal.ofNat_ne_top).le
 
 theorem iUnionNotConvergentSeq_subset (hε : 0 < ε)
     (hf : ∀ n, Measurable (fun a ↦ edist (f n a) (g a)))

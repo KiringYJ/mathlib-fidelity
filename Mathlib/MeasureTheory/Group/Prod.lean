@@ -314,15 +314,15 @@ follows from §59, Th. D, but the second inequality is not justified. We prove t
 almost all `x` in `MeasureTheory.ae_measure_preimage_add_right_lt_top_of_ne_zero`. -/]
 theorem measure_lintegral_div_measure (sm : MeasurableSet s) (h2s : ν' s ≠ 0) (h3s : ν' s ≠ ∞)
     (f : G → ℝ≥0∞) (hf : Measurable f) :
-    (μ' s * ∫⁻ y, (f y⁻¹ / ν' ((· * y⁻¹) ⁻¹' s)) ∂ν') = ∫⁻ x, f x ∂μ' := by
-  set g := fun y => (f y⁻¹ / ν' ((fun x => x * y⁻¹) ⁻¹' s))
+    (μ' s * ∫⁻ y, ENNReal.divInf (f y⁻¹) (ν' ((· * y⁻¹) ⁻¹' s)) ∂ν') = ∫⁻ x, f x ∂μ' := by
+  set g := fun y => ENNReal.divInf (f y⁻¹) (ν' ((fun x => x * y⁻¹) ⁻¹' s))
   have hg : Measurable g :=
     (hf.comp measurable_inv).mul (measurable_inv.comp
       ((measurable_measure_mul_right ν' sm).comp measurable_inv))
   simp_rw [measure_mul_lintegral_eq μ' ν' sm g hg, g, inv_inv]
   refine lintegral_congr_ae ?_
   refine (ae_measure_preimage_mul_right_lt_top_of_ne_zero μ' ν' h2s h3s).mono fun x hx => ?_
-  simp_rw [ENNReal.mul_div_cancel (measure_mul_right_ne_zero ν' h2s _) hx.ne]
+  exact ENNReal.mul_div_cancel (measure_mul_right_ne_zero ν' h2s x) hx.ne
 
 @[to_additive]
 theorem measure_mul_measure_eq (s t : Set G) (h2s : ν' s ≠ 0) (h3s : ν' s ≠ ∞) :
@@ -344,11 +344,11 @@ theorem measure_mul_measure_eq (s t : Set G) (h2s : ν' s ≠ 0) (h3s : ν' s �
 @[to_additive
 /-- Left invariant Borel measures on an additive measurable group are unique (up to a scalar). -/]
 theorem measure_eq_div_smul (h2s : ν' s ≠ 0) (h3s : ν' s ≠ ∞) :
-    μ' = (μ' s / ν' s) • ν' := by
+    μ' = ENNReal.div (μ' s) (ν' s) ⟨h2s, Or.inr h3s⟩ • ν' := by
   ext1 t -
-  rw [Measure.smul_apply, smul_eq_mul, mul_comm, ← ENNReal.mul_div_assoc,
-    mul_comm, measure_mul_measure_eq μ' ν' s t h2s h3s, ENNReal.mul_div_assoc,
-    ENNReal.mul_div_cancel h2s h3s]
+  rw [Measure.smul_apply, smul_eq_mul, ENNReal.div_eq_mul_inv, mul_right_comm,
+    measure_mul_measure_eq μ' ν' s t h2s h3s, mul_right_comm, ENNReal.mul_inv_cancel h2s h3s,
+    one_mul]
 
 end SigmaFinite
 

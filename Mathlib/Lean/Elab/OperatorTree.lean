@@ -70,13 +70,13 @@ private def checkedDivisionOp? (carrier : Expr) : MetaM (Option Expr) := do
   let .some monoid ← trySynthInstance (← mkAppM `Monoid #[carrier]) | return none
   return some (← mkAppOptM `Checked.div #[some carrier, some monoid])
 
-private def ambientDivisionOp? (lhsType rhsType : Expr) : MetaM (Option Expr) := do
+private def ambientBinaryOp? (cls op : Name) (lhsType rhsType : Expr) : MetaM (Option Expr) := do
   let resultLevel ← mkFreshLevelMVar
   let levels := [← getDecLevel lhsType, ← getDecLevel rhsType, resultLevel]
   let resultType ← mkFreshExprMVar (mkSort (.succ resultLevel))
-  let type := mkApp3 (mkConst ``HDiv levels) lhsType rhsType resultType
+  let type := mkApp3 (mkConst cls levels) lhsType rhsType resultType
   let .some division ← trySynthInstance type | return none
-  return some (mkApp4 (mkConst ``HDiv.hDiv levels) lhsType rhsType resultType division)
+  return some (mkApp4 (mkConst op levels) lhsType rhsType resultType division)
 
 /-- Select a division on resolved operand types. Checked domains take precedence over ordinary
 instance search. Otherwise a monoid can divide by a proved unit when it has no ambient division. -/
@@ -85,9 +85,12 @@ private def divisionOp? (lhsType rhsType : Expr) : MetaM (Option Expr) := do
   if homogeneous && (← getEnv).contains `EReal.div then
     if ← withNewMCtxDepth <| isDefEqGuarded lhsType (mkConst `EReal) then
       return some (mkConst `EReal.div)
+  if homogeneous && (← getEnv).contains `ENNReal.div then
+    if ← withNewMCtxDepth <| isDefEqGuarded lhsType (mkConst `ENNReal) then
+      return some (mkConst `ENNReal.div)
   if homogeneous && (← usesCheckedExactDivision lhsType) then
     return ← checkedDivisionOp? lhsType
-  if let some op ← ambientDivisionOp? lhsType rhsType then return some op
+  if let some op ← ambientBinaryOp? ``HDiv ``HDiv.hDiv lhsType rhsType then return some op
   if homogeneous then checkedDivisionOp? lhsType else pure none
 
 open Lean.PrettyPrinter.Delaborator SubExpr
@@ -136,15 +139,35 @@ private def divisionProofAvailable (op lhs rhs : Expr) : MetaM Bool := do
     divisionProofAvailable selected lhs rhs)
   `($(← withNaryArg 2 delab) / $(← withNaryArg 3 delab))
 
-/-- Display extended-real division when slash can reconstruct its domain witness. -/
-@[delab app.EReal.div] def delabERealDiv : Delab :=
+private def delabExtendedDiv (head : Name) : Delab :=
   whenNotPPOption getPPExplicit <| whenPPOption getPPNotation <| withOverApp 3 do
     let #[lhs, rhs, _] := (← getExpr).getAppArgs | failure
     guard (← withDivisionInstances do
       let some selected ← divisionOp? (← inferType lhs) (← inferType rhs) | return false
-      unless selected.isConstOf `EReal.div do return false
+      unless selected.isConstOf head do return false
       divisionProofAvailable selected lhs rhs)
     `($(← withNaryArg 0 delab) / $(← withNaryArg 1 delab))
+
+/-- Keep explicit carrier information: in particular, never print
+`sub ↑u ↑v h` as bare ENNReal subtraction. Otherwise use the named
+application if the current context cannot reconstruct the witness. -/
+@[delab app.EReal.sub] def delabERealSub : Delab :=
+  whenNotPPOption getPPExplicit <| whenPPOption getPPNotation <| withOverApp 3 do
+    let #[lhs, rhs, _] := (← getExpr).getAppArgs | failure
+    guard (← withDivisionInstances do
+      divisionProofAvailable (mkConst `EReal.sub) lhs rhs)
+    let arg (i : Nat) : DelabM Term := withNaryArg i do
+      let e ← getExpr
+      let t ← delab
+      if e.isFVar then return t
+      `(($t : $(mkIdent `EReal)))
+    `($(← arg 0) - $(← arg 1))
+
+/-- Display ordinary signed extended-real division when slash can reconstruct its domain. -/
+@[delab app.EReal.div] def delabERealDiv : Delab := delabExtendedDiv `EReal.div
+
+/-- Display ordinary nonnegative extended-real division when slash can reconstruct its domain. -/
+@[delab app.ENNReal.div] def delabENNRealDiv : Delab := delabExtendedDiv `ENNReal.div
 
 /-- Display an ambient quotient with slash when instance inference selects it. -/
 @[app_delab HDiv.hDiv] def delabHDiv : Delab :=
@@ -371,8 +394,55 @@ def checkedApp (name : Name) (args : Array Expr) : TermElabM Expr := do
   elabAppArgs (← mkConstWithFreshMVarLevels name) #[] (args.map Arg.expr)
     none (explicit := false) (ellipsis := false) (resultIsOutParamSupport := false)
 
+/-- Find the declared carrier through aliases, preserving the distinction between
+`ENNReal` and an explicitly chosen `WithTop` carrier. -/
+private partial def hasSubCarrierHead (ty : Expr) (n : Name) : MetaM Bool := do
+  let ty ← withReducible <| whnf ty
+  if ty.isConstOf n then return true
+  let some unfolded ← withTransparency .default (unfoldDefinition? ty) | return false
+  hasSubCarrierHead unfolded n
+
+private def isSubCarrier (ty : Expr) (n : Name) : MetaM Bool := do
+  unless (← getEnv).contains n do return false
+  withNewMCtxDepth do
+    unless ← isDefEqGuarded ty (mkConst n) do return false
+    hasSubCarrierHead ty n
+
+/-- An explicit instance application on extended operands cannot round-trip through
+subtraction notation when the notation is checked or unavailable. -/
+@[app_delab HSub.hSub] def delabExtendedHSub : Delab := withOverApp 6 do
+  let #[lhsType, rhsType, _, _, _, _] := (← getExpr).getAppArgs | failure
+  let suppress ← withDivisionInstances do
+    if (← isSubCarrier lhsType `ENNReal) || (← isSubCarrier rhsType `ENNReal) then return true
+    unless (← getEnv).contains `EReal.sub do return false
+    return (← isSubCarrier lhsType `EReal) && (← isSubCarrier rhsType `EReal)
+  guard suppress
+  withOptionAtCurrPos `pp.notation false <| withOptionAtCurrPos `pp.fieldNotation false delabApp
+
+/-- Inspect operand carriers *before* asking the application elaborator to coerce
+them. Do not use the expected result alone to reinterpret two known operands. -/
+private def extendedSub? (maxType? : Option Expr) (f lhs rhs : Expr) :
+    TermElabM (Option Expr) := do
+  unless f.isConstOf ``HSub.hSub do return none
+  let l ← instantiateMVars (← inferType lhs)
+  let r ← instantiateMVars (← inferType rhs)
+  if (← isSubCarrier l `ENNReal) || (← isSubCarrier r `ENNReal) then
+    throwError "no subtraction notation on ENNReal; use ENNReal.monus or cast explicitly to EReal"
+  unless (← getEnv).contains `EReal.sub do return none
+  let lE ← isSubCarrier l `EReal
+  let rE ← isSubCarrier r `EReal
+  if lE != rE && !isUnknown l && !isUnknown r then
+    if (← ambientBinaryOp? ``HSub ``HSub.hSub l r).isSome then return none
+  let mut checked := lE || rE
+  if !checked && isUnknown l && isUnknown r then
+    if let some ty := maxType? then
+      checked := ← isSubCarrier ty `EReal
+  unless checked do return none
+  return some (← checkedApp `EReal.sub #[lhs, rhs])
+
 private def mkBinOp (rules : Rules) (maxType? : Option Expr) (lazy : Bool)
     (f lhs rhs : Expr) : TermElabM Expr := do
+  if let some result ← extendedSub? maxType? f lhs rhs then return result
   if let some result ← rules.binOp? maxType? f lhs rhs then return result
   let rhs ← if lazy then mkFunUnit rhs else pure rhs
   elabAppArgs f #[] #[Arg.expr lhs, Arg.expr rhs] none
@@ -496,6 +566,33 @@ mutual
       | .binop ref .rightact f lhs rhs =>
         return .binop ref .rightact f (← go lhs none false false) rhs
       | .binop ref kind f lhs rhs =>
+        if f.isConstOf ``HSub.hSub then
+          if (← isSubCarrier maxType `ENNReal) || (← isSubCarrier maxType `EReal) then
+            -- Analyze each operand as an expression in its own right. For example
+            -- `(u + v) - x` must not push an EReal coercion into `u + v` when
+            -- u and v are ENNReal. Conversely `(u + v : EReal)` is explicit.
+            let r ← withRef ref do
+              let l ← toExpr rules lhs none
+              let r ← toExpr rules rhs none
+              if (← isSubCarrier maxType `ENNReal) &&
+                  isUnknown (← instantiateMVars (← inferType l)) &&
+                  isUnknown (← instantiateMVars (← inferType r)) then
+                throwError "no subtraction notation on ENNReal"
+              mkBinOp rules (some maxType) (kind == .lazy) f l r
+            return .term ref (← getResetInfoTrees) r
+          if (← getEnv).contains `ENNReal then
+            if ← hasCoe (mkConst `ENNReal) maxType then
+              -- Probe only; do not commit assignments, default instances, or
+              -- duplicate infotrees from this inspection to ordinary elaboration.
+              for arg in #[lhs, rhs] do
+                let bad ← withoutModifyingState do
+                  try
+                    let e ← withoutErrToSorry <| toExpr rules arg none
+                    isSubCarrier (← instantiateMVars (← inferType e)) `ENNReal
+                  catch ex =>
+                    if ex.isInterrupt then throw ex
+                    return false
+                if bad then throwError "no subtraction notation on ENNReal"
         /-
           We only keep applying coercions to `maxType` if `f` is predicate or
           `f` has a homogeneous instance with `maxType`. See `hasHomogeneousInstance` for additional

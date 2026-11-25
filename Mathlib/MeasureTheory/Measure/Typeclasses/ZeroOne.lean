@@ -82,8 +82,8 @@ lemma measure_inter_eq_one {s t : Set α} (hs : MeasurableSet s) (ht : Measurabl
   _ = μ (sᶜ ∪ tᶜ) := by simp [compl_inter]
   _ ≤ μ sᶜ + μ tᶜ := measure_union_le _ _
   _ ≤ 0 := by
-    rw [measure_compl hs (by simp), measure_univ hμs, hμs, tsub_self,
-      measure_compl ht (by simp), measure_univ hμt, hμt, tsub_self]
+    rw [measure_compl hs (by simp), measure_univ hμs, hμs, ENNReal.monus_self,
+      measure_compl ht (by simp), measure_univ hμt, hμt, ENNReal.monus_self]
     simp
 
 lemma measure_inter_eq_prod {s t : Set α} (hs : MeasurableSet s) (ht : MeasurableSet t) :

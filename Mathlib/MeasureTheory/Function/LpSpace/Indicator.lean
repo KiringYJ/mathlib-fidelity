@@ -41,19 +41,19 @@ theorem exists_eLpNorm_indicator_le (hp : p ≠ ∞) (c : E) {ε : ℝ≥0∞} (
   rcases eq_or_ne p 0 with (rfl | h'p)
   · exact ⟨1, zero_lt_one, fun s _ => by simp⟩
   have hp₀ : 0 < p := bot_lt_iff_ne_bot.2 h'p
-  have hp₀' : 0 ≤ (1 / p).toReal := ENNReal.toReal_nonneg
+  have hp₀' : 0 ≤ (p⁻¹).toReal := ENNReal.toReal_nonneg
   have hpReal : 0 < p.toReal := ENNReal.toReal_pos hp₀.ne' hp
-  have hp₀'' : 0 < (1 / p).toReal := by
-    rw [ENNReal.one_div, ENNReal.toReal_inv (ha := hpReal.ne'.isUnit)]
+  have hp₀'' : 0 < (p⁻¹).toReal := by
+    rw [ENNReal.toReal_inv (ha := hpReal.ne'.isUnit)]
     positivity
   obtain ⟨η, hη_pos, hη_le⟩ :
-      ∃ η : ℝ≥0, 0 < η ∧ ‖c‖ₑ * (η : ℝ≥0∞) ^ (1 / p).toReal ≤ ε := by
+      ∃ η : ℝ≥0, 0 < η ∧ ‖c‖ₑ * (η : ℝ≥0∞) ^ (p⁻¹).toReal ≤ ε := by
     have :
-      Filter.Tendsto (fun x : ℝ≥0 => ((‖c‖₊ * x ^ (1 / p).toReal : ℝ≥0) : ℝ≥0∞)) (𝓝 0)
+      Filter.Tendsto (fun x : ℝ≥0 => ((‖c‖₊ * x ^ (p⁻¹).toReal : ℝ≥0) : ℝ≥0∞)) (𝓝 0)
         (𝓝 (0 : ℝ≥0)) := by
       rw [ENNReal.tendsto_coe]
-      have h : Tendsto (fun x : ℝ≥0 ↦ ‖c‖₊ * x ^ (1 / p).toReal) (𝓝 0)
-          (𝓝 (‖c‖₊ * (0 : ℝ≥0) ^ (1 / p).toReal)) :=
+      have h : Tendsto (fun x : ℝ≥0 ↦ ‖c‖₊ * x ^ (p⁻¹).toReal) (𝓝 0)
+          (𝓝 (‖c‖₊ * (0 : ℝ≥0) ^ (p⁻¹).toReal)) :=
         (NNReal.continuousAt_rpow_const (Or.inr hp₀')).tendsto.const_mul _
       simpa only [NNReal.zero_rpow hp₀''.ne', mul_zero] using h
     have hε' : 0 < ε := hε.bot_lt
@@ -128,7 +128,7 @@ theorem indicatorConstLp_coeFn_notMem : ∀ᵐ x : α ∂μ, x ∉ s → indicat
   indicatorConstLp_coeFn.mono fun _x hx hxs => hx.trans (Set.indicator_of_notMem hxs _)
 
 theorem norm_indicatorConstLp (hp_ne_zero : p ≠ 0) (hp_ne_top : p ≠ ∞) :
-    ‖indicatorConstLp p hs hμs c‖ = ‖c‖ * μ.real s ^ (1 / p).toReal := by
+    ‖indicatorConstLp p hs hμs c‖ = ‖c‖ * μ.real s ^ (p⁻¹).toReal := by
   rw [Lp.norm_def, eLpNorm_congr_ae indicatorConstLp_coeFn,
     eLpNorm_indicator_const hs hp_ne_zero hp_ne_top, ENNReal.toReal_mul, measureReal_def,
     ENNReal.toReal_rpow, toReal_enorm]
@@ -136,18 +136,18 @@ theorem norm_indicatorConstLp (hp_ne_zero : p ≠ 0) (hp_ne_top : p ≠ ∞) :
 theorem norm_indicatorConstLp_top (hμs_ne_zero : μ s ≠ 0) :
     ‖indicatorConstLp ∞ hs hμs c‖ = ‖c‖ := by
   rw [Lp.norm_def, eLpNorm_congr_ae indicatorConstLp_coeFn,
-    eLpNorm_indicator_const' hs hμs_ne_zero ENNReal.top_ne_zero, ENNReal.div_top,
+    eLpNorm_indicator_const' hs hμs_ne_zero ENNReal.top_ne_zero, ENNReal.inv_top,
     ENNReal.toReal_zero, ENNReal.rpow_zero, mul_one, toReal_enorm]
 
 theorem norm_indicatorConstLp' (hp_pos : p ≠ 0) (hμs_pos : μ s ≠ 0) :
-    ‖indicatorConstLp p hs hμs c‖ = ‖c‖ * μ.real s ^ (1 / p).toReal := by
+    ‖indicatorConstLp p hs hμs c‖ = ‖c‖ * μ.real s ^ (p⁻¹).toReal := by
   by_cases hp_top : p = ∞
-  · rw [hp_top, ENNReal.div_top, ENNReal.toReal_zero, Real.rpow_zero, mul_one]
+  · rw [hp_top, ENNReal.inv_top, ENNReal.toReal_zero, Real.rpow_zero, mul_one]
     exact norm_indicatorConstLp_top hμs_pos
   · exact norm_indicatorConstLp hp_pos hp_top
 
 theorem norm_indicatorConstLp_le :
-    ‖indicatorConstLp p hs hμs c‖ ≤ ‖c‖ * μ.real s ^ (1 / p).toReal := by
+    ‖indicatorConstLp p hs hμs c‖ ≤ ‖c‖ * μ.real s ^ (p⁻¹).toReal := by
   rw [indicatorConstLp, Lp.norm_toLp]
   refine ENNReal.toReal_le_of_le_ofReal (by positivity) ?_
   refine (eLpNorm_indicator_const_le _ _).trans_eq ?_
@@ -156,11 +156,11 @@ theorem norm_indicatorConstLp_le :
   finiteness
 
 theorem nnnorm_indicatorConstLp_le :
-    ‖indicatorConstLp p hs hμs c‖₊ ≤ ‖c‖₊ * (μ s).toNNReal ^ (1 / p).toReal :=
+    ‖indicatorConstLp p hs hμs c‖₊ ≤ ‖c‖₊ * (μ s).toNNReal ^ (p⁻¹).toReal :=
   norm_indicatorConstLp_le
 
 theorem enorm_indicatorConstLp_le :
-    ‖indicatorConstLp p hs hμs c‖ₑ ≤ ‖c‖ₑ * μ s ^ (1 / p).toReal := by
+    ‖indicatorConstLp p hs hμs c‖ₑ ≤ ‖c‖ₑ * μ s ^ (p⁻¹).toReal := by
   simpa [ENNReal.coe_rpow_of_nonneg, ENNReal.coe_toNNReal hμs, Lp.enorm_def, ← enorm_eq_nnnorm]
     using ENNReal.coe_le_coe.2 <| nnnorm_indicatorConstLp_le (c := c) (hμs := hμs)
 
@@ -253,17 +253,17 @@ lemma indicatorConstLp_univ :
   simp only [Set.indicator_univ]
 
 theorem Lp.norm_const [NeZero μ] (hp_zero : p ≠ 0) :
-    ‖Lp.const p μ c‖ = ‖c‖ * μ.real Set.univ ^ (1 / p).toReal := by
+    ‖Lp.const p μ c‖ = ‖c‖ * μ.real Set.univ ^ (p⁻¹).toReal := by
   have := NeZero.ne μ
   rw [← MemLp.toLp_const, Lp.norm_toLp, eLpNorm_const] <;> try assumption
   rw [measureReal_def, ENNReal.toReal_mul, toReal_enorm, ← ENNReal.toReal_rpow]
 
 theorem Lp.norm_const' (hp_zero : p ≠ 0) (hp_top : p ≠ ∞) :
-    ‖Lp.const p μ c‖ = ‖c‖ * μ.real Set.univ ^ (1 / p).toReal := by
+    ‖Lp.const p μ c‖ = ‖c‖ * μ.real Set.univ ^ (p⁻¹).toReal := by
   rw [← MemLp.toLp_const, Lp.norm_toLp, eLpNorm_const'] <;> try assumption
   rw [measureReal_def, ENNReal.toReal_mul, toReal_enorm, ← ENNReal.toReal_rpow]
 
-theorem Lp.norm_const_le : ‖Lp.const p μ c‖ ≤ ‖c‖ * μ.real Set.univ ^ (1 / p).toReal := by
+theorem Lp.norm_const_le : ‖Lp.const p μ c‖ ≤ ‖c‖ * μ.real Set.univ ^ (p⁻¹).toReal := by
   rw [← indicatorConstLp_univ]
   exact norm_indicatorConstLp_le
 
@@ -278,14 +278,14 @@ theorem Lp.norm_const_le : ‖Lp.const p μ c‖ ≤ ‖c‖ * μ.real Set.univ 
 @[simps! apply]
 protected def Lp.constL (𝕜 : Type*) [NormedRing 𝕜] [Module 𝕜 E] [IsBoundedSMul 𝕜 E] [Fact (1 ≤ p)] :
     E →L[𝕜] Lp E p μ :=
-  (Lp.constₗ p μ 𝕜).mkContinuous (μ.real Set.univ ^ (1 / p).toReal) fun x ↦ by
-    change ‖Lp.const p μ x‖ ≤ μ.real Set.univ ^ (1 / p).toReal * ‖x‖
+  (Lp.constₗ p μ 𝕜).mkContinuous (μ.real Set.univ ^ (p⁻¹).toReal) fun x ↦ by
+    change ‖Lp.const p μ x‖ ≤ μ.real Set.univ ^ (p⁻¹).toReal * ‖x‖
     rw [mul_comm]
     exact Lp.norm_const_le (p := p) (μ := μ) x
 
 theorem Lp.norm_constL_le (𝕜 : Type*) [NontriviallyNormedField 𝕜] [NormedSpace 𝕜 E]
     [Fact (1 ≤ p)] :
-    ‖(Lp.constL p μ 𝕜 : E →L[𝕜] Lp E p μ)‖ ≤ μ.real Set.univ ^ (1 / p).toReal :=
+    ‖(Lp.constL p μ 𝕜 : E →L[𝕜] Lp E p μ)‖ ≤ μ.real Set.univ ^ (p⁻¹).toReal :=
   LinearMap.mkContinuous_norm_le _ (by positivity) _
 
 end const

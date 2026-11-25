@@ -8,11 +8,11 @@ module
 public import Mathlib.MeasureTheory.Integral.Lebesgue.Add
 
 /-!
-# Subtraction of Lebesgue integrals
+# Monus of Lebesgue integrals
 
-In this file we first show that Lebesgue integrals can be subtracted with the expected results –
-`∫⁻ f - ∫⁻ g ≤ ∫⁻ (f - g)`, with equality if `g ≤ f` almost everywhere. Then we prove variants of
-the monotone convergence theorem that use this subtraction in their proofs.
+The monus of two Lebesgue integrals is bounded by the integral of the pointwise monus.
+Equality holds when `g ≤ f` almost everywhere and the integral of `g` is finite.
+We use this equality to prove versions of the monotone convergence theorem.
 -/
 
 public section
@@ -25,29 +25,29 @@ namespace MeasureTheory
 
 variable {α β : Type*} [SigmaAlgebra α] {μ : Measure α}
 
-theorem lintegral_sub' {f g : α → ℝ≥0∞} (hg : AEMeasurable g μ) (hg_fin : ∫⁻ a, g a ∂μ ≠ ∞)
-    (h_le : g ≤ᵐ[μ] f) : ∫⁻ a, f a - g a ∂μ = ∫⁻ a, f a ∂μ - ∫⁻ a, g a ∂μ := by
-  refine ENNReal.eq_sub_of_add_eq hg_fin ?_
+theorem lintegral_monus' {f g : α → ℝ≥0∞} (hg : AEMeasurable g μ) (hg_fin : ∫⁻ a, g a ∂μ ≠ ∞)
+    (h_le : g ≤ᵐ[μ] f) : ∫⁻ a, monus (f a) (g a) ∂μ = monus (∫⁻ a, f a ∂μ) (∫⁻ a, g a ∂μ) := by
+  refine ENNReal.eq_monus_of_add_eq hg_fin ?_
   rw [← lintegral_add_right' _ hg]
-  exact lintegral_congr_ae (h_le.mono fun x hx => tsub_add_cancel_of_le hx)
+  exact lintegral_congr_ae (h_le.mono fun x hx => ENNReal.monus_add_cancel_of_le hx)
 
-theorem lintegral_sub {f g : α → ℝ≥0∞} (hg : Measurable g) (hg_fin : ∫⁻ a, g a ∂μ ≠ ∞)
-    (h_le : g ≤ᵐ[μ] f) : ∫⁻ a, f a - g a ∂μ = ∫⁻ a, f a ∂μ - ∫⁻ a, g a ∂μ :=
-  lintegral_sub' hg.aemeasurable hg_fin h_le
+theorem lintegral_monus {f g : α → ℝ≥0∞} (hg : Measurable g) (hg_fin : ∫⁻ a, g a ∂μ ≠ ∞)
+    (h_le : g ≤ᵐ[μ] f) : ∫⁻ a, monus (f a) (g a) ∂μ = monus (∫⁻ a, f a ∂μ) (∫⁻ a, g a ∂μ) :=
+  lintegral_monus' hg.aemeasurable hg_fin h_le
 
-theorem lintegral_sub_le' (f g : α → ℝ≥0∞) (hf : AEMeasurable f μ) :
-    ∫⁻ x, g x ∂μ - ∫⁻ x, f x ∂μ ≤ ∫⁻ x, g x - f x ∂μ := by
-  rw [tsub_le_iff_right]
+theorem lintegral_monus_le' (f g : α → ℝ≥0∞) (hf : AEMeasurable f μ) :
+    monus (∫⁻ x, g x ∂μ) (∫⁻ x, f x ∂μ) ≤ ∫⁻ x, monus (g x) (f x) ∂μ := by
+  rw [ENNReal.monus_le_iff]
   by_cases hfi : ∫⁻ x, f x ∂μ = ∞
   · rw [hfi, add_top]
     exact le_top
   · rw [← lintegral_add_right' _ hf]
     gcongr
-    exact le_tsub_add
+    exact ENNReal.le_monus_add
 
-theorem lintegral_sub_le (f g : α → ℝ≥0∞) (hf : Measurable f) :
-    ∫⁻ x, g x ∂μ - ∫⁻ x, f x ∂μ ≤ ∫⁻ x, g x - f x ∂μ :=
-  lintegral_sub_le' f g hf.aemeasurable
+theorem lintegral_monus_le (f g : α → ℝ≥0∞) (hf : Measurable f) :
+    monus (∫⁻ x, g x ∂μ) (∫⁻ x, f x ∂μ) ≤ ∫⁻ x, monus (g x) (f x) ∂μ :=
+  lintegral_monus_le' f g hf.aemeasurable
 
 /-- **Monotone convergence theorem** for nonincreasing sequences of functions. -/
 theorem lintegral_iInf_ae {f : ℕ → α → ℝ≥0∞} (h_meas : ∀ n, Measurable (f n))
@@ -56,18 +56,19 @@ theorem lintegral_iInf_ae {f : ℕ → α → ℝ≥0∞} (h_meas : ∀ n, Measu
   have fn_le_f0 : ∫⁻ a, ⨅ n, f n a ∂μ ≤ ∫⁻ a, f 0 a ∂μ :=
     lintegral_mono fun _ => iInf_le_of_le 0 le_rfl
   have fn_le_f0' : ⨅ n, ∫⁻ a, f n a ∂μ ≤ ∫⁻ a, f 0 a ∂μ := iInf_le_of_le 0 le_rfl
-  (ENNReal.sub_right_inj h_fin fn_le_f0 fn_le_f0').1 <|
-    show ∫⁻ a, f 0 a ∂μ - ∫⁻ a, ⨅ n, f n a ∂μ = ∫⁻ a, f 0 a ∂μ - ⨅ n, ∫⁻ a, f n a ∂μ from
+  (ENNReal.monus_right_inj h_fin fn_le_f0 fn_le_f0').1 <|
+    show monus (∫⁻ a, f 0 a ∂μ) (∫⁻ a, ⨅ n, f n a ∂μ) =
+      monus (∫⁻ a, f 0 a ∂μ) (⨅ n, ∫⁻ a, f n a ∂μ) from
       calc
-        ∫⁻ a, f 0 a ∂μ - ∫⁻ a, ⨅ n, f n a ∂μ = ∫⁻ a, f 0 a - ⨅ n, f n a ∂μ :=
-          (lintegral_sub (.iInf h_meas)
+        monus (∫⁻ a, f 0 a ∂μ) (∫⁻ a, ⨅ n, f n a ∂μ) = ∫⁻ a, monus (f 0 a) (⨅ n, f n a) ∂μ :=
+          (lintegral_monus (.iInf h_meas)
               (ne_top_of_le_ne_top h_fin <| lintegral_mono fun _ => iInf_le _ _)
               (ae_of_all _ fun _ => iInf_le _ _)).symm
-        _ = ∫⁻ a, ⨆ n, f 0 a - f n a ∂μ := congr rfl (funext fun _ => ENNReal.sub_iInf)
-        _ = ⨆ n, ∫⁻ a, f 0 a - f n a ∂μ :=
-          (lintegral_iSup_ae (fun n => (h_meas 0).sub (h_meas n)) fun n =>
-            (h_mono n).mono fun _ ha => tsub_le_tsub le_rfl ha)
-        _ = ⨆ n, ∫⁻ a, f 0 a ∂μ - ∫⁻ a, f n a ∂μ :=
+        _ = ∫⁻ a, ⨆ n, monus (f 0 a) (f n a) ∂μ := congr rfl (funext fun _ => ENNReal.monus_iInf)
+        _ = ⨆ n, ∫⁻ a, monus (f 0 a) (f n a) ∂μ :=
+          (lintegral_iSup_ae (fun n => (h_meas 0).ennreal_monus (h_meas n)) fun n =>
+            (h_mono n).mono fun _ ha => ENNReal.monus_le_monus le_rfl ha)
+        _ = ⨆ n, monus (∫⁻ a, f 0 a ∂μ) (∫⁻ a, f n a ∂μ) :=
           (have h_mono : ∀ᵐ a ∂μ, ∀ n : ℕ, f n.succ a ≤ f n a := ae_all_iff.2 h_mono
           have h_mono : ∀ n, ∀ᵐ a ∂μ, f n a ≤ f 0 a := fun n =>
             h_mono.mono fun a h => by
@@ -76,9 +77,10 @@ theorem lintegral_iInf_ae {f : ℕ → α → ℝ≥0∞} (h_meas : ∀ n, Measu
               | succ n ih => exact (h n).trans ih
           congr_arg iSup <|
             funext fun n =>
-              lintegral_sub (h_meas _) (ne_top_of_le_ne_top h_fin <| lintegral_mono_ae <| h_mono n)
+              lintegral_monus (h_meas _)
+                (ne_top_of_le_ne_top h_fin <| lintegral_mono_ae <| h_mono n)
                 (h_mono n))
-        _ = ∫⁻ a, f 0 a ∂μ - ⨅ n, ∫⁻ a, f n a ∂μ := ENNReal.sub_iInf.symm
+        _ = monus (∫⁻ a, f 0 a ∂μ) (⨅ n, ∫⁻ a, f n a ∂μ) := ENNReal.monus_iInf.symm
 
 /-- **Monotone convergence theorem** for nonincreasing sequences of functions. -/
 theorem lintegral_iInf {f : ℕ → α → ℝ≥0∞} (h_meas : ∀ n, Measurable (f n)) (h_anti : Antitone f)
@@ -163,22 +165,23 @@ theorem exists_setLIntegral_compl_lt {f : α → ℝ≥0∞} (hf : ∫⁻ a, f a
   by_cases hf₀ : ∫⁻ a, f a ∂μ = 0
   · exact ⟨∅, .empty, by simp, by simpa [hf₀, pos_iff_ne_zero]⟩
   obtain ⟨g, hgf, hg_meas, hgsupp, hgε⟩ :
-      ∃ g ≤ f, Measurable g ∧ μ (support g) < ∞ ∧ ∫⁻ a, f a ∂μ - ε < ∫⁻ a, g a ∂μ := by
-    obtain ⟨g, hgf, hgε⟩ : ∃ (g : α →ₛ ℝ≥0∞) (_ : g ≤ f), ∫⁻ a, f a ∂μ - ε < g.lintegral μ := by
-      simpa only [← lt_iSup_iff, ← lintegral_def] using ENNReal.sub_lt_self hf hf₀ hε
+      ∃ g ≤ f, Measurable g ∧ μ (support g) < ∞ ∧ monus (∫⁻ a, f a ∂μ) ε < ∫⁻ a, g a ∂μ := by
+    obtain ⟨g, hgf, hgε⟩ :
+        ∃ (g : α →ₛ ℝ≥0∞) (_ : g ≤ f), monus (∫⁻ a, f a ∂μ) ε < g.lintegral μ := by
+      simpa only [← lt_iSup_iff, ← lintegral_def] using ENNReal.monus_lt_self hf hf₀ hε
     refine ⟨g, hgf, g.measurable, ?_, by rwa [g.lintegral_eq_lintegral]⟩
     exact SimpleFunc.FinMeasSupp.of_lintegral_ne_top <| ne_top_of_le_ne_top hf <|
       g.lintegral_eq_lintegral μ ▸ lintegral_mono hgf
   refine ⟨_, measurableSet_support hg_meas, hgsupp, ?_⟩
   calc
     ∫⁻ a in (support g)ᶜ, f a ∂μ
-      = ∫⁻ a in (support g)ᶜ, f a - g a ∂μ := setLIntegral_congr_fun
+      = ∫⁻ a in (support g)ᶜ, monus (f a) (g a) ∂μ := setLIntegral_congr_fun
       (measurableSet_support hg_meas).compl <| by intro; simp_all
-    _ ≤ ∫⁻ a, f a - g a ∂μ := setLIntegral_le_lintegral _ _
-    _ = ∫⁻ a, f a ∂μ - ∫⁻ a, g a ∂μ :=
-      lintegral_sub hg_meas (ne_top_of_le_ne_top hf <| lintegral_mono hgf) (ae_of_all _ hgf)
-    _ < ε := ENNReal.sub_lt_of_lt_add (lintegral_mono hgf) <|
-      ENNReal.lt_add_of_sub_lt_left (.inl hf) hgε
+    _ ≤ ∫⁻ a, monus (f a) (g a) ∂μ := setLIntegral_le_lintegral _ _
+    _ = monus (∫⁻ a, f a ∂μ) (∫⁻ a, g a ∂μ) :=
+      lintegral_monus hg_meas (ne_top_of_le_ne_top hf <| lintegral_mono hgf) (ae_of_all _ hgf)
+    _ < ε := ENNReal.monus_lt_of_lt_add (lintegral_mono hgf) <|
+      ENNReal.lt_add_of_monus_lt_left (.inl hf) hgε
 
 /-- For any function `f : α → ℝ≥0∞`, there exists a measurable function `g ≤ f` with the same
 integral over any measurable set. -/

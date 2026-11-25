@@ -234,8 +234,8 @@ theorem exists_subset_lt_add (H : InnerRegularWRT μ p q) (h0 : p ∅) (hU : q U
   rcases eq_or_ne (μ U) 0 with h₀ | h₀
   · refine ⟨∅, empty_subset _, h0, ?_⟩
     rwa [measure_empty, h₀, zero_add, pos_iff_ne_zero]
-  · rcases H hU _ (ENNReal.sub_lt_self hμU h₀ hε) with ⟨K, hKU, hKc, hrK⟩
-    exact ⟨K, hKU, hKc, ENNReal.lt_add_of_sub_lt_right (Or.inl hμU) hrK⟩
+  · rcases H hU _ (ENNReal.monus_lt_self hμU h₀ hε) with ⟨K, hKU, hKc, hrK⟩
+    exact ⟨K, hKU, hKc, ENNReal.lt_add_of_monus_lt_right (Or.inl hμU) hrK⟩
 
 protected theorem map {α β} [SigmaAlgebra α] [SigmaAlgebra β]
     {μ : Measure α} {pa qa : Set α → Prop}
@@ -448,8 +448,9 @@ lemma of_restrict [OpensSigmaAlgebra α] {μ : Measure α} {s : ℕ → Set α}
         inter_subset_right.trans (disjointed_subset _ _),
         (disjoint_disjointed s).mono fun k l hkl => hkl.mono inf_le_right inf_le_right, ?_⟩
     rw [← inter_iUnion, iUnion_disjointed, univ_subset_iff.mp h'', inter_univ]
-  rcases ENNReal.exists_pos_sum_of_countable' (tsub_pos_iff_lt.2 hr).ne' ℕ with ⟨δ, δ0, hδε⟩
-  rw [lt_tsub_iff_right, add_comm] at hδε
+  rcases ENNReal.exists_pos_sum_of_countable'
+    (ENNReal.monus_pos_iff_lt.2 hr).ne' ℕ with ⟨δ, δ0, hδε⟩
+  rw [ENNReal.lt_monus_iff_add_lt_right, add_comm] at hδε
   have : ∀ n, ∃ U ⊇ A n, IsOpen U ∧ μ U < μ (A n) + δ n := by
     intro n
     have H₁ : ∀ t, μ.restrict (s n) t = μ (t ∩ s n) := fun t => restrict_apply' (hm n)
@@ -587,18 +588,19 @@ theorem measurableSet_of_isOpen [OuterRegular μ] (H : InnerRegularWRT μ p IsOp
     have : 0 < μ univ := (bot_le.trans_lt hr).trans_le (measure_mono (subset_univ _))
     obtain ⟨K, -, hK, -⟩ : ∃ K, K ⊆ univ ∧ p K ∧ 0 < μ K := H isOpen_univ _ this
     simpa using hd hK isOpen_univ
-  obtain ⟨ε, hε, hεs, rfl⟩ : ∃ ε ≠ 0, ε + ε ≤ μ s ∧ r = μ s - (ε + ε) := by
-    use ((μ s - r) / 2)
-    simp [*, hr.le, ENNReal.add_halves, ENNReal.sub_sub_cancel, tsub_eq_zero_iff_le]
+  obtain ⟨ε, hε, hεs, rfl⟩ : ∃ ε ≠ 0, ε + ε ≤ μ s ∧ r = ENNReal.monus (μ s) (ε + ε) := by
+    use ((ENNReal.monus (μ s) r) / 2)
+    simp [*, hr.le, ENNReal.add_halves, ENNReal.monus_monus_cancel, ENNReal.monus_eq_zero_iff_le,
+      ENNReal.monus_le_self]
   rcases hs.exists_isOpen_sdiff_lt hμs hε with ⟨U, hsU, hUo, hUt, hμU⟩
   rcases (U \ s).exists_isOpen_lt_of_lt _ hμU with ⟨U', hsU', hU'o, hμU'⟩
   replace hsU' := sdiff_subset_comm.1 hsU'
   rcases H.exists_subset_lt_add h0 hUo hUt.ne hε with ⟨K, hKU, hKc, hKr⟩
-  refine ⟨K \ U', fun x hx => hsU' ⟨hKU hx.1, hx.2⟩, hd hKc hU'o, ENNReal.sub_lt_of_lt_add hεs ?_⟩
+  refine ⟨K \ U', fun x hx => hsU' ⟨hKU hx.1, hx.2⟩, hd hKc hU'o, ENNReal.monus_lt_of_lt_add hεs ?_⟩
   calc
     μ s ≤ μ U := μ.mono hsU
     _ < μ K + ε := hKr
-    _ ≤ μ (K \ U') + μ U' + ε := by grw [tsub_le_iff_right.1 le_measure_sdiff]
+    _ ≤ μ (K \ U') + μ U' + ε := by grw [ENNReal.monus_le_iff.1 le_measure_sdiff]
     _ ≤ μ (K \ U') + ε + ε := by gcongr
     _ = μ (K \ U') + (ε + ε) := add_assoc _ _ _
 
@@ -614,9 +616,9 @@ theorem weaklyRegular_of_finite [BorelSpace α] (μ : Measure α) [IsFiniteMeasu
       { outerRegular := fun s hs r hr => ?_
         innerRegular := H }
     rcases exists_between hr with ⟨r', hsr', hr'r⟩
-    rcases this s hs _ (tsub_pos_iff_lt.2 hsr').ne' with ⟨-, -, U, hsU, -, hUo, -, H⟩
+    rcases this s hs _ (ENNReal.monus_pos_iff_lt.2 hsr').ne' with ⟨-, -, U, hsU, -, hUo, -, H⟩
     refine ⟨U, hsU, hUo, ?_⟩
-    rw [add_tsub_cancel_of_le hsr'.le] at H
+    rw [add_comm (μ s), ENNReal.monus_add_cancel_of_le hsr'.le] at H
     exact H.trans_lt hr'r
   apply MeasurableSet.induction_on_open
   /- The proof is by measurable induction: we should check that the property is true for the empty

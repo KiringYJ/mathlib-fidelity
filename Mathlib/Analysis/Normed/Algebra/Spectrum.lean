@@ -306,7 +306,7 @@ theorem spectralRadius_le_liminf_pow_nnnorm_pow_one_div (a : A) :
       (ENNReal.inv_ne_top.mpr h)]
   apply le_liminf_of_le
   · infer_param
-  · have hεinv : 1 < ε⁻¹ := by simpa only [inv_one] using ENNReal.inv_lt_inv.mpr hε
+  · have hεinv : 1 < ε⁻¹ := by simpa only [ENNReal.inv_one] using ENNReal.inv_lt_inv.mpr hε
     filter_upwards [ENNReal.eventually_pow_one_div_le
       (ENNReal.coe_ne_top : ↑‖(1 : A)‖₊ ≠ ∞) hεinv] with n hn
     rcases n with ⟨_ | k, hn₀⟩
@@ -831,7 +831,7 @@ lemma nnreal_iff_spectralRadius_le [Algebra ℝ A] {a : A} {t : ℝ≥0} (ht : s
     obtain ⟨hty, hyt⟩ := Set.mem_Icc.mp <| this hy
     lift y to ℝ≥0 using h y hy
     rw [← NNReal.coe_sub (by exact_mod_cast hyt)]
-    simp
+    simp [ENNReal.monus_le_self]
   · replace h : ∀ x ∈ spectrum ℝ a, ‖t - x‖₊ ≤ t := by
       simpa [spectralRadius, iSup₂_le_iff, ← spectrum.singleton_sub_eq] using h
     gconvert h with x hx h_le

@@ -545,9 +545,20 @@ variable [TopologicalSpace G] [IsTopologicalGroup G] [SigmaAlgebra G] [BorelSpac
 noncomputable def haarMeasure (K₀ : PositiveCompacts G) : Measure G :=
   ((haarContent K₀).measure K₀)⁻¹ • (haarContent K₀).measure
 
+/-- Haar normalization uses a positive finite denominator. -/
+@[to_additive /-- Additive Haar normalization uses a positive finite denominator. -/]
+theorem haarContent_measure_divDomain (K₀ : PositiveCompacts G) (a : ℝ≥0∞) :
+    ((haarContent K₀).measure K₀) ≠ 0 ∧
+      (a ≠ ∞ ∨ ((haarContent K₀).measure K₀) ≠ ∞) := by
+  have : LocallyCompactSpace G := K₀.locallyCompactSpace_of_group
+  rw [← K₀.isCompact.measure_closure, Content.measure_apply _ isClosed_closure.measurableSet]
+  exact ⟨(haarContent_outerMeasure_closure_pos K₀).ne',
+    Or.inr (Content.outerMeasure_lt_top_of_isCompact _ K₀.isCompact.closure).ne⟩
+
 @[to_additive]
 theorem haarMeasure_apply {K₀ : PositiveCompacts G} {s : Set G} (hs : MeasurableSet s) :
-    haarMeasure K₀ s = (haarContent K₀).outerMeasure s / (haarContent K₀).measure K₀ := by
+    haarMeasure K₀ s = ENNReal.div ((haarContent K₀).outerMeasure s) ((haarContent K₀).measure K₀)
+      (haarContent_measure_divDomain K₀ _) := by
   change ((haarContent K₀).measure K₀)⁻¹ * (haarContent K₀).measure s = _
   simp only [ENNReal.div_eq_mul_inv, hs, mul_comm, Content.measure_apply]
 
@@ -558,7 +569,8 @@ instance isMulLeftInvariant_haarMeasure (K₀ : PositiveCompacts G) :
   intro g A hA
   rw [haarMeasure_apply hA, haarMeasure_apply (measurable_const_mul g hA)]
   -- Porting note: Here was `congr 1`, but `to_additive` failed to generate a theorem.
-  refine congr_arg (fun x : ℝ≥0∞ => x / (haarContent K₀).measure K₀) ?_
+  refine congr_arg (fun x : ℝ≥0∞ => ENNReal.div x ((haarContent K₀).measure K₀)
+    (haarContent_measure_divDomain K₀ x)) ?_
   apply Content.is_mul_left_invariant_outerMeasure
   apply is_left_invariant_haarContent
 
@@ -711,7 +723,7 @@ theorem haarMeasure_unique (μ : Measure G) [SigmaFinite μ] [IsMulLeftInvariant
     K₀.interior_nonempty.mono (interior_mono subset_closure)
   have := measure_eq_div_smul μ (haarMeasure K₀)
     (measure_pos_of_nonempty_interior _ A).ne' K₀.isCompact.closure.measure_ne_top
-  rwa [haarMeasure_closure_self, ENNReal.div_eq_mul_inv, inv_one, mul_one,
+  rwa [ENNReal.div_eq_mul_inv, haarMeasure_closure_self, ENNReal.inv_one, mul_one,
     K₀.isCompact.measure_closure] at this
 
 /-- Let `μ` be a σ-finite left invariant measure on `G`. Then `μ` is equal to the Haar measure

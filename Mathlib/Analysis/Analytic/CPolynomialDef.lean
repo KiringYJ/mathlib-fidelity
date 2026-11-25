@@ -454,14 +454,15 @@ variable {x y : E}
 
 theorem HasFiniteFPowerSeriesOnBall.changeOrigin (hf : HasFiniteFPowerSeriesOnBall f p x n r)
     (h : (‖y‖₊ : ℝ≥0∞) < r) :
-    HasFiniteFPowerSeriesOnBall f (p.changeOrigin y) (x + y) n (r - ‖y‖₊) where
-  r_le := (tsub_le_tsub_right hf.r_le _).trans p.changeOrigin_radius
+    HasFiniteFPowerSeriesOnBall f (p.changeOrigin y) (x + y) n (ENNReal.monus r ‖y‖₊) where
+  r_le := (ENNReal.monus_le_monus hf.r_le le_rfl).trans p.changeOrigin_radius
   r_pos := by simp [h]
   finite _ hm := p.changeOrigin_finite_of_finite hf.finite hm
   hasSum {z} hz := by
     simp only [id_eq] at hz ⊢
     have hz' : ‖y‖ₑ + ‖z - (x + y)‖ₑ < r := by
-      simpa only [mem_eball_zero_iff, lt_tsub_iff_right, add_comm, enorm_eq_nnnorm] using hz
+      simpa only [mem_eball_zero_iff, ENNReal.lt_monus_iff_add_lt_right, add_comm, enorm_eq_nnnorm]
+        using hz
     have hdist : z - x = y + (z - (x + y)) := by abel
     have hsum : f z = (p.changeOrigin y).sum (z - (x + y)) := by
       rw [p.changeOrigin_eval_of_finite hf.finite]

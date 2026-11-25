@@ -161,7 +161,8 @@ theorem exists_ne_zero_mem_ideal_of_norm_le_mul_sqrt_discr (I : (FractionalIdeal
   have hdeg : 0 < (finrank ℚ K : ℝ) := Nat.cast_pos.mpr finrank_pos
   have hfactor : (convexBodySumFactor K : ℝ≥0∞) ≠ 0 :=
     ENNReal.coe_ne_zero.mpr (convexBodySumFactor_ne_zero K)
-  let A := (minkowskiBound K I / convexBodySumFactor K).toReal
+  let A := (ENNReal.div (minkowskiBound K I) (convexBodySumFactor K : ℝ≥0∞)
+    ⟨hfactor, Or.inr ENNReal.coe_ne_top⟩).toReal
   let B := A ^ (1 / (finrank ℚ K : ℝ))
   have hA : 0 ≤ A := ENNReal.toReal_nonneg
   have hB : 0 ≤ B := Real.rpow_nonneg hA _

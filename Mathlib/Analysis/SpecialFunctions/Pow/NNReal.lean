@@ -692,7 +692,8 @@ theorem rpow_neg (x : ℝ≥0∞) (y : ℝ) : x ^ (-y) = (x ^ y)⁻¹ := by
         _ = ((x : ℝ≥0∞) ^ y)⁻¹ := by rw [coe_inv, coe_rpow_of_ne_zero h]
 
 theorem rpow_sub {x : ℝ≥0∞} (y z : ℝ) (hx : x ≠ 0) (h'x : x ≠ ⊤) :
-    x ^ (y - z) = ((x ^ y) / (x ^ z)) := by
+    x ^ (y - z) = ENNReal.div (x ^ y) (x ^ z)
+      ⟨by simp [hx, h'x], Or.inr (rpow_ne_top_of_ne_zero hx h'x)⟩ := by
   rw [sub_eq_add_neg, rpow_add _ _ hx h'x, rpow_neg, ENNReal.div_eq_mul_inv]
 
 theorem rpow_neg_one (x : ℝ≥0∞) : x ^ (-1 : ℝ) = x⁻¹ := by simp [rpow_neg]
@@ -726,8 +727,8 @@ lemma rpow_ofNat (x : ℝ≥0∞) (n : ℕ) [n.AtLeastTwo] :
 
 @[simp, norm_cast]
 lemma rpow_intCast (x : ℝ≥0∞) (n : ℤ) : x ^ (n : ℝ) = x ^ n := by
-  cases n <;> simp only [Int.ofNat_eq_natCast, Int.cast_natCast, rpow_natCast, zpow_natCast,
-    Int.cast_negSucc, rpow_neg, zpow_negSucc]
+  cases n <;> simp only [Int.ofNat_eq_natCast, Int.cast_natCast, rpow_natCast, ENNReal.zpow_natCast,
+    Int.cast_negSucc, rpow_neg, ENNReal.zpow_negSucc]
 
 theorem rpow_two (x : ℝ≥0∞) : x ^ (2 : ℝ) = x ^ 2 := rpow_ofNat x 2
 
@@ -789,7 +790,7 @@ theorem prod_rpow_of_nonneg {ι} {s : Finset ι} {f : ι → ℝ≥0∞} {r : �
   | insert _ _ hi ih => simp_rw [prod_insert hi, ih, ← mul_rpow_of_nonneg _ _ hr]
 
 theorem inv_rpow (x : ℝ≥0∞) (y : ℝ) : x⁻¹ ^ y = (x ^ y)⁻¹ := by
-  rcases eq_or_ne y 0 with (rfl | hy); · simp only [rpow_zero, inv_one]
+  rcases eq_or_ne y 0 with (rfl | hy); · simp only [rpow_zero, ENNReal.inv_one]
   replace hy := hy.lt_or_gt
   rcases eq_or_ne x 0 with (rfl | h0); · cases hy <;> simp [*]
   rcases eq_or_ne x ⊤ with (rfl | h_top); · cases hy <;> simp [*]
@@ -797,9 +798,9 @@ theorem inv_rpow (x : ℝ≥0∞) (y : ℝ) : x⁻¹ ^ y = (x ^ y)⁻¹ := by
   rw [← mul_rpow_of_ne_zero (ENNReal.inv_ne_zero.2 h_top) h0, ENNReal.inv_mul_cancel h0 h_top,
     one_rpow]
 
-theorem div_rpow_of_nonneg (x y : ℝ≥0∞) {z : ℝ} (hz : 0 ≤ z) :
-    (x / y) ^ z = ((x ^ z) / (y ^ z)) := by
-  rw [ENNReal.div_eq_mul_inv, mul_rpow_of_nonneg _ _ hz, inv_rpow, ENNReal.div_eq_mul_inv]
+theorem divInf_rpow_of_nonneg (x y : ℝ≥0∞) {z : ℝ} (hz : 0 ≤ z) :
+    divInf x y ^ z = divInf (x ^ z) (y ^ z) := by
+  rw [divInf, mul_rpow_of_nonneg _ _ hz, inv_rpow, divInf]
 
 theorem strictMono_rpow_of_pos {z : ℝ} (h : 0 < z) : StrictMono fun x : ℝ≥0∞ => x ^ z := by
   intro x y hxy
