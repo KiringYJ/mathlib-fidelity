@@ -46,11 +46,11 @@ sense. Note that we use 1.27(iii) of [wedhorn_adic] as the definition of equival
 * `orderMonoidIso` is the ordered isomorphism between the value groups of two equivalent valuations.
 
 * `AddValuation R Γ₀`, the type of additive valuations on `R` with values in a
-  linearly ordered additive commutative group with a top element, `Γ₀`.
+  linearly ordered additive commutative monoid with an absorbing top element, `Γ₀`.
 
 ## Implementation Details
 
-`AddValuation R Γ₀` is implemented as `Valuation R (Multiplicative Γ₀)ᵒᵈ`.
+`AddValuation R Γ₀` is implemented as `Valuation R (Multiplicative Γ₀ᵒᵈ)`.
 
 ## Notation
 
@@ -1281,21 +1281,20 @@ theorem map_sub_eq_of_lt_right {x y : R} (hx : v y < v x) :
 theorem map_eq_of_lt_sub (h : v x < v (y - x)) : v y = v x :=
   Valuation.map_eq_of_sub_lt v h
 
+theorem map_isAddUnit (hx : IsUnit x) : IsAddUnit (v x) :=
+  Multiplicative.isUnit_iff.mp (hx.map (toValuation v))
+
+@[simp]
+theorem map_inv {hx : IsUnit x} : v x⁻¹ = Checked.neg (v x) (v.map_isAddUnit hx) :=
+  left_neg_eq_right_neg (a := v x)
+    (by rw [← v.map_mul, inv_mul_cancel₀, v.map_one]) (v.map_isAddUnit hx).add_val_neg
+
+@[simp]
+theorem map_div {hy : IsUnit y} : v (x / y) = Checked.sub (v x) (v y) (v.map_isAddUnit hy) := by
+  rw [div_eq_mul_inv₀, v.map_mul, v.map_inv]
+  rfl
+
 end Monoid
-
-section Group
-
-variable [LinearOrderedAddCommGroupWithTop Γ₀] [Ring R] (v : AddValuation R Γ₀) {x y : R}
-
-@[simp]
-theorem map_inv {hx : IsUnit x} : v x⁻¹ = -(v x) :=
-  eq_neg_of_add_eq_zero_left <| by rw [← v.map_mul, inv_mul_cancel₀, v.map_one]
-
-@[simp]
-theorem map_div {hy : IsUnit y} : v (x / y) = v x - v y := by
-  rw [div_eq_mul_inv₀, v.map_mul, v.map_inv, sub_eq_add_neg]
-
-end Group
 
 end Basic
 

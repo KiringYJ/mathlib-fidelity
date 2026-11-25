@@ -24,12 +24,70 @@ top element: `Γ ∪ {⊤}`.
 
 The disadvantage is that a type such as `ENNReal` is not of that form,
 whereas it is a very common target for valuations.
-The solutions is to use a typeclass, and that is exactly what we do in this file.
+The classes distinguish ordered monoids with an absorbing top from those in which every
+non-top element is an additive unit. The checked operations `Checked.neg`, `Checked.sub`, and
+`Checked.zsmul` use additive units. Subtraction requires only the subtrahend to be a unit, and
+integer scaling requires the element to be a unit only for negative scalars.
 -/
 
 public section
 
 variable {G α : Type*}
+
+namespace Checked
+
+variable {M : Type*} [AddMonoid M] {a b c : M}
+
+/-- The additive inverse of an element known to be an additive unit. -/
+@[expose] noncomputable def neg (a : M) (ha : IsAddUnit a) : M :=
+  ↑(-ha.addUnit)
+
+/-- Subtract an additive unit from an arbitrary element of an additive monoid. -/
+@[expose] noncomputable def sub (a b : M) (hb : IsAddUnit b) : M :=
+  a + neg b hb
+
+/-- Integer scaling of an element of an additive monoid. A negative scalar requires the element
+to be an additive unit. -/
+@[expose] noncomputable def zsmul (n : ℤ) (a : M) (ha : n < 0 → IsAddUnit a) : M :=
+  match n with
+  | .ofNat k => k • a
+  | .negSucc k => (k + 1) • neg a (ha (Int.negSucc_lt_zero k))
+
+@[simp] theorem neg_add_cancel (ha : IsAddUnit a) : neg a ha + a = 0 :=
+  ha.val_neg_add
+
+@[simp] theorem add_neg_cancel (ha : IsAddUnit a) : a + neg a ha = 0 :=
+  ha.add_val_neg
+
+theorem neg_eq_of_add_eq_zero (ha : IsAddUnit a) (h : a + b = 0) : neg a ha = b :=
+  ha.isAddRegular.1 ((add_neg_cancel ha).trans h.symm)
+
+theorem isAddUnit_neg (ha : IsAddUnit a) : IsAddUnit (neg a ha) :=
+  (-ha.addUnit).isAddUnit
+
+theorem sub_eq_add_neg (a : M) (hb : IsAddUnit b) : sub a b hb = a + neg b hb :=
+  rfl
+
+@[simp] theorem sub_add_cancel (a : M) (hb : IsAddUnit b) : sub a b hb + b = a := by
+  rw [sub_eq_add_neg, add_assoc, neg_add_cancel, add_zero]
+
+theorem sub_eq_iff_eq_add (hb : IsAddUnit b) : sub a b hb = c ↔ a = c + b := by
+  constructor
+  · intro h
+    rw [← h, sub_add_cancel]
+  · intro h
+    rw [h, sub_eq_add_neg, add_assoc, add_neg_cancel, add_zero]
+
+@[simp] theorem zsmul_ofNat (n : ℕ) (a : M) (ha : (n : ℤ) < 0 → IsAddUnit a) :
+    zsmul (n : ℤ) a ha = n • a :=
+  rfl
+
+theorem zsmul_negSucc (n : ℕ) (a : M) (ha : Int.negSucc n < 0 → IsAddUnit a) :
+    zsmul (Int.negSucc n) a ha = (n + 1) • neg a (ha (Int.negSucc_lt_zero n)) :=
+  rfl
+
+end Checked
+
 
 /-- A linearly ordered commutative monoid with an additively absorbing `⊤` element.
   Instances should include number systems with an infinite element adjoined. -/
@@ -39,17 +97,16 @@ class LinearOrderedAddCommMonoidWithTop (α : Type*) extends
   protected top_add' : ∀ x : α, ⊤ + x = ⊤
   protected isAddLeftRegular_of_ne_top ⦃x : α⦄ : x ≠ ⊤ → IsAddLeftRegular x
 
-/-- A linearly ordered commutative group with an additively absorbing `⊤` element.
-  Instances should include number systems with an infinite element adjoined. -/
+/-- A linearly ordered commutative additive monoid with an absorbing `⊤`, in which each
+non-top element is an additive unit. -/
 -- We do not extend `LinearOrderedAddCommMonoidWithTop` as that would bring in the unnecessary
 -- `isAddLeftRegular_of_ne_top` field.
 class LinearOrderedAddCommGroupWithTop (α : Type*)
-    extends AddCommMonoid α, LinearOrder α, IsOrderedAddMonoid α, OrderTop α, SubNegMonoid α,
-    Nontrivial α where
-  /-- In a `LinearOrderedAddCommMonoidWithTop`, the `⊤` element is invariant under addition. -/
+    extends AddCommMonoid α, LinearOrder α, IsOrderedAddMonoid α, OrderTop α, Nontrivial α where
+  /-- The top element is invariant under addition. -/
   protected top_add' (x : α) : ⊤ + x = ⊤
-  neg_top : -(⊤ : α) = ⊤
-  add_neg_cancel_of_ne_top ⦃x : α⦄ : x ≠ ⊤ → x + -x = 0
+  /-- A finite element belongs to the group of additive units. -/
+  protected isAddUnit_of_ne_top ⦃x : α⦄ : x ≠ ⊤ → IsAddUnit x
 
 section LinearOrderedAddCommMonoidWithTop
 variable [LinearOrderedAddCommMonoidWithTop α] {a b c : α}
@@ -107,25 +164,6 @@ namespace LinearOrderedAddCommGroupWithTop
 
 variable [LinearOrderedAddCommGroupWithTop α] {a b c : α}
 
-attribute [simp] neg_top
-
-/-! Note: The following lemmas are special cases of the corresponding `IsAddUnit` lemmas. -/
-
-lemma neg_add_cancel_of_ne_top (ha : a ≠ ⊤) : -a + a = 0 := by
-  simp [add_comm, add_neg_cancel_of_ne_top ha]
-
-lemma add_neg_cancel_left_of_ne_top (ha : a ≠ ⊤) (b : α) : a + (-a + b) = b := by
-  simp [← add_assoc, add_neg_cancel_of_ne_top ha]
-
-lemma neg_add_cancel_left_of_ne_top (ha : a ≠ ⊤) (b : α) : -a + (a + b) = b := by
-  simp [← add_assoc, neg_add_cancel_of_ne_top ha]
-
-lemma add_neg_cancel_right_of_ne_top (hb : b ≠ ⊤) (a : α) : a + b + -b = a := by
-  simp [add_assoc, add_neg_cancel_of_ne_top hb]
-
-lemma neg_add_cancel_right_of_ne_top (hb : b ≠ ⊤) (a : α) : a + -b + b = a := by
-  simp [add_assoc, neg_add_cancel_of_ne_top hb]
-
 @[simp] lemma top_ne_zero : (⊤ : α) ≠ 0 := by
   intro h
   obtain ⟨a, ha⟩ := exists_ne (0 : α)
@@ -138,7 +176,7 @@ lemma neg_add_cancel_right_of_ne_top (hb : b ≠ ⊤) (a : α) : a + -b + b = a 
 
 @[simp] lemma isAddUnit_iff : IsAddUnit a ↔ a ≠ ⊤ where
   mp := by rintro ⟨⟨b, c, hbc, -⟩, rfl⟩ rfl; simp [LinearOrderedAddCommGroupWithTop.top_add'] at hbc
-  mpr ha := .of_add_eq_zero (-a) <| by simp [ha, add_neg_cancel_of_ne_top]
+  mpr ha := LinearOrderedAddCommGroupWithTop.isAddUnit_of_ne_top ha
 
 instance : LinearOrderedAddCommMonoidWithTop α where
   top_add' := LinearOrderedAddCommGroupWithTop.top_add'
@@ -151,82 +189,9 @@ lemma add_ne_top : a + b ≠ ⊤ ↔ a ≠ ⊤ ∧ b ≠ ⊤ := by simp [← isA
 
 @[simp] lemma add_lt_top : a + b < ⊤ ↔ a < ⊤ ∧ b < ⊤ := by simp [lt_top_iff_ne_top]
 
-@[simp] lemma neg_eq_top : -a = ⊤ ↔ a = ⊤ where
-  mp h := by simpa [h] using add_neg_cancel_of_ne_top (x := a)
-  mpr h := by simp [h]
-
-@[simp] lemma sub_top : a - ⊤ = ⊤ := by simp [sub_eq_add_neg]
-
-instance (priority := 100) toSubtractionMonoid : SubtractionMonoid α where
-  neg_neg a := by
-    obtain rfl | ha := eq_or_ne a ⊤
-    · simp
-    · apply left_neg_eq_right_neg (a := -a) <;> simp [add_comm, add_neg_cancel_of_ne_top, ha]
-  neg_add_rev a b := by
-    obtain rfl | ha := eq_or_ne a ⊤
-    · simp
-    obtain rfl | hb := eq_or_ne b ⊤
-    · simp
-    · exact left_neg_eq_right_neg (a := a + b) (by simp [neg_add_cancel_of_ne_top, *])
-        (by simp [add_assoc, add_neg_cancel_of_ne_top, add_neg_cancel_left_of_ne_top, *])
-  neg_eq_of_add a b h := by
-    have ha : a ≠ ⊤ := by rintro rfl; simp at h
-    exact left_neg_eq_right_neg (a := a) (by simp [neg_add_cancel_of_ne_top, *]) h
-
-lemma sub_left_injective_of_ne_top (h : b ≠ ⊤) : Function.Injective fun x ↦ x - b := by
-  simpa [sub_eq_add_neg] using add_left_injective_of_ne_top (-b) (by simpa)
-
-lemma sub_right_injective_of_ne_top (h : b ≠ ⊤) : Function.Injective fun x ↦ b - x := by
-  simpa [sub_eq_add_neg] using! (add_right_injective_of_ne_top b h).comp neg_injective
-
-@[simp]
-lemma sub_left_inj_of_ne_top (h : a ≠ ⊤) : b - a = c - a ↔ b = c :=
-  (sub_left_injective_of_ne_top h).eq_iff
-
-@[simp]
-lemma sub_right_inj_of_ne_top (h : a ≠ ⊤) : a - b = a - c ↔ b = c :=
-  (sub_right_injective_of_ne_top h).eq_iff
-
-lemma sub_left_strictMono_of_ne_top (h : b ≠ ⊤) : StrictMono fun x ↦ x - b := by
-  simpa [sub_eq_add_neg] using add_left_strictMono_of_ne_top (b := -b) (by simpa)
-
-@[simp]
-lemma sub_le_sub_iff_left_of_ne_top (h : a ≠ ⊤) : b - a ≤ c - a ↔ b ≤ c :=
-  (sub_left_strictMono_of_ne_top h).le_iff_le
-
-@[simp]
-lemma sub_lt_sub_iff_left_of_ne_top (h : a ≠ ⊤) : b - a < c - a ↔ b < c :=
-  (sub_left_strictMono_of_ne_top h).lt_iff_lt
-
-@[simp]
-lemma add_neg_cancel_iff_ne_top : a + -a = 0 ↔ a ≠ ⊤ where
-  mp := by contrapose; simp +contextual
-  mpr h := add_neg_cancel_of_ne_top h
-
-@[simp]
-lemma sub_self_eq_zero_iff_ne_top : a - a = 0 ↔ a ≠ ⊤ := by
-  rw [sub_eq_add_neg, add_neg_cancel_iff_ne_top]
-
-alias ⟨_, sub_self_eq_zero_of_ne_top⟩ := sub_self_eq_zero_iff_ne_top
-
-lemma sub_pos : 0 < a - b ↔ b < a ∨ b = ⊤ := by
-  obtain rfl | hb := eq_or_ne b ⊤
-  · simp
-  · simp [← sub_self_eq_zero_of_ne_top hb, hb]
-
-@[simp]
-lemma neg_pos : 0 < -a ↔ a < 0 ∨ a = ⊤ := by
-  simpa using sub_pos (a := 0) (b := a)
-
-@[simp]
-lemma sub_self_nonneg : 0 ≤ a - a := by
-  obtain rfl | ha := eq_or_ne a ⊤
-  · simp
-  · rw [sub_self_eq_zero_of_ne_top ha]
-
-@[simp]
-lemma sub_eq_zero (ha : a ≠ ⊤) : b - a = 0 ↔ b = a := by
-  rw [← sub_self_eq_zero_of_ne_top ha, sub_left_inj_of_ne_top ha]
+@[simp] lemma checked_sub_eq_top_iff (hb : IsAddUnit b) :
+    Checked.sub a b hb = ⊤ ↔ a = ⊤ := by
+  simp [Checked.sub_eq_add_neg, (isAddUnit_iff.mp (Checked.isAddUnit_neg hb))]
 
 end LinearOrderedAddCommGroupWithTop
 
@@ -237,37 +202,33 @@ instance linearOrderedAddCommMonoidWithTop [AddCancelCommMonoid α] [LinearOrder
   top_add' := WithTop.top_add
   isAddLeftRegular_of_ne_top _a ha _b _c := WithTop.add_left_cancel ha
 
-namespace LinearOrderedAddCommGroup
-variable [AddCommGroup G] {x y : WithTop G}
+variable [AddCommGroup G]
 
-instance instNeg : Neg (WithTop G) where
-  neg := .map fun a ↦ -a
+@[simp] theorem isAddUnit_coe (a : G) : IsAddUnit (a : WithTop G) :=
+  .of_add_eq_zero (↑(-a) : WithTop G) (by rw [← coe_add, add_neg_cancel, coe_zero])
 
-/-- If `G` has subtraction, we can extend the subtraction to `WithTop G`, by setting `x - ⊤ = ⊤` and
-`⊤ - x = ⊤`. This definition is only registered as an instance on additive commutative groups, to
-avoid conflicting with the instance `WithTop.instSub` on types with a bottom element. -/
-instance instSub : Sub (WithTop G) where
-  sub
-  | _, ⊤ => ⊤
-  | ⊤, (b : G) => ⊤
-  | (a : G), (b : G) => (a - b : G)
+@[simp] theorem checked_neg_coe (a : G) (ha : IsAddUnit (a : WithTop G)) :
+    Checked.neg (a : WithTop G) ha = (↑(-a) : WithTop G) := by
+  apply Checked.neg_eq_of_add_eq_zero
+  rw [← coe_add, add_neg_cancel, coe_zero]
 
-@[simp, norm_cast] lemma coe_neg (a : G) : (↑(-a) : WithTop G) = -a := rfl
-@[simp, norm_cast] lemma coe_sub (a b : G) : (↑(a - b) : WithTop G) = ↑a - ↑b := rfl
+@[simp] theorem checked_sub_coe (a b : G) (hb : IsAddUnit (b : WithTop G)) :
+    Checked.sub (a : WithTop G) (b : WithTop G) hb = (↑(a - b) : WithTop G) := by
+  rw [Checked.sub_eq_add_neg, checked_neg_coe, ← coe_add, sub_eq_add_neg]
 
-@[simp] lemma neg_top : -(⊤ : WithTop G) = ⊤ := rfl
+@[simp] theorem checked_zsmul_coe (n : ℤ) (a : G) (ha : n < 0 → IsAddUnit (a : WithTop G)) :
+    Checked.zsmul n (a : WithTop G) ha = (↑(n • a) : WithTop G) := by
+  cases n with
+  | ofNat n =>
+    change n • (a : WithTop G) = (↑((n : ℤ) • a) : WithTop G)
+    rw [natCast_zsmul, coe_nsmul]
+  | negSucc n => rw [Checked.zsmul_negSucc, checked_neg_coe, ← coe_nsmul, negSucc_zsmul, neg_nsmul]
 
-@[simp] lemma top_sub (x : WithTop G) : ⊤ - x = ⊤ := by cases x <;> rfl
-@[simp] lemma sub_top (x : WithTop G) : x - ⊤ = ⊤ := by cases x <;> rfl
+instance linearOrderedAddCommGroupWithTop [LinearOrder G] [IsOrderedAddMonoid G] :
+    LinearOrderedAddCommGroupWithTop (WithTop G) where
+  top_add' := WithTop.top_add
+  isAddUnit_of_ne_top _ ha := by
+    obtain ⟨a, rfl⟩ := WithTop.ne_top_iff_exists.mp ha
+    exact WithTop.isAddUnit_coe a
 
-@[simp] lemma sub_eq_top_iff : x - y = ⊤ ↔ x = ⊤ ∨ y = ⊤ := by
-  cases x <;> cases y <;> simp [← coe_sub]
-
-instance [LinearOrder G] [IsOrderedAddMonoid G] : LinearOrderedAddCommGroupWithTop (WithTop G) where
-  __ := WithTop.linearOrderedAddCommMonoidWithTop
-  sub_eq_add_neg a b := by cases a <;> cases b <;> simp [← coe_sub, ← coe_neg, sub_eq_add_neg]
-  neg_top := WithTop.map_top _
-  zsmul := zsmulRec
-  add_neg_cancel_of_ne_top | (a : G), _ => mod_cast add_neg_cancel a
-
-end WithTop.LinearOrderedAddCommGroup
+end WithTop

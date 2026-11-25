@@ -475,6 +475,11 @@ instance [AddMonoid R] : Monoid (MinTropical R) where
   npow_zero := fun _ => untrop_injective <| by simp
   npow_succ := fun _ _ => untrop_injective <| succ_nsmul _ _
 
+@[to_dual (attr := simp) _root_.MaxTropical.isUnit_iff]
+theorem isUnit_iff [AddMonoid R] {x : MinTropical R} : IsUnit x ↔ IsAddUnit (untrop x) := by
+  rw [isUnit_iff_exists, isAddUnit_iff_exists]
+  exact tropEquiv.symm.exists_congr_left.trans <| by simp [← untrop_inj_iff]
+
 @[to_dual (attr := simp)]
 theorem trop_nsmul [AddMonoid R] (x : R) (n : ℕ) : trop (n • x) = trop x ^ n :=
   rfl

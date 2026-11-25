@@ -253,7 +253,12 @@ theorem epsilon_mul_omega : ε * ω = 1 :=
 
 @[simp]
 theorem archimedeanClassMk_epsilon_pos : 0 < mk ε := by
-  simp [← inv_omega]
+  by_contra! h
+  have hsum : mk ε + mk ω = 0 := by rw [← mk_mul, epsilon_mul_omega, mk_one]
+  exact archimedeanClassMk_omega_neg.not_ge <| calc
+    0 = mk ε + mk ω := hsum.symm
+    _ ≤ 0 + mk ω := add_le_add h le_rfl
+    _ = mk ω := zero_add _
 
 /-!
 ### Some facts about `Tendsto`

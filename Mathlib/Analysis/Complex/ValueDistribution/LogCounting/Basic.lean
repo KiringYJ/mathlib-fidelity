@@ -579,17 +579,12 @@ theorem logCounting_inv {f : 𝕜 → 𝕜} (hf : Meromorphic f)
   apply congrArg Function.locallyFinsuppWithin.logCounting
   ext z
   have ho := meromorphicOrderAt_inv (hf z) (hi z).1
-  have hz := (frequently_coe_ne_zero_iff (hf z)).mp (ha z)
   have hD := coe_divisor_apply (U := univ) hf.meromorphicOn (mem_univ z)
     (h := fun w _ ↦ (frequently_coe_ne_zero_iff (hf w)).mp (ha w))
-  have hp := coe_poleDivisor_apply (U := univ) (fun w _ ↦ hi w) (mem_univ z)
-  have hm : -min (meromorphicOrderAt _ z (hi z)) 0 =
-      ((-min (-(divisor f univ (hf := hf.meromorphicOn) (fun w _ ↦
-        (frequently_coe_ne_zero_iff (hf w)).mp (ha w)) z)) 0 : ℤ) : WithTop ℤ) := by
-    rw [ho, ← hD]
-    rfl
-  have hp' := WithTop.coe_injective (hp.trans hm)
-  rw [Function.locallyFinsuppWithin.posPart_apply, posPart_def, hp']
+  have hp := coe_neg_poleDivisor_apply (U := univ) (fun w _ ↦ hi w) (mem_univ z)
+  simp only [ho, ← hD, WithTop.checked_neg_coe, ← WithTop.coe_zero, ← WithTop.coe_min,
+    WithTop.coe_inj] at hp
+  rw [Function.locallyFinsuppWithin.posPart_apply, posPart_def]
   omega
 
 /--

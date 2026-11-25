@@ -5,6 +5,7 @@ Authors: Weiyi Wang, Violeta Hernández Palacios
 -/
 module
 
+public import Mathlib.Algebra.Group.TransferInstance
 public import Mathlib.Algebra.Order.Archimedean.Class
 public import Mathlib.Algebra.Order.Group.DenselyOrdered
 public import Mathlib.Algebra.Order.Ring.Basic
@@ -21,11 +22,9 @@ by defining
 * `0 = mk 1`
 * `mk x + mk y = mk (x * y)`
 
-For a linearly ordered field, we can define a negative as
-
-* `-mk x = mk x⁻¹` for `x ≠ 0`, and `-⊤ = ⊤` for the class `⊤ = mk 0`
-
-which turns them into a `LinearOrderedAddCommGroupWithTop`.
+Over a linearly ordered field, each nonzero `x` gives an additive unit with value `mk x` and
+inverse `mk x⁻¹`. Thus `ArchimedeanClass R` is a `LinearOrderedAddCommGroupWithTop`, and
+the finite classes form a linearly ordered additive group.
 
 ## Implementation notes
 
@@ -104,6 +103,11 @@ instance : AddCommMonoid (ArchimedeanClass R) where
   add_zero x := private add_comm x _ ▸ zero_add' x
   nsmul_zero x := by induction x with | mk x => rw [← mk_pow, pow_zero, mk_one]
   nsmul_succ n x := by induction x with | mk x => rw [← mk_pow, pow_succ, mk_mul, mk_pow]
+
+theorem isAddUnit_mk {x : R} (hx : IsUnit x) : IsAddUnit (mk x) := by
+  obtain ⟨u, rfl⟩ := hx
+  exact ⟨⟨mk u.val, mk u.inv, by rw [← mk_mul, u.val_inv, mk_one],
+    by rw [← mk_mul, u.inv_val, mk_one]⟩, rfl⟩
 
 instance : IsOrderedAddMonoid (ArchimedeanClass R) where
   add_le_add_left x y h z := by
@@ -275,53 +279,29 @@ end Ring
 section Field
 variable [Field R] [IsOrderedRing R]
 
-/-- Negation of Archimedean classes: `-mk x = mk x⁻¹` for `x ≠ 0` (`ArchimedeanClass.mk_inv`).
-The top class `⊤ = mk 0` has no invertible representative; its negation is `⊤`, the convention
-`neg_top` of `LinearOrderedAddCommGroupWithTop`. -/
-noncomputable instance : Neg (ArchimedeanClass R) where
-  neg := lift (fun x ↦ if hx : x = 0 then ⊤ else mk x⁻¹) fun x y h ↦ by
-    obtain rfl | hx := eq_or_ne x 0
-    · obtain rfl : y = 0 := by simpa using h.symm
-      rfl
-    have hy : y ≠ 0 := by
-      rintro rfl
-      exact hx (by simpa using h)
-    rw [dite_eq_right hx, dite_eq_right hy]
-    have hx' : mk x ≠ ⊤ := by simpa using hx
-    apply add_left_cancel_of_ne_top hx'
-    nth_rw 2 [h]
-    rw [← mk_mul, ← mk_mul, mul_inv_cancel₀, mul_inv_cancel₀]
-
-@[simp] theorem mk_inv (x : R) {hx : IsUnit x} : mk x⁻¹ = -mk x := by
-  change mk x⁻¹ = if hx : x = 0 then ⊤ else mk x⁻¹
-  rw [dite_eq_right hx.ne_zero]
-
-/-- Integer multiples of Archimedean classes, from natural multiples and negation. -/
-noncomputable instance : SMul ℤ (ArchimedeanClass R) where
-  smul := zsmulRec (· • ·)
-
 noncomputable instance : LinearOrderedAddCommGroupWithTop (ArchimedeanClass R) where
-  neg_top := dite_eq_left rfl
   top_add' := by simp
-  add_neg_cancel_of_ne_top x h := by
+  isAddUnit_of_ne_top x h := by
     induction x with | mk x
     have hx : x ≠ 0 := mk_eq_top_iff.not.1 h
-    rw [← mk_inv x (hx := hx.isUnit), ← mk_mul, mul_inv_cancel₀, mk_one]
-  zsmul_zero' x := zero_nsmul x
-  zsmul_succ' n x := succ_nsmul x n
-  zsmul_neg' _ _ := rfl
+    exact isAddUnit_mk hx.isUnit
 
-@[simp] theorem mk_zpow (n : ℤ) (x : R) {h : n < 0 → IsUnit x} : mk (x ^ n) = n • mk x := by
+@[simp] theorem mk_inv (x : R) {hx : IsUnit x} :
+    mk x⁻¹ = Checked.neg (mk x) (isAddUnit_mk hx) :=
+  (addValuation R).map_inv (hx := hx)
+
+@[simp] theorem mk_zpow (n : ℤ) (x : R) {h : n < 0 → IsUnit x} :
+    mk (x ^ n) = Checked.zsmul n (mk x) (fun hn ↦ isAddUnit_mk (h hn)) := by
   cases n with
   | ofNat k => exact mk_pow k x
   | negSucc k =>
-    rw [zpow_negSucc₀, mk_inv, mk_pow]
-    rfl
+    rw [zpow_negSucc₀, ← inv_pow₀ (ha := h (Int.negSucc_lt_zero k)), mk_pow, mk_inv,
+      Checked.zsmul_negSucc]
 
 @[simp]
-theorem mk_div (x y : R) {hy : IsUnit y} : mk (x / y) = mk x - mk y := by
-  rw [div_eq_mul_inv₀, mk_mul, mk_inv]
-  exact (sub_eq_add_neg _ _).symm
+theorem mk_div (x y : R) {hy : IsUnit y} :
+    mk (x / y) = Checked.sub (mk x) (mk y) (isAddUnit_mk hy) :=
+  (addValuation R).map_div (hy := hy)
 
 @[simp]
 theorem mk_ratCast {q : ℚ} (h : q ≠ 0) : mk (q : R) = 0 := by
@@ -337,3 +317,25 @@ theorem mk_le_mk_iff_ratCast {x y : R} : mk x ≤ mk y ↔ ∃ q : ℚ, 0 < q �
 
 end Field
 end ArchimedeanClass
+
+namespace FiniteArchimedeanClass
+
+variable [Field R] [IsOrderedRing R]
+
+variable (R) in
+/-- Finite Archimedean classes of a linearly ordered field are the additive units. -/
+noncomputable def orderIsoAddUnits :
+    FiniteArchimedeanClass R ≃o AddUnits (ArchimedeanClass R) where
+  toFun a := (LinearOrderedAddCommGroupWithTop.isAddUnit_iff.2 a.2).addUnit
+  invFun u := ⟨u.val, LinearOrderedAddCommGroupWithTop.isAddUnit_iff.1 u.isAddUnit⟩
+  left_inv _ := rfl
+  right_inv _ := AddUnits.ext rfl
+  map_rel_iff' := Iff.rfl
+
+noncomputable instance : AddCommGroup (FiniteArchimedeanClass R) :=
+  (orderIsoAddUnits R).toEquiv.addCommGroup
+
+instance : IsOrderedAddMonoid (FiniteArchimedeanClass R) where
+  add_le_add_left a b h c := show a.val + c.val ≤ b.val + c.val from add_le_add h le_rfl
+
+end FiniteArchimedeanClass

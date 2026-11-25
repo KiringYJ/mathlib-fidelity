@@ -5,6 +5,7 @@ Authors: Kenny Lau, Johan Commelin, Patrick Massot
 -/
 module
 
+public import Mathlib.Algebra.Group.TypeTags.Units
 public import Mathlib.Algebra.Group.WithOne.Map
 public import Mathlib.Algebra.GroupWithZero.InjSurj
 public import Mathlib.Algebra.GroupWithZero.Regular
@@ -179,15 +180,9 @@ theorem ofDual_toAdd_zero [LinearOrderedAddCommMonoidWithTop α] :
 
 instance [LinearOrderedAddCommGroupWithTop α] :
     LinearOrderedCommGroupWithZero (Multiplicative αᵒᵈ) where
-  isUnit_of_ne_zero {a} ha := by
-    have ha' : OrderDual.ofDual a.toAdd ≠ ⊤ := ha
-    let b : Multiplicative αᵒᵈ := .ofAdd (.toDual (-OrderDual.ofDual a.toAdd))
-    refine ⟨⟨a, b, ?_, ?_⟩, rfl⟩
-    · change OrderDual.ofDual a.toAdd + -OrderDual.ofDual a.toAdd = 0
-      exact LinearOrderedAddCommGroupWithTop.add_neg_cancel_of_ne_top ha'
-    · change -OrderDual.ofDual a.toAdd + OrderDual.ofDual a.toAdd = 0
-      rw [add_comm]
-      exact LinearOrderedAddCommGroupWithTop.add_neg_cancel_of_ne_top ha'
+  isUnit_of_ne_zero {a} ha := Multiplicative.isUnit_iff.mpr
+    (show IsAddUnit (OrderDual.ofDual a.toAdd) from
+      LinearOrderedAddCommGroupWithTop.isAddUnit_of_ne_top ha)
 
 namespace WithZero
 

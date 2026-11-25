@@ -1601,12 +1601,13 @@ lemma exists_eval_meromorphic_derivWeierstrassP (z : {z : ℂ // z ∉ L.lattice
     (fun l w ↦ (L.cube_mul_derivWeierstrassP l w).symm) z
 
 lemma order_weierstrassP (l : L.lattice) :
-    (MeromorphicSection.germ ⟨l.1, by simp⟩ L.meromorphicWeierstrassP).order = -2 := by
+    (MeromorphicSection.germ ⟨l.1, by simp⟩ L.meromorphicWeierstrassP).order = ↑(-2 : ℤ) := by
   let z : L.poleChart l := ⟨l.1, by simp [poleChart]⟩
   unfold meromorphicWeierstrassP ellipticSection
   rw [MeromorphicSection.germ_glue (i := some l) (hx := z.2)]
   change (MeromorphicSection.germ z
-    (L.poleSection 2 L.weierstrassPNumerator L.analyticAt_weierstrassPNumerator l)).order = -2
+    (L.poleSection 2 L.weierstrassPNumerator L.analyticAt_weierstrassPNumerator l)).order =
+      ↑(-2 : ℤ)
   have hg := MeromorphicSection.germ_ofAnalyticFraction (U := L.poleChart l)
     (L.weierstrassPNumerator l) (L.poleDenominator 2 l) (L.analyticAt_weierstrassPNumerator l)
     (L.analyticAt_poleDenominator 2 l) (L.poleDenominator_germ_ne_zero 2 l) z
@@ -1617,16 +1618,17 @@ lemma order_weierstrassP (l : L.lattice) :
     apply (AnalyticGerm.order_eq_zero_iff _).mpr
     rw [AnalyticGerm.eval_ofDomain]
     simp [weierstrassPNumerator, z]
-  rw [hN, L.poleDenominator_germ_eq_coordinate_pow 2 l z rfl, AnalyticGerm.order_coordinate_pow]
-  norm_num
+  simp only [hN, L.poleDenominator_germ_eq_coordinate_pow 2 l z rfl,
+    AnalyticGerm.order_coordinate_pow]
+  exact WithTop.checked_sub_coe (0 : ℤ) 2 _
 
 lemma order_derivWeierstrassP (l : L.lattice) :
-    (MeromorphicSection.germ ⟨l.1, by simp⟩ L.meromorphicDerivWeierstrassP).order = -3 := by
+    (MeromorphicSection.germ ⟨l.1, by simp⟩ L.meromorphicDerivWeierstrassP).order = ↑(-3 : ℤ) := by
   let z : L.poleChart l := ⟨l.1, by simp [poleChart]⟩
   unfold meromorphicDerivWeierstrassP ellipticSection
   rw [MeromorphicSection.germ_glue (i := some l) (hx := z.2)]
   change (MeromorphicSection.germ z (L.poleSection 3 L.derivWeierstrassPNumerator
-    L.analyticAt_derivWeierstrassPNumerator l)).order = -3
+    L.analyticAt_derivWeierstrassPNumerator l)).order = ↑(-3 : ℤ)
   have hg := MeromorphicSection.germ_ofAnalyticFraction (U := L.poleChart l)
     (L.derivWeierstrassPNumerator l) (L.poleDenominator 3 l)
     (L.analyticAt_derivWeierstrassPNumerator l) (L.analyticAt_poleDenominator 3 l)
@@ -1639,8 +1641,9 @@ lemma order_derivWeierstrassP (l : L.lattice) :
     apply (AnalyticGerm.order_eq_zero_iff _).mpr
     rw [AnalyticGerm.eval_ofDomain]
     norm_num [derivWeierstrassPNumerator, z]
-  rw [hN, L.poleDenominator_germ_eq_coordinate_pow 3 l z rfl, AnalyticGerm.order_coordinate_pow]
-  norm_num
+  simp only [hN, L.poleDenominator_germ_eq_coordinate_pow 3 l z rfl,
+    AnalyticGerm.order_coordinate_pow]
+  exact WithTop.checked_sub_coe (0 : ℤ) 3 _
 
 /-- The Weierstrass section is regular exactly off the period lattice. -/
 lemma mem_regularLocus_meromorphic_weierstrassP_iff (z : (⊤ : Opens ℂ)) :

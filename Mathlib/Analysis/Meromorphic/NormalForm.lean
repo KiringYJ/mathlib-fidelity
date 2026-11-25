@@ -84,7 +84,8 @@ theorem MeromorphicNFAt.order_eq_zero_iff_value_ne_zero {D : Type*} {f : D → E
   obtain ⟨a, ha, he⟩ := hf.mem_range_iff.mp ⟨y, hy⟩
   have hv := (hf.value_eq y hy).trans (hf.meromorphicAt.value_eq _ ha he)
   rw [hf.meromorphicAt.order_eq_of_presentation (n := 0) ha (he.mono fun z hz ↦ by
-    simpa only [pow_zero, one_smul, Function.comp_apply] using hz), Nat.cast_zero, sub_zero,
+    simpa only [pow_zero, one_smul, Function.comp_apply] using hz), Nat.cast_zero, neg_zero,
+    WithTop.coe_zero, add_zero,
     ENat.map_natCast_eq_zero, ha.analyticOrderAt_eq_zero, hv]
 
 /-- An ambient representative is already normalized if and only if it is analytic at the center. -/
@@ -550,12 +551,12 @@ theorem order_eval {U : Opens ℂ} (s : MeromorphicSection U) (x : U) :
     change s.eval a * g b.val = f b.val
     rw [← hab]
     exact eval_mul_eq_of_mul_eq a.property (he a.val hV').symm)
-  rw [meromorphicOrderAt_div (hf x hx).meromorphicAt (hg x hx).meromorphicAt hc,
+  simp only [meromorphicOrderAt_div (hf x hx).meromorphicAt (hg x hx).meromorphicAt hc,
     (hf x hx).meromorphicOrderAt_eq, (hg x hx).meromorphicOrderAt_eq] at ho
   have hfrac : germ x s = Checked.div (ofAnalytic (ofFun f (hf x hx)))
       (ofAnalytic (ofFun g (hg x hx))) (ofAnalytic_ne_zero.mpr (hgn x hx)).isUnit :=
     eq_div_iff.mpr (he x hx).symm
-  rw [hfrac, order_div _ _ (hgn x hx), order_ofFun, order_ofFun]
+  simp only [hfrac, order_div _ _ (hgn x hx), order_ofFun]
   exact ho
 
 /-- A section admits scalar evaluation at exactly the points where its scalar representative
@@ -646,9 +647,8 @@ theorem MeromorphicNFOn.poleDivisor_eq_zero_iff_analyticOnNhd (h₁f : Meromorph
     MeromorphicOn.poleDivisor f U h₁f.meromorphicOn = 0 ↔ AnalyticOnNhd 𝕜 f U := by
   refine ⟨fun h x hx ↦ ?_, fun h ↦ MeromorphicOn.AnalyticOnNhd.poleDivisor_eq_zero h⟩
   rw [← (h₁f hx).meromorphicOrderAt_nonneg_iff_analyticAt]
-  have h₂ : (MeromorphicOn.poleDivisor f U h₁f.meromorphicOn x : WithTop ℤ) = 0 := by simp [h]
-  rwa [MeromorphicOn.coe_poleDivisor_apply h₁f.meromorphicOn hx, neg_eq_zero,
-    min_eq_right_iff] at h₂
+  apply min_eq_right_iff.mp
+  simpa [h] using (MeromorphicOn.coe_neg_poleDivisor_apply h₁f.meromorphicOn hx).symm
 
 /-- Analytic functions are meromorphic in normal form. -/
 theorem AnalyticOnNhd.meromorphicNFOn (h₁f : AnalyticOnNhd 𝕜 f U) :
@@ -951,7 +951,7 @@ theorem MeromorphicOn.exists_normalForm_on_domain {S : Set 𝕜} {f : S → E}
     filter_upwards [eventually_comap.mp (heq x hx)] with y hy
     exact fun ht hs ↦ (hy ⟨y, ht⟩ rfl).trans (hFval ⟨y, hs⟩)
 
-open Filter WithTop.LinearOrderedAddCommGroup in
+open Filter in
 /-- A partial scalar factor acting on an ambient meromorphic function adds its order. -/
 theorem MeromorphicAt.order_smul_comp_domain {D : Type*} {c : D → 𝕜} {s : D → 𝕜}
     (hs : MeromorphicAt s x c) (hf : MeromorphicAt f x) :

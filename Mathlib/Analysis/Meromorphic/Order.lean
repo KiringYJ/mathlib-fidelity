@@ -25,7 +25,7 @@ Uniformize API between analytic and meromorphic functions
 
 @[expose] public section
 
-open Filter Set WithTop.LinearOrderedAddCommGroup
+open Filter Set
 open scoped Topology
 
 variable {𝕜 : Type*} [NontriviallyNormedField 𝕜]
@@ -52,13 +52,13 @@ function that is not meromorphic at `x`. -/
 noncomputable def meromorphicOrderAt {D : Type*} (f : D → E) (x : 𝕜) {coord : D → 𝕜}
     (hf : MeromorphicAt f x coord := by fun_prop_default) : WithTop ℤ :=
   let hg := hf.2.choose_spec.choose_spec.1
-  (analyticOrderAt hf.2.choose_spec.choose x hg).map (↑· : ℕ → ℤ) - hf.2.choose
+  (analyticOrderAt hf.2.choose_spec.choose x hg).map (↑· : ℕ → ℤ) + ↑(-(hf.2.choose : ℤ))
 
 /-- Any local analytic numerator and clearing power compute the same order. -/
 theorem MeromorphicAt.order_eq_of_presentation {D : Type*} {coord : D → 𝕜} {f : D → E}
     (hf : MeromorphicAt f x coord) {n : ℕ} {g : 𝕜 → E} (hg : AnalyticAt 𝕜 g x)
     (he : ∀ᶠ y in comap coord (𝓝[≠] x), (coord y - x) ^ n • f y = g (coord y)) :
-    meromorphicOrderAt f x hf = (analyticOrderAt g x hg).map (↑· : ℕ → ℤ) - n := by
+    meromorphicOrderAt f x hf = (analyticOrderAt g x hg).map (↑· : ℕ → ℤ) + ↑(-(n : ℤ)) := by
   let m := hf.2.choose
   let a := hf.2.choose_spec.choose
   have ha : AnalyticAt 𝕜 a x := hf.2.choose_spec.choose_spec.1
@@ -78,8 +78,8 @@ theorem MeromorphicAt.order_eq_of_presentation {D : Type*} {coord : D → 𝕜} 
   rw [analyticOrderAt_smul (hc.pow n) ha, analyticOrderAt_smul (hc.pow m) hg] at H
   have hcn (k : ℕ) : analyticOrderAt (c ^ k) x (hc.pow k) = k := analyticOrderAt_centeredMonomial
   rw [hcn, hcn] at H
-  change (analyticOrderAt a x ha).map (↑· : ℕ → ℤ) - m =
-    (analyticOrderAt g x hg).map (↑· : ℕ → ℤ) - n
+  change (analyticOrderAt a x ha).map (↑· : ℕ → ℤ) + ↑(-(m : ℤ)) =
+    (analyticOrderAt g x hg).map (↑· : ℕ → ℤ) + ↑(-(n : ℤ))
   cases hₐ : analyticOrderAt a x ha with
   | top =>
     have hg' : analyticOrderAt g x hg = ⊤ := by simpa [hₐ] using H.symm
@@ -89,7 +89,7 @@ theorem MeromorphicAt.order_eq_of_presentation {D : Type*} {coord : D → 𝕜} 
     | top => simp [hₐ, h₉] at H
     | coe j =>
       simp only [hₐ, h₉, ← Nat.cast_add, Nat.cast_inj] at H
-      simp only [ENat.map_natCast, ← WithTop.coe_natCast, ← coe_sub, WithTop.coe_inj]
+      simp only [ENat.map_natCast, ← WithTop.coe_add, WithTop.coe_inj]
       omega
 
 /-- Representatives on different domains have the same order if their values agree above
@@ -134,8 +134,7 @@ lemma meromorphicOrderAt_eq_top_iff (hf : MeromorphicAt f x) :
     meromorphicOrderAt f x hf = ⊤ ↔ ∀ᶠ z in 𝓝[≠] x, f z = 0 := by
   let w := MeromorphicAt.iff_exists_analyticAt_pow_smul.mp hf
   rw [hf.order_eq_of_presentation w.choose_spec (.of_forall fun _ ↦ rfl)]
-  simp only [sub_eq_top_iff, ENat.map_eq_top_iff, WithTop.natCast_ne_top,
-    or_false]
+  simp only [WithTop.add_eq_top, ENat.map_eq_top_iff, WithTop.coe_ne_top, or_false]
   by_cases h : analyticOrderAt (fun z ↦ (z - x) ^ w.choose • f z) x w.choose_spec = ⊤
   · simp only [h, eventually_nhdsWithin_iff, mem_compl_iff, mem_singleton_iff, true_iff]
     rw [analyticOrderAt_eq_top] at h
@@ -167,7 +166,7 @@ lemma meromorphicOrderAt_eq_int_iff {n : ℤ} (hf : MeromorphicAt f x) :
   let w := MeromorphicAt.iff_exists_analyticAt_pow_smul.mp hf
   rw [hf.order_eq_of_presentation w.choose_spec (.of_forall fun _ ↦ rfl)]
   by_cases h : analyticOrderAt (fun z ↦ (z - x) ^ w.choose • f z) x w.choose_spec = ⊤
-  · rw [h, ENat.map_top, ← WithTop.coe_natCast, top_sub,
+  · rw [h, ENat.map_top, top_add,
       eq_false_intro WithTop.top_ne_coe, false_iff]
     rw [analyticOrderAt_eq_top] at h
     refine fun ⟨g, hg_an, hg_ne, hg_eq⟩ ↦ hg_ne ?_
@@ -185,7 +184,7 @@ lemma meromorphicOrderAt_eq_int_iff {n : ℤ} (hf : MeromorphicAt f x) :
     exact (smul_eq_zero_iff_right
       (mul_ne_zero (pow_ne_zero _ (sub_ne_zero.mpr hz)) (u ^ n).ne_zero)).mp hfz
   · obtain ⟨m, h⟩ := ENat.ne_top_iff_exists.mp h
-    rw [← h, ENat.map_natCast, ← WithTop.coe_natCast, ← coe_sub, WithTop.coe_inj]
+    rw [← h, ENat.map_natCast, ← WithTop.coe_add, WithTop.coe_inj]
     obtain ⟨g, hg_an, hg_ne, hg_eq⟩ := w.choose_spec.analyticOrderAt_eq_natCast.mp h.symm
     have heq : ∀ᶠ z : {z : 𝕜 // z ≠ x} in comap Subtype.val (𝓝 x),
         f z = Checked.zpow (z.val - x) (↑m - ↑w.choose : ℤ)
@@ -229,6 +228,12 @@ theorem meromorphicOrderAt_ne_top_iff_eventually_ne_zero {f : 𝕜 → E} (hf : 
     rw [meromorphicOrderAt_eq_top_iff hf] at h₀
     obtain ⟨z, hz, hz'⟩ := (h.and h₀).exists
     exact hz hz'
+
+/-- A puncturally nonzero meromorphic function has finite order. -/
+theorem MeromorphicAt.isAddUnit_order_of_eventually_ne_zero {f : 𝕜 → E} (hf : MeromorphicAt f x)
+    (hn : ∀ᶠ y in 𝓝[≠] x, f y ≠ 0) : IsAddUnit (meromorphicOrderAt f x hf) := by
+  apply LinearOrderedAddCommGroupWithTop.isAddUnit_iff.mpr
+  exact (meromorphicOrderAt_ne_top_iff_eventually_ne_zero (x := x) (f := f) hf).mpr hn
 
 /-- The order of a meromorphic function `f` at `z₀` is finite iff `f` has multiplicative inverse
 in a sufficiently small neighborhood of `z₀`. -/
@@ -615,7 +620,7 @@ theorem meromorphicOrderAt_fun_neg {f : 𝕜 → E} (hf : MeromorphicAt f x) :
   rw [hab]
   generalize (analyticOrderAt a x ha).map (↑· : ℕ → ℤ) = A
   generalize (analyticOrderAt b x hb).map (↑· : ℕ → ℤ) = B
-  cases A <;> cases B <;> simp [← WithTop.coe_natCast, ← WithTop.coe_add, ← coe_sub]
+  cases A <;> cases B <;> simp [← WithTop.coe_add]
   omega
 
 /--
@@ -688,7 +693,7 @@ theorem MeromorphicAt.order_eq_zero_of_eventuallyEq_one {D : Type*} {coord : D �
   have horder := hf.order_eq_of_presentation (n := 0) h1 (he.mono fun y hy ↦ by
     simpa only [pow_zero, one_smul, Pi.one_apply] using hy)
   simpa only [h1.analyticOrderAt_eq_zero.mpr one_ne_zero, ENat.map_zero, Nat.cast_zero,
-    WithTop.coe_zero, sub_zero] using horder
+    neg_zero, WithTop.coe_zero, add_zero] using horder
 
 /-- The order multiplies by `n` when taking a meromorphic function to its `n`th power. -/
 @[to_fun] theorem meromorphicOrderAt_pow {D : Type*} {coord : D → 𝕜} {f : D → 𝕜'}
@@ -707,65 +712,95 @@ theorem MeromorphicAt.order_eq_zero_of_eventuallyEq_one {D : Type*} {coord : D �
       push_cast
       ring
 
+/-- The orders of two meromorphic germs whose product is one add to zero. -/
+theorem MeromorphicAt.order_add_eq_zero_of_mul_eq_one {D : Type*} {coord : D → 𝕜} {f g : D → 𝕜'}
+    (hf : MeromorphicAt f x coord) (hg : MeromorphicAt g x coord)
+    (he : f * g =ᶠ[comap coord (𝓝[≠] x)] 1) :
+    meromorphicOrderAt f x hf + meromorphicOrderAt g x hg = 0 :=
+  (meromorphicOrderAt_mul hf hg).symm.trans ((hf.mul hg).order_eq_zero_of_eventuallyEq_one he)
+
 /-- Two meromorphic germs whose product equals one have opposite orders. -/
 theorem MeromorphicAt.order_of_mul_eq_one {D : Type*} {coord : D → 𝕜} {f g : D → 𝕜'}
     (hf : MeromorphicAt f x coord) (hg : MeromorphicAt g x coord)
     (he : f * g =ᶠ[comap coord (𝓝[≠] x)] 1) :
-    meromorphicOrderAt g x hg = -meromorphicOrderAt f x hf := by
-  have h := (hf.mul hg).order_eq_zero_of_eventuallyEq_one he
-  rw [meromorphicOrderAt_mul hf hg] at h
-  cases ha : meromorphicOrderAt f x hf <;> cases hb : meromorphicOrderAt g x hg <;>
-    simp [ha, hb, ← WithTop.coe_add, ← coe_neg] at h ⊢
-  omega
+    meromorphicOrderAt g x hg = Checked.neg (meromorphicOrderAt f x hf)
+      (.of_add_eq_zero _ (hf.order_add_eq_zero_of_mul_eq_one hg he)) :=
+  (Checked.neg_eq_of_add_eq_zero _ (hf.order_add_eq_zero_of_mul_eq_one hg he)).symm
+
+/-- A meromorphic germ has finite order when its unit locus covers a punctured neighborhood. -/
+theorem MeromorphicAt.isAddUnit_order_of_unit_locus {D : Type*} {coord : D → 𝕜} {f : D → 𝕜'}
+    (hf : MeromorphicAt f x coord)
+    (hc : range (fun y : {y : D | IsUnit (f y)} ↦ coord y.val) ∈ 𝓝[≠] x) :
+    IsAddUnit (meromorphicOrderAt f x hf) := by
+  rw [← hf.order_comp_domain Subtype.val hc]
+  exact .of_add_eq_zero _ ((hf.comp_domain Subtype.val hc).order_add_eq_zero_of_mul_eq_one
+    (hf.inv hc) (.of_forall fun _ ↦ mul_inv_cancel₀))
 
 /-- The order of the inverse is the negative of the order. -/
 theorem meromorphicOrderAt_inv {D : Type*} {coord : D → 𝕜} {f : D → 𝕜'}
     (hf : MeromorphicAt f x coord)
     (hc : range (fun y : {y : D | IsUnit (f y)} ↦ coord y.val) ∈ 𝓝[≠] x) :
     meromorphicOrderAt (fun y : {y : D | IsUnit (f y)} ↦ Checked.inv (f y) y.property)
-      x (hf.inv hc) = -meromorphicOrderAt f x hf := by
-  rw [← hf.order_comp_domain Subtype.val hc]
-  exact (hf.comp_domain Subtype.val hc).order_of_mul_eq_one (hf.inv hc)
-    (.of_forall fun _ ↦ mul_inv_cancel₀)
+      x (hf.inv hc) =
+        Checked.neg (meromorphicOrderAt f x hf) (hf.isAddUnit_order_of_unit_locus hc) := by
+  simpa only [hf.order_comp_domain Subtype.val hc] using
+    (hf.comp_domain Subtype.val hc).order_of_mul_eq_one (hf.inv hc)
+      (.of_forall fun _ ↦ mul_inv_cancel₀)
 
 /-- The order of a quotient is the difference of the orders on its true punctured domain. -/
 theorem meromorphicOrderAt_div {D : Type*} {coord : D → 𝕜} {f g : D → 𝕜'}
     (hf : MeromorphicAt f x coord) (hg : MeromorphicAt g x coord)
     (hc : range (fun y : {y : D | IsUnit (g y)} ↦ coord y.val) ∈ 𝓝[≠] x) :
     meromorphicOrderAt (fun y : {y : D | IsUnit (g y)} ↦ Checked.div (f y) (g y) y.property)
-      x (hf.div hg hc) = meromorphicOrderAt f x hf - meromorphicOrderAt g x hg := by
+      x (hf.div hg hc) = Checked.sub (meromorphicOrderAt f x hf) (meromorphicOrderAt g x hg)
+        (hg.isAddUnit_order_of_unit_locus hc) := by
   have h := meromorphicOrderAt_mul (hf.comp_domain Subtype.val hc) (hg.inv hc)
   rw [hf.order_comp_domain Subtype.val hc, meromorphicOrderAt_inv hg hc] at h
-  simpa only [sub_eq_add_neg] using! h
+  simpa only [Checked.sub_eq_add_neg] using! h
+
+/-- Coverage of the domain of a negative power forces the order of the base to be finite. -/
+theorem MeromorphicAt.isAddUnit_order_of_zpow_locus {D : Type*} {coord : D → 𝕜} {f : D → 𝕜'}
+    (hf : MeromorphicAt f x coord) {n : ℤ}
+    (hc : range (fun y : {y : D | n < 0 → IsUnit (f y)} ↦ coord y.val) ∈ 𝓝[≠] x) (hn : n < 0) :
+    IsAddUnit (meromorphicOrderAt f x hf) :=
+  hf.isAddUnit_order_of_unit_locus (mem_of_superset hc fun _ ⟨y, hy⟩ ↦
+    ⟨⟨y.val, y.property hn⟩, hy⟩)
 
 /-- The order of an integer power on its exponent-dependent domain. -/
 theorem meromorphicOrderAt_zpow {D : Type*} {coord : D → 𝕜} {f : D → 𝕜'}
     (hf : MeromorphicAt f x coord) (n : ℤ)
     (hc : range (fun y : {y : D | n < 0 → IsUnit (f y)} ↦ coord y.val) ∈ 𝓝[≠] x) :
     meromorphicOrderAt (fun y : {y : D | n < 0 → IsUnit (f y)} ↦ Checked.zpow (f y) n y.property)
-      x (hf.zpow n hc) = n * meromorphicOrderAt f x hf := by
+      x (hf.zpow n hc) = Checked.zsmul n (meromorphicOrderAt f x hf)
+        (hf.isAddUnit_order_of_zpow_locus hc) := by
   cases n with
   | ofNat n =>
     have h := meromorphicOrderAt_pow (hf.comp_domain Subtype.val hc) (n := n)
     rw [hf.order_comp_domain Subtype.val hc] at h
-    simpa only [Int.ofNat_eq_natCast, WithTop.coe_natCast, zpow_natCast₀] using! h
+    simp only [Int.ofNat_eq_natCast, Checked.zsmul_ofNat, zpow_natCast₀]
+    apply h.trans
+    cases meromorphicOrderAt f x hf with
+    | top =>
+      cases n with
+      | zero => simp
+      | succ n => exact WithTop.mul_top (by exact_mod_cast Nat.succ_ne_zero n)
+    | coe k => exact congrArg ((↑) : ℤ → WithTop ℤ) (nsmul_eq_mul n k).symm
   | negSucc n =>
-    have h := ((hf.comp_domain Subtype.val hc).pow (n + 1)).order_of_mul_eq_one
+    have hu := hf.isAddUnit_order_of_zpow_locus hc (Int.negSucc_lt_zero n)
+    obtain ⟨k, hk⟩ := WithTop.ne_top_iff_exists.mp
+      (LinearOrderedAddCommGroupWithTop.isAddUnit_iff.mp hu)
+    have h := ((hf.comp_domain Subtype.val hc).pow (n + 1)).order_add_eq_zero_of_mul_eq_one
       (hf.zpow (Int.negSucc n) hc) (.of_forall fun y ↦ by
         change f y.val ^ (n + 1) * Checked.zpow (f y.val) (Int.negSucc n) y.property = 1
         rw [zpow_negSucc₀, mul_inv_cancel₀])
-    rw [meromorphicOrderAt_pow (hf.comp_domain Subtype.val hc),
-      hf.order_comp_domain Subtype.val hc] at h
-    apply h.trans
-    cases horder : meromorphicOrderAt f x hf with
-    | top =>
-      rw [WithTop.mul_top (by exact_mod_cast Nat.succ_ne_zero n),
-        WithTop.mul_top (WithTop.coe_ne_zero.mpr (Int.negSucc_ne_zero n))]
-      rfl
-    | coe k =>
-      norm_cast
-      simp only [Int.negSucc_eq, Nat.cast_add, Nat.cast_one]
-      ring
+    rw [meromorphicOrderAt_pow (hf.comp_domain Subtype.val hc), hf.order_comp_domain Subtype.val hc,
+      ← hk, ← WithTop.coe_natCast, ← WithTop.coe_mul] at h
+    simp only [← hk, WithTop.checked_zsmul_coe]
+    apply add_right_injective_of_ne_top (↑(((n + 1 : ℕ) : ℤ) * k) : WithTop ℤ) WithTop.coe_ne_top
+    exact h.trans (congrArg ((↑) : ℤ → WithTop ℤ)
+      (show 0 = ((n + 1 : ℕ) : ℤ) * k + Int.negSucc n • k by
+        simp [Int.negSucc_eq]
+        ring))
 
 /--
 Adding a locally vanishing function does not change the order.
@@ -820,10 +855,10 @@ theorem meromorphicOrderAt_add (hf₁ : MeromorphicAt f₁ x) (hf₂ : Meromorph
          _ = (A + B) y := congrArg₂ (· + ·) hy.1 hy.2
   rw [hf₁.order_eq_of_presentation hA heA, hf₂.order_eq_of_presentation hB heB,
     (hf₁.add hf₂).order_eq_of_presentation (hA.add hB) he]
-  have hm : Monotone (fun t : ℕ∞ ↦ t.map (↑· : ℕ → ℤ) - ((m + n : ℕ) : WithTop ℤ)) := by
+  have hm : Monotone (fun t : ℕ∞ ↦ t.map (↑· : ℕ → ℤ) + ↑(-((m + n : ℕ) : ℤ))) := by
     intro i j hij
     cases i <;> cases j <;>
-      simp_all [← WithTop.coe_natCast]
+      simp_all
   exact hm.map_min.ge.trans (hm (le_analyticOrderAt_add hA hB))
 
 /--
@@ -1126,7 +1161,7 @@ lemma MeromorphicAt.meromorphicOrderAt_comp (hf : MeromorphicAt f (g x)) (hg : A
     exact (WithTop.coe_ne_top He).elim
   | coe k =>
     simp only [hcomp, ENat.map_natCast, ← WithTop.coe_add, WithTop.coe_inj] at He
-    simp only [ENat.map_natCast, ← WithTop.coe_natCast, ← coe_sub, ← WithTop.coe_mul,
+    simp only [ENat.map_natCast, ← WithTop.coe_add, ← WithTop.coe_mul,
       WithTop.coe_inj]
     push_cast at He ⊢
     linear_combination -He
@@ -1265,9 +1300,12 @@ variable [CompleteSpace 𝕜] {f : 𝕜 → 𝕜}
 /-- The order of the logarithmic derivative on its regular scalar domain is the order
 of the derivative minus that of the function. -/
 theorem meromorphicOrderAt_logDeriv (hf : MeromorphicAt f x) (hn : ∀ᶠ y in 𝓝[≠] x, f y ≠ 0) :
-    meromorphicOrderAt (fun y : {y : 𝕜 | DifferentiableAt 𝕜 f y ∧ IsUnit (f y)} ↦
-      logDeriv f y.val id y.property.1.existsUnique_hasDerivAt y.property.2) x (hf.logDeriv hn) =
-      meromorphicOrderAt (deriv f) x hf.deriv - meromorphicOrderAt f x hf := by
+    meromorphicOrderAt (coord := (Subtype.val :
+        {y : 𝕜 | DifferentiableAt 𝕜 f y ∧ IsUnit (f y)} → 𝕜))
+      _ x (MeromorphicAt.logDeriv (𝕜 := 𝕜) (𝕜' := 𝕜) (f := f) (x := x) hf hn) =
+      Checked.sub (meromorphicOrderAt (coord := _root_.id) (deriv f) x hf.deriv)
+        (meromorphicOrderAt (coord := _root_.id) f x hf)
+        (MeromorphicAt.isAddUnit_order_of_eventually_ne_zero (x := x) (f := f) hf hn) := by
   let S := {y : 𝕜 | DifferentiableAt 𝕜 f y ∧ IsUnit (f y)}
   have hc : range (Subtype.val : S → 𝕜) ∈ 𝓝[≠] x := by
     rw [Subtype.range_coe]
@@ -1283,7 +1321,8 @@ theorem meromorphicOrderAt_logDeriv (hf : MeromorphicAt f x) (hn : ∀ᶠ y in �
     (.of_forall fun y ↦ logDeriv_apply f y.val (hderiv := y.property.1.existsUnique_hasDerivAt)
       (hvalue := y.property.2)),
     meromorphicOrderAt_mul hd hr, hf'.order_of_mul_eq_one hr he,
-    hf.order_comp_domain Subtype.val hc, hf.deriv.order_comp_domain Subtype.val hc, sub_eq_add_neg]
+    hf.deriv.order_comp_domain Subtype.val hc, Checked.sub_eq_add_neg]
+  simp only [hf.order_comp_domain Subtype.val hc]
 
 /-- At zeros and poles in characteristic zero the logarithmic derivative has a simple pole. -/
 theorem meromorphicOrderAt_logDeriv_eq_neg_one [CharZero 𝕜] (hf : MeromorphicAt f x)
@@ -1292,12 +1331,12 @@ theorem meromorphicOrderAt_logDeriv_eq_neg_one [CharZero 𝕜] (hf : Meromorphic
         {y : 𝕜 | DifferentiableAt 𝕜 f y ∧ IsUnit (f y)} → 𝕜))
       _ x (MeromorphicAt.logDeriv (𝕜 := 𝕜) (𝕜' := 𝕜) (f := f) (x := x) hf (by
         exact (meromorphicOrderAt_ne_top_iff_eventually_ne_zero (x := x) (f := f) hf).mp
-          h₂)) = -1 := by
+          h₂)) = ↑(-1 : ℤ) := by
   obtain ⟨n, hn⟩ := WithTop.ne_top_iff_exists.mp h₂
   have hn' : (n : 𝕜) ≠ 0 := Int.cast_ne_zero.mpr fun he ↦ h₁ (by simp [← hn, he])
   rw [meromorphicOrderAt_logDeriv hf ((meromorphicOrderAt_ne_top_iff_eventually_ne_zero hf).mp h₂),
-    meromorphicOrderAt_deriv_eq_sub_one hf hn' hn.symm, ← hn]
-  rw [← coe_sub, show n - 1 - n = -1 by omega, coe_neg, WithTop.coe_one]
+    meromorphicOrderAt_deriv_eq_sub_one hf hn' hn.symm]
+  simp only [← hn, WithTop.checked_sub_coe, show n - 1 - n = -1 by omega]
 
 /-- At a point of order zero the logarithmic derivative has nonnegative order. -/
 theorem meromorphicOrderAt_logDeriv_nonneg (hf : MeromorphicAt f x)
@@ -1311,8 +1350,10 @@ theorem meromorphicOrderAt_logDeriv_nonneg (hf : MeromorphicAt f x)
   obtain ⟨g, hg, he⟩ := hf.meromorphicOrderAt_nonneg_iff.mp h.ge
   have he' : f =ᶠ[𝓝[≠] x] g := by simpa only [comap_id, Function.comp_id] using he
   have hn := (meromorphicOrderAt_ne_top_iff_eventually_ne_zero hf).mp (h ▸ WithTop.zero_ne_top)
-  rw [meromorphicOrderAt_logDeriv hf hn, h, sub_zero,
+  rw [meromorphicOrderAt_logDeriv hf hn, Checked.sub_eq_add_neg,
     meromorphicOrderAt_congr hf.deriv he'.nhdsNE_deriv]
-  exact hg.deriv.meromorphicOrderAt_nonneg
+  have hneg (hu : IsAddUnit (0 : WithTop ℤ)) : Checked.neg (0 : WithTop ℤ) hu = 0 :=
+    Checked.neg_eq_of_add_eq_zero hu (add_zero _)
+  simpa only [h, hneg, add_zero] using hg.deriv.meromorphicOrderAt_nonneg
 
 end deriv

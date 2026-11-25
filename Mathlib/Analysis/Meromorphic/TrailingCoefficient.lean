@@ -49,9 +49,7 @@ theorem MeromorphicAt.exists_analytic_factor {D : Type*} {coord : D → 𝕜} {f
   obtain ⟨g, hg, hgx, hag⟩ := ha.analyticOrderAt_eq_natCast.mp hn.symm
   have ho : (meromorphicOrderAt f x hf).untop h = (n : ℤ) - m := by
     apply WithTop.coe_injective
-    rw [WithTop.coe_untop, hfOrder, ← hn, ENat.map_natCast,
-      WithTop.LinearOrderedAddCommGroup.coe_sub]
-    rfl
+    rw [WithTop.coe_untop, hfOrder, ← hn, ENat.map_natCast, sub_eq_add_neg, WithTop.coe_add]
   refine ⟨g, hg, hgx, ?_⟩
   filter_upwards [he, tendsto_comap.eventually (hag.filter_mono nhdsWithin_le_nhds)] with y hya hyg
   intro hy
@@ -575,7 +573,9 @@ lemma MeromorphicAt.meromorphicTrailingCoeffAt_zpow {D : Type*} {coord : D → �
   obtain ⟨G, hG, hGg⟩ := analyticAt_exists_zpow hg hgx n
   have ho : (meromorphicOrderAt _ x hp).untop h' = n * (meromorphicOrderAt f x hf).untop h := by
     apply WithTop.coe_injective
-    rw [WithTop.coe_untop, meromorphicOrderAt_zpow hf n hp.1, WithTop.coe_mul, WithTop.coe_untop]
+    obtain ⟨k, hk⟩ := WithTop.ne_top_iff_exists.mp h
+    simp only [meromorphicOrderAt_zpow hf n hp.1, ← hk, WithTop.checked_zsmul_coe,
+      WithTop.untop_coe, zsmul_eq_mul, Int.cast_id]
   have hcoef : meromorphicTrailingCoeffAt _ x h' = G x := by
     apply hG.meromorphicTrailingCoeffAt_of_eq_nhdsNE hp h'
     rw [← comap_comap]

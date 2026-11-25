@@ -5,7 +5,6 @@ Authors: Stefan Kebekus
 -/
 module
 
-public import Mathlib.Algebra.Order.AddGroupWithTop
 public import Mathlib.Algebra.Order.Ring.WithTop
 
 /-!
@@ -54,7 +53,7 @@ lemma coe_untop₀_of_ne_top {a : WithTop α} (ha : a ≠ ⊤) :
 end Zero
 
 /-!
-## Simplifying Lemmas involving addition and negation
+## Simplifying Lemmas involving addition
 -/
 
 @[simp]
@@ -80,11 +79,6 @@ theorem untop₀_one {α : Type*} [AddMonoidWithOne α] :
 @[simp]
 lemma untop₀_ofNat [AddMonoidWithOne α] (n : ℕ) [n.AtLeastTwo] :
     untop₀ (ofNat(n) : WithTop α) = ofNat(n) := rfl
-
-@[simp]
-lemma untop₀_neg [AddCommGroup α] : ∀ a : WithTop α, (-a).untop₀ = -a.untop₀
-  | ⊤ => by simp
-  | (a : α) => rfl
 
 @[simp]
 lemma untop₀_mul [DecidableEq α] [MulZeroClass α] (a b : WithTop α) :

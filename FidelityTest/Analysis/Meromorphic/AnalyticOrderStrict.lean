@@ -90,5 +90,6 @@ example (n : ℤ) :
     filter_upwards [self_mem_nhdsWithin] with z hz
     exact ⟨⟨z, fun _ ↦ (sub_ne_zero.mpr hz).isUnit⟩, rfl⟩
   refine ⟨hf.zpow n hc, ?_⟩
-  simpa only [meromorphicOrderAt_id_sub_const, mul_one] using!
+  simpa only [meromorphicOrderAt_id_sub_const, ← WithTop.coe_one, WithTop.checked_zsmul_coe,
+    Int.zsmul_eq_mul, Int.mul_one] using!
     meromorphicOrderAt_zpow hf n hc

@@ -21,6 +21,12 @@ When tagging a release, move its notes under the Fidelity tag and release date a
   including nonzero evidence in a field. Nonnegative integer powers retain the monoid domain.
   `Rat.fraction` requires a nonzero denominator, and square matrix inversion requires a unit
   determinant. See the [checked operation examples](FidelityTest/Algebra/CheckedOperations.lean).
+- **Additive groups with an adjoined top.** Non-top elements are exactly the additive units.
+  `Checked.neg`, `Checked.sub`, and `Checked.zsmul` use unit evidence. A finite subtrahend
+  permits subtraction from `⊤`, and only negative scalars require a unit. Finite Archimedean
+  classes form an ordered additive group. Multiplicative and tropical wrappers transport unit
+  evidence to the checked inverse, quotient, and power operations.
+  See [#86](https://github.com/KiringYJ/mathlib-fidelity/issues/86).
 - **Signed extended-real division.** On `EReal`, `a / b` requires a nonzero denominator and at
   least one finite operand. This is the maximal domain of continuous extension. Finite numerators
   divided by either infinity give zero. Finite nonzero denominators give unit division.

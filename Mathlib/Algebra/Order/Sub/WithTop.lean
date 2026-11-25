@@ -15,11 +15,9 @@ This file introduces a subtraction on `WithTop α` when `α` has a subtraction a
 given by `x - ⊤ = ⊥` and `⊤ - x = ⊤` for `x ≠ ⊤`. It gives the subtraction on `ℕ∞`.
 On `ℝ≥0∞`, the same construction defines the named order residual `ENNReal.monus`.
 
-Note that there is another subtraction on objects of the form `WithTop α` in the file
-`Mathlib/Algebra/Order/AddGroupWithTop.lean`, setting `-⊤ = ⊤` as this corresponds to the
-additivization of the usual convention `0⁻¹ = 0` and is relevant in valuation theory. Since that
-other instance is only registered for `AddCommGroup α` (which doesn't have a bottom
-element, unless the group is trivial), this shouldn't create diamonds.
+The `OrderedSub` instance satisfies the right residual law `x - y ≤ z ↔ x ≤ z + y`.
+For translation by an additive unit, use `Checked.sub` from
+`Mathlib.Algebra.Order.AddGroupWithTop`.
 -/
 
 @[expose] public section

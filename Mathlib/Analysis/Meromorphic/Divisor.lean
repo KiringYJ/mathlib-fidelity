@@ -327,18 +327,11 @@ theorem poleDivisor_def {D : Type*} (f : D → E) (U : Set 𝕜) {coord : D → 
       (ne_top_of_le_ne_top WithTop.coe_ne_top (min_le_right _ 0)) else 0 :=
   rfl
 
-/-- On `U`, the pole divisor of `f` is the negative of the minimum of the order and `0`. -/
-lemma coe_poleDivisor_apply {D : Type*} {coord : D → 𝕜} {f : D → E}
+/-- On `U`, the negative of the integer pole multiplicity is the minimum of the order and zero. -/
+lemma coe_neg_poleDivisor_apply {D : Type*} {coord : D → 𝕜} {f : D → E}
     (hf : MeromorphicOn f U coord) (hz : z ∈ U) :
-    (poleDivisor f U hf z : WithTop ℤ) = -min (meromorphicOrderAt f z (hf z hz)) 0 := by
-  simp only [poleDivisor_def, hz, ↓reduceDIte]
-  rw [WithTop.LinearOrderedAddCommGroup.coe_neg, WithTop.coe_untop]
-
-/-- The minimum of the order and `0` is the negative of the pole divisor. -/
-private lemma min_meromorphicOrderAt_zero {D : Type*} {coord : D → 𝕜} {f : D → E}
-    (hf : MeromorphicOn f U coord) (hz : z ∈ U) :
-    min (meromorphicOrderAt f z (hf z hz)) 0 = ((-poleDivisor f U hf z : ℤ) : WithTop ℤ) := by
-  rw [WithTop.LinearOrderedAddCommGroup.coe_neg, coe_poleDivisor_apply hf hz, neg_neg]
+    ((-poleDivisor f U hf z : ℤ) : WithTop ℤ) = min (meromorphicOrderAt f z (hf z hz)) 0 := by
+  simp only [poleDivisor_def, hz, ↓reduceDIte, neg_neg, WithTop.coe_untop]
 
 /-- The pole divisor vanishes exactly when the meromorphic function extends analytically
 at every point. -/
@@ -348,13 +341,13 @@ theorem poleDivisor_eq_zero_iff_regular {D : Type*} {coord : D → 𝕜} {f : D 
   constructor
   · intro h z hz
     apply (hf z hz).meromorphicOrderAt_nonneg_iff.mp
-    have hmin := min_meromorphicOrderAt_zero hf hz
+    have hmin := (coe_neg_poleDivisor_apply hf hz).symm
     simpa [h, min_eq_right_iff] using hmin
   · intro h
     ext z
     by_cases hz : z ∈ U
     · have hle := (hf z hz).meromorphicOrderAt_nonneg_iff.mpr (h z hz)
-      have hzero := (min_meromorphicOrderAt_zero hf hz).symm.trans (min_eq_right hle)
+      have hzero := (coe_neg_poleDivisor_apply hf hz).trans (min_eq_right hle)
       have hneg : -(poleDivisor f U hf z) = 0 := by exact_mod_cast hzero
       exact neg_eq_zero.mp hneg
     · exact Function.locallyFinsuppWithin.apply_eq_zero_of_notMem _ hz
@@ -363,7 +356,7 @@ theorem poleDivisor_eq_zero_iff_regular {D : Type*} {coord : D → 𝕜} {f : D 
 theorem poleDivisor_nonneg {f : 𝕜 → E} (hf : MeromorphicOn f U) : 0 ≤ poleDivisor f U hf := by
   intro z
   by_cases hz : z ∈ U
-  · have h₁ := min_meromorphicOrderAt_zero hf hz
+  · have h₁ := (coe_neg_poleDivisor_apply hf hz).symm
     have h₂ : ((-poleDivisor f U hf z : ℤ) : WithTop ℤ) ≤ 0 := h₁ ▸ min_le_right _ _
     have : -poleDivisor f U hf z ≤ 0 := by exact_mod_cast h₂
     simp only [Function.locallyFinsuppWithin.coe_zero, Pi.zero_apply]
@@ -376,7 +369,7 @@ theorem poleDivisor_eq_negPart_divisor {f : 𝕜 → E} {hf : MeromorphicOn f U}
     poleDivisor f U hf = (divisor f U h)⁻ := by
   ext z
   by_cases hz : z ∈ U
-  · have h₁ := min_meromorphicOrderAt_zero hf hz
+  · have h₁ := (coe_neg_poleDivisor_apply hf hz).symm
     rw [← coe_divisor_apply hf hz (h := h), ← WithTop.coe_zero, ← WithTop.coe_min,
       WithTop.coe_inj] at h₁
     rw [Function.locallyFinsuppWithin.negPart_apply, negPart_def]
@@ -393,8 +386,8 @@ private theorem poleDivisor_congr' {D₁ D₂ : Type*} {c₁ : D₁ → 𝕜} {c
     poleDivisor f₁ U hf₁ = poleDivisor f₂ U hf₂ := by
   ext z
   by_cases hz : z ∈ U
-  · exact_mod_cast (coe_poleDivisor_apply hf₁ hz).trans
-      ((congrArg (-·) (h z hz)).trans (coe_poleDivisor_apply hf₂ hz).symm)
+  · exact neg_injective (WithTop.coe_injective ((coe_neg_poleDivisor_apply hf₁ hz).trans
+      ((h z hz).trans (coe_neg_poleDivisor_apply hf₂ hz).symm)))
   · simp [Function.locallyFinsuppWithin.apply_eq_zero_of_notMem _ hz]
 
 /-- Two pole divisors on `U` agree if the orders of the two functions agree at every point of
@@ -426,7 +419,7 @@ theorem AnalyticOnNhd.poleDivisor_eq_zero {f : 𝕜 → E} (hf : AnalyticOnNhd �
     poleDivisor f U hf.meromorphicOn = 0 := by
   ext z
   by_cases hz : z ∈ U
-  · have h₁ := min_meromorphicOrderAt_zero hf.meromorphicOn hz
+  · have h₁ := (coe_neg_poleDivisor_apply hf.meromorphicOn hz).symm
     rw [min_eq_right (hf z hz).meromorphicOrderAt_nonneg, ← WithTop.coe_zero, WithTop.coe_inj]
       at h₁
     simp only [Function.locallyFinsuppWithin.coe_zero, Pi.zero_apply]
@@ -462,8 +455,8 @@ theorem poleDivisor_add_le_max {f₁ f₂ : 𝕜 → E} {U : Set 𝕜} (hf₁ : 
   intro z
   by_cases hz : z ∈ U
   · have h := min_le_min_right 0 (meromorphicOrderAt_add (hf₁ z hz) (hf₂ z hz))
-    rw [inf_inf_distrib_right, min_meromorphicOrderAt_zero hf₁ hz,
-      min_meromorphicOrderAt_zero hf₂ hz, min_meromorphicOrderAt_zero (hf₁.add hf₂) hz] at h
+    rw [inf_inf_distrib_right, ← coe_neg_poleDivisor_apply hf₁ hz,
+      ← coe_neg_poleDivisor_apply hf₂ hz, ← coe_neg_poleDivisor_apply (hf₁.add hf₂) hz] at h
     have h' : min (-poleDivisor f₁ U hf₁ z) (-poleDivisor f₂ U hf₂ z) ≤
         -poleDivisor (f₁ + f₂) U (hf₁.add hf₂) z := by exact_mod_cast h
     simp only [Function.locallyFinsuppWithin.max_apply]
@@ -496,9 +489,9 @@ theorem poleDivisor_smul_le_add {f₁ : 𝕜 → 𝕜} {f₂ : 𝕜 → E} (hf�
     poleDivisor (f₁ • f₂) U (hf₁.smul hf₂) ≤ poleDivisor f₁ U hf₁ + poleDivisor f₂ U hf₂ := by
   intro z
   by_cases hz : z ∈ U
-  · have e₁ := coe_poleDivisor_apply hf₁ hz
-    have e₂ := coe_poleDivisor_apply hf₂ hz
-    have e₃ := coe_poleDivisor_apply (hf₁.smul hf₂) hz
+  · have e₁ := coe_neg_poleDivisor_apply hf₁ hz
+    have e₂ := coe_neg_poleDivisor_apply hf₂ hz
+    have e₃ := coe_neg_poleDivisor_apply (hf₁.smul hf₂) hz
     have h : meromorphicOrderAt (f₁ • f₂) z ((hf₁.smul hf₂) z hz) =
         meromorphicOrderAt f₁ z (hf₁ z hz) + meromorphicOrderAt f₂ z (hf₂ z hz) :=
       meromorphicOrderAt_smul (hf₁ z hz) (hf₂ z hz)
@@ -518,9 +511,9 @@ theorem poleDivisor_smul_le_add {f₁ : 𝕜 → 𝕜} {f₂ : 𝕜 → E} (hf�
         have : poleDivisor (f₁ • f₂) U (hf₁.smul hf₂) z = 0 := by simpa using e₃
         omega
       | coe n =>
-        have e₁' : poleDivisor f₁ U hf₁ z = -min m 0 := by exact_mod_cast e₁
-        have e₂' : poleDivisor f₂ U hf₂ z = -min n 0 := by exact_mod_cast e₂
-        have e₃' : poleDivisor (f₁ • f₂) U (hf₁.smul hf₂) z = -min (m + n) 0 := by
+        have e₁' : -poleDivisor f₁ U hf₁ z = min m 0 := by exact_mod_cast e₁
+        have e₂' : -poleDivisor f₂ U hf₂ z = min n 0 := by exact_mod_cast e₂
+        have e₃' : -poleDivisor (f₁ • f₂) U (hf₁.smul hf₂) z = min (m + n) 0 := by
           exact_mod_cast e₃
         omega
   · simp [Function.locallyFinsuppWithin.apply_eq_zero_of_notMem _ hz]
@@ -668,10 +661,9 @@ theorem divisor_inv {D : Type*} {coord : D → 𝕜} {f : D → 𝕜} {hf : Mero
   ext z
   by_cases hz : z ∈ U
   · have ho := meromorphicOrderAt_inv (hf z hz) (hf' z hz).1
-    rw [← coe_divisor_apply hf hz (h := h), ← coe_divisor_apply hf' hz (h := h'),
-      ← WithTop.LinearOrderedAddCommGroup.coe_neg] at ho
-    simp only [Function.locallyFinsuppWithin.coe_neg, Pi.neg_apply]
-    exact_mod_cast ho
+    simpa only [← coe_divisor_apply hf hz (h := h), ← coe_divisor_apply hf' hz (h := h'),
+      WithTop.checked_neg_coe, WithTop.coe_inj, Function.locallyFinsuppWithin.coe_neg,
+      Pi.neg_apply] using ho
   · simp [Function.locallyFinsuppWithin.apply_eq_zero_of_notMem _ hz]
 
 /--
@@ -705,8 +697,8 @@ theorem poleDivisor_pow {f : 𝕜 → 𝕜} (hf : MeromorphicOn f U) (n : ℕ) :
     poleDivisor (f ^ n) U (hf.pow n) = n • poleDivisor f U hf := by
   ext z
   by_cases hz : z ∈ U
-  · have e₁ := coe_poleDivisor_apply hf hz
-    have e₂ := coe_poleDivisor_apply (hf.pow n) hz
+  · have e₁ := coe_neg_poleDivisor_apply hf hz
+    have e₂ := coe_neg_poleDivisor_apply (hf.pow n) hz
     have h : meromorphicOrderAt (f ^ n) z ((hf.pow n) z hz) =
         n * meromorphicOrderAt f z (hf z hz) :=
       meromorphicOrderAt_pow (hf z hz)
@@ -721,9 +713,10 @@ theorem poleDivisor_pow {f : 𝕜 → 𝕜} (hf : MeromorphicOn f U) (n : ℕ) :
       · rw [WithTop.mul_top (by exact_mod_cast hn)] at e₂
         simpa [h₁] using e₂
     | coe m =>
-      have e₁' : poleDivisor f U hf z = -min m 0 := by exact_mod_cast e₁
-      have e₂' : poleDivisor (f ^ n) U (hf.pow n) z = -min (n * m) 0 := by exact_mod_cast e₂
-      rw [e₁', e₂', mul_neg, mul_min_of_nonneg _ _ (Int.natCast_nonneg n), mul_zero]
+      have e₁' : -poleDivisor f U hf z = min m 0 := by exact_mod_cast e₁
+      have e₂' : -poleDivisor (f ^ n) U (hf.pow n) z = min (n * m) 0 := by exact_mod_cast e₂
+      apply neg_injective
+      rw [e₂', ← mul_neg, e₁', mul_min_of_nonneg _ _ (Int.natCast_nonneg n), mul_zero]
   · simp [Function.locallyFinsuppWithin.apply_eq_zero_of_notMem _ hz]
 
 /-- The divisor of an integer power on its exponent-dependent domain is the exponent
@@ -737,9 +730,9 @@ theorem divisor_zpow {D : Type*} {coord : D → 𝕜} {f : D → 𝕜} {hf : Mer
   ext z
   by_cases hz : z ∈ U
   · have ho := meromorphicOrderAt_zpow (hf z hz) n (hf' z hz).1
-    rw [← coe_divisor_apply hf hz (h := h), ← coe_divisor_apply hf' hz (h := h')] at ho
-    simp only [Function.locallyFinsuppWithin.coe_zsmul, Pi.smul_apply, zsmul_eq_mul]
-    exact_mod_cast ho
+    simpa only [← coe_divisor_apply hf hz (h := h), ← coe_divisor_apply hf' hz (h := h'),
+      WithTop.checked_zsmul_coe, WithTop.coe_inj, Function.locallyFinsuppWithin.coe_zsmul,
+      Pi.smul_apply] using ho
   · simp [Function.locallyFinsuppWithin.apply_eq_zero_of_notMem _ hz]
 
 /--
@@ -767,8 +760,8 @@ theorem poleDivisor_restrict {f : 𝕜 → E} {V : Set 𝕜} (hf : MeromorphicOn
   ext x
   by_cases hx : x ∈ V
   · simp only [Function.locallyFinsuppWithin.restrict_apply, hx, ↓reduceIte]
-    exact_mod_cast (coe_poleDivisor_apply hf (hV hx)).trans
-      (coe_poleDivisor_apply (hf.mono_set hV) hx).symm
+    exact neg_injective (WithTop.coe_injective ((coe_neg_poleDivisor_apply hf (hV hx)).trans
+      (coe_neg_poleDivisor_apply (hf.mono_set hV) hx).symm))
   · simp [Function.locallyFinsuppWithin.apply_eq_zero_of_notMem _ hx]
 
 /-- Adding an analytic function to a meromorphic one does not change the pole divisor. -/

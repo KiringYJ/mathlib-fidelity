@@ -73,10 +73,9 @@ example {f : ℂ → ℂ} {x : ℂ} (hf : MeromorphicAt f x) (h : meromorphicOrd
       meromorphicOrderAt (fun z : {z : ℂ // IsUnit (f z)} ↦ Checked.inv (f z.val) z.property)
         x (hf.inv (coord := id) hc) ≠ ⊤ := by
   have hc := unitLocus_mem_nhdsNE f x hf h
-  refine ⟨hc, ?_⟩
-  have hn : -meromorphicOrderAt f x hf ≠ ⊤ := by
-    simpa only [ne_eq, LinearOrderedAddCommGroupWithTop.neg_eq_top] using h
-  exact (meromorphicOrderAt_inv (coord := id) hf hc).trans_ne hn
+  refine ⟨hc, (meromorphicOrderAt_inv (coord := id) hf hc).trans_ne ?_⟩
+  exact LinearOrderedAddCommGroupWithTop.isAddUnit_iff.mp
+    (Checked.isAddUnit_neg (LinearOrderedAddCommGroupWithTop.isAddUnit_iff.mpr h))
 
 example {f : ℂ → ℂ} {x : ℂ} (hf : MeromorphicAt f x) (h : meromorphicOrderAt f x hf ≠ ⊤)
     (hi : MeromorphicAt (fun z : {z : ℂ // IsUnit (f z)} ↦ Checked.inv (f z.val) z.property)

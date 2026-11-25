@@ -150,11 +150,11 @@ theorem analyticOnNhd_canonicalFactor (R : ℝ) (w : ℂ) {hR : R ≠ 0} :
   fun y _ ↦ ((meromorphicNFOn_canonicalFactor R w (hR := hR))
     (z := (y.val : ℂ)) (mem_univ _)).analyticAt_of_mem
 
-/-- Orders of the canonical section are computed as the difference of the two analytic orders. -/
+/-- The canonical factor has the order of its analytic numerator, decreased by one at its center. -/
 theorem order_canonicalFactor_eq (R : ℝ) (w z : ℂ) {hR : R ≠ 0} :
     meromorphicOrderAt (canonicalFactor R w hR).eval z (meromorphic_canonicalFactor R w z) =
-      (analyticOrderAt (fun y : ℂ ↦ (R : ℂ) ^ 2 - conj w * y) z (by fun_prop)).map (↑· : ℕ → ℤ) -
-      (analyticOrderAt (fun y : ℂ ↦ (R : ℂ) * (y - w)) z (by fun_prop)).map (↑· : ℕ → ℤ) := by
+      (analyticOrderAt (fun y : ℂ ↦ (R : ℂ) ^ 2 - conj w * y) z (by fun_prop)).map (↑· : ℕ → ℤ) +
+        (if z = w then ↑(-1 : ℤ) else 0) := by
   let a := AnalyticGerm.ofFun (z := z) (fun y : ℂ ↦ (R : ℂ) ^ 2 - conj w * y) (by fun_prop)
   let b := AnalyticGerm.ofFun (z := z) (fun y : ℂ ↦ (R : ℂ) * (y - w)) (by fun_prop)
   have hb : b ≠ 0 := MeromorphicGerm.ofAnalytic_ne_zero.mp
@@ -164,7 +164,17 @@ theorem order_canonicalFactor_eq (R : ℝ) (w z : ℂ) {hR : R ≠ 0} :
         (MeromorphicGerm.ofAnalytic_ne_zero.mpr hb).isUnit :=
     eq_div_iff.mpr (germ_canonicalFactor_mul_denominator z)
   rw [(canonicalFactor R w hR).order_eval ⟨z, mem_univ z⟩, he, MeromorphicGerm.order_div a b hb]
-  simp only [a, b, AnalyticGerm.order_ofFun]
+  have hc : AnalyticAt ℂ (fun _ : ℂ ↦ (R : ℂ)) z := analyticAt_const
+  have hd : AnalyticAt ℂ (fun y ↦ y - w) z := analyticAt_id.sub analyticAt_const
+  have hmul := analyticOrderAt_mul hc hd
+  change analyticOrderAt (fun y ↦ (R : ℂ) * (y - w)) z _ = _ at hmul
+  simp only [a, b, AnalyticGerm.order_ofFun, hmul,
+    hc.analyticOrderAt_eq_zero.mpr (ofReal_ne_zero.mpr hR), zero_add, Checked.sub_eq_add_neg]
+  by_cases hz : z = w
+  · subst z
+    simp only [analyticOrderAt_id_sub_const_self, ENat.map_one, Nat.cast_one,
+      WithTop.checked_neg_coe, ↓reduceIte]
+  · simp [hz, analyticOrderAt_id_sub_const_of_ne hz, ← WithTop.coe_zero]
 
 private theorem canonicalFactor_numerator_ne_zero {z : ℂ} (hw : w ∈ ball 0 R)
     (hz : z ∈ closedBall 0 R) : (R : ℂ) ^ 2 - conj w * z ≠ 0 := by
@@ -178,17 +188,10 @@ private theorem canonicalFactor_numerator_ne_zero {z : ℂ} (hw : w ∈ ball 0 R
 /-- The factor of an interior point has a simple pole at that point. -/
 theorem meromorphicOrderAt_canonicalFactor (hw : w ∈ ball 0 R) :
     meromorphicOrderAt (canonicalFactor R w (pos_of_mem_ball hw).ne').eval w
-      (meromorphic_canonicalFactor R w w) = -1 := by
+      (meromorphic_canonicalFactor R w w) = ↑(-1 : ℤ) := by
   have ha : AnalyticAt ℂ (fun y : ℂ ↦ (R : ℂ) ^ 2 - conj w * y) w := by fun_prop
-  have hb : AnalyticAt ℂ (fun y : ℂ ↦ y - w) w := analyticAt_id.sub analyticAt_const
-  have hc : AnalyticAt ℂ (fun _ : ℂ ↦ (R : ℂ)) w := analyticAt_const
-  rw [order_canonicalFactor_eq R w w, ha.analyticOrderAt_eq_zero.mpr
+  simp [order_canonicalFactor_eq, ha.analyticOrderAt_eq_zero.mpr
     (canonicalFactor_numerator_ne_zero hw (ball_subset_closedBall hw))]
-  have hmul := analyticOrderAt_mul hc hb
-  change analyticOrderAt (fun y ↦ (R : ℂ) * (y - w)) w _ = _ at hmul
-  rw [hmul, hc.analyticOrderAt_eq_zero.mpr (ofReal_ne_zero.mpr (pos_of_mem_ball hw).ne'),
-    analyticOrderAt_id_sub_const_self]
-  simp
 
 /-!
 ### Values of Canonical Factors
@@ -232,29 +235,21 @@ theorem canonicalFactor_nonvanishing (R : ℝ) (w : ℂ) {hR : R ≠ 0} :
   rw [hx, zero_mul] at he
   exact he.symm
 
+/-- A unit of global meromorphic sections has finite order in every stalk. -/
+theorem isAddUnit_order_germ (u : (MeromorphicSection (⊤ : Opens ℂ))ˣ) (x : ℂ) :
+    IsAddUnit (MeromorphicGerm.order (germ ⟨x, mem_univ x⟩ u.val)) :=
+  MeromorphicGerm.isAddUnit_order_unit (Units.map (germ (U := ⊤) ⟨x, mem_univ x⟩).toMonoidHom u)
+
+/-- The scalar presentation of a meromorphic section unit has finite order everywhere. -/
+theorem order_sectionUnit_ne_top (u : (MeromorphicSection (⊤ : Opens ℂ))ˣ) (x : ℂ) :
+    meromorphicOrderAt u.val.eval x (u.val.meromorphicOn_eval x (mem_univ x)) ≠ ⊤ := by
+  rw [u.val.order_eval ⟨x, mem_univ x⟩]
+  exact LinearOrderedAddCommGroupWithTop.isAddUnit_iff.mp (isAddUnit_order_germ u x)
+
 /-- Canonical factors have finite order at every point of the plane. -/
 theorem meromorphicOrderAt_canonicalFactor_ne_top (R : ℝ) (w z : ℂ) {hR : R ≠ 0} :
-    meromorphicOrderAt (canonicalFactor R w hR).eval z (meromorphic_canonicalFactor R w z) ≠ ⊤ := by
-  rw [order_canonicalFactor_eq]
-  let A := fun y : ℂ ↦ (R : ℂ) ^ 2 - conj w * y
-  let B := fun y : ℂ ↦ (R : ℂ) * (y - w)
-  have ha : AnalyticOnNhd ℂ A univ := fun _ _ ↦ by dsimp [A]; fun_prop
-  have hb : AnalyticOnNhd ℂ B univ := fun _ _ ↦ by dsimp [B]; fun_prop
-  have hna := AnalyticGerm.ofFun_ne_zero_of_preconnected ha isPreconnected_univ (mem_univ z)
-    (mem_univ 0) (by simp [A, hR])
-  have hnb := AnalyticGerm.ofFun_ne_zero_of_preconnected hb isPreconnected_univ (mem_univ z)
-    (mem_univ (w + 1)) (by simp [B, hR])
-  have hfinite (f : ℂ → ℂ) (h : AnalyticAt ℂ f z) (hn : AnalyticGerm.ofFun f h ≠ 0) :
-      analyticOrderAt f z h ≠ ⊤ := by
-    rw [← AnalyticGerm.order_ofFun]
-    exact mt (AnalyticGerm.order_eq_top_iff _).mp hn
-  have hA := hfinite A (ha z trivial) hna
-  have hB := hfinite B (hb z trivial) hnb
-  obtain ⟨m, hm⟩ := ENat.ne_top_iff_exists.mp hA
-  obtain ⟨n, hn⟩ := ENat.ne_top_iff_exists.mp hB
-  change (analyticOrderAt A z _).map (↑· : ℕ → ℤ) - (analyticOrderAt B z _).map (↑· : ℕ → ℤ) ≠ ⊤
-  rw [← hm, ← hn, ENat.map_natCast, ENat.map_natCast, ← WithTop.LinearOrderedAddCommGroup.coe_sub]
-  exact WithTop.coe_ne_top
+    meromorphicOrderAt (canonicalFactor R w hR).eval z (meromorphic_canonicalFactor R w z) ≠ ⊤ :=
+  order_sectionUnit_ne_top (unit (canonicalFactor R w hR) (canonicalFactor_nonvanishing R w)) z
 
 /-- In the open disk, the canonical factor has divisor minus the point mass at its pole. -/
 theorem divisor_canonicalFactor (hw : w ∈ ball 0 R)
@@ -274,11 +269,9 @@ theorem divisor_canonicalFactor (hw : w ∈ ball 0 R)
         exact h₂
       simp [he, Function.locallyFinsuppWithin.restrict_apply, hw]
     · have ha : AnalyticAt ℂ (fun y : ℂ ↦ (R : ℂ) ^ 2 - conj w * y) z := by fun_prop
-      have hb : AnalyticAt ℂ (fun y : ℂ ↦ (R : ℂ) * (y - w)) z := by fun_prop
-      rw [order_canonicalFactor_eq, ha.analyticOrderAt_eq_zero.mpr
-        (canonicalFactor_numerator_ne_zero hw (ball_subset_closedBall hz)),
-        hb.analyticOrderAt_eq_zero.mpr (mul_ne_zero (ofReal_ne_zero.mpr (pos_of_mem_ball hw).ne')
-          (sub_ne_zero.mpr hzw)), ENat.map_zero, Nat.cast_zero, WithTop.coe_zero, sub_zero] at h₂
+      simp only [order_canonicalFactor_eq, ha.analyticOrderAt_eq_zero.mpr
+        (canonicalFactor_numerator_ne_zero hw (ball_subset_closedBall hz)), hzw, ↓reduceIte,
+        ENat.map_zero, Nat.cast_zero, WithTop.coe_zero, add_zero] at h₂
       have he : MeromorphicOn.divisor _ (ball 0 R) h z = 0 := by exact_mod_cast h₂
       simp [he, hzw, Function.locallyFinsuppWithin.restrict_apply, hz]
   · simp [Function.locallyFinsuppWithin.apply_eq_zero_of_notMem _ hz]
@@ -298,15 +291,17 @@ theorem order_canonicalProduct {R : ℝ} (D : Function.locallyFinsuppWithin (bal
     MeromorphicGerm.order (germ ⟨x, mem_univ x⟩ (canonicalProduct D hD).val) =
       ∑ u ∈ hD.toFinset.attach,
         let hw := D.supportWithinDomain (hD.mem_toFinset.mp u.property)
-        (-D u : ℤ) * MeromorphicGerm.order
-          (germ ⟨x, mem_univ x⟩ (canonicalFactor R u (pos_of_mem_ball hw).ne')) := by
+        let q := canonicalFactor R u (pos_of_mem_ball hw).ne'
+        Checked.zsmul (-D u) (MeromorphicGerm.order (germ ⟨x, mem_univ x⟩ q))
+          (fun _ ↦ isAddUnit_order_germ (unit q (canonicalFactor_nonvanishing R u)) x) := by
   let k := germ (U := ⊤) ⟨x, mem_univ x⟩
   let F (u : hD.toFinset) : (MeromorphicSection (⊤ : Opens ℂ))ˣ :=
     let hw := D.supportWithinDomain (hD.mem_toFinset.mp u.property)
     unit (canonicalFactor R u (pos_of_mem_ball hw).ne') (canonicalFactor_nonvanishing R u)
   have hprod (s : Finset hD.toFinset) :
       MeromorphicGerm.order (k (↑(∏ u ∈ s, (F u) ^ (-D u)) : MeromorphicSection ⊤)) =
-        ∑ u ∈ s, (-D u : ℤ) * MeromorphicGerm.order (k (F u).val) := by
+        ∑ u ∈ s, Checked.zsmul (-D u) (MeromorphicGerm.order (k (F u).val))
+          (fun _ ↦ isAddUnit_order_germ (F u) x) := by
     classical
     induction s using Finset.induction_on with
     | empty => simp
@@ -323,18 +318,14 @@ theorem order_canonicalProduct {R : ℝ} (D : Function.locallyFinsuppWithin (bal
 theorem order_canonicalFactor_on_closedBall {R : ℝ} {w z : ℂ} (hw : w ∈ ball 0 R)
     (hz : z ∈ closedBall 0 R) :
     MeromorphicGerm.order (germ ⟨z, mem_univ z⟩ (canonicalFactor R w (pos_of_mem_ball hw).ne')) =
-      if z = w then -1 else 0 := by
+      if z = w then ↑(-1 : ℤ) else 0 := by
   rw [← (canonicalFactor R w (pos_of_mem_ball hw).ne').order_eval ⟨z, mem_univ z⟩]
   by_cases hzw : z = w
   · subst z
     exact (meromorphicOrderAt_canonicalFactor hw).trans (ite_eq_left rfl).symm
   · rw [ite_eq_right hzw, order_canonicalFactor_eq]
     have hA : AnalyticAt ℂ (fun y : ℂ ↦ (R : ℂ) ^ 2 - conj w * y) z := by fun_prop
-    have hB : AnalyticAt ℂ (fun y : ℂ ↦ (R : ℂ) * (y - w)) z := by fun_prop
-    rw [hA.analyticOrderAt_eq_zero.mpr (canonicalFactor_numerator_ne_zero hw hz),
-      hB.analyticOrderAt_eq_zero.mpr (mul_ne_zero (ofReal_ne_zero.mpr (pos_of_mem_ball hw).ne')
-        (sub_ne_zero.mpr hzw)), ENat.map_zero]
-    rfl
+    simp [hzw, hA.analyticOrderAt_eq_zero.mpr (canonicalFactor_numerator_ne_zero hw hz)]
 
 /-- The canonical product realizes its prescribed order at every point of the closed disk.
 It therefore has order zero along the boundary. -/
@@ -349,13 +340,11 @@ theorem order_canonicalProduct_on_closedBall {R : ℝ}
       apply Finset.sum_congr rfl
       intro u _
       have hw := D.supportWithinDomain (hD.mem_toFinset.mp u.property)
-      change (-D u : ℤ) * MeromorphicGerm.order
-        (germ ⟨z, mem_univ z⟩ (canonicalFactor R u (pos_of_mem_ball hw).ne')) = _
-      rw [order_canonicalFactor_on_closedBall hw hz]
       by_cases he : z = (u : ℂ)
-      · rw [ite_eq_left he, ite_eq_left he]
-        exact congrArg ((↑) : ℤ → WithTop ℤ) (show -(D u) * (-1) = D u by ring)
-      · simp only [ite_eq_right he, mul_zero]
+      · simp only [order_canonicalFactor_on_closedBall hw hz, he, ↓reduceIte,
+          WithTop.checked_zsmul_coe, zsmul_eq_mul, Int.cast_id, mul_neg_one, neg_neg]
+      · simp only [order_canonicalFactor_on_closedBall hw hz, he, ↓reduceIte, ← WithTop.coe_zero,
+          WithTop.checked_zsmul_coe, smul_zero]
     _ = D z := by
       rw [Finset.sum_attach hD.toFinset fun u ↦ if z = u then (D u : WithTop ℤ) else 0,
         Finset.sum_ite_eq]
@@ -387,7 +376,8 @@ private theorem exists_normalized_section_quotient
     (u : (MeromorphicSection (⊤ : Opens ℂ))ˣ) :
     ∃ (T : Set ℂ) (G : T → E), ∃ hG : MeromorphicNFOn G U Subtype.val,
       (∀ x (hx : x ∈ U), meromorphicOrderAt G x (hG.meromorphicOn x hx) =
-        meromorphicOrderAt f x (hf x hx) - MeromorphicGerm.order (germ ⟨x, mem_univ x⟩ u.val)) ∧
+        Checked.sub (meromorphicOrderAt f x (hf x hx)) (MeromorphicGerm.order
+          (germ ⟨x, mem_univ x⟩ u.val)) (isAddUnit_order_germ u x)) ∧
       ∀ᶠ y in Filter.codiscreteWithin U,
         ∃ (hy : y ∈ T) (hp : (⟨y, mem_univ y⟩ : (⊤ : Opens ℂ)) ∈ u.val.regularLocus),
         f y = (u.val.eval ⟨⟨y, mem_univ y⟩, hp⟩) • G ⟨y, hy⟩ := by
@@ -425,7 +415,7 @@ private theorem exists_normalized_section_quotient
     let k := germ (U := (⊤ : Opens ℂ)) ⟨x, mem_univ x⟩
     have hi : k u.inv = (↑(Units.map k.toMonoidHom u)⁻¹ : MeromorphicGerm x) := rfl
     rw [hFG, (hq x).order_smul_comp_domain (hf x hx), hqOrder, hi, MeromorphicGerm.order_unit_inv]
-    rw [sub_eq_add_neg, add_comm]
+    rw [Checked.sub_eq_add_neg, add_comm]
     rfl
   · apply eventually_codiscreteWithin_iff_forall_eventually_nhdsNE.mpr
     intro x hx
@@ -515,15 +505,16 @@ theorem _root_.MeromorphicOn.exists_canonicalDecomp (hf : MeromorphicOn f (close
     ∃ (T : Set ℂ) (g : T → E), CanonicalDecomp f g R := by
   obtain ⟨T, g, hg, ho, he⟩ := exists_normalized_section_quotient hf (hf.canonicalFactorProduct h)
   refine ⟨T, g, hf, h, hg, fun x hx ↦ (ho x hx).trans ?_, he⟩
-  rw [MeromorphicOn.canonicalFactorProduct, order_canonicalProduct_on_closedBall _ _ hx]
+  simp only [MeromorphicOn.canonicalFactorProduct, order_canonicalProduct_on_closedBall _ _ hx,
+    Checked.sub_eq_add_neg, WithTop.checked_neg_coe]
   rcases lt_or_eq_of_le (mem_closedBall.mp hx) with hi | hs
   · have hib : x ∈ ball (0 : ℂ) R := mem_ball.mpr hi
     have hns : x ∉ sphere (0 : ℂ) R := fun hs ↦ hi.ne (mem_sphere.mp hs)
     rw [locallyFinsuppWithin.apply_eq_zero_of_notMem _ hns, ← coe_divisor_apply
       (h := fun z hz ↦ h z (ball_subset_closedBall hz)) (hf.mono_set ball_subset_closedBall) hib]
-    exact_mod_cast sub_self _
+    simp only [← WithTop.coe_add, add_neg_cancel, WithTop.coe_zero]
   · have hnb : x ∉ ball (0 : ℂ) R := fun hi ↦ (mem_ball.mp hi).ne hs
-    rw [locallyFinsuppWithin.apply_eq_zero_of_notMem _ hnb, WithTop.coe_zero, sub_zero,
+    rw [locallyFinsuppWithin.apply_eq_zero_of_notMem _ hnb, neg_zero, WithTop.coe_zero, add_zero,
       coe_divisor_apply (hf.mono_set sphere_subset_closedBall) (mem_sphere.mpr hs)]
 
 /-- The normalized remainder has finite order at every point of the closed disk. -/
@@ -636,15 +627,6 @@ theorem _root_.MeromorphicOn.exists_ecanonicalDecomp (hf : MeromorphicOn f (clos
   rw [hx, ← hv ⟨x, ht⟩, hhx, mul_smul]
 
 /-! ## Leading coefficients and scalar values -/
-
-/-- The scalar presentation of a meromorphic section unit has finite order everywhere. -/
-theorem order_sectionUnit_ne_top (u : (MeromorphicSection (⊤ : Opens ℂ))ˣ) (x : ℂ) :
-    meromorphicOrderAt u.val.eval x (u.val.meromorphicOn_eval x (mem_univ x)) ≠ ⊤ := by
-  rw [u.val.order_eval ⟨x, mem_univ x⟩]
-  intro ht
-  have he := congrArg MeromorphicGerm.order (congrArg (germ (U := ⊤) ⟨x, mem_univ x⟩) u.val_inv)
-  rw [map_mul, MeromorphicGerm.order_mul, ht, top_add, map_one, MeromorphicGerm.order_one] at he
-  exact WithTop.zero_ne_top he.symm
 
 private theorem trailingCoeff_eq_of_rep {A : Type*} {c : A → ℂ} {s : A → E} {F : ℂ → E}
     (hs : MeromorphicAt s w c) (hF : MeromorphicAt F w) (he : ∀ a, F (c a) = s a)

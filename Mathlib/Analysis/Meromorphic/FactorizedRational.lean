@@ -198,9 +198,9 @@ theorem meromorphicOrderAt_eq {d : 𝕜 → ℤ} (hd : d.support.Finite) (x : �
     (.of_forall fun t ⟨a, ha⟩ ⟨b, hb⟩ hat hbt ↦ by
       obtain rfl : a = b := hat.trans hbt.symm
       rfl)
-  rw [meromorphicOrderAt_div ha.meromorphicAt hb.meromorphicAt hc,
-    ha.meromorphicOrderAt_eq, hb.meromorphicOrderAt_eq,
-    analyticOrderAt_numerator, analyticOrderAt_denominator, ENat.map_natCast, ENat.map_natCast] at h
+  simp only [meromorphicOrderAt_div ha.meromorphicAt hb.meromorphicAt hc,
+    ha.meromorphicOrderAt_eq, hb.meromorphicOrderAt_eq, analyticOrderAt_numerator,
+    analyticOrderAt_denominator, ENat.map_natCast, WithTop.checked_sub_coe] at h
   exact h.trans (congrArg ((↑) : ℤ → WithTop ℤ)
     (show ((d x).toNat : ℤ) - (-d x).toNat = d x by omega))
 

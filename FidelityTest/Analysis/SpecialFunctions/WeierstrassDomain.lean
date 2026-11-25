@@ -29,10 +29,10 @@ example : (⟨0, by simp⟩ : (⊤ : Opens ℂ)) ∉
   rw [L.mem_regularLocus_meromorphic_derivWeierstrassP_iff]
   exact not_not_intro L.lattice.zero_mem
 
-example : (MeromorphicSection.germ ⟨0, by simp⟩ L.meromorphicWeierstrassP).order = -2 :=
+example : (MeromorphicSection.germ ⟨0, by simp⟩ L.meromorphicWeierstrassP).order = ↑(-2 : ℤ) :=
   L.order_weierstrassP (0 : L.lattice)
 
-example : (MeromorphicSection.germ ⟨0, by simp⟩ L.meromorphicDerivWeierstrassP).order = -3 :=
+example : (MeromorphicSection.germ ⟨0, by simp⟩ L.meromorphicDerivWeierstrassP).order = ↑(-3 : ℤ) :=
   L.order_derivWeierstrassP (0 : L.lattice)
 
 example : let z : {z : ℂ // z ∉ L.lattice} := ⟨L.ω₁ / 2, L.ω₁_div_two_notMem_lattice⟩
